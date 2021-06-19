@@ -1,0 +1,11 @@
+post_install() {
+	gpg --import /usr/share/pacman/keyrings/ptr1337.gpg
+	pacman-key --add /usr/share/pacman/keyrings/ptr1337.gpg
+        sudo pacman-key --finger C3C4820857F654FE
+	pacman-key --lsign-key C3C4820857F654FE
+	pacman-key --populate
+}
+
+post_upgrade() {
+        post_install
+}
