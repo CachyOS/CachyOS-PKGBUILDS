@@ -1,8 +1,10 @@
 post_install() {
-	gpg --import /usr/share/pacman/keyrings/ptr1337.gpg
-	pacman-key --add /usr/share/pacman/keyrings/ptr1337.gpg
-        sudo pacman-key --finger C3C4820857F654FE
-	pacman-key --lsign-key C3C4820857F654FE
+	gpg --import /usr/share/pacman/keyrings/cachyos.gpg
+	pacman-key --add /usr/share/pacman/keyrings/cachyos.gpg
+        pacman-key --finger C3C4820857F654FE
+        pacman-key --lsign-key C3C4820857F654FE
+        pacman-key --finger 0DD37206DBA6CDE9
+	pacman-key --lsign-key 0DD37206DBA6CDE9
 	pacman-key --populate
 }
 
