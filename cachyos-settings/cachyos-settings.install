@@ -3,7 +3,7 @@ post_install() {
   systemctl enable haveged
   systemctl enable irqbalance
   systemctl enable preload
-  systemctl enable systemd-swap
+  systemctl enable zramd
 }
 
 post_upgrade() {
@@ -12,5 +12,5 @@ post_upgrade() {
   systemctl is-active haveged >/dev/null || systemctl enable haveged
   systemctl is-active irqbalance >/dev/null || systemctl enable irqbalance
   systemctl is-active preload >/dev/null || systemctl enable preload
-  systemctl is-active systemd-swap >/dev/null || systemctl enable systemd-swap
-}
+  systemctl is-active zramd >/dev/null || systemctl enable zramd
+  }
