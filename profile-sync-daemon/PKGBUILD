@@ -1,0 +1,28 @@
+# Maintainer: David Runge <dvzrv@archlinux.org>
+# Contributor: graysky <graysky AT archlinux DOT us>
+
+pkgname=profile-sync-daemon
+pkgver=6.44
+pkgrel=1
+pkgdesc="Symlinks and syncs browser profile dirs to RAM"
+arch=('any')
+url="https://github.com/graysky2/profile-sync-daemon"
+license=('MIT')
+depends=('bash' 'findutils' 'inetutils' 'procps-ng' 'rsync' 'systemd')
+optdepends=('zsh-completions: for completion when using zsh')
+install="${pkgname}.install"
+source=("$pkgname-$pkgver.tar.gz::https://github.com/graysky2/$pkgname/archive/v$pkgver.tar.gz")
+sha512sums=('ddfafffbd993c3acb3f50d04bbedefd5786032f6180012416f1035372590421cadae84a1f49390618d03483c1ae8eadb3d1d75dc7d9f52fbe0f594c573d79162')
+b2sums=('b29a85c85141442066671f066e23e4abbcfb8d387fc406a50e656e8c297b11563396980f5e28bed20d422572bd6328ccab56ff813bb7344dc8fb9065d9db730f')
+
+build() {
+  cd "$pkgname-$pkgver"
+  make
+}
+
+package() {
+  cd "$pkgname-$pkgver"
+  make DESTDIR="$pkgdir/" install
+  install -vDm 644 MIT "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE"
+  install -vDm 644 README.md -t "${pkgdir}/usr/share/doc/${pkgname}"
+}
