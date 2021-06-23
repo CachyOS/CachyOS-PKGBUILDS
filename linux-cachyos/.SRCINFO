@@ -1,0 +1,47 @@
+pkgbase = linux-cachyos
+	pkgdesc = Linux
+	pkgver = 5.12.13.arch1
+	pkgrel = 1
+	url = https://git.archlinux.org/linux.git/log/?h=v5.12.13-arch1
+	arch = x86_64
+	license = GPL2
+	makedepends = bc
+	makedepends = kmod
+	makedepends = libelf
+	makedepends = pahole
+	makedepends = cpio
+	makedepends = perl
+	makedepends = tar
+	makedepends = xz
+	makedepends = xmlto
+	makedepends = python-sphinx
+	makedepends = python-sphinx_rtd_theme
+	makedepends = graphviz
+	makedepends = imagemagick
+	makedepends = git
+	options = !strip
+	source = archlinux-linux::git+https://git.archlinux.org/linux.git?signed#tag=v5.12.13-arch1
+	source = config
+	source = cacule-5.12.patch
+	sha256sums = SKIP
+	sha256sums = 022ddff7b28e096ba9de926387576647a667792c88c1d30efe39f539914e1c0e
+	sha256sums = a90ec03375bf97c06bf2ca3f1fd0224deee8408077f71447326b2796b53652a1
+
+pkgname = linux-cachyos
+	pkgdesc = The Linux kernel and modules
+	depends = coreutils
+	depends = kmod
+	depends = initramfs
+	optdepends = crda: to set the correct wireless channels of your country
+	optdepends = linux-firmware: firmware images needed for some devices
+	provides = VIRTUALBOX-GUEST-MODULES
+	provides = WIREGUARD-MODULE
+	replaces = virtualbox-guest-modules-arch
+	replaces = wireguard-arch
+
+pkgname = linux-cachyos-headers
+	pkgdesc = Headers and scripts for building modules for the Linux kernel
+	depends = pahole
+
+pkgname = linux-cachyos-docs
+	pkgdesc = Documentation for the Linux kernel
