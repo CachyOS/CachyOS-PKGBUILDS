@@ -1,0 +1,82 @@
+# Maintainer: Felix Yan <felixonmars@archlinux.org>
+# Contributor: Andrea Scarpino <andrea@archlinux.org>
+
+pkgname=qt5-tools
+pkgver=5.15.2+kde+r17
+pkgrel=2
+_commit=33693a928986006d79c1ee743733cde5966ac402
+arch=('x86_64')
+url='https://www.qt.io'
+license=('GPL3' 'LGPL3' 'FDL' 'custom')
+pkgdesc='A cross-platform application and UI framework (Development Tools, QtHelp)'
+depends=('qt5-base' 'hicolor-icon-theme')
+makedepends=('qt5-declarative' 'vulkan-headers' 'clang' 'qt5-webkit' 'git')
+optdepends=('clang: for qdoc' 'qt5-webkit: for Qt Assistant')
+groups=('qt' 'qt5')
+conflicts=('qtchooser')
+_pkgfqn=qttools
+source=(git+https://invent.kde.org/qt/qt/$_pkgfqn#commit=$_commit
+        {assistant,designer,linguist,qdbusviewer}.desktop)
+sha256sums=('SKIP'
+            '8092d6d846e39632107b14726fa112862d800e929ef10f05f2a284dbda9b53c4'
+            '92f3e5dc8bc416e02893c38a05287238853e0c20732df1e62d6a672744a34e7c'
+            '15781519115e36d2c67c12ee6bc636425cd445072f43cb8bdd1364cfacbe4c45'
+            '6bc07903971983efb9492700efb2c03e24fbb1ce61b520b6e7d0a04662400701')
+
+pkgver() {
+  cd $_pkgfqn
+  echo "5.15.2+kde+r"`git rev-list --count origin/5.15.2..$_commit`
+}
+
+prepare() {
+  mkdir -p build
+
+  cd $_pkgfqn
+  git revert -n dbe0567470db2b369a9fdb28d9fbac38be3e2d60 # Revert version bump
+}
+
+build() {
+  cd build
+
+  qmake ../${_pkgfqn}
+  make
+}
+
+package() {
+  cd build
+  make INSTALL_ROOT="${pkgdir}" install
+
+  cd ../${_pkgfqn}
+  # install missing icons and desktop files
+  for icon in src/linguist/linguist/images/icons/linguist-*-32.png ; do
+    size=$(echo $(basename ${icon}) | cut -d- -f2)
+    install -p -D -m644 ${icon} \
+      "${pkgdir}/usr/share/icons/hicolor/${size}x${size}/apps/linguist.png"
+  done
+
+  install -D -m644 src/assistant/assistant/images/assistant.png \
+    "${pkgdir}/usr/share/icons/hicolor/32x32/apps/assistant.png"
+  install -D -m644 src/assistant/assistant/images/assistant-128.png \
+    "${pkgdir}/usr/share/icons/hicolor/128x128/apps/assistant.png"
+  install -D -m644 src/designer/src/designer/images/designer.png \
+    "${pkgdir}/usr/share/icons/hicolor/128x128/apps/QtProject-designer.png"
+  install -D -m644 src/qdbus/qdbusviewer/images/qdbusviewer.png \
+    "${pkgdir}/usr/share/icons/hicolor/32x32/apps/qdbusviewer.png"
+  install -D -m644 src/qdbus/qdbusviewer/images/qdbusviewer-128.png \
+    "${pkgdir}/usr/share/icons/hicolor/128x128/apps/qdbusviewer.png"
+  install -d "${pkgdir}/usr/share/applications"
+  install -m644 "${srcdir}"/{linguist,designer,assistant,qdbusviewer}.desktop \
+    "${pkgdir}/usr/share/applications/"
+
+  # Symlinks for backwards compatibility
+  for b in "${pkgdir}"/usr/bin/*; do
+    ln -s $(basename $b) "${pkgdir}"/usr/bin/$(basename $b)-qt5
+  done
+
+  # Drop QMAKE_PRL_BUILD_DIR because reference the build dir
+  find "${pkgdir}/usr/lib" -type f -name '*.prl' \
+    -exec sed -i -e '/^QMAKE_PRL_BUILD_DIR/d' {} \;
+
+  install -d "$pkgdir"/usr/share/licenses
+  ln -s /usr/share/licenses/qt5-base "$pkgdir"/usr/share/licenses/${pkgname}
+}
