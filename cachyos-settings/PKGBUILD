@@ -12,14 +12,13 @@ depends=(
     'irqbalance'
     'zramd'   
     'reflector'
+    'haveged'
     'profile-sync-daemon')
 install=$pkgname.install
 package() {
     install -d $pkgdir/etc
     cp -rf $srcdir/$pkgname-$pkgver/etc $pkgdir
 
-    # Fix permissions
-    chmod -R 750 $pkgdir/etc/sudoers.d/
 }
 
 
