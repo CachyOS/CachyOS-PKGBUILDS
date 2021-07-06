@@ -3,21 +3,23 @@
 pkgname=cachyos-settings
 pkgver=1
 pkgrel=1
-arch=('any')
+arch=('x86_64')
 license=('GPL')
 makedepends=('coreutils')
-
 pkgdesc='CachyOS - Settings'
+source=('etc.tar.gz')
+install=$pkgname.install
+sha256sums=('SKIP')
 depends=(
     'irqbalance'
     'zramd'   
     'reflector'
     'haveged'
     'profile-sync-daemon')
-install=$pkgname.install
 package() {
     install -d $pkgdir/etc
-    cp -rf $srcdir/$pkgname-$pkgver/etc $pkgdir
+
+    cp -rf $srcdir/etc $pkgdir
 
 }
 
