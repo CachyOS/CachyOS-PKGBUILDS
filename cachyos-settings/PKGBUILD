@@ -2,7 +2,7 @@
 
 pkgname=cachyos-settings
 pkgver=1
-pkgrel=3
+pkgrel=4
 arch=('x86_64' 'x86_64_v3')
 license=('GPL')
 makedepends=('coreutils')
@@ -20,7 +20,9 @@ depends=(
     )
 package() {
     install -d $pkgdir/$pkgname/etc
+    install -d $pkgdir/$pkgname/usr
 
     cp -rf $pkgname/etc $pkgdir
+    cp -rf $pkgname/use $pkgdir
 
 }
