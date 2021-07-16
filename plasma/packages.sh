@@ -5,3 +5,15 @@ asp export oxygen-icons sonnet solid syntax-highlighting plasma-framework kwindo
 find . -name "PKGBUILD" | xargs -I {} sed -i 's/arch=(x86_64)/arch=(x86_64_v3)/' {}
 
 find . -name "PKGBUILD" | xargs -I {} sed -i "s/arch=('x86_64')/arch=('x86_64_v3')/" {}
+
+
+files=$(find . -name "PKGBUILD")
+
+for f in $files
+do
+	d=$(dirname $f)
+	echo "makepkg -sr --sign $f"
+	cd $d
+	makepkg -sr --sign $d/PKGBUILD
+	cd ..
+done
