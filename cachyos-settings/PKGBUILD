@@ -2,7 +2,7 @@
 
 pkgname=cachyos-settings
 pkgver=1
-pkgrel=2
+pkgrel=3
 arch=('x86_64' 'x86_64_v3')
 license=('GPL')
 makedepends=('coreutils')
@@ -15,14 +15,12 @@ depends=(
     'reflector'
     'haveged'
     'profile-sync-daemon'
-    'zram-generator'
-    'earlyroom'
+    'zramd'
+    'earlyoom'
     )
 package() {
-    install -d $pkgdir/etc
+    install -d $pkgdir/$pkgname/etc
 
-    cp -rf $srcdir/etc $pkgdir
+    cp -rf $pkgname/etc $pkgdir
 
 }
-
-

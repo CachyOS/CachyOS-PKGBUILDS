@@ -2,7 +2,7 @@ post_install() {
   systemctl enable fstrim.timer
   systemctl enable haveged
   systemctl enable irqbalance
-  systemctl enable zram-generator
+  systemctl enable zramd
   systemctl enable earlyoom.service
   systemctl enable reflector.timer
 }
@@ -12,7 +12,7 @@ post_upgrade() {
   systemctl is-active fstrim.timer >/dev/null || systemctl enable fstrim.timer
   systemctl is-active haveged >/dev/null || systemctl enable haveged
   systemctl is-active irqbalance >/dev/null || systemctl enable irqbalance
-  systemctl is-active zram-generator >/dev/null || systemctl enable zram-generator.service
+  systemctl is-active zramd >/dev/null || systemctl enable zram-generator.service
   systemctl is-active earlyoom >/dev/null || systemctl enable earlyoom.service
   systemctl is-active reflector.timer >/dev/null || systemctl enable reflector.timer
   }
