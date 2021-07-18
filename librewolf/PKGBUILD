@@ -8,7 +8,7 @@ _pkgname=LibreWolf
 pkgver=90.0
 pkgrel=1
 pkgdesc="Community-maintained fork of Firefox, focused on privacy, security and freedom."
-arch=(x86_64 x86_64_v3 aarch64)
+arch=(x86_64 aarch64)
 license=(MPL GPL LGPL)
 url="https://librewolf-community.gitlab.io/"
 depends=(gtk3 libxt mime-types dbus-glib ffmpeg nss ttf-font libpulse)
@@ -137,7 +137,8 @@ fi
   patch -Np1 -i ${_patches_dir}/mozilla-vpn-ad.patch
 
   # Remove Internal Plugin Certificates
-  patch -Np1 -i ${_patches_dir}/sed-patches/remove-internal-plugin-certs.patch
+  # patch -Np1 -i ${_patches_dir}/sed-patches/remove-internal-plugin-certs.patch
+  # => breaks profiled builds since 90.0, it seems
 
   # allow SearchEngines option in non-ESR builds
   patch -Np1 -i ${_patches_dir}/sed-patches/allow-searchengines-non-esr.patch
