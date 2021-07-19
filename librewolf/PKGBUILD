@@ -8,7 +8,7 @@ _pkgname=LibreWolf
 pkgver=90.0
 pkgrel=1
 pkgdesc="Community-maintained fork of Firefox, focused on privacy, security and freedom."
-arch=(x86_64 aarch64)
+arch=(x86_64 x86_64_v3)
 license=(MPL GPL LGPL)
 url="https://librewolf-community.gitlab.io/"
 depends=(gtk3 libxt mime-types dbus-glib ffmpeg nss ttf-font libpulse)
@@ -32,13 +32,10 @@ source=(https://archive.mozilla.org/pub/firefox/releases/$pkgver/source/firefox-
         $pkgname.desktop
         "git+https://gitlab.com/${pkgname}-community/browser/common.git#tag=${_common_tag}"
         "git+https://gitlab.com/${pkgname}-community/settings.git#tag=${_settings_tag}")
-source_aarch64=("${pkgver}-${pkgrel}_build-arm-libopus.patch::https://raw.githubusercontent.com/archlinuxarm/PKGBUILDs/master/extra/firefox/build-arm-libopus.patch")
 sha256sums=('43a943e7d7660c6d7f5b41c95b344b7fd6a4a88ad0bb45dbd844b372ea60d58b'
             '0b28ba4cc2538b7756cb38945230af52e8c4659b2006262da6f3352345a8bed2'
             'SKIP'
             'SKIP')
-sha256sums_aarch64=('2d4d91f7e35d0860225084e37ec320ca6cae669f6c9c8fe7735cdbd542e3a7c9')
-
 prepare() {
   mkdir -p mozbuild
   cd firefox-$pkgver
@@ -91,33 +88,10 @@ mk_add_options MOZ_TELEMETRY_REPORTING=0
 # ac_add_options --enable-linker=gold
 END
 
-if [[ $CARCH == 'aarch64' ]]; then
-  cat >>../mozconfig <<END
-# taken from manjaro build:
-ac_add_options --enable-optimize="-g0 -O2"
-# from ALARM
-# ac_add_options --disable-webrtc
-
-END
-
-  export MOZ_DEBUG_FLAGS=" "
-  export CFLAGS+=" -g0"
-  export CXXFLAGS+=" -g0"
-  export RUSTFLAGS="-Cdebuginfo=0"
-
-  # we should have more than enough RAM on the CI spot instances.
-  # ...or maybe not?
-  export LDFLAGS+=" -Wl,--no-keep-memory"
-  patch -Np1 -i ${_patches_dir}/arm.patch
-  patch -Np1 -i ../${pkgver}-${pkgrel}_build-arm-libopus.patch
-
-else
-
   cat >>../mozconfig <<END
 # probably not needed, enabled by default?
 ac_add_options --enable-optimize
 END
-fi
 
   # Remove some pre-installed addons that might be questionable
   patch -Np1 -i ${_patches_dir}/remove_addons.patch
@@ -189,19 +163,9 @@ build() {
   # Do 3-tier PGO
   echo "Building instrumented browser..."
 
-if [[ $CARCH == 'aarch64' ]]; then
-
-  cat >.mozconfig ../mozconfig - <<END
-ac_add_options --enable-profile-generate
-END
-
-else
-
   cat >.mozconfig ../mozconfig - <<END
 ac_add_options --enable-profile-generate=cross
 END
-
-fi
 
   ./mach build
 
@@ -223,18 +187,6 @@ fi
 
   echo "Building optimized browser..."
 
-if [[ $CARCH == 'aarch64' ]]; then
-
-  cat >.mozconfig ../mozconfig - <<END
-ac_add_options --enable-lto
-ac_add_options --enable-profile-use
-ac_add_options --with-pgo-profile-path=${PWD@Q}/merged.profdata
-ac_add_options --with-pgo-jarlog=${PWD@Q}/jarlog
-ac_add_options --enable-linker=lld
-END
-
-else
-
   cat >.mozconfig ../mozconfig - <<END
 ac_add_options --enable-lto=cross
 ac_add_options --enable-profile-use=cross
@@ -244,8 +196,6 @@ ac_add_options --enable-linker=lld
 ac_add_options --disable-elf-hack
 ac_add_options --disable-bootstrap
 END
-
-fi
 
   ./mach build
 
