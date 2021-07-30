@@ -1,0 +1,17 @@
+
+pkgname=cachyos-v3-mirrorlist
+pkgver=1
+pkgrel=1
+pkgdesc="cachyos-v3-mirrorlist"
+arch=('any')
+url=https://github.com/endeavouros-team/PKGBUILDS/tree/master/$pkgname
+_url="https://raw.githubusercontent.com/endeavouros-team/PKGBUILDS/master/$pkgname"
+license=('GPL3')
+options=(!strip !emptydirs)
+backup=("etc/pacman.d/$pkgname")  # to keep possibly ranked mirrorlist
+source=($_url/$pkgname)
+sha512sums=('db9fd9990f8877444352b8871f7d1997edb5c1f96cf4b9efb071d1f046e22af7f228386f5536d17e399462194a8ebf70edfc9826f0ec9375c4634a9213f0d068')
+package() {
+ #install -d "$pkgdir/etc/pacman.d"
+ install -Dm644 "$srcdir/$pkgname" "$pkgdir/etc/pacman.d/$pkgname"
+}
