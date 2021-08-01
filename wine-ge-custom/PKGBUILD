@@ -5,7 +5,7 @@
 # Contributor: Giovanni Scafora <giovanni@archlinux.org>
 
 pkgname=wine-ge-custom
-_srctag=6.12-GE-1
+_srctag=6.14-GE-1
 pkgver=${_srctag//-/.}
 pkgrel=1
 
@@ -14,14 +14,12 @@ _winever=$pkgver
 _pkgbasever=${pkgver/rc/-rc}
 
 source=(wine-ge-custom::git+https://github.com/GloriousEggroll/wine-ge-custom#tag=$_srctag
-        wine-gloriouseggroll::git+http://github.com/GloriousEggroll/wine.git
-        wine-staging::git+https://github.com/wine-staging/wine-staging.git
+        wine-gloriouseggroll::git+https://github.com/GloriousEggroll/wine.git
         30-win32-aliases.conf
         wine-binfmt.conf)
 sha512sums=('SKIP'
             'SKIP'
-            'SKIP'
-            'bdde7ae015d8a98ba55e84b86dc05aca1d4f8de85be7e4bd6187054bfe4ac83b5a20538945b63fb073caab78022141e9545685e4e3698c97ff173cf30859e285'
+            '6e54ece7ec7022b3c9d94ad64bdf1017338da16c618966e8baf398e6f18f80f7b0576edf1d1da47ed77b96d577e4cbb2bb0156b0b11c183a0accf22654b0a2bb'
             'bdde7ae015d8a98ba55e84b86dc05aca1d4f8de85be7e4bd6187054bfe4ac83b5a20538945b63fb073caab78022141e9545685e4e3698c97ff173cf30859e285')
 validpgpkeys=(5AC1A08B03BD7A313E0A955AF5E6E9EEB9461DD7
               DA23579A74D4AD9AF9D3F945CEFAC8EAAF17519D)
@@ -126,10 +124,11 @@ prepare() {
   git submodule init wine
   git config submodule.wine.url "$srcdir"/wine-gloriouseggroll
   git submodule update wine
-  git submodule init wine-staging
-  git config submodule.wine-staging.url "$srcdir"/wine-staging
-  git submodule update wine-staging
-#  ./patches/protonprep.sh
+  pushd wine
+	dlls/winevulkan/make_vulkan
+	tools/make_requests
+	autoreconf -f
+  popd
   popd
 
   export CFLAGS="-O3 -march=x86-64-v3 -pipe"
