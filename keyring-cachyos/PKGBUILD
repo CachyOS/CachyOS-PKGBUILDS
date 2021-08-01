@@ -8,15 +8,14 @@ license=('GPL3')
 install=${pkgname}.install
 
 source=(
-  "cachyos.gpg"
-)
+  "keyring-cachyos.gpg")
 
-sha512sums=('c6f28df2d9158669861a8b9f132978a51da88a13c4797cf677435b3741083611d6d058186f8cd137e2d88edcd147d63d55ce47fa2d7c678ef5bc4d68ca330a54')
+sha512sums=('26537b9307e9ef24e61fbca1b1e60c1d343a7f2effc2456b140738d983e9545f5d96679df16e23137f77528812cdc3c952b20f1b3020675d859f6300f4ea6218')
 
 package() {
     local destdir=usr/share/pacman/keyrings
 
     install -d $pkgdir/$destdir
-    install -Dm644 cachyos.gpg $pkgdir/$destdir/cachyos.gpg
+    install -Dm644 keyring-cachyos.gpg  $pkgdir/$destdir/keyring-cachyos.gpg
 }
 
