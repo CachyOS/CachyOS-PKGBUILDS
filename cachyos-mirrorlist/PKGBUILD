@@ -4,12 +4,10 @@ pkgver=1
 pkgrel=1
 pkgdesc="cachyos mirrorlist"
 arch=('any')
-url=https://gitea.cachyos.org/CachyOS/PKGBUILDS/raw/branch/master/$pkgname
-_url="https://gitea.cachyos.org/CachyOS/PKGBUILDS/raw/branch/master/cachyos-mirrorlist/cachyos-mirrorlist"
 license=('GPL3')
 options=(!strip !emptydirs)
 backup=("etc/pacman.d/$pkgname")  # to keep possibly ranked mirrorlist
-source=($_url/$pkgname)
+source=(cachyos-mirrorlist)
 sha512sums=('c61385ea80150215de51a518d090be3505eef36843ebafbaf4454b2c11f55c276397f94809fdb5ba13e0ff9da3b39f214b6e533bac3478d56a8bbe47ea6be6a6')
 package() {
  #install -d "$pkgdir/etc/pacman.d"
