@@ -1,18 +1,20 @@
 pkgname=keyring-cachyos
-pkgver=1
-pkgrel=16
+pkgver=2
+pkgrel=1
 pkgdesc="CachyOS keyring"
 arch=(any)
 license=('GPL3')
 install=${pkgname}.install
 
-source=("keyring-cachyos.gpg")
+source=("cachyos.gpg"
+	"keyring-cachyos.install")
 
-sha512sums=('SKIP)
+sha256sums=('0544faf1c39efd523f8c75ae1641c2759cd36321645ea716da61864c3633652a'
+            'ca30465684311bad608728d5f5332bb9d33958f40478d115dbee9380bd354015')
 
 package() {
     local destdir=usr/share/pacman/keyrings
 
     install -d $pkgdir/$destdir
-    install -Dm644 keyring-cachyos.gpg  $pkgdir/$destdir/keyring-cachyos.gpg
+    install -Dm644 cachyos.gpg  $pkgdir/$destdir/cachyos.gpg
 }
