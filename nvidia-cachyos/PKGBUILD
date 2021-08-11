@@ -8,7 +8,7 @@
 # You can read more about it here: https://github.com/keylase/nvidia-patch
 #
 # WARNING: In extreme cases, this can damage the NVENC and NvFBC libraries.
-_nvidia_patch=
+_nvidia_patch=1
 
 # This parameter sets the default configuration of NVIDIA PowerMizer (schema).
 #
@@ -17,7 +17,7 @@ _nvidia_patch=
 #
 # When using the adaptive strategy, the clock frequency is adjusted according
 # to the requirements of the task that the GPU has to perform,
-# and it will switch between performance levels accordingly. 
+# and it will switch between performance levels accordingly.
 # This strikes a balance between performance when needed and powersaving.
 # Static strategy implies a clear locking of the clock frequency at a certain performance level.
 #
@@ -47,7 +47,7 @@ _nvidia_patch=
 # However, you can reassign the behavior of the power scheme through the Xorg option "RegistryDwords".
 #
 # Read more about NVIDIA PowerMizer settings here: https://wins911.blogspot.com/2012/06/etcx11xorg.html
-_powermizer_scheme=6
+_powermizer_scheme=5
 
 # Enforces applying a certain performance level
 # (see description of _powermizer_scheme option above for details),
@@ -69,8 +69,8 @@ _override_max_perf=3
 pkgbase=nvidia-dkms-cachyos
 pkgname=(nvidia-dkms-cachyos nvidia-settings-cachyos nvidia-utils-cachyos opencl-nvidia-cachyos
 	 lib32-nvidia-utils-cachyos lib32-opencl-nvidia-cachyos)
-pkgver=470.57.02
-pkgrel=1
+pkgver=470.63.01
+pkgrel=2
 arch=('x86_64')
 url='https://www.nvidia.com/'
 license=('custom')
@@ -85,13 +85,13 @@ source=("https://us.download.nvidia.com/XFree86/Linux-${CARCH}/${pkgver}/${_pkg}
         '0003-nvidia-drm-modeset.patch'
         '0004-NVreg-Improvements.patch'
         '0005-nvidia-settings-paths.patch')
-sha256sums=('55d7ae104827faa79e975321fe2b60f9dd42fbff65642053443c0e56fdb4c47d'
+sha256sums=('6f1a44cc4a2ce27dce749ccd1e403c1db0f4791e2d22c05ec966842101d3ed14'
             'ae1fee1238da7aeb0e2d3e3d3fe4478dfe3a2bcbbab529586ac8f3bb55aa47ae'
             'd8d1caa5d72c71c6430c2a0d9ce1a674787e9272ccce28b9d5898ca24e60a167'
             '0a13ad7583f6c553f9ab0cd861a9aa6f2b08784506a32cee58979badc3307b2d'
-            '010e5ee27c6121b0c32e3298bd5cc6b86a8d428a724858f88db4b32c5d520935'
-            'ed20d9fa8b04d8f519feef42f4ffea7998bc29457b4e48d0b2ca863330125fce'
-            '7d9392f36374ab609417abe4b5493bbb9d868a2ee29cdb877d4be8b098eb527b'
+            'a885c208a4cda620797eae6ffca412c7a3c44fa11624fa1fee5b04c29fcf9cc4'
+            '6ef8cde2a5c1a5eadaefc0b4fb9005ab433ac10b0452a015b9d93e345156665e'
+            '73921222256f9e9f195e9097c316b4057c7fc6a7ea2220899a5f4eef8891d2d7'
             '898fe80847fb2974e1d16b380c16569ddb3ab24c6974bbeb72d68e8e13902311'
             '6bb5456f14435ad329d750147c749d7c50fb8ae11778c7fcc9e6e3cd256c4017')
 
@@ -284,6 +284,7 @@ package_nvidia-utils-cachyos() {
     # Vulkan ICD
     install -D -m644 nvidia_icd.json -t "${pkgdir}/usr/share/vulkan/icd.d"
     install -D -m644 nvidia_layers.json -t "${pkgdir}/usr/share/vulkan/implicit_layer.d"
+    install -D -m755 "libnvidia-vulkan-producer.so.${pkgver}" -t "${pkgdir}/usr/lib"
 
     # VDPAU
     install -D -m755 "libvdpau_nvidia.so.${pkgver}" -t "${pkgdir}/usr/lib/vdpau"

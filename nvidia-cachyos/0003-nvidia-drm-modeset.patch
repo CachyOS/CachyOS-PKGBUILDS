@@ -17,7 +17,7 @@ However, the implementation of DRM KMS in the NVIDIA driver also causes some pro
 - May cause problems booting the system due to missing Nvidia driver modules in initramfs or loading them too late.
 To fix this you need to put the Nvidia driver modules in /etc/mknitcpio.conf,
 line MODULES=(nvidia nvidia_drm nvidia_modeset nvidia_uvm).
-The nvidia-dkms-performance package also contains a Pacman hook to automatically rebuild initramfs
+The nvidia-dkms-cachyos package also contains a Pacman hook to automatically rebuild initramfs
 when upgrading/installing/uninstalling an Nvidia driver.
 - Causes problems scaling resolution in the console on HiDPI monitors
   and not only. This is because the NVIDIA driver does not support the fbdev high-resolution framebuffer.
@@ -42,7 +42,7 @@ index f8fcde4..e220af5 100644
 --- a/kernel/nvidia-drm/nvidia-drm-linux.c
 +++ b/kernel/nvidia-drm/nvidia-drm-linux.c
 @@ -41,8 +41,8 @@
- 
+
  MODULE_PARM_DESC(
      modeset,
 -    "Enable atomic kernel modesetting (1 = enable, 0 = disable (default))");
@@ -50,8 +50,7 @@ index f8fcde4..e220af5 100644
 +    "Enable atomic kernel modesetting (1 = enable (default), 0 = disable");
 +bool nv_drm_modeset_module_param = true;
  module_param_named(modeset, nv_drm_modeset_module_param, bool, 0400);
- 
- void *nv_drm_calloc(size_t nmemb, size_t size)
--- 
-2.31.1
 
+ void *nv_drm_calloc(size_t nmemb, size_t size)
+--
+2.31.1
