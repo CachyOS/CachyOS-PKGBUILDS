@@ -1,0 +1,24 @@
+pkgname=cachyos-keyring
+pkgver=1
+pkgrel=1
+pkgdesc="CachyOS keyring"
+arch=(any)
+url="https://gitlab.com/cachyos/PKGBUILDS/-/raw/master/$pkgname"
+license=('GPL3')
+
+install=$pkgname.install
+[ -r $install ] || curl -o $install -s --max-time 30 $url/$install
+
+source=(
+  $url/cachyos.gpg
+  $url/$install
+  )
+
+sha512sums=('d5db8a61dde4686fca588089a60c829e07534d5e4e015d3414b7ee07f2cae834'
+            '84482bed0b394cb17fd9feb912c476eab26be917df094e5e81ce619c95c45764')
+package() {
+    local destdir=usr/share/pacman/keyrings
+
+    install -d $pkgdir/$destdir
+    install -Dm644 cachyos.gpg  $pkgdir/$destdir/cachyos.gpg
+}
