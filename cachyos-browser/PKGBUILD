@@ -7,7 +7,7 @@
 pkgname=cachy-browser
 _pkgname=Cachy
 __pkgname=cachy
-pkgver=91.0
+pkgver=91.0.1
 pkgrel=1
 pkgdesc="Community-maintained fork of Firefox, focused on privacy, security and freedom."
 arch=(x86_64 x86_64_v3)
@@ -15,6 +15,7 @@ license=(MPL GPL LGPL)
 url="https://cachyos.org"
 depends=(gtk3 libxt mime-types dbus-glib
          ffmpeg nss ttf-font libpulse
+         aom harfbuzz graphite dav1d
          libvpx libjpeg zlib icu libevent pipewire)
 makedepends=(unzip zip diffutils yasm mesa imake inetutils ccache
              rust xorg-server-xwayland xorg-server-xvfb
@@ -38,7 +39,7 @@ source=(https://archive.mozilla.org/pub/firefox/releases/$pkgver/source/firefox-
         $pkgname.desktop
         "git+https://gitlab.com/cachyos/cachyos-browser-common.git"
         "git+https://gitlab.com/cachyos/cachyos-browser-settings.git")
-sha256sums=('35c45dbc21a7bd59e5daa6b3fef7a08c51ff0a1333f47a355bb1cbc840c3ff59'
+sha256sums=('b95854ec9cb3e4409e5a1cf203c2b228146c6e3f9f3240d304cecec6b256f962'
             'c0786df2fd28409da59d0999083914a65e2097cda055c9c6c2a65825f156e29f'
             'SKIP'
             'SKIP')
@@ -82,6 +83,9 @@ ac_add_options --with-system-libevent
 ac_add_options --with-system-icu
 ac_add_options --with-system-zlib
 ac_add_options --with-system-jpeg
+ac_add_options --with-system-harfbuzz
+ac_add_options --with-system-graphite2
+ac_add_options --with-system-av1
 
 # Features
 ac_add_options --enable-pulseaudio
@@ -120,7 +124,19 @@ END
 ac_add_options --enable-optimize
 END
 
+  # Gentoo patches
+  echo "---- Gentoo patches"
+  patch -Np1 -i ${_patches_dir}/gentoo/0021-bmo-1516081-Disable-watchdog-during-PGO-builds.patch
+  patch -Np1 -i ${_patches_dir}/gentoo/0029-LTO-Only-enable-LTO-for-Rust-when-complete-build-use.patch
+
+  # Use more system libs
+  echo "---- Patching for system libs"
+  patch -Np1 -i ${_patches_dir}/gentoo/0004-bmo-847568-Support-system-harfbuzz.patch
+  patch -Np1 -i ${_patches_dir}/gentoo/0005-bmo-847568-Support-system-graphite2.patch
+  patch -Np1 -i ${_patches_dir}/gentoo/0006-bmo-1559213-Support-system-av1.patch
+
   # Remove some pre-installed addons that might be questionable
+  echo "---- Librewolf patches"
   patch -Np1 -i ${_patches_dir}/remove_addons.patch
 
   # Disable (some) megabar functionality
@@ -169,7 +185,7 @@ END
   # change some hardcoded directory strings that could lead to unnecessarily
   # created directories
 
-  # patch -Np1 -i ${_patches_dir}/mozilla_dirs.patch
+  patch -Np1 -i ${_patches_dir}/mozilla_dirs.patch
 
   rm -f ${srcdir}/cachyos-browser-common/source_files/mozconfig
   cp -r ${srcdir}/cachyos-browser-common/source_files/* ./
