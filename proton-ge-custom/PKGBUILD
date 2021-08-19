@@ -1,17 +1,17 @@
 # Maintainer: loathingkernel <loathingkernel _a_ gmail _d_ com>
 
 pkgname=proton-ge-custom
-_srctag=6.14-GE-3
-_commit=f04a5161ebd57608c5781fa2fe20a868cc055040
+_srctag=6.15-GE-2
+_commit=f0ab74112aefeaf372a7d280e7aaa84c9e43107a
 pkgver=${_srctag//-/.}
 _geckover=2.47.2
 _monover=6.3.0
-pkgrel=3
+pkgrel=1
 epoch=1
 pkgdesc="Compatibility tool for Steam Play based on Wine and additional components. GloriousEggroll's custom build"
 url="https://github.com/GloriousEggroll/proton-ge-custom"
 arch=(x86_64 x86_64_v3)
-options=(staticlibs !lto)
+options=(!staticlibs !lto)
 license=('custom')
 
 depends=(
@@ -38,7 +38,7 @@ depends=(
 )
 
 makedepends=(autoconf bison perl fontforge flex mingw-w64-gcc
-  git wget rsync mingw-w64-tools lld nasm meson=0.58.1 cmake python-virtualenv python-pip
+  git wget rsync mingw-w64-tools lld nasm meson cmake python-virtualenv python-pip
   glslang vulkan-headers
   giflib                lib32-giflib
   libpng                lib32-libpng
@@ -62,7 +62,7 @@ makedepends=(autoconf bison perl fontforge flex mingw-w64-gcc
   gtk3                  lib32-gtk3
   gst-plugins-base-libs lib32-gst-plugins-base-libs
   vulkan-icd-loader     lib32-vulkan-icd-loader
-  sdl2                  lib32-sdl2
+  'sdl2>=2.0.16'        'lib32-sdl2>=2.0.16'
   libcups               lib32-libcups
   sane
   libgphoto2
@@ -92,7 +92,7 @@ optdepends=(
   gtk3                  lib32-gtk3
   gst-plugins-base-libs lib32-gst-plugins-base-libs
   vulkan-icd-loader     lib32-vulkan-icd-loader
-  sdl2                  lib32-sdl2
+  'sdl2>=2.0.16'        'lib32-sdl2>=2.0.16'
   sane
   libgphoto2
   gsm
@@ -133,6 +133,8 @@ source=(
     proton-unfuck_makefile.patch
     proton-disable_lock.patch
     proton-user_compat_data.patch
+    proton-more_8x5_res.patch
+    proton-remove_broken_patch_segments.patch
 )
 noextract=(
     wine-gecko-${_geckover}-{x86,x86_64}.tar.xz
@@ -204,11 +206,13 @@ prepare() {
         git submodule update "${submodule}"
     done
 
+    patch -p1 -i "$srcdir"/proton-remove_broken_patch_segments.patch
     ./patches/protonprep.sh
 
     patch -p1 -i "$srcdir"/proton-unfuck_makefile.patch
     patch -p1 -i "$srcdir"/proton-disable_lock.patch
     patch -p1 -i "$srcdir"/proton-user_compat_data.patch
+    patch -p1 -i "$srcdir"/proton-more_8x5_res.patch
 }
 
 build() {
@@ -226,8 +230,8 @@ build() {
     # This overrides CFLAGS from makepkg.conf, if you comment these you are on your own
     # If you want the "best" possbile optimizations for your system you can use
     # `-march=native` and remove the `-mtune=core-avx2` option.
-    export CFLAGS="-O3 -march=nocona -mtune=core-avx2 -pipe"
-    export CXXFLAGS="-O3 -march=nocona -mtune=core-avx2 -pipe"
+    export CFLAGS="-O3 -march=znver3 -pipe"
+    export CXXFLAGS="-O3 -march=znver3 -pipe"
 
     # If using -march=native and the CPU supports AVX, launching a d3d9
     # game can cause an Unhandled exception. The cause seems to be the
@@ -328,7 +332,8 @@ sha256sums=('SKIP'
             '8fab46ea2110b2b0beed414e3ebb4e038a3da04900e7a28492ca3c3ccf9fea94'
             'b4476706a4c3f23461da98bed34f355ff623c5d2bb2da1e2fa0c6a310bc33014'
             'eb67426ff60ed6395b70437e838883ee08b6189cad84faf036b1a4d7366a34e2'
-            '5c6862f48862fd59c8e1893fcbfaaaba33b084c08ceef8802b8c6512727fac11'
+            'b674fa7904620362970a60d52902b303b08590080bdac86cb8b676e665041759'
             '61dbdb4d14e22c2c34b136e5ddb800eac54023b5b23c19acd13a82862f94738c'
             '20f7cd3e70fad6f48d2f1a26a485906a36acf30903bf0eefbf82a7c400e248f3'
-)
+            '9071f1432b136071e58a7be9f40c8c7daf4147e75f455c194593e9cdf3872fa2'
+            'e8cb8d0517822be7ce80782c2c7b1fea5b34467e87a4b2cd23c320007eba909a')

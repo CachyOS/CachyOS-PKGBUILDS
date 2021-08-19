@@ -1,0 +1,54 @@
+diff --git a/trunk/PKGBUILD b/trunk/PKGBUILD
+index 30bae19..6ec0c99 100644
+--- a/trunk/PKGBUILD
++++ b/trunk/PKGBUILD
+@@ -3,7 +3,7 @@
+ # Contributor: J0k3r <moebius282@gmail.com>
+ 
+ pkgname=lib32-sdl2
+-pkgver=2.0.14
++pkgver=2.0.16
+ pkgrel=1
+ pkgdesc='A library for portable low-level access to a video framebuffer, audio output, mouse, and keyboard'
+ arch=(x86_64)
+@@ -29,24 +29,19 @@ makedepends=(
+   lib32-wayland
+   lib32-libxkbcommon
+   lib32-libxss
+-  mercurial
++  git
+   wayland-protocols
++  lib32-pipewire
+ )
+ optdepends=(
+   'lib32-alsa-lib: ALSA audio driver'
+   'lib32-libpulse: PulseAudio audio driver'
+   'lib32-jack: JACK audio driver'
++  'lib32-pipewire: PipeWire audio driver'
+ )
+-_tag=e52d96ea04fc
+-source=(hg+https://hg.libsdl.org/SDL#tag=${_tag})
++source=(git+https://github.com/libsdl-org/SDL#tag=release-$pkgver)
+ sha512sums=(SKIP)
+ 
+-pkgver() {
+-  cd SDL
+-
+-  hg id --tags | sed 's/^release-//'
+-}
+-
+ prepare() {
+   # fix libdir
+   sed -i 's|lib/cmake|lib32/cmake|' SDL/CMakeLists.txt
+@@ -72,7 +67,10 @@ build() {
+       -DVIDEO_WAYLAND=ON \
+       -DRPATH=OFF \
+       -DCLOCK_GETTIME=ON \
+-      -DJACK_SHARED=ON
++      -DJACK_SHARED=ON \
++      -DPIPEWIRE=ON \
++      -DPIPEWIRE_SHARED=ON
++
+   make -C build
+ }
+ 
