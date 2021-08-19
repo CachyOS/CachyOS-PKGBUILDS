@@ -1,0 +1,24 @@
+# Maintainer: Vladislav Nepogodin <nepogodin.vlad@gmail.com>
+
+pkgname=calamares-branding-cachyos
+pkgver=r2.7c2b371
+pkgrel=1
+pkgdesc="CachyOS branding for the Calamares installer"
+arch=(any)
+url="https://gitlab.com/cachyos/themes-and-settings/theme/$pkgname"
+license=('GPL')
+makedepends=('git')
+source=("${pkgname}::git+$url.git")
+sha512sums=('SKIP')
+
+pkgver() {
+  cd "${srcdir}/${pkgname}"
+  printf "r%s.%s" "$(git rev-list --count HEAD)" "$(git rev-parse --short HEAD)"
+}
+
+package() {
+  local _destdir=usr/share/calamares/branding/cachyos
+
+  install -d $pkgdir/$_destdir
+  cp -rf $srcdir/$pkgname/usr $pkgdir
+}
