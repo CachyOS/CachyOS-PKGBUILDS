@@ -1,0 +1,75 @@
+# Maintainer: Vladislav Nepogodin <nepogodin.vlad@gmail.com>
+# Contributor: Philip Müller <philm[at]manjaro[dog]org>
+
+pkgname=calamares
+pkgver=3.2.41.1
+pkgrel=1
+pkgdesc='Distribution-independent installer framework'
+arch=('i686' 'x86_64')
+license=(GPL)
+url="https://github.com/calamares/calamares"
+license=('LGPL')
+conflicts=('calamares')
+provides=('calamares')
+depends=('kconfig' 'kcoreaddons' 'kiconthemes' 'ki18n' 'kio' 'solid' 'yaml-cpp' 'kpmcore' 'mkinitcpio-openswap'
+         'boost-libs' 'ckbcomp' 'hwinfo' 'qt5-svg' 'polkit-qt5' 'gtk-update-icon-cache' 'plasma-framework'
+         'qt5-xmlpatterns' 'squashfs-tools' 'libpwquality' 'appstream-qt' 'icu')
+makedepends=('ninja' 'extra-cmake-modules' 'qt5-tools' 'qt5-translations' 'git' 'boost')
+backup=('usr/share/calamares/modules/bootloader.conf'
+        'usr/share/calamares/modules/displaymanager.conf'
+        'usr/share/calamares/modules/initcpio.conf'
+        'usr/share/calamares/modules/unpackfs.conf')
+
+source+=("calamares-$pkgver.tar.gz::$url/archive/v$pkgver.tar.gz")
+sha256sums=('c963c6e6ed9893d9ec1008ecf471747193627fadee16b76491df6b653c8e4663')
+
+prepare() {
+  cd ${srcdir}/calamares-${pkgver}
+  sed -i -e 's/"Install configuration files" OFF/"Install configuration files" ON/' CMakeLists.txt
+
+  # patches here
+
+  # change version
+  #_ver="$(cat CMakeLists.txt | grep -m3 -e "  VERSION" | grep -o "[[:digit:]]*" | xargs | sed s'/ /./g')"
+  _ver="$pkgver"
+  printf 'Version: %s-%s\n' "${_ver}" "${pkgrel}"
+  sed -i -e "s|\${CALAMARES_VERSION_MAJOR}.\${CALAMARES_VERSION_MINOR}.\${CALAMARES_VERSION_PATCH}|${_ver}-${pkgrel}|g" CMakeLists.txt
+  sed -i -e "s|CALAMARES_VERSION_RC 1|CALAMARES_VERSION_RC 0|g" CMakeLists.txt
+
+  # change branding
+  sed -i -e "s/default/cachyos/g" src/branding/CMakeLists.txt
+}
+
+
+build() {
+  cd ${srcdir}/calamares-${pkgver}
+
+  _cpuCount=$(grep -c -w ^processor /proc/cpuinfo)
+
+  cmake -S . -Bbuild \
+        -GNinja \
+        -DCMAKE_BUILD_TYPE=Release \
+        -DCMAKE_INSTALL_PREFIX=/usr \
+        -DCMAKE_INSTALL_LIBDIR=lib \
+        -DWITH_PYTHONQT:BOOL=ON \
+        -DBoost_NO_BOOST_CMAKE=ON \
+        -DSKIP_MODULES="tracking webview interactiveterminal initramfs \
+                        initramfscfg dracut dracutlukscfg \
+                        dummyprocess dummypython dummycpp \
+                        dummypythonqt services-openrc"
+  cmake --build build --parallel $_cpuCount
+}
+
+package() {
+  cd ${srcdir}/calamares-${pkgver}/build
+  DESTDIR="${pkgdir}" cmake --build . --target install
+
+  # rename services-systemd back to services
+  mv "$pkgdir/usr/lib/calamares/modules/services-systemd" "$pkgdir/usr/lib/calamares/modules/services"
+  mv "$pkgdir/usr/share/calamares/modules/services-systemd.conf" "$pkgdir/usr/share/calamares/modules/services.conf"
+  sed -i -e 's/-systemd//' "$pkgdir/usr/lib/calamares/modules/services/module.desc"
+  sed -i -e 's/-systemd//' "$pkgdir/usr/share/calamares/settings.conf"
+  sed -i -e "s/default/cachyos/g" "$pkgdir/usr/share/calamares/settings.conf"
+}
+
+# vim:set sw=2 sts=2 et:
