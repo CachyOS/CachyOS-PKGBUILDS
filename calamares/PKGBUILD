@@ -70,6 +70,7 @@ package() {
   sed -i -e 's/-systemd//' "$pkgdir/usr/lib/calamares/modules/services/module.desc"
   sed -i -e 's/-systemd//' "$pkgdir/usr/share/calamares/settings.conf"
   sed -i -e "s/default/cachyos/g" "$pkgdir/usr/share/calamares/settings.conf"
+  sed -i -e "s/  - initramfs/#  - initramfs/g" "$pkgdir/usr/share/calamares/settings.conf"
 }
 
 # vim:set sw=2 sts=2 et:
