@@ -1,0 +1,292 @@
+#! /bin/bash
+#
+# sdboot-manage provides automation for systemd-boot on systems with multiple kernels
+
+usage() {
+    echo "Usage: sdboot-manage [options] [action]"
+    echo ""
+    echo "Actions:"
+    echo "  gen     generates entries for systemd-boot based on installed kernels"
+    echo "  remove  removes orphaned systemd-boot entries"
+    echo "  setup   installs systemd-boot and generate initial entries"
+    echo "  update  updates systemd-boot"
+    echo ""
+    echo "Options:"
+    echo "  -e,--esp-path=<path>  specify <path> to be used for esp"
+    echo "  -c,--config=<path>    location of config file"
+    exit 1
+}
+
+# parse the options
+for i in "$@"; do
+    case $i in
+        -e=*|--esp-path=*)
+            ESP="${i#*=}"
+            shift 
+        ;;
+        -c=*|--config=*)
+            config="${i#*=}"
+            shift 
+        ;;
+        # handle unknown options
+        -*)
+            usage
+        ;;
+        # printing usage is handled later
+        *)
+            true
+        ;;
+    esac
+done
+
+# set defaults for optional arguments if they are not passed on the command-line
+[[ -z ${ESP} ]] && ESP=$(bootctl -p)
+[[ -z ${config} ]] && config=/etc/sdboot-manage.conf
+
+# config variables
+export  LINUX_OPTIONS \
+        LINUX_FALLBACK_OPTIONS \
+        LINUX_USE_SWAP_FOR_RESUME \
+        DEFAULT_ENTRY="manual" \
+        ENTRY_ROOT="CachyOS" \
+        ENTRY_TITLE="CachyOS" \
+        ENTRY_APPEND_KVER="no" \
+        KERNEL_PATTERN="vmlinuz-*-*" \
+        REMOVE_EXISTING="yes" \
+        OVERWRITE_EXISTING \
+        REMOVE_OBSOLETE="yes" \
+        PRESERVE_FOREIGN \
+        NO_AUTOGEN \
+        NO_AUTOUPDATE \
+        CDISCARD \
+        DISCARD 
+
+# Load the config file
+[[ -f ${config} ]] && . "${config}"
+
+get_entry_root() {
+    echo -n "$1/loader/entries/${ENTRY_ROOT}"
+    if [[ ${ENTRY_APPEND_KVER,,} == "yes" ]]; then
+        echo -n "$2"
+    fi
+}
+
+# removes a systemd-boot entry
+remove_entry() {
+    [[ ${1} =~ ^$(get_entry_root "${ESP}").* || ${PRESERVE_FOREIGN} != "yes" ]] && rm "$1"
+}
+
+# installs and configures systemd-boot
+setup_sdboot() {
+    if [[ $(bootctl status 2>&1 >/dev/null) ]]; then
+        # install systemd-boot
+        bootctl --esp-path=${ESP} install
+
+        # create a simple loader.conf
+        echo "timeout 3" > "${ESP}/loader/loader.conf"
+
+        # generate entries, ensure an initial set of entries is generated
+        [[ ${DEFAULT_ENTRY} != "oldest" ]] && DEFAULT_ENTRY="latest"
+        generate_entries
+    else
+        echo -e "systemd-boot already installed"
+        exit 1
+    fi
+}
+
+generate_entries() {
+    root='/'
+
+    # First, ensure we have a valid config
+    if [[ -f ${ESP}/loader/loader.conf ]]; then
+        # only build entries if there is some place to put them
+        if [[ -d ${ESP}/loader/entries ]]; then
+            srcdev=$(findmnt -no SOURCE ${root})
+            srcdev_uuid=$(findmnt -no UUID ${root})
+            srcdev_partuuid=$(findmnt -no PARTUUID ${root})
+            srcdev_fsroot=$(findmnt -no FSROOT ${root})
+            root_fstype=$(findmnt -no FSTYPE ${root})
+            mkinitcpio_has_sdencrypt_hook=$(grep -c '^HOOKS=\(.*sd-encrypt.*\)$' /etc/mkinitcpio.conf)
+
+            # generate an appropriate options line
+            case ${root_fstype} in
+                zfs)
+                    sdoptions="zfs=${srcdev} rw"
+                    ;;
+                btrfs)
+                    if [[ -n ${srcdev_uuid} ]]; then
+                        sdoptions="root=UUID=${srcdev_uuid} rw rootflags=subvol=${srcdev_fsroot}"
+                    else
+                        sdoptions="root=PARTUUID=${srcdev_partuuid} rw rootflags=subvol=${srcdev_fsroot}"
+                    fi
+                    if [[ ${CDISCARD,,} == "yes" ]]; then
+                        sdoptions="${sdoptions},discard"
+                    fi
+                    ;;
+                *)
+                    if [[ -n ${srcdev_uuid} ]]; then
+                        sdoptions="root=UUID=${srcdev_uuid} rw"
+                    elif [[ -n ${srcdev_partuuid} ]]; then
+                        sdoptions="root=PARTUUID=${srcdev_partuuid} rw"
+                    else
+                        sdoptions="root=${srcdev} rw"
+                    fi
+                    if [[ ${CDISCARD,,} == "yes" ]]; then
+                        sdoptions="${sdoptions} rootflags=discard"
+                    fi
+                    ;;
+            esac
+
+            # Search for a crypt device
+
+            # get the UUID for the crypt root - requires special handling for zfs
+            if [[ ${root_fstype} == "zfs" ]]; then
+                zpool=${srcdev%%/*}
+                zpool_device=$(zpool status -LP ${zpool} | grep "/dev/" | awk '{print $1}')
+                top_level_uuid=$(lsblk -no UUID ${zpool_device})
+            else
+                top_level_uuid=${srcdev_uuid}
+            fi
+
+            # now that we have the UUID search all the devices above it to find a cryptroot
+            while read -r devname devtype; do
+                if [[ $devtype == crypt ]]; then
+                    # handle cryptdevice
+                    cryptdevice_option_prefix="cryptdevice=UUID"
+                    cryptdevice_option_suffix=":"
+                    if [[ ${mkinitcpio_has_sdencrypt_hook} > 0 ]]; then
+                        cryptdevice_option_prefix="rd.luks.name"
+                        cryptdevice_option_suffix="="
+                    fi
+                    sdoptions="${sdoptions} ${cryptdevice_option_prefix}=$(blkid -o value -s UUID "$(cryptsetup status "${devname}" | grep device | awk '{print $2}')")${cryptdevice_option_suffix}${devname}"
+                    if [[ ${DISCARD,,} == "yes" ]]; then
+                        if [[ ${mkinitcpio_has_sdencrypt_hook} > 0 ]]; then
+                            sdoptions="${sdoptions} rd.luks.options=discard"
+                        else
+                            sdoptions="${sdoptions}:allow-discards"
+                        fi
+                    fi
+                fi
+            done < <(lsblk -nslo NAME,TYPE /dev/disk/by-uuid/"${top_level_uuid}" 2> /dev/null)
+
+            # if LINUX_USE_DEVICE_FOR_RESUME is enabled, pass its identifier to the `resume` kernel parameter
+            if [[ -n ${LINUX_USE_DEVICE_FOR_RESUME,,} ]]; then
+                sdoptions="${sdoptions} resume=${LINUX_USE_DEVICE_FOR_RESUME}"
+            fi
+
+            # if LINUX_USE_SWAP_FOR_RESUME is enabled, pass the UUID of the first detected swap device as an argument to the `resume` kernel parameter
+            if [[ ${LINUX_USE_SWAP_FOR_RESUME,,} == "yes" ]]; then
+                swapdev=$(swapon --show=NAME --noheadings | head -1)
+                if [[ -n ${swapdev} ]]; then
+                    swapdev_uuid=$(blkid -o value -s UUID "${swapdev}")
+                    sdoptions="${sdoptions} resume=UUID=${swapdev_uuid}"
+                fi
+            fi
+
+            # handle ucode
+            ucode=""
+            while read -r ucodefile; do
+                ucode="${ucode}initrd\t${ucodefile}\n"
+            done < <(find "${ESP}" -maxdepth 2 -type f -iname "*ucode.img" -printf "/%P\n")
+
+            # when remove existing is set we want to start from an empty slate
+            if [[ ${REMOVE_EXISTING,,} == "yes" ]]; then
+                while read -r entry; do
+                    remove_entry "${entry}"
+                done < <(find "${ESP}/loader/entries" -type f -name "*.conf")
+            fi
+
+            # create entries for each installed kernel
+            while read -r kernel; do
+                kernelnum=$(echo "${kernel}" | awk -F- '{print $2}')
+                arch=$(echo "${kernel}" | awk -F- '{print $3}')
+
+                # first validate we don't already have an entry for this kernel
+                [[ ${OVERWRITE_EXISTING,,} != "yes" && -f $(get_entry_root "$ESP" "$kernelnum")${kernelnum}.conf ]] && continue
+
+                title=${ENTRY_TITLE}
+                if [[ ${ENTRY_APPEND_KVER,,} == "yes" ]]; then
+                    title="${title} ${kernelnum}"
+                fi
+
+                # get the kernel location so the initrd can be written to the same location as the kernel
+                [[ $(dirname ${kernel}) == "/" ]] && kernelpath="" || kernelpath=$(dirname ${kernel})
+
+                echo -e "title\t${title}\nlinux\t${kernel}\n${ucode}initrd\t${kernelpath}/initramfs-${kernelnum}-${arch}.img\noptions\t${sdoptions} ${LINUX_OPTIONS}" > "$(get_entry_root "$ESP" "$kernelnum").conf"
+                echo -e "title\t${title}\nlinux\t${kernel}\n${ucode}initrd\t${kernelpath}/initramfs-${kernelnum}-${arch}-fallback.img\noptions\t${sdoptions} ${LINUX_FALLBACK_OPTIONS}" > "$(get_entry_root "$ESP" "$kernelnum")-fallback.conf"
+            done < <(find "${ESP}" -maxdepth 2 -type f -name "${KERNEL_PATTERN}" -printf "/%P\n")
+
+            if [[ ! "$(ls -A ${ESP}/loader/entries)" ]]; then
+                echo "Error: There are no boot loader entries after entry generation"
+                exit 1
+            fi
+
+            # set the default entry in loader.conf
+            entryroot=$(get_entry_root "${ESP}")
+            if [[ ${DEFAULT_ENTRY} == "latest" ]]; then
+                defentry=$(find "${entryroot%/*}" -maxdepth 2 -type f -name "${entryroot##*/}*" -printf "%P\n" | grep -v 'fallback.conf$' | sort -Vr | head -1)
+                sed '/^default/{h;s/.*/default '"${defentry}"'/};${x;/^$/{s//default '"${defentry}"'/;H};x}' -i "${ESP}/loader/loader.conf"
+            elif [[ ${DEFAULT_ENTRY} == "oldest" ]]; then
+                defentry=$(find "${entryroot%/*}" -maxdepth 2 -type f -name "${entryroot##*/}*" -printf "%P\n" | grep -v 'fallback.conf$' | sort -V | head -1 )
+                sed '/^default/{h;s/.*/default '"${defentry}"'/};${x;/^$/{s//default '"${defentry}"'/;H};x}' -i "${ESP}/loader/loader.conf"
+            fi
+        else
+            echo "Error: ${ESP}/loader/entries does not exist"
+            exit 1
+        fi
+    else
+        echo "Error: ${ESP}/loader/loader.conf does not exist"
+        exit 1
+    fi
+}
+
+# removes entries for kernels which are no longer installed
+remove_orphan_entries() {
+    [[ ${REMOVE_OBSOLETE,,} != "yes" ]] && return
+
+    # find and remove all the entries with unmatched kernels
+    for kernel in $(comm -13 <(find "${ESP}" -maxdepth 2 -type f -name "${KERNEL_PATTERN}" -printf "/%P\n" | uniq | sort) <(cat "${ESP}"/loader/entries/* | grep -i "^linux" | awk '{print $2}' | uniq | sort)); do
+        while read -r entry; do
+            remove_entry "${entry}"
+        done < <(grep -l "${kernel}" "${ESP}"/loader/entries/*)
+    done
+}
+
+# make sure we are root
+if [[ $EUID -ne 0 ]]; then
+   echo "sdboot-manage must be run as root"
+   exit 1
+fi
+
+bootctl status &> /dev/null
+if [[ $? == 1 && $1 != "setup" ]]; then
+    echo -e "systemd-boot not installed\nTry sdboot-manage setup to install"
+    exit 1
+fi
+
+case $1 in
+    autogen)
+        [[ ${NO_AUTOGEN} != "yes" ]] && generate_entries
+        ;;
+    autoupdate)
+        [[ ${NO_AUTOUPDATE} != "yes" ]] && bootctl --esp-path=${ESP} update
+        ;;
+    gen)
+        generate_entries
+        ;;
+    remove)
+        remove_orphan_entries
+        ;;
+    setup)
+        setup_sdboot
+        ;;
+    update)
+        bootctl --esp-path=${ESP} update
+        ;;
+    *)
+        usage
+        ;;
+        
+esac
+
+exit 0
