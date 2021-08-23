@@ -2,7 +2,7 @@
 
 pkgname=cachyos-settings
 pkgver=1
-pkgrel=9
+pkgrel=10
 arch=('any')
 license=('GPL')
 makedepends=('coreutils')
@@ -20,10 +20,8 @@ depends=(
     'ananicy-rules-git'
     )
 package() {
-    install -d $pkgdir/$pkgname/etc
-    install -d $pkgdir/$pkgname/usr
-
-    cp -rf $pkgname/etc $pkgdir
-    cp -rf $pkgname/usr $pkgdir
-
+  install -d $pkgdir/etc
+  cp -rf $srcdir/$_pkgname/etc $pkgdir
+  install -d $pkgdir/usr
+  cp -rf $srcdir/$_pkgname/usr $pkgdir
 }
