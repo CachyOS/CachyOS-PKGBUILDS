@@ -1,0 +1,20 @@
+#!/bin/bash
+
+# A helper program for 'keyserver-rank'.
+
+Main()
+{
+    local server="$1"
+    local log="$2"
+    local keyid=F3B607488DB35A47   # key id of admin@cachyos.org
+    local out="$(gpg --batch --keyserver $server --search-keys admin@cachyos.org 2>/dev/null)"
+    local code=$?
+
+    if [ $code -ne 0 ] || [ -z "$(echo "$out" | grep -w "$keyid")" ] ; then
+        printf "$server FAIL " >> $log
+    else
+        printf "$server OK " >> $log
+    fi
+}
+
+Main "$@"

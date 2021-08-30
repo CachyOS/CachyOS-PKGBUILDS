@@ -1,0 +1,26 @@
+# Maintainer: CachyOS-Team <admin@cachyos.org>
+
+pkgname=keyserver-rank-cachy
+_pkgname=keyserver-rank
+pkgdesc="Ranks some keyservers."
+url="https://github.com/endeavouros-team/PKGBUILDS/raw/master/$pkgname"
+pkgver=1.2.4
+pkgrel=1
+arch=('any')
+license=('GPL')
+depends=(
+    bash
+    time    # for timing commands
+)
+
+source=(
+    "$_pkgname"
+    "$_pkgname"-helper
+)
+sha512sums=('1e09c84a093f0b174892c1dbb0809e0ed62fe7ebc9fe1511e4369851d70cccfc88fc9b27c3d226b341ab3103ab41843768d385aa3241b5a61b6fa716bfd2dba1'
+            '77579607d672191c1ff7287f03c1c869064f00ba6f0bbb34129a6ab7d54d5a98b49e1eb3dae38e255b07a86ad74cf4cccb4b4d00fe769fe6ca8847c614f0d059')
+
+package() {
+  install -Dm755 ${_pkgname}           $pkgdir/usr/bin/${_pkgname}
+  install -Dm755 ${_pkgname}-helper    $pkgdir/usr/bin/${_pkgname}-helper
+}
