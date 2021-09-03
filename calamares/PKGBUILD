@@ -20,12 +20,20 @@ backup=('usr/share/calamares/modules/bootloader.conf'
         'usr/share/calamares/modules/initcpio.conf'
         'usr/share/calamares/modules/unpackfs.conf')
 
+source=(settings_online.conf
+        settings_offline.conf)
 source+=("calamares-$pkgver.tar.gz::$url/archive/v$pkgver.tar.gz")
-sha256sums=('c963c6e6ed9893d9ec1008ecf471747193627fadee16b76491df6b653c8e4663')
+sha256sums=('371ff78c6ee634d82f906231c683a61c453e4771636436b11e163eb5a7d139bd'
+            'dedaea0190e1c20c9f95e02c7d5a601e7e9a0af618c8df5e46894d3c9afe6077'
+            'c963c6e6ed9893d9ec1008ecf471747193627fadee16b76491df6b653c8e4663')
 
 prepare() {
   cd ${srcdir}/calamares-${pkgver}
   sed -i -e 's/"Install configuration files" OFF/"Install configuration files" ON/' CMakeLists.txt
+
+  sed -i 's/\"mkinitcpio\", \"-p\", m_kernel/\"mkinitcpio\", \"-P\"/' src/modules/initcpio/InitcpioJob.cpp
+
+  sed -i "s?pacman_flags,?pacman_flags, \"--needed\",?" src/modules/packages/main.py
 
   # patches here
 
@@ -53,10 +61,11 @@ build() {
         -DCMAKE_INSTALL_LIBDIR=lib \
         -DWITH_PYTHONQT:BOOL=ON \
         -DBoost_NO_BOOST_CMAKE=ON \
-        -DSKIP_MODULES="tracking webview interactiveterminal initramfs \
-                        initramfscfg dracut dracutlukscfg \
-                        dummyprocess dummypython dummycpp \
-                        dummypythonqt services-openrc"
+        -DSKIP_MODULES="tracking webview interactiveterminal \
+                        contextualprocess plymouthcfg dracut dracutlukscfg \
+                        dummyprocess dummypython dummycpp welcomeq \
+                        finishedq keyboardq localeq notesqml \
+                        usersq openrcdmcryptcfg dummypythonqt services-openrc"
   cmake --build build --parallel $_cpuCount
 }
 
@@ -68,9 +77,10 @@ package() {
   mv "$pkgdir/usr/lib/calamares/modules/services-systemd" "$pkgdir/usr/lib/calamares/modules/services"
   mv "$pkgdir/usr/share/calamares/modules/services-systemd.conf" "$pkgdir/usr/share/calamares/modules/services.conf"
   sed -i -e 's/-systemd//' "$pkgdir/usr/lib/calamares/modules/services/module.desc"
-  sed -i -e 's/-systemd//' "$pkgdir/usr/share/calamares/settings.conf"
-  sed -i -e "s/default/cachyos/g" "$pkgdir/usr/share/calamares/settings.conf"
-  sed -i -e "s/  - initramfs/#  - initramfs/g" "$pkgdir/usr/share/calamares/settings.conf"
+  cp ${srcdir}/settings_offline.conf "$pkgdir/usr/share/calamares/settings.conf"
+  cp ${srcdir}/settings_offline.conf "$pkgdir/usr/share/calamares/settings_offline.conf"
+  cp ${srcdir}/settings_online.conf "$pkgdir/usr/share/calamares/settings_online.conf"
+  #sed -i -e "s/  - initramfs/#  - initramfs/g" "$pkgdir/usr/share/calamares/settings.conf"
 }
 
 # vim:set sw=2 sts=2 et:
