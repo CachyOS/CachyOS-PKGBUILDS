@@ -1,0 +1,33 @@
+# Maintainer: ptr1337 <ptr1337@cachyos.org>
+
+
+pkgname=cachyos-theming
+pkgver=1
+pkgrel=1
+arch=('any')
+pkgdesc='CachyOS - Theming'
+url="https://gitlab.com/cachyos/themes-and-settings/$pkgname"
+license=('GPL')
+makedepends=('coreutils'
+             'git')
+depends=('char-white'
+        'cachyos-fish-config'
+        'nerd-fonts-fantasque-sans-mono'
+        'cachyos-nord-kde-theme-git'
+        'arch-kde-theme-git')
+install=$pkgname.install
+conflicts=('kwin-scripts-window-colors')
+source=("git+$url.git")
+sha256sums=('SKIP')
+
+pkgver() {
+	cd "$srcdir/$pkgname"
+	printf "r%s.%s" "$(git rev-list --count HEAD)" "$(git rev-parse --short HEAD)"
+}
+package() {
+
+    install -d $pkgdir/etc
+    cp -rf $srcdir/$pkgname/etc $pkgdir
+    install -d $pkgdir/usr
+    cp -rf $srcdir/$pkgname/usr $pkgdir
+}
