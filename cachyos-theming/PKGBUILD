@@ -1,6 +1,5 @@
 # Maintainer: ptr1337 <ptr1337@cachyos.org>
 
-
 pkgname=cachyos-theming
 pkgver=1
 pkgrel=1
@@ -13,16 +12,17 @@ makedepends=('coreutils'
 depends=('char-white'
         'cachyos-fish-config'
         'nerd-fonts-fantasque-sans-mono'
-        'cachyos-nord-kde-theme-git'
-        'arch-kde-theme-git')
-install=$pkgname.install
+        'cachyos-emerald-kde-theme-git'
+        'arch-kde-theme-git'
+)
+install=.install
 conflicts=('kwin-scripts-window-colors')
 source=("git+$url.git")
 sha256sums=('SKIP')
 
 pkgver() {
-	cd "$srcdir/$pkgname"
-	printf "r%s.%s" "$(git rev-list --count HEAD)" "$(git rev-parse --short HEAD)"
+        cd "$srcdir/$pkgname"
+        printf "r%s.%s" "$(git rev-list --count HEAD)" "$(git rev-parse --short HEAD)"
 }
 package() {
 
