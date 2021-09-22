@@ -1,0 +1,30 @@
+# Maintainer: Vladislav Nepogodin <nepogodin.vlad@gmail.com>
+
+pkgname=cachyos-hello
+pkgver=0.6.7
+pkgrel=1
+pkgdesc='Welcome screen for CachyOS'
+arch=('x86_64')
+license=(GPLv3)
+url="https://gitlab.com/cachyos/cachyos-hello"
+depends=('gtkmm3' 'fmt')
+makedepends=('meson' 'git')
+source=("${pkgname}::git+$url.git")
+sha512sums=('SKIP')
+
+build() {
+  cd ${srcdir}/$pkgname
+
+  _cpuCount=$(grep -c -w ^processor /proc/cpuinfo)
+
+  meson --buildtype=release --prefix=/usr build
+
+  meson compile -C build --jobs $_cpuCount
+}
+
+package() {
+  cd ${srcdir}/$pkgname/build
+  DESTDIR="${pkgdir}" meson install
+}
+
+# vim:set sw=2 sts=2 et:
