@@ -7,7 +7,7 @@
 pkgname=cachy-browser
 _pkgname=Cachy
 __pkgname=cachy
-pkgver=92.0
+pkgver=93.0
 pkgrel=1
 pkgdesc="Community-maintained fork of Firefox, focused on privacy, security and freedom."
 arch=(x86_64 x86_64_v3)
@@ -125,65 +125,66 @@ ac_add_options --enable-optimize
 END
 
   # Gentoo patches
-  echo "---- Gentoo patches"
+  msg2 "---- Gentoo patches"
   patch -Np1 -i ${_patches_dir}/gentoo/0021-bmo-1516081-Disable-watchdog-during-PGO-builds.patch
   patch -Np1 -i ${_patches_dir}/gentoo/0029-LTO-Only-enable-LTO-for-Rust-when-complete-build-use.patch
 
   # Use more system libs
-  echo "---- Patching for system libs"
+  msg2 "---- Patching for system libs"
   patch -Np1 -i ${_patches_dir}/gentoo/0004-bmo-847568-Support-system-harfbuzz.patch
   patch -Np1 -i ${_patches_dir}/gentoo/0005-bmo-847568-Support-system-graphite2.patch
   patch -Np1 -i ${_patches_dir}/gentoo/0006-bmo-1559213-Support-system-av1.patch
 
-  # Remove some pre-installed addons that might be questionable
+
   echo "---- Librewolf patches"
+    msg2 "Remove some pre-installed addons that might be questionable"
   patch -Np1 -i ${_patches_dir}/remove_addons.patch
 
-  # Disable (some) megabar functionality
+    msg2 "Disable (some) megabar functionality"
   # Adapted from https://github.com/WesleyBranton/userChrome.css-Customizations
   patch -Np1 -i ${_patches_dir}/megabar.patch
 
   # Experimental
-  # Enable blur in searchbar
-  # patch -Np1 -i ${_patches_dir}/searchbar.patch
+    msg2 "Enable blur in searchbar"
+  patch -Np1 -i ${_patches_dir}/searchbar.patch
 
-  # Debian patch to enable global menubar
+    msg2 "Debian patch to enable global menubar"
   # disabled for the default build, as it seems to cause issues in some configurations
   # patch -Np1 -i ${_patches_dir}/unity-menubar.patch
 
-  # Disabling Pocket
+    msg2  "Disabling Pocket"
   patch -Np1 -i ${_patches_dir}/sed-patches/disable-pocket.patch
 
-  # remove mozilla vpn ads
+    msg2 "remove mozilla vpn ads"
   patch -Np1 -i ${_patches_dir}/mozilla-vpn-ad.patch
 
   # Remove Internal Plugin Certificates
   # patch -Np1 -i ${_patches_dir}/sed-patches/remove-internal-plugin-certs.patch
   # => breaks profiled builds since 90.0, it seems
 
-  # allow SearchEngines option in non-ESR builds
+    msg2"  # allow SearchEngines option in non-ESR builds"
   patch -Np1 -i ${_patches_dir}/sed-patches/allow-searchengines-non-esr.patch
 
-  # remove search extensions (experimental)
+    msg2"   # remove search extensions (experimental)"
   patch -Np1 -i ${_patches_dir}/search-config.patch
 
-  # stop some undesired requests (https://gitlab.com/librewolf-community/browser/common/-/issues/10)
+    msg2"   # stop some undesired requests (https://gitlab.com/librewolf-community/browser/common/-/issues/10)"
   patch -Np1 -i ${_patches_dir}/sed-patches/stop-undesired-requests.patch
 
-  # Assorted patches
+    msg2"   # Assorted patches"
   patch -Np1 -i ${_patches_dir}/context-menu.patch
   patch -Np1 -i ${_patches_dir}/browser-confvars.patch
   patch -Np1 -i ${_patches_dir}/urlbarprovider-interventions.patch
 
 
-  # allow overriding the color scheme light/dark preference with RFP
+    msg2"   # allow overriding the color scheme light/dark preference with RFP"
   patch -Np1 -i ${_patches_dir}/allow_dark_preference_with_rfp.patch
 
-  # fix an URL in 'about' dialog
+    msg2"   # fix an URL in 'about' dialog"
   patch -Np1 -i ${_patches_dir}/about-dialog.patch
 
-  # change some hardcoded directory strings that could lead to unnecessarily
-  # created directories
+    msg2"   # change some hardcoded directory strings that could lead to unnecessarily
+  # created directories"
 
   patch -Np1 -i ${_patches_dir}/mozilla_dirs.patch
 
