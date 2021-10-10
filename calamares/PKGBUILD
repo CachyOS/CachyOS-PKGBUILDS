@@ -1,8 +1,8 @@
 # Maintainer: Vladislav Nepogodin <nepogodin.vlad@gmail.com>
 # Contributor: Philip Müller <philm[at]manjaro[dog]org>
 
-pkgname=calamares
-pkgver=3.2.41.1
+pkgname=cachyos-calamares
+pkgver=3.2.44.3
 pkgrel=1
 pkgdesc='Distribution-independent installer framework'
 arch=('i686' 'x86_64')
@@ -13,7 +13,7 @@ conflicts=('calamares')
 provides=('calamares')
 depends=('kconfig' 'kcoreaddons' 'kiconthemes' 'ki18n' 'kio' 'solid' 'yaml-cpp' 'kpmcore' 'mkinitcpio-openswap'
          'boost-libs' 'ckbcomp' 'hwinfo' 'qt5-svg' 'polkit-qt5' 'gtk-update-icon-cache' 'plasma-framework'
-         'qt5-xmlpatterns' 'squashfs-tools' 'libpwquality' 'appstream-qt' 'icu')
+         'qt5-xmlpatterns' 'squashfs-tools' 'libpwquality' 'efibootmgr' 'icu')
 makedepends=('ninja' 'extra-cmake-modules' 'qt5-tools' 'qt5-translations' 'git' 'boost')
 backup=('usr/share/calamares/modules/bootloader.conf'
         'usr/share/calamares/modules/displaymanager.conf'
@@ -23,17 +23,13 @@ backup=('usr/share/calamares/modules/bootloader.conf'
 source=(settings_online.conf
         settings_offline.conf)
 source+=("calamares-$pkgver.tar.gz::$url/archive/v$pkgver.tar.gz")
-sha256sums=('371ff78c6ee634d82f906231c683a61c453e4771636436b11e163eb5a7d139bd'
-            'dedaea0190e1c20c9f95e02c7d5a601e7e9a0af618c8df5e46894d3c9afe6077'
-            'c963c6e6ed9893d9ec1008ecf471747193627fadee16b76491df6b653c8e4663')
+sha256sums=('e690da797a3ead0854be166ea6916c0e41f7d6bfefd95a231093f01e2035b428'
+            '9a72ed61815fc4dde8f1064bd7ee4449ff10355a81c7b4c12b40764dd86fdb9c'
+            '35bb60b5b85ab84a3b106bcd50d96d510441a4b973063011d062cbf4269d82c4')
 
 prepare() {
   cd ${srcdir}/calamares-${pkgver}
   sed -i -e 's/"Install configuration files" OFF/"Install configuration files" ON/' CMakeLists.txt
-
-  sed -i 's/\"mkinitcpio\", \"-p\", m_kernel/\"mkinitcpio\", \"-P\"/' src/modules/initcpio/InitcpioJob.cpp
-
-  sed -i "s?pacman_flags,?pacman_flags, \"--needed\",?" src/modules/packages/main.py
 
   # patches here
 
@@ -60,12 +56,14 @@ build() {
         -DCMAKE_INSTALL_PREFIX=/usr \
         -DCMAKE_INSTALL_LIBDIR=lib \
         -DWITH_PYTHONQT:BOOL=ON \
+        -DWITH_KF5DBus=OFF \
         -DBoost_NO_BOOST_CMAKE=ON \
-        -DSKIP_MODULES="tracking webview interactiveterminal \
-                        contextualprocess plymouthcfg dracut dracutlukscfg \
+        -DWEBVIEW_FORCE_WEBKIT=OFF \
+        -DSKIP_MODULES="tracking webview interactiveterminal initramfs \
+                        initramfscfg dracut dracutlukscfg \
                         dummyprocess dummypython dummycpp welcomeq \
-                        finishedq keyboardq localeq notesqml \
-                        usersq openrcdmcryptcfg dummypythonqt services-openrc"
+                        keyboardq localeq \
+                        dummypythonqt services-openrc"
   cmake --build build --parallel $_cpuCount
 }
 
@@ -73,14 +71,9 @@ package() {
   cd ${srcdir}/calamares-${pkgver}/build
   DESTDIR="${pkgdir}" cmake --build . --target install
 
-  # rename services-systemd back to services
-  mv "$pkgdir/usr/lib/calamares/modules/services-systemd" "$pkgdir/usr/lib/calamares/modules/services"
-  mv "$pkgdir/usr/share/calamares/modules/services-systemd.conf" "$pkgdir/usr/share/calamares/modules/services.conf"
-  sed -i -e 's/-systemd//' "$pkgdir/usr/lib/calamares/modules/services/module.desc"
-  cp ${srcdir}/settings_offline.conf "$pkgdir/usr/share/calamares/settings.conf"
+  #cp ${srcdir}/settings_offline.conf "$pkgdir/etc/calamares/settings.conf"
   cp ${srcdir}/settings_offline.conf "$pkgdir/usr/share/calamares/settings_offline.conf"
   cp ${srcdir}/settings_online.conf "$pkgdir/usr/share/calamares/settings_online.conf"
-  #sed -i -e "s/  - initramfs/#  - initramfs/g" "$pkgdir/usr/share/calamares/settings.conf"
 }
 
 # vim:set sw=2 sts=2 et:
