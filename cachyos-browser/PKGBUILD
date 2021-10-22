@@ -8,7 +8,7 @@ pkgname=cachy-browser
 _pkgname=Cachy
 __pkgname=cachy
 pkgver=93.0
-pkgrel=1
+pkgrel=2
 pkgdesc="Community-maintained fork of Firefox, focused on privacy, security and freedom."
 arch=(x86_64 x86_64_v3)
 license=(MPL GPL LGPL)
@@ -29,7 +29,7 @@ optdepends=('networkmanager: Location detection via available WiFi networks'
             'xdg-desktop-portal: Screensharing with Wayland')
 backup=('usr/lib/cachy-browser/cachy.cfg'
         'usr/lib/cachy-browser/distribution/policies.json')
-options=(!emptydirs !makeflags !strip)
+options=(!emptydirs !strip)
 _arch_svn=https://git.archlinux.org/svntogit/packages.git/plain/trunk
 # _common_tag="v90.0-1"
 _common_tag="v${pkgver}-${pkgrel}"
@@ -60,8 +60,16 @@ ac_add_options --enable-hardening
 ac_add_options --enable-rust-simd
 ac_add_options --with-ccache
 ac_add_options --enable-default-toolkit=cairo-gtk3-wayland
-export CC='clang'
-export CXX='clang++'
+export CC="clang --target=x86_64-pc-linux-gnu"
+export CXX="clang++ --target=x86_64-pc-linux-gnu"
+export LD=ld.lld
+export OBJCOPY=llvm-objcopy
+export RANLIB=llvm-ranlib
+export NM=llvm-nm
+export AR=llvm-ar
+export STRIP=llvm-strip
+
+
 
 # Branding
 ac_add_options --enable-update-channel=release
@@ -78,7 +86,7 @@ export MOZ_APP_REMOTINGNAME=${pkgname//-/}
 # System libraries
 ac_add_options --with-system-nspr
 ac_add_options --with-system-nss
-ac_add_options --with-system-libvpx
+# ac_add_options --with-system-libvpx
 ac_add_options --with-system-libevent
 ac_add_options --with-system-icu
 ac_add_options --with-system-zlib
