@@ -14,35 +14,36 @@ arch=(x86_64 x86_64_v3)
 license=(MPL GPL LGPL)
 url="https://cachyos.org"
 depends=(gtk3 libxt mime-types dbus-glib
-         ffmpeg nss ttf-font libpulse
-         aom harfbuzz graphite dav1d
-         libvpx libjpeg zlib icu libevent pipewire)
+  ffmpeg nss ttf-font libpulse
+  aom harfbuzz graphite dav1d
+libvpx libjpeg zlib icu libevent pipewire)
 makedepends=(unzip zip diffutils yasm mesa imake inetutils ccache
-             rust xorg-server-xwayland xorg-server-xvfb
-             autoconf2.13 clang llvm jack nodejs cbindgen nasm
-             python-setuptools python-psutil python-zstandard git binutils lld dump_syms)
+  rust xorg-server-xwayland xorg-server-xvfb
+  autoconf2.13 clang llvm jack nodejs cbindgen nasm
+python-setuptools python-psutil python-zstandard git binutils lld dump_syms)
 optdepends=('networkmanager: Location detection via available WiFi networks'
-            'libnotify: Notification integration'
-            'pulseaudio: Audio support'
-            'speech-dispatcher: Text-to-Speech'
-            'hunspell-en_US: Spell checking, American English'
-            'xdg-desktop-portal: Screensharing with Wayland')
+  'libnotify: Notification integration'
+  'pulseaudio: Audio support'
+  'speech-dispatcher: Text-to-Speech'
+  'hunspell-en_US: Spell checking, American English'
+'xdg-desktop-portal: Screensharing with Wayland')
 backup=('usr/lib/cachy-browser/cachy.cfg'
-        'usr/lib/cachy-browser/distribution/policies.json')
-options=(!emptydirs !strip)
+'usr/lib/cachy-browser/distribution/policies.json')
+options=(!emptydirs !strip !makeflags)
 _arch_svn=https://git.archlinux.org/svntogit/packages.git/plain/trunk
 # _common_tag="v90.0-1"
 _common_tag="v${pkgver}-${pkgrel}"
 _settings_tag='1.4'
 install=cachy-browser.install
 source=(https://archive.mozilla.org/pub/firefox/releases/$pkgver/source/firefox-$pkgver.source.tar.xz
-        $pkgname.desktop
-        "git+https://gitlab.com/cachyos/cachyos-browser-common.git"
-        "git+https://gitlab.com/cachyos/cachyos-browser-settings.git")
+  $pkgname.desktop
+  "use-mcpu-native-with-lto-pgo.patch"
+  "git+https://gitlab.com/cachyos/cachyos-browser-common.git"
+"git+https://gitlab.com/cachyos/cachyos-browser-settings.git")
 sha256sums=('23523af27631e24dd7dbab8429bcd0d828133e9d32b7ab343495c6e15912f6b5'
-            'c0786df2fd28409da59d0999083914a65e2097cda055c9c6c2a65825f156e29f'
-            'SKIP'
-            'SKIP')
+  'c0786df2fd28409da59d0999083914a65e2097cda055c9c6c2a65825f156e29f'
+  'SKIP'
+'SKIP')
 
 prepare() {
   mkdir -p mozbuild
@@ -57,11 +58,11 @@ mk_add_options MOZ_OBJDIR=${PWD@Q}/obj
 ac_add_options --prefix=/usr
 ac_add_options --enable-release
 ac_add_options --enable-hardening
-ac_add_options --enable-rust-simd
+#ac_add_options --enable-rust-simd
 ac_add_options --with-ccache
 ac_add_options --enable-default-toolkit=cairo-gtk3-wayland
-export CC="clang --target=x86_64-pc-linux-gnu"
-export CXX="clang++ --target=x86_64-pc-linux-gnu"
+export CC=clang
+export CXX=clang++
 export LD=ld.lld
 export OBJCOPY=llvm-objcopy
 export RANLIB=llvm-ranlib
@@ -145,56 +146,56 @@ END
 
 
   echo "---- Librewolf patches"
-    msg2 "Remove some pre-installed addons that might be questionable"
+  msg2 "Remove some pre-installed addons that might be questionable"
   patch -Np1 -i ${_patches_dir}/remove_addons.patch
 
-    msg2 "Disable (some) megabar functionality"
+  msg2 "Disable (some) megabar functionality"
   # Adapted from https://github.com/WesleyBranton/userChrome.css-Customizations
   patch -Np1 -i ${_patches_dir}/megabar.patch
 
   # Experimental
-    msg2 "Enable blur in searchbar"
-  patch -Np1 -i ${_patches_dir}/searchbar.patch
+  #  msg2 "Enable blur in searchbar"
+  #  patch -Np1 -i ${_patches_dir}/searchbar.patch
 
-    msg2 "Debian patch to enable global menubar"
+  msg2 "Debian patch to enable global menubar"
   # disabled for the default build, as it seems to cause issues in some configurations
   # patch -Np1 -i ${_patches_dir}/unity-menubar.patch
 
-    msg2  "Disabling Pocket"
+  msg2  "Disabling Pocket"
   patch -Np1 -i ${_patches_dir}/sed-patches/disable-pocket.patch
 
-    msg2 "remove mozilla vpn ads"
-  patch -Np1 -i ${_patches_dir}/mozilla-vpn-ad.patch
+  #  msg2 "remove mozilla vpn ads"#
+  #  patch -Np1 -i ${_patches_dir}/mozilla-vpn-ad.patch
 
   # Remove Internal Plugin Certificates
   # patch -Np1 -i ${_patches_dir}/sed-patches/remove-internal-plugin-certs.patch
   # => breaks profiled builds since 90.0, it seems
 
-    msg2"  # allow SearchEngines option in non-ESR builds"
+  msg2  "allow SearchEngines option in non-ESR builds"
   patch -Np1 -i ${_patches_dir}/sed-patches/allow-searchengines-non-esr.patch
 
-    msg2"   # remove search extensions (experimental)"
+  msg2  "remove search extensions (experimental)"
   patch -Np1 -i ${_patches_dir}/search-config.patch
 
-    msg2"   # stop some undesired requests (https://gitlab.com/librewolf-community/browser/common/-/issues/10)"
+  msg2  "stop some undesired requests (https://gitlab.com/librewolf-community/browser/common/-/issues/10)"
   patch -Np1 -i ${_patches_dir}/sed-patches/stop-undesired-requests.patch
 
-    msg2"   # Assorted patches"
+  msg2 "Assorted patches"
   patch -Np1 -i ${_patches_dir}/context-menu.patch
   patch -Np1 -i ${_patches_dir}/browser-confvars.patch
   patch -Np1 -i ${_patches_dir}/urlbarprovider-interventions.patch
 
 
-    msg2"   # allow overriding the color scheme light/dark preference with RFP"
+  msg2 "allow overriding the color scheme light/dark preference with RFP"
   patch -Np1 -i ${_patches_dir}/allow_dark_preference_with_rfp.patch
 
-    msg2"   # fix an URL in 'about' dialog"
+  msg2 "fix an URL in 'about' dialog"
   patch -Np1 -i ${_patches_dir}/about-dialog.patch
 
-    msg2"   # change some hardcoded directory strings that could lead to unnecessarily
-  # created directories"
-
-  patch -Np1 -i ${_patches_dir}/mozilla_dirs.patch
+  msg2 "change some hardcoded directory strings that could lead to unnecessarily
+  created directories"
+  patch -Np1 -i ../use-mcpu-native-with-lto-pgo.patch
+  #  patch -Np1 -i ${_patches_dir}/mozilla_dirs.patch
 
   rm -f ${srcdir}/cachyos-browser-common/source_files/mozconfig
   cp -r ${srcdir}/cachyos-browser-common/source_files/* ./
