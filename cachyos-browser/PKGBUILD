@@ -7,7 +7,8 @@
 pkgname=cachy-browser
 _pkgname=Cachy
 __pkgname=cachy
-pkgver=93.0
+srcname=94.0
+pkgver=94.0b4
 pkgrel=2
 pkgdesc="Community-maintained fork of Firefox, focused on privacy, security and freedom."
 arch=(x86_64 x86_64_v3)
@@ -37,18 +38,18 @@ _settings_tag='1.4'
 install=cachy-browser.install
 source=(https://archive.mozilla.org/pub/firefox/releases/$pkgver/source/firefox-$pkgver.source.tar.xz
   $pkgname.desktop
-  "git+https://gitlab.com/cachyos/cachyos-browser-common.git"
-"git+https://gitlab.com/cachyos/cachyos-browser-settings.git")
-sha256sums=('23523af27631e24dd7dbab8429bcd0d828133e9d32b7ab343495c6e15912f6b5'
+  "git+https://github.com/CachyOS/CachyOS-Browser-Settings.git"
+"git+https://github.com/CachyOS/CachyOS-Browser-Common.git")
+sha256sums=('9e51cdd44ad803265bbc66ab6f2f4c6e63be37137205812298c12a40c717fb36'
   'c0786df2fd28409da59d0999083914a65e2097cda055c9c6c2a65825f156e29f'
   'SKIP'
 'SKIP')
 
 prepare() {
   mkdir -p mozbuild
-  cd firefox-$pkgver
+  cd firefox-$srcname
 
-  local _patches_dir="${srcdir}/cachyos-browser-common/patches"
+  local _patches_dir="${srcdir}/CachyOS-Browser-Common/patches"
 
   cat >../mozconfig <<END
 ac_add_options --enable-application=browser
@@ -60,8 +61,13 @@ ac_add_options --enable-hardening
 #ac_add_options --enable-rust-simd
 ac_add_options --with-ccache
 ac_add_options --enable-default-toolkit=cairo-gtk3-wayland
-export CC=clang
-export CXX=clang++
+export CC='clang'
+export CXX='clang++'
+export RANLIB=llvm-ranlib
+export STRIP=llvm-strip
+export AR=llvm-ar
+export NM=llvm-nm
+export OBJCOPY='/usr/bin/llvm-objcopy'
 
 
 # Branding
@@ -145,6 +151,15 @@ END
   # Adapted from https://github.com/WesleyBranton/userChrome.css-Customizations
   patch -Np1 -i ${_patches_dir}/megabar.patch
 
+  # # Arch patches
+  echo "---- Arch patches"
+  patch -Np1 -i ${_patches_dir}/0001-arch.patch
+
+  # KDE patches (W. Rosenauer)
+  echo "---- Patching for KDE"
+  patch -Np1 -i ${_patches_dir}/kde/mozilla-nongnome-proxies.patch
+  patch -Np1 -i ${_patches_dir}/kde/mozilla-kde.patch
+
   # Experimental
   #  msg2 "Enable blur in searchbar"
   #  patch -Np1 -i ${_patches_dir}/searchbar.patch
@@ -158,6 +173,7 @@ END
 
   #  msg2 "remove mozilla vpn ads"#
   #  patch -Np1 -i ${_patches_dir}/mozilla-vpn-ad.patch
+
 
   # Remove Internal Plugin Certificates
   # patch -Np1 -i ${_patches_dir}/sed-patches/remove-internal-plugin-certs.patch
@@ -178,6 +194,7 @@ END
   patch -Np1 -i ${_patches_dir}/urlbarprovider-interventions.patch
 
 
+
   msg2 "allow overriding the color scheme light/dark preference with RFP"
   patch -Np1 -i ${_patches_dir}/allow_dark_preference_with_rfp.patch
 
@@ -188,13 +205,19 @@ END
   created directories"
   #  patch -Np1 -i ${_patches_dir}/mozilla_dirs.patch
 
-  rm -f ${srcdir}/cachyos-browser-common/source_files/mozconfig
-  cp -r ${srcdir}/cachyos-browser-common/source_files/* ./
+  msg2 "fix an URL in 'about' dialog"
+  patch -Np1 -i ${_patches_dir}/fix-wayland.patch
+
+  #  patch -Np1 -i ${_patches_dir}/use-mcpu-native-with-lto-pgo.patch
+
+  rm -f ${srcdir}/CachyOS-Browser-Common/source_files/mozconfig
+
+  cp -r ${srcdir}/CachyOS-Browser-Common/source_files/* ./
 }
 
 
 build() {
-  cd firefox-$pkgver
+  cd firefox-$srcname
 
   export MOZ_NOSPAM=1
   export MOZBUILD_STATE_PATH="$srcdir/mozbuild"
@@ -252,7 +275,7 @@ END
 }
 
 package() {
-  cd firefox-$pkgver
+  cd firefox-$srcname
   DESTDIR="$pkgdir" ./mach install
   rm "$pkgdir"/usr/lib/${pkgname}/pingsender
 
@@ -269,8 +292,8 @@ END
 
   # cd ${srcdir}/settings
   # git checkout ${_settings_commit}
-  cd ${srcdir}/firefox-$pkgver
-  cp -r ${srcdir}/cachyos-browser-settings/* ${pkgdir}/usr/lib/${pkgname}/
+  cd ${srcdir}/firefox-$srcname
+  cp -r ${srcdir}/CachyOS-Browser-Common/* ${pkgdir}/usr/lib/${pkgname}/
 
   local distini="$pkgdir/usr/lib/$pkgname/distribution/distribution.ini"
   install -Dvm644 /dev/stdin "$distini" <<END
