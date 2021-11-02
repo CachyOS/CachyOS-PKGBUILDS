@@ -7,9 +7,8 @@
 pkgname=cachy-browser
 _pkgname=Cachy
 __pkgname=cachy
-srcname=94.0
-pkgver=94.0b4
-pkgrel=2
+pkgver=94.0
+pkgrel=1
 pkgdesc="Community-maintained fork of Firefox, focused on privacy, security and freedom."
 arch=(x86_64 x86_64_v3)
 license=(MPL GPL LGPL)
@@ -47,7 +46,7 @@ sha256sums=('9e51cdd44ad803265bbc66ab6f2f4c6e63be37137205812298c12a40c717fb36'
 
 prepare() {
   mkdir -p mozbuild
-  cd firefox-$srcname
+  cd firefox-$pkgver
 
   local _patches_dir="${srcdir}/CachyOS-Browser-Common/patches"
 
@@ -67,7 +66,6 @@ export RANLIB=llvm-ranlib
 export STRIP=llvm-strip
 export AR=llvm-ar
 export NM=llvm-nm
-export OBJCOPY='/usr/bin/llvm-objcopy'
 
 
 # Branding
@@ -85,7 +83,7 @@ export MOZ_APP_REMOTINGNAME=${pkgname//-/}
 # System libraries
 ac_add_options --with-system-nspr
 ac_add_options --with-system-nss
-# ac_add_options --with-system-libvpx
+ac_add_options --with-system-libvpx
 ac_add_options --with-system-libevent
 ac_add_options --with-system-icu
 ac_add_options --with-system-zlib
@@ -217,7 +215,7 @@ END
 
 
 build() {
-  cd firefox-$srcname
+  cd firefox-$pkgver
 
   export MOZ_NOSPAM=1
   export MOZBUILD_STATE_PATH="$srcdir/mozbuild"
@@ -275,7 +273,7 @@ END
 }
 
 package() {
-  cd firefox-$srcname
+  cd firefox-$pkgver
   DESTDIR="$pkgdir" ./mach install
   rm "$pkgdir"/usr/lib/${pkgname}/pingsender
 
@@ -292,7 +290,7 @@ END
 
   # cd ${srcdir}/settings
   # git checkout ${_settings_commit}
-  cd ${srcdir}/firefox-$srcname
+  cd ${srcdir}/firefox-$pkgver
   cp -r ${srcdir}/CachyOS-Browser-Common/* ${pkgdir}/usr/lib/${pkgname}/
 
   local distini="$pkgdir/usr/lib/$pkgname/distribution/distribution.ini"
