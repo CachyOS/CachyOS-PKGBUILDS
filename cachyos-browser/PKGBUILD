@@ -14,21 +14,21 @@ arch=(x86_64 x86_64_v3)
 license=(MPL GPL LGPL)
 url="https://cachyos.org"
 depends=(gtk3 libxt mime-types dbus-glib
-  ffmpeg nss ttf-font libpulse
-  aom harfbuzz graphite dav1d
-libvpx libjpeg zlib icu libevent pipewire)
+         ffmpeg nss ttf-font libpulse
+         aom harfbuzz graphite dav1d
+         libvpx libjpeg zlib icu libevent pipewire)
 makedepends=(unzip zip diffutils yasm mesa imake inetutils ccache
-  rust xorg-server-xwayland xorg-server-xvfb
-  autoconf2.13 clang llvm jack nodejs cbindgen nasm
-python-setuptools python-psutil python-zstandard git binutils lld dump_syms)
+             rust xorg-server-xwayland xorg-server-xvfb
+             autoconf2.13 clang llvm jack nodejs cbindgen nasm
+             python-setuptools python-psutil python-zstandard git binutils lld dump_syms)
 optdepends=('networkmanager: Location detection via available WiFi networks'
-  'libnotify: Notification integration'
-  'pulseaudio: Audio support'
-  'speech-dispatcher: Text-to-Speech'
-  'hunspell-en_US: Spell checking, American English'
-'xdg-desktop-portal: Screensharing with Wayland')
+            'libnotify: Notification integration'
+            'pulseaudio: Audio support'
+            'speech-dispatcher: Text-to-Speech'
+            'hunspell-en_US: Spell checking, American English'
+            'xdg-desktop-portal: Screensharing with Wayland')
 backup=('usr/lib/cachy-browser/cachy.cfg'
-'usr/lib/cachy-browser/distribution/policies.json')
+        'usr/lib/cachy-browser/distribution/policies.json')
 options=(!emptydirs !strip !makeflags)
 _arch_svn=https://git.archlinux.org/svntogit/packages.git/plain/trunk
 # _common_tag="v90.0-1"
@@ -36,19 +36,19 @@ _common_tag="v${pkgver}-${pkgrel}"
 _settings_tag='1.4'
 install=cachy-browser.install
 source=(https://archive.mozilla.org/pub/firefox/releases/$pkgver/source/firefox-$pkgver.source.tar.xz
-  $pkgname.desktop
-  "git+https://github.com/CachyOS/CachyOS-Browser-Settings.git"
-"git+https://github.com/CachyOS/CachyOS-Browser-Common.git")
-sha256sums=('9e51cdd44ad803265bbc66ab6f2f4c6e63be37137205812298c12a40c717fb36'
-  'c0786df2fd28409da59d0999083914a65e2097cda055c9c6c2a65825f156e29f'
-  'SKIP'
-'SKIP')
+        $pkgname.desktop
+        "git+https://github.com/cachyos/cachyos-browser-settings.git"
+        "git+https://github.com/cachyos/cachyos-browser-common.git")
+sha256sums=('b7bb8c5fcc74a74e9d2b55d1e9415b891305fe86520fb854cec25024d7e5de67'
+            'c0786df2fd28409da59d0999083914a65e2097cda055c9c6c2a65825f156e29f'
+            'SKIP'
+            'SKIP')
 
 prepare() {
   mkdir -p mozbuild
   cd firefox-$pkgver
 
-  local _patches_dir="${srcdir}/CachyOS-Browser-Common/patches"
+  local _patches_dir="${srcdir}/cachyos-browser-common/patches"
 
   cat >../mozconfig <<END
 ac_add_options --enable-application=browser
@@ -57,16 +57,11 @@ mk_add_options MOZ_OBJDIR=${PWD@Q}/obj
 ac_add_options --prefix=/usr
 ac_add_options --enable-release
 ac_add_options --enable-hardening
-#ac_add_options --enable-rust-simd
+ac_add_options --enable-rust-simd
 ac_add_options --with-ccache
 ac_add_options --enable-default-toolkit=cairo-gtk3-wayland
 export CC='clang'
 export CXX='clang++'
-export RANLIB=llvm-ranlib
-export STRIP=llvm-strip
-export AR=llvm-ar
-export NM=llvm-nm
-
 
 # Branding
 ac_add_options --enable-update-channel=release
@@ -164,13 +159,13 @@ END
 
   msg2 "Debian patch to enable global menubar"
   # disabled for the default build, as it seems to cause issues in some configurations
-  # patch -Np1 -i ${_patches_dir}/unity-menubar.patch
+  patch -Np1 -i ${_patches_dir}/unity-menubar.patch
 
   msg2  "Disabling Pocket"
   patch -Np1 -i ${_patches_dir}/sed-patches/disable-pocket.patch
 
-  #  msg2 "remove mozilla vpn ads"#
-  #  patch -Np1 -i ${_patches_dir}/mozilla-vpn-ad.patch
+  msg2 "remove mozilla vpn ads"
+  patch -Np1 -i ${_patches_dir}/mozilla-vpn-ad.patch
 
 
   # Remove Internal Plugin Certificates
@@ -199,18 +194,16 @@ END
   msg2 "fix an URL in 'about' dialog"
   patch -Np1 -i ${_patches_dir}/about-dialog.patch
 
-  msg2 "change some hardcoded directory strings that could lead to unnecessarily
-  created directories"
-  #  patch -Np1 -i ${_patches_dir}/mozilla_dirs.patch
+  msg2 "change some hardcoded directory strings that could lead to unnecessarily created directories"
+  #patch -Np1 -i ${_patches_dir}/mozilla_dirs.patch
 
   msg2 "fix an URL in 'about' dialog"
   patch -Np1 -i ${_patches_dir}/fix-wayland.patch
 
-  #  patch -Np1 -i ${_patches_dir}/use-mcpu-native-with-lto-pgo.patch
+  #patch -Np1 -i ${_patches_dir}/use-mcpu-native-with-lto-pgo.patch
 
-  rm -f ${srcdir}/CachyOS-Browser-Common/source_files/mozconfig
-
-  cp -r ${srcdir}/CachyOS-Browser-Common/source_files/* ./
+  rm -f ${srcdir}/cachyos-browser-common/source_files/mozconfig
+  cp -r ${srcdir}/cachyos-browser-common/source_files/* ./
 }
 
 
@@ -291,7 +284,7 @@ END
   # cd ${srcdir}/settings
   # git checkout ${_settings_commit}
   cd ${srcdir}/firefox-$pkgver
-  cp -r ${srcdir}/CachyOS-Browser-Common/* ${pkgdir}/usr/lib/${pkgname}/
+  cp -r ${srcdir}/cachyos-browser-common/* ${pkgdir}/usr/lib/${pkgname}/
 
   local distini="$pkgdir/usr/lib/$pkgname/distribution/distribution.ini"
   install -Dvm644 /dev/stdin "$distini" <<END
