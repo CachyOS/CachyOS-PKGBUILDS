@@ -7,7 +7,7 @@
 pkgname=cachy-browser
 _pkgname=Cachy
 __pkgname=cachy
-pkgver=94.0.1
+pkgver=94.0.2
 pkgrel=1
 pkgdesc="Community-maintained fork of Firefox, focused on privacy, security and freedom."
 arch=(x86_64 x86_64_v3)
@@ -39,7 +39,7 @@ source=(https://archive.mozilla.org/pub/firefox/releases/$pkgver/source/firefox-
         $pkgname.desktop
         "git+https://github.com/cachyos/cachyos-browser-settings.git"
         "git+https://github.com/cachyos/cachyos-browser-common.git")
-sha256sums=('b7bb8c5fcc74a74e9d2b55d1e9415b891305fe86520fb854cec25024d7e5de67'
+sha256sums=('8d2169122892161e26fe4cc45d61781513181dee1f1981be42427f88092c8d06'
             'c0786df2fd28409da59d0999083914a65e2097cda055c9c6c2a65825f156e29f'
             'SKIP'
             'SKIP')
@@ -128,8 +128,9 @@ END
   msg2 "---- Gentoo patches"
   patch -Np1 -i ${_patches_dir}/gentoo/0021-bmo-1516081-Disable-watchdog-during-PGO-builds.patch
   patch -Np1 -i ${_patches_dir}/gentoo/0029-LTO-Only-enable-LTO-for-Rust-when-complete-build-use.patch
-
-  # Use more system libs
+  patch -Np1 -i ${_patches_dir}/arch/0001-arch.patch
+  patch -Np1 -i ${_patches_dir}/arch/0002-arch.patch  
+# Use more system libs
   msg2 "---- Patching for system libs"
   patch -Np1 -i ${_patches_dir}/gentoo/0004-bmo-847568-Support-system-harfbuzz.patch
   patch -Np1 -i ${_patches_dir}/gentoo/0005-bmo-847568-Support-system-graphite2.patch
@@ -138,7 +139,7 @@ END
   # upstream Arch fix
   # https://bugzilla.mozilla.org/show_bug.cgi?id=1530052
   echo "---- Arch patches"
-  patch -Np1 -i ${_patches_dir}/0001-arch.patch
+#  patch -Np1 -i ${_patches_dir}/0001-arch.patch
 
   echo "---- Librewolf patches"
   msg2 "Remove some pre-installed addons that might be questionable"
