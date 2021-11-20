@@ -4,7 +4,8 @@
 pkgname=cachyos-iridescent-kde
 _themeName=cachyos-iridescent-kde
 _gitname=cachyos-iridescent-kde
-pkgver=r2.38b6a4e
+_srcname=cachyos-iridescent-kde
+pkgver=r2.16aa352
 pkgrel=1
 pkgdesc="CachyOS cachyos-iridescent-kde"
 arch=('any')
@@ -14,6 +15,7 @@ optdepends=('plasma-desktop: for included plasma theme')
 makedepends=('git')
 source=("git+${url}.git")
 sha256sums=('SKIP')
+groups=(cachyos)
 pkgver() {
    cd ${_gitname}
    printf "r%s.%s" "$(git rev-list --count HEAD)" "$(git rev-parse --short HEAD)"
@@ -36,12 +38,12 @@ package() {
    # color scheme
    cp -r "${srcdir}/${_gitname}/color-schemes"/* "${pkgdir}/usr/share/color-schemes"
    # desktop theme
-   cp -r "${srcdir}/${_gitname}/plasma/desktoptheme"/${_themeName}* "${pkgdir}/usr/share/plasma/desktoptheme"
+   cp -r "${srcdir}/${_gitname}/plasma/desktoptheme"/* "${pkgdir}/usr/share/plasma/desktoptheme"
 #   cp -r "${srcdir}/${_gitname}/plasma/desktoptheme/icons" "${pkgdir}/usr/share/plasma/desktoptheme/${_themeName}"
 #   cp -r "${srcdir}/${_gitname}/plasma/desktoptheme/icons" "${pkgdir}/usr/share/plasma/desktoptheme/${_themeName}-alt"
 #   cp -r "${srcdir}/${_gitname}/plasma/desktoptheme/icons" "${pkgdir}/usr/share/plasma/desktoptheme/${_themeName}-dark"
    # look and feel
-   cp -r "${srcdir}/${_gitname}/plasma/look-and-feel"/* "${pkgdir}/usr/share/plasma/look-and-feel"
+   cp -r "${srcdir}/${_gitname}/plasma/look-and-feel"/ "${pkgdir}/usr/share/plasma/look-and-feel"
    # wallpaper
  #  cp -r "${srcdir}/${_gitname}/wallpapers"/*  "${pkgdir}/usr/share/wallpapers"
 #   # sddm
