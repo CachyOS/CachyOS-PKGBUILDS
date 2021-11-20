@@ -1,0 +1,56 @@
+#!/bin/bash
+
+# Avoid unnecessary reboots: don't notify if an updated package is
+# - not currently running (e.g. alternative kernel)
+# - not in use (e.g. alternative driver)
+
+RunningKernel() {
+    cat /proc/cmdline | sed 's|.*/vmlinuz-\(linux[a-z0-9-]*\) .*|\1|'
+}
+
+Main() {
+    local targets=$(tee /dev/null)  # targets from the hook (stdin)
+    local target
+    local notify=no
+    local runningKernel="$(RunningKernel)"
+
+    for target in $targets ; do
+        case "$target" in
+            linux | linux-lts | linux-zen | linux-hardened | linux-lts?? | linux-lts???)
+                # Note: only official and older LTS kernels are checked.
+                if [[ "$target" = "$runningKernel" ]] ; then
+                    notify=yes
+                    break
+                fi
+                ;;
+            nvidia)
+                if [[ "$runningKernel" = "linux" ]] ; then
+                    notify=yes
+                    break
+                fi
+                ;;
+            nvidia-lts)
+                if [[ "$runningKernel" = "linux-lts" ]] ; then
+                    notify=yes
+                    break
+                fi
+                ;;
+            btrfs-progs)
+                if [[ -n "$(/usr/bin/df -hT | awk '{print $2}' | grep -w btrfs)" ]] ; then
+                    notify=yes
+                    break
+                fi
+                ;;
+            *)
+                notify=yes
+                break
+                ;;
+        esac
+    done
+
+    if [[ "$notify" = "yes" ]] ; then
+        /usr/bin/cachyos-reboot-required
+    fi
+}
+
+Main "$@"

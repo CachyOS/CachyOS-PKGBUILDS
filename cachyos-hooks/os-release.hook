@@ -1,0 +1,10 @@
+[Trigger]
+Operation = Install
+Operation = Upgrade
+Type = Package
+Target = filesystem
+
+[Action]
+Description = Add Cachy OS specific config.
+When = PostTransaction
+Exec = /usr/bin/cachyos-hooks-runner os-release
