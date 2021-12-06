@@ -7,7 +7,7 @@
 pkgname=cachy-browser
 _pkgname=Cachy
 __pkgname=cachy
-pkgver=94.0.2
+pkgver=95.0
 pkgrel=2
 pkgdesc="Community-maintained fork of Firefox, focused on privacy, security and freedom."
 arch=(x86_64 x86_64_v3)
@@ -20,7 +20,8 @@ depends=(gtk3 libxt mime-types dbus-glib
 makedepends=(unzip zip diffutils yasm mesa imake inetutils ccache
              rust xorg-server-xwayland xorg-server-xvfb
              autoconf2.13 clang llvm jack nodejs cbindgen nasm
-             python-setuptools python-psutil python-zstandard git binutils lld dump_syms)
+             python-setuptools python-psutil python-zstandard git binutils lld dump_syms
+             wasi-compiler-rt wasi-libc wasi-libc++ wasi-libc++abi)
 optdepends=('networkmanager: Location detection via available WiFi networks'
             'libnotify: Notification integration'
             'pulseaudio: Audio support'
@@ -40,7 +41,7 @@ source=(https://archive.mozilla.org/pub/firefox/releases/$pkgver/source/firefox-
         $pkgname.desktop
         "git+https://github.com/cachyos/cachyos-browser-settings.git"
         "git+https://github.com/cachyos/cachyos-browser-common.git")
-sha256sums=('8d2169122892161e26fe4cc45d61781513181dee1f1981be42427f88092c8d06'
+sha256sums=('7fa3e43f6ec710b2ebba0e99db713a56d13d85f1f23c4a1399bb594fd74864de'
             'c0786df2fd28409da59d0999083914a65e2097cda055c9c6c2a65825f156e29f'
             'SKIP'
             'SKIP')
@@ -61,6 +62,7 @@ ac_add_options --enable-hardening
 ac_add_options --enable-rust-simd
 ac_add_options --with-ccache
 ac_add_options --enable-default-toolkit=cairo-gtk3-wayland
+ac_add_options --with-wasi-sysroot=/usr/share/wasi-sysroot
 export CC='clang'
 export CXX='clang++'
 
@@ -129,9 +131,7 @@ END
   msg2 "---- Gentoo patches"
   patch -Np1 -i ${_patches_dir}/gentoo/0021-bmo-1516081-Disable-watchdog-during-PGO-builds.patch
   patch -Np1 -i ${_patches_dir}/gentoo/0029-LTO-Only-enable-LTO-for-Rust-when-complete-build-use.patch
-  patch -Np1 -i ${_patches_dir}/arch/0001-arch.patch
-  patch -Np1 -i ${_patches_dir}/arch/0002-arch.patch
-# Use more system libs
+  # Use more system libs
   msg2 "---- Patching for system libs"
   patch -Np1 -i ${_patches_dir}/gentoo/0004-bmo-847568-Support-system-harfbuzz.patch
   patch -Np1 -i ${_patches_dir}/gentoo/0005-bmo-847568-Support-system-graphite2.patch
@@ -140,7 +140,7 @@ END
   # upstream Arch fix
   # https://bugzilla.mozilla.org/show_bug.cgi?id=1530052
   echo "---- Arch patches"
-#  patch -Np1 -i ${_patches_dir}/0001-arch.patch
+  patch -Np1 -i ${_patches_dir}/arch/0001-arch.patch
 
   echo "---- Librewolf patches"
   msg2 "Remove some pre-installed addons that might be questionable"
