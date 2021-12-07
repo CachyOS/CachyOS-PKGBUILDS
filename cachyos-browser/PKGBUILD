@@ -15,7 +15,7 @@ license=(MPL GPL LGPL)
 url="https://cachyos.org"
 depends=(gtk3 libxt mime-types dbus-glib
          ffmpeg nss ttf-font libpulse
-         aom harfbuzz graphite dav1d
+         aom harfbuzz graphite
          libvpx libjpeg zlib icu libevent pipewire)
 makedepends=(unzip zip diffutils yasm mesa imake inetutils ccache
              rust xorg-server-xwayland xorg-server-xvfb
@@ -88,7 +88,7 @@ ac_add_options --with-system-zlib
 ac_add_options --with-system-jpeg
 ac_add_options --with-system-harfbuzz
 ac_add_options --with-system-graphite2
-ac_add_options --with-system-av1
+#ac_add_options --with-system-av1
 
 # Features
 ac_add_options --enable-pulseaudio
@@ -130,7 +130,14 @@ END
   # Gentoo patches
   msg2 "---- Gentoo patches"
   patch -Np1 -i ${_patches_dir}/gentoo/0021-bmo-1516081-Disable-watchdog-during-PGO-builds.patch
-  patch -Np1 -i ${_patches_dir}/gentoo/0029-LTO-Only-enable-LTO-for-Rust-when-complete-build-use.patch
+  patch -Np1 -i ${_patches_dir}/gentoo/0026-LTO-Only-enable-LTO-for-Rust-when-complete-build-use.patch
+  patch -Np1 -i ${_patches_dir}/gentoo/0002-Fortify-sources-properly.patch
+  patch -Np1 -i ${_patches_dir}/gentoo/0008-bmo-878089-Don-t-fail-when-TERM-is-not-set.patch
+  patch -Np1 -i ${_patches_dir}/gentoo/0022-bmo-1196777-Set-GDK_FOCUS_CHANGE_MASK.patch
+  patch -Np1 -i ${_patches_dir}/gentoo/0027-Make-elfhack-use-toolchain.patch
+  patch -Np1 -i ${_patches_dir}/gentoo/0029-Enable-FLAC-on-platforms-without-ffvpx-via-ffmpeg.patch
+  patch -Np1 -i ${_patches_dir}/gentoo/0030-bmo-1670333-OpenH264-Fix-decoding-if-it-starts-on-no.patch
+  patch -Np1 -i ${_patches_dir}/gentoo/0031-bmo-1663844-OpenH264-Allow-using-OpenH264-GMP-decode.patch
   # Use more system libs
   msg2 "---- Patching for system libs"
   patch -Np1 -i ${_patches_dir}/gentoo/0004-bmo-847568-Support-system-harfbuzz.patch
