@@ -8,7 +8,7 @@ pkgname=cachy-browser
 _pkgname=Cachy
 __pkgname=cachy
 pkgver=95.0
-pkgrel=2
+pkgrel=3
 pkgdesc="Community-maintained fork of Firefox, focused on privacy, security and freedom."
 arch=(x86_64 x86_64_v3)
 license=(MPL GPL LGPL)
@@ -208,6 +208,7 @@ END
   msg2 "fix an URL in 'about' dialog"
   patch -Np1 -i ${_patches_dir}/fix-wayland.patch
 
+  patch -Np1 -i ${_patches_dir}/1745560-Add-missing-stub-for-wl_proxy_marshal_flags.patch
   #patch -Np1 -i ${_patches_dir}/use-mcpu-native-with-lto-pgo.patch
 
   # ui patches
