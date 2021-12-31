@@ -1,32 +1,35 @@
-# Maintainer: Nikita Almakov <nikita.almakov@gmail.com>
+# Maintainer: Michael Bolden <me@sm9.dev>
 
-pkgname=rate-mirrors
-pkgver=0.6.4
+pkgname=cachyos-rate-mirrors
+pkgver=1
 pkgrel=1
-pkgdesc="Everyday-use client-side map-aware mirror ranking tool"
-url="https://github.com/cachyos/rate-mirrors"
-license=('custom')
-options=(!lto)
-source=("${pkgname}-${pkgver}.tar.gz::https://github.com/cachyos/${pkgname}/archive/v${pkgver}.tar.gz")
-arch=('x86_64')
-depends=('gcc-libs')
 groups=(cachyos)
-makedepends=('cargo')
-sha512sums=('f982e1e8dcdf2f0219e62395e00320ac944cf613d057976732f3f1aa426a9f8109d0f33df4888994d116cb26a7169d6b3b89a8cfb932c74a21d4d379c4a25737')
+arch=('any')
+url="https://raw.githubusercontent.com/CachyOS/$pkgname/master"
+license=('GPL')
+pkgdesc='CachyOS - Rate mirrors service'
+source=("git+https://github.com/CachyOS/$pkgname")
+install=$pkgname.install
 
-build() {
-  cd "$pkgname-$pkgver"
+sha512sums=('e88349ba1a03c782aa890da28db0b3c0c3093038d17636ccd93f7629b69f16a0596f5e6a3d91da33ea98ac7f2e5148ab7b23f17b8f9ac9b500ce4a9c147eb531'
+            'b8bdb250c56e216440ff1aa7f258a66a420f4891c184ae38566abaeec927a8495e2c16e6ab14ab39e20588226640647a238fb65f2ea6539f1202fd9ad9adb486'
+            'f6845f70044889b6d48a58c10a5679c55bcbb2ec3128327e7f0f67d61c26eab0672c22fb2dea3c71ef81578521ea1fee3e2879534bcdde875b5c5af88c245536'
+            '46ffef592da142cdf1980fff4380340cc7cf52e32125b3eee677af3d0fc8fceb554fd074fa7d9827453142652a05dde8ae0197fa45f4b71f334ba558cbb5c83d')
 
-  export RUSTUP_TOOLCHAIN=nightly
-  export CARGO_TARGET_DIR=target
-  cargo build --release --locked
-}
+depends=(
+    'rate-mirrors'
+)
+
+source=(
+  $url/usr/bin/$pkgname
+  $url/usr/lib/systemd/system/$pkgname.service
+  $url/usr/lib/systemd/system/$pkgname.timer
+  $url/usr/share/libalpm/hooks/$pkgname.hook
+)
 
 package() {
-  cd "$pkgname-$pkgver"
-
-  install -Dm755 "target/release/rate_mirrors" "$pkgdir/usr/bin/${pkgname}"
-  install -Dm644 "LICENSE" "$pkgdir/usr/share/licenses/${pkgname}/LICENSE"
+  install -Dm755 "$pkgname" "$pkgdir/usr/bin/$pkgname"
+  install -Dm644 "$pkgname.service" "$pkgdir/usr/lib/systemd/system/$pkgname.service"
+  install -Dm644 "$pkgname.timer" "$pkgdir/usr/lib/systemd/system/$pkgname.timer"
+  install -Dm644 "$pkgname.hook" "$pkgdir/usr/share/libalpm/hooks/$pkgname.hook"
 }
-
-#vim: syntax=sh

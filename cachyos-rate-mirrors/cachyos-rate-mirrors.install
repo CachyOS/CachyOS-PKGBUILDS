@@ -1,0 +1,9 @@
+post_install() {
+  systemctl enable cachyos-rate-mirrors.timer
+  systemctl disable reflector.timer
+}
+
+post_upgrade() {
+  systemctl enable cachyos-rate-mirrors.timer
+  systemctl disable reflector.timer
+}
