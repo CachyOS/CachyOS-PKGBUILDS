@@ -1,56 +1,27 @@
 #!/bin/bash
 
-export TMPFILE="$(mktemp)";
+TMPFILE="$(mktemp)";
 
 sudo true;
 
 function rateArch() {
-	echoGreen "Rating Arch mirrors..."
-
     rate-mirrors --concurrency=40 --save=$TMPFILE arch \
         && sudo rm /etc/pacman.d/mirrorlist \
         && sudo mv $TMPFILE /etc/pacman.d/mirrorlist
 }
 
 function rateCachyOS() {
-	echoGreen "Rating CachyOS mirrors..."
-
     rate-mirrors --concurrency=40 --save=$TMPFILE cachyos \
         && sudo rm /etc/pacman.d/cachyos-mirrorlist \
         && sudo mv $TMPFILE /etc/pacman.d/cachyos-mirrorlist
 }
 
 function rateCachyOSV3() {
-	echoGreen "Rating CachyOS-v3 mirrors..."
-
-    test -f /etc/pacman.d/cachyos-v3-mirrorlist &&
     rate-mirrors --concurrency=40 --save=$TMPFILE cachyos --arch=x86_64_v3 \
         && sudo rm /etc/pacman.d/cachyos-v3-mirrorlist \
         && sudo mv $TMPFILE /etc/pacman.d/cachyos-v3-mirrorlist
 }
 
-function echoGreen() {
-	echo -e "\\e[32m$*\\e[0m"
-}
-
-while [[ $# -gt 0 ]]; do
-	keys="$1"
-	case $keys in
-	-a | --arch)
-        rateArch;
-		shift
-		;;
-	-c | --cachyos)
-        rateCachyOS
-		shift
-		;;
-	-cv3 | --cachyosv3)
-        rateCachyOSV3
-		shift
-		;;
-	*)
-		echo "Unknown arg $1, use -h for help"
-		exit
-		;;
-	esac
-done
+rateArch
+rateCachyOS
+rateCachyOSV3
