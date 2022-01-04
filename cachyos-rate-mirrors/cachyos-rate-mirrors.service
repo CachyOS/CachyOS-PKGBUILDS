@@ -1,0 +1,8 @@
+[Unit]
+Description=Refresh arch / cachyos mirror lists
+Requires=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/bin/bash -c '/usr/bin/cachyos-rate-mirrors -a -c -cv3' > /dev/null 2>&1

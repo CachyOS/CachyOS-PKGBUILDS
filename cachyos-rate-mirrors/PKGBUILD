@@ -2,30 +2,20 @@
 
 pkgname=cachyos-rate-mirrors
 pkgver=1
-pkgrel=1
+pkgrel=2
 groups=(cachyos)
 arch=('any')
-url="https://raw.githubusercontent.com/CachyOS/$pkgname/master"
+url="https://github.com/CachyOS"
 license=('GPL')
 pkgdesc='CachyOS - Rate mirrors service'
-source=("git+https://github.com/CachyOS/$pkgname")
 install=$pkgname.install
-
-sha512sums=('e88349ba1a03c782aa890da28db0b3c0c3093038d17636ccd93f7629b69f16a0596f5e6a3d91da33ea98ac7f2e5148ab7b23f17b8f9ac9b500ce4a9c147eb531'
-            'b8bdb250c56e216440ff1aa7f258a66a420f4891c184ae38566abaeec927a8495e2c16e6ab14ab39e20588226640647a238fb65f2ea6539f1202fd9ad9adb486'
-            'f6845f70044889b6d48a58c10a5679c55bcbb2ec3128327e7f0f67d61c26eab0672c22fb2dea3c71ef81578521ea1fee3e2879534bcdde875b5c5af88c245536'
-            '46ffef592da142cdf1980fff4380340cc7cf52e32125b3eee677af3d0fc8fceb554fd074fa7d9827453142652a05dde8ae0197fa45f4b71f334ba558cbb5c83d')
-
-depends=(
-    'rate-mirrors'
-)
-
 source=(
-  $url/usr/bin/$pkgname
-  $url/usr/lib/systemd/system/$pkgname.service
-  $url/usr/lib/systemd/system/$pkgname.timer
-  $url/usr/share/libalpm/hooks/$pkgname.hook
+  $pkgname
+  $pkgname.service
+  $pkgname.timer
+  $pkgname.hook
 )
+
 
 package() {
   install -Dm755 "$pkgname" "$pkgdir/usr/bin/$pkgname"
@@ -33,3 +23,9 @@ package() {
   install -Dm644 "$pkgname.timer" "$pkgdir/usr/lib/systemd/system/$pkgname.timer"
   install -Dm644 "$pkgname.hook" "$pkgdir/usr/share/libalpm/hooks/$pkgname.hook"
 }
+
+
+md5sums=('0aaf4af96fda2bf45948a618cb1ce951'
+         'ceef323e04228a2979f19e52b81d2813'
+         '9f7fc4330c82f177cf5c46ea7460155c'
+         'cad6941c10ff483add89264c46008064')
