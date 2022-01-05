@@ -1,25 +1,15 @@
 #!/bin/bash
 
-TMPFILE="$(mktemp)";
-
-sudo true;
-
 function rateArch() {
-    rate-mirrors --concurrency=40 --save=$TMPFILE arch \
-        && sudo rm /etc/pacman.d/mirrorlist \
-        && sudo cp $TMPFILE /etc/pacman.d/mirrorlist
+    sudo rate-mirrors --allow-root --concurrency=40 --save=/etc/pacman.d/mirrorlist arch
 }
 
 function rateCachyOS() {
-    rate-mirrors --concurrency=40 --save=$TMPFILE cachyos \
-        && sudo rm /etc/pacman.d/cachyos-mirrorlist \
-        && sudo cp $TMPFILE /etc/pacman.d/cachyos-mirrorlist
+    sudo rate-mirrors --allow-root --concurrency=40 --save=/etc/pacman.d/cachyos-mirrorlist cachyos
 }
 
 function rateCachyOSV3() {
-    rate-mirrors --concurrency=40 --save=$TMPFILE cachyos --arch=x86_64_v3 \
-        && sudo rm /etc/pacman.d/cachyos-v3-mirrorlist \
-        && sudo cp $TMPFILE /etc/pacman.d/cachyos-v3-mirrorlist
+    sudo rate-mirrors --allow-root --concurrency=40 --save=/etc/pacman.d/cachyos-v3-mirrorlist cachyos --arch=x86_64_v3
 }
 
 rateArch
