@@ -3,7 +3,7 @@
 
 pkgname=cachyos-rate-mirrors
 pkgver=1
-pkgrel=3
+pkgrel=4
 groups=(cachyos)
 arch=('any')
 url="https://github.com/CachyOS"
@@ -13,21 +13,18 @@ install=$pkgname.install
 depends=(rate-mirrors)
 source=(
   $pkgname
-  $pkgname.service
-  $pkgname.timer
-  $pkgname.hook
+#  $pkgname.service
+#  $pkgname.timer
+#  $pkgname.hook
 )
 
 
 package() {
   install -Dm755 "$pkgname" "$pkgdir/usr/bin/$pkgname"
-  install -Dm644 "$pkgname.service" "$pkgdir/usr/lib/systemd/system/$pkgname.service"
-  install -Dm644 "$pkgname.timer" "$pkgdir/usr/lib/systemd/system/$pkgname.timer"
-  install -Dm644 "$pkgname.hook" "$pkgdir/usr/share/libalpm/hooks/$pkgname.hook"
+#  install -Dm644 "$pkgname.service" "$pkgdir/usr/lib/systemd/system/$pkgname.service"
+#  install -Dm644 "$pkgname.timer" "$pkgdir/usr/lib/systemd/system/$pkgname.timer"
+#  install -Dm644 "$pkgname.hook" "$pkgdir/usr/share/libalpm/hooks/$pkgname.hook"
 }
 
 
-md5sums=('1427fcdecc033dab7a98150f20cd1bfd'
-         '4d3c3c9cfc3ed5bcad07362a559ca151'
-         '246bc3f9c89785ceeb5169d342a4011a'
-         'fdc9b4e894fd117dadec24def13764db')
+md5sums=('1427fcdecc033dab7a98150f20cd1bfd')
