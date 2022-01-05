@@ -9,3 +9,8 @@ post_upgrade() {
   systemctl enable cachyos-rate-mirrors.service
   systemctl disable reflector.timer
 }
+
+post_remove() {
+  systemctl disable cachyos-rate-mirrors.timer
+  systemctl disable cachyos-rate-mirrors.service
+}
