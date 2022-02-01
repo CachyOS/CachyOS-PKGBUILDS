@@ -2,7 +2,7 @@
 
 pkgname=cachyos-settings
 gitname=CachyOS-Settings
-pkgver=4
+pkgver=5
 pkgrel=1
 groups=(cachyos)
 arch=('any')
@@ -17,8 +17,11 @@ depends=(
     'reflector'
     'haveged'
     'profile-sync-daemon'
-    'zramd'
+    'zram-generator'
+    'ananicy-cpp'
+    'ananicy-rules-git'
     )
+replaces=(zramd)
 package() {
   install -d $pkgdir/etc
   cp -rf $srcdir/$gitname/etc $pkgdir
