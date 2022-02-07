@@ -5,8 +5,8 @@
 pkgbase=mhwd-cachyos
 pkgname=('mhwd-cachyos' 'mhwd-db-cachyos')
 pkgname=mhwd-cachyos
-pkgver=0.6.6
-pkgrel=3
+pkgver=0.6.7
+pkgrel=1
 pkgdesc="Manjaro's Hardware Detection for CachyOS"
 arch=(x86_64 x86_64_v3)
 url="https://github.com/cachyos/mhwd-cachyos"
@@ -14,7 +14,7 @@ license=(GPLv3)
 depends=('gcc-libs' 'hwinfo')
 makedepends=('cmake' 'ninja' 'git')
 groups=('cachyos')
-_commit_hash=77932105d2e11b824d1c4c337cefdfc119bf9b57
+_commit_hash=63ac673460ec65c7c5a4466c28c9496979f7e7bb
 source=("git+${url}.git#commit=${_commit_hash}"
         "git+${url/-cachyos}-db-cachyos.git")
 sha256sums=('SKIP'
@@ -36,7 +36,7 @@ build() {
 
 package_mhwd-cachyos() {
   pkgdesc="mhwd-cachyos library and application"
-  depends=('hwinfo' 'mesa' 'mhwd-db-cachyos' 'v86d' 'pacman')
+  depends=('hwinfo' 'mesa' 'mhwd-db-cachyos' 'pacman')
   optdepends=('lib32-mesa: for 32bit libgl support')
   provides=('mhwd' 'mhwd-cachyos')
   conflicts=('mhwd' 'mhwd-cachyos')
