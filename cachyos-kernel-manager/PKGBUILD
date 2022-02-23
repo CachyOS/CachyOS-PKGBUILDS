@@ -1,7 +1,7 @@
 # Maintainer: Vladislav Nepogodin <nepogodin.vlad@gmail.com>
 
 pkgname=cachyos-kernel-manager
-pkgver=0.9.2
+pkgver=0.9.3
 pkgrel=1
 pkgdesc="Simple kernel manager"
 arch=(aarch64 x86_64 x86_64_v3)
@@ -14,7 +14,7 @@ source=("kernel-manager-$pkgver.tar.gz::$url/archive/v$pkgver.tar.gz")
 sha256sums=('498b367adebfe9f52f67c440706517b31f2fcdb4198d952d251d58d3764646e9')
 provides=('cachyos-kernel-manager')
 conflicts=('cachyos-kernel-manager')
-options=(!strip)
+options=(strip)
 
 build() {
   cd ${srcdir}/kernel-manager-${pkgver}
