@@ -1,16 +1,17 @@
 # Maintainer: Nico <d3sox at protonmail dot com>
 
 
-pkgname=cachyos-emerald-kde-theme-git
-_themeName=cachyos-emerald
-_gitname=CachyOS-Emerald-KDE
-pkgver=r25.d61d1dd
+pkgname=cachyos-lavender-kde-theme-git
+_themeName=cachyos-lavender
+_gitname=CachyOS-Lavender-KDE
+pkgver=r7.6279f76
 pkgrel=1
-pkgdesc="CachyOS Emerald KDE Theme"
+pkgdesc="CachyOS Lavender KDE Theme"
 arch=('any')
-url="https://github.com/CachyOS/CachyOS-Emerald-KDE"
+url="https://github.com/CachyOS/CachyOS-Lavender-KDE"
 license=('GPL3')
-optdepends=('plasma-desktop: for included plasma theme')
+optdepends=('plasma-desktop: for included plasma theme'
+			'kvantum')
 makedepends=('git')
 groups=(cachyos)
 source=("git+${url}.git")
@@ -22,29 +23,29 @@ pkgver() {
 
 package() {
    # make folders
-#   mkdir -p "${pkgdir}/usr/share/aurorae/themes"
+   mkdir -p "${pkgdir}/usr/share/aurorae/themes"
    mkdir -p "${pkgdir}/usr/share/color-schemes"
    mkdir -p "${pkgdir}/usr/share/plasma/desktoptheme"
    mkdir -p "${pkgdir}/usr/share/plasma/look-and-feel"
-#   mkdir -p "${pkgdir}/usr/share/Kvantum"
+   mkdir -p "${pkgdir}/usr/share/Kvantum"
 #   mkdir -p "${pkgdir}/usr/share/sddm/themes"
-   mkdir -p "${pkgdir}/usr/share/wallpapers"
+#   mkdir -p "${pkgdir}/usr/share/wallpapers"
 
    # aurorae theme
-#   cp -r "${srcdir}/${_gitname}/aurorae"/* "${pkgdir}/usr/share/aurorae/themes"
+   cp -r "${srcdir}/${_gitname}/aurorae"/* "${pkgdir}/usr/share/aurorae/themes"
 #   # kvantum theme
-#   cp -r "${srcdir}/${_gitname}/Kvantum"/* "${pkgdir}/usr/share/Kvantum"
+   cp -r "${srcdir}/${_gitname}/kvantum"/* "${pkgdir}/usr/share/Kvantum"
    # color scheme
-   cp -r "${srcdir}/${_gitname}/color-schemes"/* "${pkgdir}/usr/share/color-schemes"
+#   cp -r "${srcdir}/${_gitname}/color-schemes"/* "${pkgdir}/usr/share/color-schemes"
    # desktop theme
-   cp -r "${srcdir}/${_gitname}/plasma/desktoptheme"/${_themeName}* "${pkgdir}/usr/share/plasma/desktoptheme"
+   cp -r "${srcdir}/${_gitname}/plasma/desktoptheme"/* "${pkgdir}/usr/share/plasma/desktoptheme"
 #   cp -r "${srcdir}/${_gitname}/plasma/desktoptheme/icons" "${pkgdir}/usr/share/plasma/desktoptheme/${_themeName}"
 #   cp -r "${srcdir}/${_gitname}/plasma/desktoptheme/icons" "${pkgdir}/usr/share/plasma/desktoptheme/${_themeName}-alt"
 #   cp -r "${srcdir}/${_gitname}/plasma/desktoptheme/icons" "${pkgdir}/usr/share/plasma/desktoptheme/${_themeName}-dark"
    # look and feel
    cp -r "${srcdir}/${_gitname}/plasma/look-and-feel"/* "${pkgdir}/usr/share/plasma/look-and-feel"
    # wallpaper
-   cp -r "${srcdir}/${_gitname}/wallpapers"/*  "${pkgdir}/usr/share/wallpapers"
+#   cp -r "${srcdir}/${_gitname}/wallpapers"/*  "${pkgdir}/usr/share/wallpapers"
 #   # sddm
 #   cp -r "${srcdir}/${_gitname}/sddm/${_themeName}" "${pkgdir}/usr/share/sddm/themes"
 
