@@ -2,7 +2,7 @@
 
 pkgname=cachyos-cli-installer-new
 pkgver=0.5.1
-pkgrel=1
+pkgrel=3
 pkgdesc='New CLI installer for CachyOS'
 arch=('x86_64')
 license=(GPLv3)
@@ -10,9 +10,13 @@ url="https://github.com/cachyos/new-cli-installer"
 makedepends=('meson' 'ninja' 'git')
 source=("${pkgname}::git+$url.git")
 sha512sums=('SKIP')
+options=(strip)
 
 build() {
   cd ${srcdir}/$pkgname
+
+  CFLAGS=${CFLAGS/-Wp,-D_GLIBCXX_ASSERTIONS}
+  CXXFLAGS=${CXXFLAGS/-Wp,-D_GLIBCXX_ASSERTIONS}
 
   _cpuCount=$(grep -c -w ^processor /proc/cpuinfo)
 
