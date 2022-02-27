@@ -84,6 +84,8 @@ do
         cd $d
 
         time docker run --name dockerbuild -e EXPORT_PKG=1 -v $PWD:/pkg -v /home/ptr1337/ccache:/home/notroot/ccache pttrr/docker-makepkg-kde-v3
+        
+        docker rm dockerbuild
 
         cd ..
 
