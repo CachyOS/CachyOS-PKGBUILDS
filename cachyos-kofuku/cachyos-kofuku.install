@@ -1,0 +1,16 @@
+post_install() {
+    post_upgrade
+}
+
+post_upgrade() {
+    mkfontscale /usr/share/fonts/TTF /usr/share/fonts/OTF /usr/share/fonts/misc > /dev/null 2>&1
+    mkfontdir /usr/share/fonts/TTF /usr/share/fonts/OTF /usr/share/fonts/misc > /dev/null 2>&1
+    fc-cache -s >/dev/null
+
+    sed -i 's/^webkit_theme\s*=\s*\(.*\)/webkit_theme = glorious #\1/g' /etc/lightdm/lightdm-webkit2-greeter.conf
+
+    glib-compile-schemas usr/share/glib-2.0/schemas
+    gtk-update-icon-cache -ftq usr/share/icons/hicolor
+    /bin/sh -c 'dconf update'
+}
+
