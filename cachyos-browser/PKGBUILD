@@ -7,14 +7,14 @@
 pkgname=cachy-browser
 _pkgname=Cachy
 __pkgname=cachy
-pkgver=97.0.1
+pkgver=97.0.2
 pkgrel=1
 pkgdesc="Community-maintained fork of Firefox, focused on privacy, security and freedom."
 arch=(x86_64 x86_64_v3)
 license=(MPL GPL LGPL)
 url="https://cachyos.org"
 depends=(gtk3 libxt mime-types dbus-glib
-         ffmpeg nss ttf-font libpulse
+         ffmpeg4.4 nss ttf-font libpulse
          aom harfbuzz graphite
          libvpx libjpeg zlib icu libevent pipewire)
 makedepends=(unzip zip diffutils yasm mesa imake inetutils ccache
@@ -41,7 +41,7 @@ source=(https://archive.mozilla.org/pub/firefox/releases/$pkgver/source/firefox-
         $pkgname.desktop
         "git+https://github.com/cachyos/cachyos-browser-settings.git"
         "git+https://github.com/cachyos/cachyos-browser-common.git")
-sha256sums=('6c8a7dcb47122d033383fd62a1bcaefff0290a6c23d057898e8ff9c72749df28'
+sha256sums=('c9f127741beabde78b021dc95b1740259d01677d461400682cb30e072126f075'
             'SKIP'
             'c0786df2fd28409da59d0999083914a65e2097cda055c9c6c2a65825f156e29f'
             'SKIP'
@@ -173,14 +173,15 @@ END
   # Adapted from https://github.com/WesleyBranton/userChrome.css-Customizations
   patch -Np1 -i ${_patches_dir}/megabar.patch
 
+  # disabled for the default build, as it seems to cause issues in some configurations
+  # 2022-01-21: re-enabled because it seems to not mess things up anymore nowadays?
+  msg2 "Debian patch to enable global menubar"
+  patch -Np1 -i ${_patches_dir}/unity-menubar.patch
+
   # KDE patches (W. Rosenauer)
   msg2 "---- Patching for KDE"
   patch -Np1 -i ${_patches_dir}/kde/mozilla-nongnome-proxies.patch
-  # patch -Np1 -i ${_patches_dir}/kde/mozilla-kde.patch
-
-  msg2 "Debian patch to enable global menubar"
-  # disabled for the default build, as it seems to cause issues in some configurations
-  patch -Np1 -i ${_patches_dir}/unity-menubar.patch
+  patch -Np1 -i ${_patches_dir}/kde/mozilla-kde_after_unity.patch
 
   msg2  "Disabling Pocket"
   patch -Np1 -i ${_patches_dir}/sed-patches/disable-pocket.patch
