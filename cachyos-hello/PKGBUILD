@@ -2,7 +2,7 @@
 
 pkgname=cachyos-hello
 pkgver=0.6.9
-pkgrel=2
+pkgrel=3
 pkgdesc='Welcome screen for CachyOS'
 arch=('x86_64')
 groups=('cachyos')
@@ -26,6 +26,9 @@ build() {
 package() {
   cd ${srcdir}/$pkgname/build
   DESTDIR="${pkgdir}" meson install
+
+  install -Dvm644 ../$pkgname.desktop \
+    "$pkgdir/etc/skel/.config/autostart/$pkgname.desktop"
 }
 
 # vim:set sw=2 sts=2 et:
