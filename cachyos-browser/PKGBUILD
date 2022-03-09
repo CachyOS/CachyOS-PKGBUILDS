@@ -31,7 +31,7 @@ optdepends=('networkmanager: Location detection via available WiFi networks'
 backup=('usr/lib/cachy-browser/cachy.cfg'
         'usr/lib/cachy-browser/distribution/policies.json')
 groups=('cachyos')
-options=(!emptydirs !strip !makeflags !lto)
+options=(!emptydirs !makeflags !strip !lto !debug)
 _arch_svn=https://git.archlinux.org/svntogit/packages.git/plain/trunk
 # _common_tag="v90.0-1"
 _common_tag="v${pkgver}-${pkgrel}"
@@ -159,12 +159,6 @@ END
   patch -Np1 -i ${_patches_dir}/gentoo/0004-bmo-847568-Support-system-harfbuzz.patch
   patch -Np1 -i ${_patches_dir}/gentoo/0005-bmo-847568-Support-system-graphite2.patch
   patch -Np1 -i ${_patches_dir}/gentoo/0006-bmo-1559213-Support-system-av1.patch
-
-  # upstream Arch fix
-  # https://bugzilla.mozilla.org/show_bug.cgi?id=1530052
-  # it was merged to upstream 98.0 release
-  #msg2 "---- Arch patches"
-  #patch -Np1 -i ${_patches_dir}/arch/0001-arch.patch
 
   msg2 "---- Librewolf patches"
   msg2 "Remove some pre-installed addons that might be questionable"
