@@ -3,7 +3,7 @@
 
 pkgname=cachyos-calamares
 pkgver=3.2.53
-pkgrel=1
+pkgrel=2
 pkgdesc='Distribution-independent installer framework'
 arch=('i686' 'x86_64' 'x86_64_v3')
 license=(GPL)
@@ -21,11 +21,13 @@ backup=('usr/share/calamares/modules/bootloader.conf'
         'usr/share/calamares/modules/unpackfs.conf')
 
 source=(settings_online.conf
-        settings_offline.conf)
+        settings_offline.conf
+        0001-Force-LTO.patch)
 source+=("calamares-$pkgver.tar.gz::$url/archive/v$pkgver.tar.gz")
-sha256sums=('2262f5cd9536b4e5ee1e4526c31611bce2f8a85134b3a66e2a643f7cec669104'
-            'e50bccc92d2106aa8eb506688fcc0293606da58cd7b379c31fa7a477a2c70815'
-            '86bdceb90eb81d42596b780ccd99385002e2b8d45d8fae836156d37b5122d020')
+sha256sums=('d3b6713e31fc0e12c0bd5fab4434310327aefcae45bc6e1cae5790984fb84f84'
+            '15915fd98426d6e2373f956cfa36553fd76da100415484efd19260f7ce0030ff'
+            '1138e096ab21558c9e518c070a7f4dd205e828aa134334bc2499194e57dd00e3'
+            '2d692042cbcfed79aea410d20276f07b05914fe65a00bc83170df0ee2cfae97d')
 
 prepare() {
   cd ${srcdir}/calamares-${pkgver}
@@ -42,6 +44,11 @@ prepare() {
 
   # change branding
   sed -i -e "s/default/cachyos/g" src/branding/CMakeLists.txt
+
+  # remove default branding
+  rm -r src/branding/default
+
+  patch -Np1 -i ${srcdir}/0001-Force-LTO.patch
 }
 
 
@@ -55,15 +62,18 @@ build() {
         -DCMAKE_BUILD_TYPE=Release \
         -DCMAKE_INSTALL_PREFIX=/usr \
         -DCMAKE_INSTALL_LIBDIR=lib \
-        -DWITH_PYTHONQT:BOOL=ON \
+        -DWITH_PYTHONQT=OFF \
         -DWITH_KF5DBus=OFF \
         -DBoost_NO_BOOST_CMAKE=ON \
         -DWEBVIEW_FORCE_WEBKIT=OFF \
+        -DWITH_APPSTREAM=OFF \
         -DSKIP_MODULES="tracking webview interactiveterminal initramfs \
-                        initramfscfg dracut dracutlukscfg \
+                        initramfscfg dracut dracutlukscfg dummypythonqt \
                         dummyprocess dummypython dummycpp welcomeq \
-                        keyboardq localeq \
-                        dummypythonqt services-openrc"
+                        openrcdmcryptcfg packagechooserq \
+                        keyboardq localeq sumaryq usersq \
+                        finishedq license notesqml oemid \
+                        plymouthcfg plasmalnf services-openrc"
   cmake --build build --parallel $_cpuCount
 }
 
