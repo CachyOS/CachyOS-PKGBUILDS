@@ -3,24 +3,34 @@
 # Contributor: Patrick Jackson <PatrickSJackson gmail com>
 # Contributor: Christoph Vigano <mail@cvigano.de>
 
-pkgname=st
-pkgver=0.8.4
-pkgrel=2
+pkgname=cachyos-st-config
+pkgver=0.8.5
+pkgrel=1
 pkgdesc='A simple virtual terminal emulator for X.'
 arch=('i686' 'x86_64' 'armv7h' 'aarch64')
 license=('MIT')
-depends=(libxft)
+depends=(libxft-bgra harfbuzz ttf-fira-code)
 url=https://st.suckless.org
 source=(https://dl.suckless.org/$pkgname/$pkgname-$pkgver.tar.gz
-        terminfo.patch)
-sha256sums=('d42d3ceceb4d6a65e32e90a5336e3d446db612c3fbd9ebc1780bc6c9a03346a6'
+        terminfo.patch
+        config.def.h
+        st-selectioncolors-0.8.4.diff
+        st-boxdraw_v2-0.8.5.diff
+        https://st.suckless.org/patches/ligatures/0.8.4/st-ligatures-boxdraw-20210824-0.8.4.diff
+        https://st.suckless.org/patches/universcroll/st-universcroll-0.8.4.diff)
+sha256sums=('ea6832203ed02ff74182bcb8adaa9ec454c8f989e79232cb859665e2f544ab37'
             'f9deea445a5c6203a0e8e699f3c3b55e27275f17fb408562c4dd5d649edeea23'
-            '0ebcbba881832adf9c98ce9fe7667c851d3cc3345077cb8ebe32702698665be2')
+            'e653e1745f7055473b5e366d66ce619f6138fe83eb059ca221a4e45ebbf19218'
+            '946340d94d838f4d33da1ddbec7f1fc3c6bc864661193f80a61cb72b60526b01'
+            'cc0bff95e289e580721ab79c3342e2cfc5d08089fb8f340815e17fff411682d6'
+            '07156a5e40cd64afee82bba5456d34a3432c3651adbde19cd4765a8bca592af9'
+            '7b7e0185713cc3dc763c744b28aa3810a3704b733241c8330cada44b7721b045')
 _sourcedir=$pkgname-$pkgver
 _makeopts="--directory=$_sourcedir"
 
 prepare() {
-  patch --directory="$_sourcedir" --strip=0 < terminfo.patch
+  patch --directory="$_sourcedir" --strip=0 < ${srcdir}/terminfo.patch
+  cd ${srcdir}/st-${pkgver}
 
   # This package provides a mechanism to provide a custom config.h. Multiple
   # configuration states are determined by the presence of two files in
@@ -40,18 +50,22 @@ prepare() {
   #
   # After this test, config.def.h is copied from $srcdir to $BUILDDIR to
   # provide an up to date template for the user.
-  if [ -e "$BUILDDIR/config.h" ]
-  then
-    cp "$BUILDDIR/config.h" "$_sourcedir"
-  elif [ ! -e "$BUILDDIR/config.def.h" ]
-  then
-    msg='This package can be configured in config.h. Copy the config.def.h '
-    msg+='that was just placed into the package directory to config.h and '
-    msg+='modify it to change the configuration. Or just leave it alone to '
-    msg+='continue to use default values.'
-    echo "$msg"
-  fi
-  cp "$_sourcedir/config.def.h" "$BUILDDIR"
+  #if [ -e "$BUILDDIR/config.h" ]
+  #then
+  #  cp "$BUILDDIR/config.h" "$_sourcedir"
+  #elif [ ! -e "$BUILDDIR/config.def.h" ]
+  #then
+  #  msg='This package can be configured in config.h. Copy the config.def.h '
+  #  msg+='that was just placed into the package directory to config.h and '
+  #  msg+='modify it to change the configuration. Or just leave it alone to '
+  #  msg+='continue to use default values.'
+  #  echo "$msg"
+  #fi
+  cp "${srcdir}/config.def.h" ${srcdir}/st-${pkgver}/
+  #patch -Np1 -i ${srcdir}/st-universcroll-0.8.4.diff
+  patch -Np1 -i ${srcdir}/st-boxdraw_v2-0.8.5.diff
+  patch -Np1 -i ${srcdir}/st-ligatures-boxdraw-20210824-0.8.4.diff
+  patch -Np1 -i ${srcdir}/st-selectioncolors-0.8.4.diff
 }
 
 build() {
