@@ -11,7 +11,7 @@ arch=('i686' 'x86_64' 'armv7h' 'aarch64')
 license=('MIT')
 depends=(libxft-bgra harfbuzz ttf-fira-code)
 url=https://st.suckless.org
-source=(https://dl.suckless.org/$pkgname/$pkgname-$pkgver.tar.gz
+source=(https://dl.suckless.org/st/st-$pkgver.tar.gz
         terminfo.patch
         config.def.h
         st-selectioncolors-0.8.4.diff
@@ -25,7 +25,9 @@ sha256sums=('ea6832203ed02ff74182bcb8adaa9ec454c8f989e79232cb859665e2f544ab37'
             'cc0bff95e289e580721ab79c3342e2cfc5d08089fb8f340815e17fff411682d6'
             '07156a5e40cd64afee82bba5456d34a3432c3651adbde19cd4765a8bca592af9'
             '7b7e0185713cc3dc763c744b28aa3810a3704b733241c8330cada44b7721b045')
-_sourcedir=$pkgname-$pkgver
+provides=('st')
+conflicts=('st')
+_sourcedir=st-$pkgver
 _makeopts="--directory=$_sourcedir"
 
 prepare() {
@@ -75,10 +77,10 @@ build() {
 package() {
   local installopts='--mode 0644 -D --target-directory'
   local shrdir="$pkgdir/usr/share"
-  local licdir="$shrdir/licenses/$pkgname"
-  local docdir="$shrdir/doc/$pkgname"
+  local licdir="$shrdir/licenses/st"
+  local docdir="$shrdir/doc/st"
   make $_makeopts PREFIX=/usr DESTDIR="$pkgdir" install
   install $installopts "$licdir" "$_sourcedir/LICENSE"
   install $installopts "$docdir" "$_sourcedir/README"
-  install $installopts "$shrdir/$pkgname" "$_sourcedir/st.info"
+  install $installopts "$shrdir/st" "$_sourcedir/st.info"
 }
