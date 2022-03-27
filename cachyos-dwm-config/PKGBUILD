@@ -1,0 +1,59 @@
+# Maintainer: Vladislav Nepogodin (vnepogodin) <vnepogodin@cachyos.org>
+# Contributor: Sergej Pupykin <pupykin.s+arch@gmail.com>
+# Contributor: Dag Odenhall <dag.odenhall@gmail.com>
+# Contributor: Grigorios Bouzakis <grbzks@gmail.com>
+
+pkgname=cachyos-dwm-config
+pkgver=6.3
+pkgrel=1
+pkgdesc="A dynamic window manager for X"
+url="https://dwm.suckless.org"
+arch=('i686' 'x86_64' 'x86_64_v3')
+license=('MIT')
+options=(zipman)
+depends=('libx11' 'libxinerama' 'libxft-bgra' 'freetype2' 'st' 'dmenu')
+install=dwm.install
+source=(dwm.desktop
+        https://dl.suckless.org/dwm/dwm-$pkgver.tar.gz
+        config.h
+        https://dwm.suckless.org/patches/autostart/dwm-autostart-20210120-cb3f58a.diff
+        dwm-vanitygaps-6.3.diff
+        dwm-cyclelayouts-20220327-6.3.diff
+        dwm-colorbar-6.2.diff
+        dwm-xrdb-6.2.diff
+        https://dwm.suckless.org/patches/rotatestack/dwm-rotatestack-20161021-ab9571b.diff)
+sha256sums=('bc36426772e1471d6dd8c8aed91f288e16949e3463a9933fee6390ee0ccd3f81'
+            'badaa028529b1fba1fd7f9a84f3b64f31190466c858011b53e2f7b70c6a3078d'
+            '72fab392ac3b8ded668c8dbfc95fde388c3345e095beefaf6200543dfd3ec53b'
+            'd78711587e6d554de5dc47adca00fc1eb6c8f8ca11c9e75411da8da60eae7abe'
+            '017baefdc65c0c10f2ebaa98460ec4cb9b809ed0ae39a22ae794bae6a2e06f2e'
+            '43958d1402ea543d57d3bc5a52096348fc6379b85af929f0bf95fdfef73c47f1'
+            '6d5cb096f1e1cd1d90b91057cb8e7eacec1f487a4bbd31bd874472d28f9d7a92'
+            '41661da484163fbc606e61fbc52ba189972a7052d445737a670b4b5684cfdf6e'
+            '27c889d424e1b539cd8b113d0c4f9693be521a0a2ef5adf246ecf3efb4208f3c')
+provides=('dwm')
+conflicts=('dwm')
+
+prepare() {
+  cd "$srcdir/dwm-$pkgver"
+  patch -Np1 -i ${srcdir}/dwm-autostart-20210120-cb3f58a.diff
+  patch -Np1 -i ${srcdir}/dwm-vanitygaps-6.3.diff
+  patch -Np1 -i ${srcdir}/dwm-cyclelayouts-20220327-6.3.diff
+  patch -Np1 -i ${srcdir}/dwm-colorbar-6.2.diff
+  patch -Np1 -i ${srcdir}/dwm-xrdb-6.2.diff
+  patch -Np1 -i ${srcdir}/dwm-rotatestack-20161021-ab9571b.diff
+  cp "$srcdir/config.h" config.h
+}
+
+build() {
+  cd "$srcdir/dwm-$pkgver"
+  make X11INC=/usr/include/X11 X11LIB=/usr/lib/X11 FREETYPEINC=/usr/include/freetype2
+}
+
+package() {
+  cd "$srcdir/dwm-$pkgver"
+  make PREFIX=/usr DESTDIR="$pkgdir" install
+  install -Dm644 LICENSE "$pkgdir/usr/share/licenses/dwm/LICENSE"
+  install -Dm644 README "$pkgdir/usr/share/doc/dwm/README"
+  install -Dm644 "$srcdir/dwm.desktop" "$pkgdir/usr/share/xsessions/dwm.desktop"
+}
