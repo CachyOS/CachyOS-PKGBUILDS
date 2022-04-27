@@ -7,8 +7,8 @@
 pkgname=cachy-browser
 _pkgname=Cachy
 __pkgname=cachy
-pkgver=99.0
-pkgrel=1
+pkgver=99.0.1
+pkgrel=2
 pkgdesc="Community-maintained fork of Firefox, focused on privacy, security and freedom."
 arch=(x86_64 x86_64_v3)
 license=(MPL GPL LGPL)
@@ -41,7 +41,7 @@ source=(https://archive.mozilla.org/pub/firefox/releases/$pkgver/source/firefox-
         $pkgname.desktop
         "git+https://github.com/cachyos/cachyos-browser-settings.git"
         "git+https://github.com/cachyos/cachyos-browser-common.git")
-sha256sums=('513f8d2cafa39a2d50f2c4a25cc48093e89f715a706b941170fa48e397976327'
+sha256sums=('76d22279ce99588a728bb2d034064be0d5918b5900631f2148d4565b8a72e00b'
             'SKIP'
             'c0786df2fd28409da59d0999083914a65e2097cda055c9c6c2a65825f156e29f'
             'SKIP'
@@ -82,16 +82,16 @@ export MOZ_ADDON_SIGNING=1
 export MOZ_APP_REMOTINGNAME=${pkgname//-/}
 
 # System libraries
+#ac_add_options --with-system-av1
+#ac_add_options --with-system-graphite2
+ac_add_options --with-system-harfbuzz
+ac_add_options --with-system-icu
+ac_add_options --with-system-jpeg
+ac_add_options --with-system-libevent
+ac_add_options --with-system-libvpx
 ac_add_options --with-system-nspr
 ac_add_options --with-system-nss
-ac_add_options --with-system-libvpx
-ac_add_options --with-system-libevent
-ac_add_options --with-system-icu
 ac_add_options --with-system-zlib
-ac_add_options --with-system-jpeg
-ac_add_options --with-system-harfbuzz
-ac_add_options --with-system-graphite2
-ac_add_options --with-system-av1
 
 # Features
 ac_add_options --enable-pulseaudio
