@@ -1,16 +1,16 @@
 
 pkgname=cachyos-v3-mirrorlist
-pkgver=8
+pkgver=9
 pkgrel=1
 pkgdesc="cachyos-v3-mirrorlist"
 arch=('any')
 license=('GPL3')
+depends=('cachyos-keyring' 'cachyos-mirrorlist')
 groups=(cachyos)
 options=(!strip !emptydirs)
 backup=("etc/pacman.d/$pkgname")  # to keep possibly ranked mirrorlist
 source=(cachyos-v3-mirrorlist)
 sha512sums=('ce038854fbdd67087380755e96e18bfa3e5b54935f8e19d11f66d09b1dc8e675b4643b9b16b6c7728874539ee621dad95e102dda3cf4245b11dd3f815dc78e5f')
 package() {
- #install -d "$pkgdir/etc/pacman.d"
  install -Dm644 "$srcdir/$pkgname" "$pkgdir/etc/pacman.d/$pkgname"
 }
