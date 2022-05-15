@@ -3,7 +3,7 @@
 
 pkgname=cachyos-calamares
 pkgver=3.2.57
-pkgrel=17
+pkgrel=18
 pkgdesc='Distribution-independent installer framework'
 arch=('i686' 'x86_64' 'x86_64_v3')
 license=(GPL)
@@ -24,14 +24,20 @@ source=(settings_online.conf
         settings_offline.conf
         0001-Force-LTO.patch)
 source+=("calamares-$pkgver.tar.gz::$url/archive/v$pkgver.tar.gz")
-sha256sums=('44ceda626c5316aea7a78e72ee7834a0e5abb1241a22a2de1bbd5aa1ce14b434'
+source+=("${pkgname}-config::git+https://github.com/cachyos/calamares-config.git")
+sha256sums=('2bb91134b71d705de3103f70a1e45db72c43d0220b7a2e0178a012c3929c76a6'
             '3989743e5f4ac697809188de058e2985a9b1940d73c40c606119461c5ec8f904'
             '1138e096ab21558c9e518c070a7f4dd205e828aa134334bc2499194e57dd00e3'
-            'ef7f564ec2cd8baaf94a44982ce1db88c1192696617f21538d0b8472a63b4c2b')
+            'ef7f564ec2cd8baaf94a44982ce1db88c1192696617f21538d0b8472a63b4c2b'
+            'SKIP')
 
 prepare() {
   cd ${srcdir}/calamares-${pkgver}
   sed -i -e 's/"Install configuration files" OFF/"Install configuration files" ON/' CMakeLists.txt
+
+  rm -r "src/modules/"{fstab,mount,packages}
+
+  cp -rf "${srcdir}/${pkgname}-config/usr/lib/calamares/modules"/{fstab,mount,packages} src/modules/
 
   # patches here
 
@@ -71,7 +77,7 @@ build() {
                         initramfscfg dracut dracutlukscfg dummypythonqt \
                         dummyprocess dummypython dummycpp welcomeq \
                         openrcdmcryptcfg packagechooserq \
-                        keyboardq localeq sumaryq usersq \
+                        keyboardq localeq summaryq usersq \
                         finishedq license notesqml oemid \
                         plymouthcfg plasmalnf services-openrc"
   cmake --build build --parallel $_cpuCount
