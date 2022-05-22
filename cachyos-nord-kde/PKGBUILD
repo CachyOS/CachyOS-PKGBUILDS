@@ -1,6 +1,5 @@
 # Maintainer: Nico <d3sox at protonmail dot com>
 
-
 pkgname=cachyos-nord-kde-theme-git
 _themeName=CachyOS-Nord-round
 _gitname=cachyos-nord-kde
@@ -16,6 +15,7 @@ depends=(char-white)
 makedepends=('git')
 source=("git+${url}.git")
 sha256sums=('SKIP')
+
 pkgver() {
    cd ${_gitname}
    printf "r%s.%s" "$(git rev-list --count HEAD)" "$(git rev-parse --short HEAD)"
