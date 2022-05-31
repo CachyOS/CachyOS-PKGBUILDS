@@ -7,7 +7,7 @@
 pkgname=cachy-browser
 _pkgname=Cachy
 __pkgname=cachy
-pkgver=100.0.2
+pkgver=101.0
 pkgrel=1
 pkgdesc="Community-maintained fork of Firefox, focused on privacy, security and freedom."
 arch=(x86_64 x86_64_v3)
@@ -41,7 +41,7 @@ source=(https://archive.mozilla.org/pub/firefox/releases/$pkgver/source/firefox-
         $pkgname.desktop
         "git+https://github.com/cachyos/cachyos-browser-settings.git"
         "git+https://github.com/cachyos/cachyos-browser-common.git")
-sha256sums=('dc109861204f6938fd8f147af89a694eb516f3d4bb64ce3f0116452d654a8417'
+sha256sums=('55ab5b517d58bbcbc837640263a8371cf1fba3d9f508e54537c4d2cbbfb86095'
             'SKIP'
             'c0786df2fd28409da59d0999083914a65e2097cda055c9c6c2a65825f156e29f'
             'SKIP'
@@ -134,8 +134,8 @@ END
   patch -Np1 -i ${_patches_dir}/gentoo/0001-Don-t-use-build-id.patch
   patch -Np1 -i ${_patches_dir}/gentoo/0002-Fortify-sources-properly.patch
   patch -Np1 -i ${_patches_dir}/gentoo/0003-Check-additional-plugins-dir.patch
-  patch -Np1 -i ${_patches_dir}/gentoo/0004-bmo-847568-Support-system-harfbuzz.patch
-  patch -Np1 -i ${_patches_dir}/gentoo/0005-bmo-847568-Support-system-graphite2.patch
+#  patch -Np1 -i ${_patches_dir}/gentoo/0004-bmo-847568-Support-system-harfbuzz.patch
+#  patch -Np1 -i ${_patches_dir}/gentoo/0005-bmo-847568-Support-system-graphite2.patch
   patch -Np1 -i ${_patches_dir}/gentoo/0006-bmo-1559213-Support-system-av1.patch
   patch -Np1 -i ${_patches_dir}/gentoo/0007-bmo-878089-Don-t-fail-when-TERM-is-not-set.patch
   patch -Np1 -i ${_patches_dir}/gentoo/0008-bmo-1516803-Fix-building-sandbox.patch
@@ -144,18 +144,18 @@ END
   patch -Np1 -i ${_patches_dir}/gentoo/0019-bmo-1516803-force-one-LTO-partition-for-sandbox-when.patch
   patch -Np1 -i ${_patches_dir}/gentoo/0020-Fix-building-with-PGO-when-using-GCC.patch
   patch -Np1 -i ${_patches_dir}/gentoo/0021-libaom-Use-NEON_FLAGS-instead-of-VPX_ASFLAGS-for-lib.patch
-  patch -Np1 -i ${_patches_dir}/gentoo/0022-build-Disable-Werror.patch
+#  patch -Np1 -i ${_patches_dir}/gentoo/0022-build-Disable-Werror.patch
   patch -Np1 -i ${_patches_dir}/gentoo/0023-LTO-Only-enable-LTO-for-Rust-when-complete-build-use.patch
   patch -Np1 -i ${_patches_dir}/gentoo/0024-Disable-FFVPX-with-VA-API.patch
   patch -Np1 -i ${_patches_dir}/gentoo/0025-Enable-FLAC-on-platforms-without-ffvpx-via-ffmpeg.patch
   patch -Np1 -i ${_patches_dir}/gentoo/0026-bmo-1670333-OpenH264-Fix-decoding-if-it-starts-on-no.patch
-  patch -Np1 -i ${_patches_dir}/gentoo/0027-bmo-1663844-OpenH264-Allow-using-OpenH264-GMP-decode.patch
+#  patch -Np1 -i ${_patches_dir}/gentoo/0027-bmo-1663844-OpenH264-Allow-using-OpenH264-GMP-decode.patch
   patch -Np1 -i ${_patches_dir}/gentoo/0028-bgo-816975-fix-build-on-x86.patch
   patch -Np1 -i ${_patches_dir}/gentoo/0029-bmo-1559213-fix-system-av1-libs.patch
   patch -Np1 -i ${_patches_dir}/gentoo/0030-bmo-1196777-Set-GDK_FOCUS_CHANGE_MASK.patch
-  patch -Np1 -i ${_patches_dir}/gentoo/0031-bmo-1762050-fix-pgo-with-virtualenv.patch
+#  patch -Np1 -i ${_patches_dir}/gentoo/0031-bmo-1762050-fix-pgo-with-virtualenv.patch
   patch -Np1 -i ${_patches_dir}/gentoo/0032-bmo-1765361-resolve_objdir_from_virtualenv_if_mozinfo_not_ancestor.patch
-  patch -Np1 -i ${_patches_dir}/gentoo/0033-bmo-1761691-fix_audio_thread_priority_when_dbus_is_disabled.patch
+#  patch -Np1 -i ${_patches_dir}/gentoo/0033-bmo-1761691-fix_audio_thread_priority_when_dbus_is_disabled.patch
   # Use more system libs
   msg2 "---- Patching for system libs"
 #  patch -Np1 -i ${_patches_dir}/gentoo/0004-bmo-847568-Support-system-harfbuzz.patch
@@ -175,7 +175,7 @@ END
   # KDE patches (W. Rosenauer)
   msg2 "---- Patching for KDE"
   patch -Np1 -i ${_patches_dir}/kde/mozilla-nongnome-proxies.patch
-  patch -Np1 -i ${_patches_dir}/kde/mozilla-kde_after_unity.patch
+#  patch -Np1 -i ${_patches_dir}/kde/mozilla-kde_after_unity.patch
 
   msg2  "Disabling Pocket"
   patch -Np1 -i ${_patches_dir}/sed-patches/disable-pocket.patch
@@ -258,14 +258,14 @@ END
   patch -Np1 -i ${_patches_dir}/librewolf-ui/lw-logo-devtools.patch
 
   msg2 "customized pref panel"
-  patch -Np1 -i ${_patches_dir}/librewolf/librewolf-pref-pane.patch
+#  patch -Np1 -i ${_patches_dir}/librewolf/librewolf-pref-pane.patch
 
 #  msg2 "fix telemetry removal, see https://gitlab.com/librewolf-community/browser/linux/-/merge_requests/17, for example"
  # patch -Np1 -i ${_patches_dir}/librewolf/disable-data-reporting-at-compile-time.patch # fails with 100
 
   msg2 "Hide passwordmgr"
   patch -Np1 -i ${_patches_dir}/librewolf/hide-passwordmgr.patch
-#  patch -Np1 -i ${_patches_dir}/fix-psutil-dev.patch
+  patch -Np1 -i ${_patches_dir}/fix-psutil-dev.patch
 
   rm -f ${srcdir}/cachyos-browser-common/source_files/mozconfig
   cp -r ${srcdir}/cachyos-browser-common/source_files/browser ./
