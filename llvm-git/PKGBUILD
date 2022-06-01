@@ -1,0 +1,213 @@
+# Maintainer: Peter Jung ptr1337 <admin@ptr1337.dev>
+# Maintainer: Grigory Vasilyev <echo "h0tc0d3(-*A*-)g-m*a-i-l(-d#t-)c#m" | sed -e 's/-//ig;s/*//ig;s/(A)/@/i;s/#/o/ig;s/(dot)/./i'>
+
+pkgname=llvm-git
+pkgdesc="LLVM Toolchain with clang, clang-tools-extra, compiler-rt, openmp, polly, lldb, lld, llvm-bolt, libc++"
+pkgver=14.0.0_r413047.c703d77a61ac
+pkgrel=1
+arch=('x86_64')
+url="https://llvm.org/"
+license=('custom:Apache 2.0 with LLVM Exception')
+
+provides=('llvm-libs-git' 'llvm-ocaml-git' 'clang-git'
+  'clang-analyzer-git' 'clang-tools-extra-git' 'openmp-git' 'polly-git' 'compiler-rt-git' 'lld-git'
+  'lldb-git' 'libc++-git' 'libc++abi-git' 'libc++experimental-git' 'llvm-bolt-git')
+
+replaces=('llvm' 'llvm-libs' 'llvm-ocaml' 'clang' 'clang-analyzer'
+  'clang-tools-extra' 'openmp' 'polly' 'compiler-rt' 'lld' 'lldb'
+  'libc++' 'libc++abi' 'libc++experimental' 'llvm-bolt')
+
+conflicts=('llvm' 'llvm-libs' 'llvm-ocaml' 'clang' 'clang-analyzer'
+  'clang-tools-extra' 'openmp' 'polly' 'compiler-rt' 'lld' 'lldb'
+  'libc++' 'libc++abi' 'libc++experimental' 'llvm-bolt')
+
+depends=('libelf' 'libffi' 'libedit' 'libxml2' 'ncurses')
+_ocaml_ver=4.13.1
+makedepends=(
+  'git' 'ninja' 'cmake'
+  "ocaml>=${_ocaml_ver}" 'ocaml-ctypes' 'ocaml-findlib'
+  'python-setuptools' 'python-psutil' 'python-sphinx'
+  'python-recommonmark' 'llvm' 'llvm-libs' 'clang' 'lld'
+)
+makedepends_x86_64=('lib32-gcc-libs')
+#_commit=29f1039a7285a5c3a9c353d054140bf2556d4c4d
+source=(
+  "llvm-project::git+https://github.com/llvm/llvm-project.git"
+  'llvm-config.h'
+)
+
+sha256sums=('SKIP'
+  '597dc5968c695bbdbb0eac9e8eb5117fcd2773bc91edf5ec103ecffffab8bc48')
+
+options=('staticlibs')
+
+pkgver() {
+    cd llvm-project/llvm
+
+    # This will almost match the output of `llvm-config --version` when the
+    # LLVM_APPEND_VC_REV cmake flag is turned on. The only difference is
+    # dash being replaced with underscore because of Pacman requirements.
+    local _pkgver=$(awk -F 'MAJOR |MINOR |PATCH |)' \
+            'BEGIN { ORS="." ; i=0 } \
+             /set\(LLVM_VERSION_/ { print $2 ; i++ ; if (i==2) ORS="" } \
+             END { print "\n" }' \
+             CMakeLists.txt)_r$(git rev-list --count HEAD).$(git rev-parse --short HEAD)
+    echo "$_pkgver"
+}
+
+
+prepare() {
+
+  cd "${srcdir:?}/llvm-project" || (
+    echo -e "\E[1;31mCan't cd to ${srcdir}/llvm-project directory! Prepare Failed! \E[0m"
+    exit 1
+  )
+
+  # Attempt to convert script to Python 3
+  2to3 -wn --no-diffs \
+    clang-tools-extra/clang-include-fixer/find-all-symbols/tool/run-find-all-symbols.py
+
+}
+
+build() {
+
+  cd "${srcdir:?}/llvm-project" || (
+    echo -e "\E[1;31mCan't cd to ${srcdir}/llvm-project directory! Build Failed! \E[0m"
+    exit 1
+  )
+
+    export CC=clang
+    export CXX=clang++
+    export AR=llvm-ar
+    export AS=llvm-as
+    export NM=llvm-nm
+    export STRIP=llvm-strip
+    export OBJCOPY=llvm-objcopy
+    export OBJDUMP=llvm-objdump
+    export READELF=llvm-readelf
+    export HOSTCC=clang
+    export HOSTCXX=clang++
+    export HOSTAR=llvm-ar
+    export DEBUG_CFLAGS="-g"
+    export DEBUG_CXXFLAGS="-g"
+    _extra_build_flags+=(
+      -DCMAKE_C_COMPILER=clang
+      -DCMAKE_CXX_COMPILER=clang++
+      -DLLVM_BUILD_TESTS=OFF
+      -DLLVM_BUILD_DOCS=OFF
+    )
+    export LD=ld.lld
+    export CC_LD=lld
+    export CXX_LD=lld
+    export HOSTLD=ld.lld
+
+  cmake -S llvm -B build -G Ninja \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DCMAKE_INSTALL_PREFIX=/usr \
+    -DLLVM_BINUTILS_INCDIR=/usr/include \
+    -DLLVM_HOST_TRIPLE="${CHOST:?}" \
+    -DLLVM_BUILD_RUNTIME=ON \
+    -DLLVM_BUILD_EXTERNAL_COMPILER_RT=ON \
+    -DLLVM_BUILD_LLVM_DYLIB=ON \
+    -DLLVM_LINK_LLVM_DYLIB=ON \
+    -DCLANG_LINK_CLANG_DYLIB=ON \
+    -DLLVM_INSTALL_UTILS=ON \
+    -DLLVM_ENABLE_RTTI=ON \
+    -DLLVM_ENABLE_FFI=ON \
+    -DLLVM_ENABLE_PROJECTS="clang;clang-tools-extra;compiler-rt;lld;lldb;mlir;openmp;polly;pstl;bolt" \
+    -DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi" \
+    -DCLANG_LINK_CLANG_DYLIB=ON \
+    -DLLDB_USE_SYSTEM_SIX=1 \
+    -DLIBOMP_INSTALL_ALIASES=OFF \
+    -DLLVM_INSTALL_TOOLCHAIN_ONLY=OFF \
+    -DPOLLY_ENABLE_GPGPU_CODEGEN=ON \
+    -DCLANG_DEFAULT_PIE_ON_LINUX=ON \
+    "${_extra_build_flags[@]}"
+
+  ninja -C build
+
+}
+
+_python_optimize() {
+  python -m compileall "$@"
+  python -O -m compileall "$@"
+  python -OO -m compileall "$@"
+}
+
+package() {
+
+  cd "${srcdir:?}/llvm-project" || (
+    echo -e "\E[1;31mCan't cd to ${srcdir}/llvm-project directory! Package Failed! \E[0m"
+    exit 1
+  )
+
+    mkdir -p "${srcdir:?}/llvm-project/build/docs/ocamldoc/html/"
+
+  DESTDIR="${pkgdir:?}" ninja -C build install
+
+  pushd llvm/utils/lit || (
+    echo -e "\E[1;31mpushd utils/lit - Package Failed! \E[0m"
+    exit 1
+  )
+
+  python setup.py install --root="${pkgdir:?}" -O1
+  popd || (
+    echo -e "\E[1;31mpopd - Package Failed!  \E[0m"
+    exit 1
+  )
+
+  if [[ "${CARCH:?}" == "x86_64" ]]; then
+    mv "${pkgdir:?}/usr/include/llvm/Config/llvm-config"{,-64}.h
+    cp "${srcdir:?}/llvm-config.h" "${pkgdir:?}/usr/include/llvm/Config/llvm-config.h"
+  fi
+
+  # Symlink LLVMgold.so from /usr/lib/bfd-plugins
+  # https://bugs.archlinux.org/task/28479
+  mkdir -p "${pkgdir:?}/usr/lib/bfd-plugins"
+  ln -s ../LLVMgold.so "${pkgdir:?}/usr/lib/bfd-plugins/LLVMgold.so"
+
+  # Clang
+  site_packages=$(python -c "import site; print(site.getsitepackages()[0])")
+  install -d "${pkgdir:?}/${site_packages}"
+  mv "${pkgdir:?}/usr/lib/"{libear,libscanbuild} "${pkgdir:?}/${site_packages}/"
+  cp -a llvm/bindings/python/llvm "${pkgdir:?}/${site_packages}/"
+  cp -a clang/bindings/python/clang "${pkgdir:?}/${site_packages}/"
+
+  mv "${pkgdir:?}"/usr/libexec/* "${pkgdir:?}/usr/lib/clang/"
+  rm -fr "${pkgdir:?}/usr/libexec"
+  sed -i 's|libexec|lib/clang|' \
+    "${pkgdir:?}/usr/bin/scan-build" \
+    "${pkgdir:?}/${site_packages}/libscanbuild/analyze.py"
+
+  _python_optimize "${pkgdir:?}/usr/share" "${pkgdir:?}/${site_packages}"
+
+
+  # Licenses
+  install -Dm644 "${srcdir:?}/llvm-project/llvm/LICENSE.TXT" "${pkgdir:?}/usr/share/licenses/${pkgname}/llvm-LICENSE"
+  install -Dm644 "${srcdir:?}/llvm-project/clang/LICENSE.TXT" "${pkgdir:?}/usr/share/licenses/${pkgname}/clang-LICENSE"
+  install -Dm644 "${srcdir:?}/llvm-project/clang-tools-extra/LICENSE.TXT" "${pkgdir:?}/usr/share/licenses/${pkgname}/clang-tools-extra-LICENSE"
+  install -Dm644 "${srcdir:?}/llvm-project/compiler-rt/LICENSE.TXT" "${pkgdir:?}/usr/share/licenses/${pkgname}/compiler-rt-LICENSE"
+  install -Dm644 "${srcdir:?}/llvm-project/lld/LICENSE.TXT" "${pkgdir:?}/usr/share/licenses/${pkgname}/lld-LICENSE"
+  install -Dm644 "${srcdir:?}/llvm-project/lldb/LICENSE.TXT" "${pkgdir:?}/usr/share/licenses/${pkgname}/lldb-LICENSE"
+  install -Dm644 "${srcdir:?}/llvm-project/polly/LICENSE.TXT" "${pkgdir:?}/usr/share/licenses/${pkgname}/polly-LICENSE"
+  install -Dm644 "${srcdir:?}/llvm-project/openmp/LICENSE.TXT" "${pkgdir:?}/usr/share/licenses/${pkgname}/openmp-LICENSE"
+  install -Dm644 "${srcdir:?}/llvm-project/bolt/LICENSE.TXT" "${pkgdir:?}/usr/share/licenses/${pkgname}/bolt-LICENSE"
+  # Fallback for llvm 13
+#  _llvm_libs=(libLLVM-13.so libLTO.so.13 libRemarks.so.13 libclang.so.13.0.1 libclang-cpp.so.13)
+#  for lib in "${_llvm_libs[@]}"; do
+#    if [[ ! -e "${pkgdir:?}/usr/lib/${lib:?}" ]]; then
+#      echo "- Copy ${lib:?}"
+#      install -Dm644 "/usr/lib/${lib:?}" "${pkgdir:?}/usr/lib/${lib:?}"
+#    else
+#      echo "- ${lib:?} exist"
+#    fi
+#  done
+
+#  if [[ ! -e "${pkgdir:?}/usr/lib/libLLVM-13.0.1.so" ]]; then
+#    echo "- Copy libLLVM-13.0.1.so"
+#    ln -s /usr/lib/libLLVM-13.so "${pkgdir:?}/usr/lib/libLLVM-13.0.1.so"
+#  else
+#    echo "- libLLVM-13.0.1.so exist"
+#  fi
+
+}
