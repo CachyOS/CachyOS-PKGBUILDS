@@ -153,6 +153,7 @@ END
   patch -Np1 -i ${_patches_dir}/gentoo/0028-bgo-816975-fix-build-on-x86.patch
   patch -Np1 -i ${_patches_dir}/gentoo/0029-bmo-1559213-fix-system-av1-libs.patch
   patch -Np1 -i ${_patches_dir}/gentoo/0030-bmo-1196777-Set-GDK_FOCUS_CHANGE_MASK.patch
+  patch -Np1 -i ${_patches_dir}/gentoo/0031-bmo-1765361-resolve_objdir_from_virtualenv_if_mozinfo_not_ancestor.patch
   # Use more system libs
   msg2 "---- Patching for system libs"
 #  patch -Np1 -i ${_patches_dir}/gentoo/0004-bmo-847568-Support-system-harfbuzz.patch
@@ -172,7 +173,7 @@ END
   # KDE patches (W. Rosenauer)
   msg2 "---- Patching for KDE"
   patch -Np1 -i ${_patches_dir}/kde/mozilla-nongnome-proxies.patch
-#  patch -Np1 -i ${_patches_dir}/kde/mozilla-kde_after_unity.patch
+  #patch -Np1 -i ${_patches_dir}/librewolf/mozilla-kde_after_unity.patch
 
   msg2  "Disabling Pocket"
   patch -Np1 -i ${_patches_dir}/sed-patches/disable-pocket.patch
@@ -190,14 +191,14 @@ END
 
   #msg2  "remove search extensions (experimental)"
   #patch -Np1 -i ${_patches_dir}/search-config.patch
-#  cp "${srcdir}/cachyos-browser-common/source_files/search-config.json" services/settings/dumps/main/search-config.json
+  #cp "${srcdir}/cachyos-browser-common/source_files/search-config.json" services/settings/dumps/main/search-config.json
 
   msg2  "stop some undesired requests (https://gitlab.com/librewolf-community/browser/common/-/issues/10)"
   patch -Np1 -i ${_patches_dir}/sed-patches/stop-undesired-requests.patch # fails with 100
 
   msg2 "Assorted patches"
-  patch -Np1 -i ${_patches_dir}/librewolf/context-menu.patch # fails with 100
- # patch -Np1 -i ${_patches_dir}/librewolf/urlbarprovider-interventions.patch fails with 100
+  patch -Np1 -i ${_patches_dir}/librewolf/context-menu.patch
+  #patch -Np1 -i ${_patches_dir}/librewolf/urlbarprovider-interventions.patch
   patch -Np1 -i ${_patches_dir}/librewolf/native-messaging-registry-path.patch
 
   #msg2 "allow overriding the color scheme light/dark preference with RFP"
@@ -254,15 +255,17 @@ END
   msg2 "lw-logo-devtools.patch"
   patch -Np1 -i ${_patches_dir}/librewolf-ui/lw-logo-devtools.patch
 
+  patch -Np1 -i ${_patches_dir}/librewolf-ui/handlers.patch
+
   msg2 "customized pref panel"
   patch -Np1 -i ${_patches_dir}/librewolf/librewolf-pref-pane.patch
 
-#  msg2 "fix telemetry removal, see https://gitlab.com/librewolf-community/browser/linux/-/merge_requests/17, for example"
- # patch -Np1 -i ${_patches_dir}/librewolf/disable-data-reporting-at-compile-time.patch # fails with 100
+  msg2 "fix telemetry removal, see https://gitlab.com/librewolf-community/browser/linux/-/merge_requests/17, for example"
+  patch -Np1 -i ${_patches_dir}/librewolf/disable-data-reporting-at-compile-time.patch
 
   msg2 "Hide passwordmgr"
   patch -Np1 -i ${_patches_dir}/librewolf/hide-passwordmgr.patch
-#  patch -Np1 -i ${_patches_dir}/fix-psutil-dev.patch
+  #patch -Np1 -i ${_patches_dir}/fix-psutil-dev.patch
 
   rm -f ${srcdir}/cachyos-browser-common/source_files/mozconfig
   cp -r ${srcdir}/cachyos-browser-common/source_files/browser ./
@@ -274,7 +277,9 @@ build() {
 
   export MOZ_NOSPAM=1
   export MOZBUILD_STATE_PATH="$srcdir/mozbuild"
+  #export MOZ_ENABLE_FULL_SYMBOLS=1
   export MACH_BUILD_PYTHON_NATIVE_PACKAGE_SOURCE=system
+  export PIP_NETWORK_INSTALL_RESTRICTED_VIRTUALENVS=mach # let us hope this is a working _new_ workaround for the pip env issues?
 
   # LTO needs more open files
   ulimit -n 4096
