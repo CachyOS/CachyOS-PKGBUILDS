@@ -2,7 +2,7 @@
 # Maintainer: Grigory Vasilyev <echo "h0tc0d3(-*A*-)g-m*a-i-l(-d#t-)c#m" | sed -e 's/-//ig;s/*//ig;s/(A)/@/i;s/#/o/ig;s/(dot)/./i'>
 
 pkgname=llvm-git
-pkgdesc="LLVM Toolchain with clang, clang-tools-extra, compiler-rt, openmp, polly, lldb, lld, llvm-bolt, libc++"
+pkgdesc="LLVM Toolchain with clang, clang-tools-extra, compiler-rt, openmp, polly, lldb, lld, libc++"
 pkgver=14.0.0_r413047.c703d77a61ac
 pkgrel=1
 arch=('x86_64')
@@ -11,15 +11,15 @@ license=('custom:Apache 2.0 with LLVM Exception')
 
 provides=('llvm-libs-git' 'llvm-ocaml-git' 'clang-git'
   'clang-analyzer-git' 'clang-tools-extra-git' 'openmp-git' 'polly-git' 'compiler-rt-git' 'lld-git'
-  'lldb-git' 'libc++-git' 'libc++abi-git' 'libc++experimental-git' 'llvm-bolt-git')
+  'lldb-git' 'libc++-git' 'libc++abi-git' 'libc++experimental-git')
 
 replaces=('llvm' 'llvm-libs' 'llvm-ocaml' 'clang' 'clang-analyzer'
   'clang-tools-extra' 'openmp' 'polly' 'compiler-rt' 'lld' 'lldb'
-  'libc++' 'libc++abi' 'libc++experimental' 'llvm-bolt')
+  'libc++' 'libc++abi' 'libc++experimental')
 
 conflicts=('llvm' 'llvm-libs' 'llvm-ocaml' 'clang' 'clang-analyzer'
   'clang-tools-extra' 'openmp' 'polly' 'compiler-rt' 'lld' 'lldb'
-  'libc++' 'libc++abi' 'libc++experimental' 'llvm-bolt')
+  'libc++' 'libc++abi' 'libc++experimental')
 
 depends=('libelf' 'libffi' 'libedit' 'libxml2' 'ncurses')
 _ocaml_ver=4.13.1
@@ -114,7 +114,7 @@ build() {
     -DLLVM_INSTALL_UTILS=ON \
     -DLLVM_ENABLE_RTTI=ON \
     -DLLVM_ENABLE_FFI=ON \
-    -DLLVM_ENABLE_PROJECTS="clang;clang-tools-extra;compiler-rt;lld;lldb;mlir;openmp;polly;pstl;bolt" \
+    -DLLVM_ENABLE_PROJECTS="clang;clang-tools-extra;compiler-rt;lld;lldb;mlir;openmp;polly;pstl" \
     -DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi" \
     -DCLANG_LINK_CLANG_DYLIB=ON \
     -DLLDB_USE_SYSTEM_SIX=1 \
