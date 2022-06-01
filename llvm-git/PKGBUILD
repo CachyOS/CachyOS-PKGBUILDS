@@ -11,16 +11,11 @@ license=('custom:Apache 2.0 with LLVM Exception')
 
 provides=('llvm-libs-git' 'llvm-ocaml-git' 'clang-git'
   'clang-analyzer-git' 'clang-tools-extra-git' 'openmp-git' 'polly-git' 'compiler-rt-git' 'lld-git'
-  'lldb-git' 'libc++-git' 'libc++abi-git' 'libc++experimental-git')
-
-replaces=('llvm' 'llvm-libs' 'llvm-ocaml' 'clang' 'clang-analyzer'
-  'clang-tools-extra' 'openmp' 'polly' 'compiler-rt' 'lld' 'lldb'
-  'libc++' 'libc++abi' 'libc++experimental')
-
+  'lldb-git' 'libc++-git' 'libc++abi-git' 'libc++experimental-git'
+  'llvm' 'compiler-rt' 'clang' 'lldb' 'polly' 'lld' 'openmp' 'polly' 'clang-analyzer' 'libc++' 'libc++abi' 'libc++experimental')
 conflicts=('llvm' 'llvm-libs' 'llvm-ocaml' 'clang' 'clang-analyzer'
   'clang-tools-extra' 'openmp' 'polly' 'compiler-rt' 'lld' 'lldb'
   'libc++' 'libc++abi' 'libc++experimental')
-
 depends=('libelf' 'libffi' 'libedit' 'libxml2' 'ncurses')
 _ocaml_ver=4.13.1
 makedepends=(
@@ -30,15 +25,12 @@ makedepends=(
   'python-recommonmark' 'llvm' 'llvm-libs' 'clang' 'lld'
 )
 makedepends_x86_64=('lib32-gcc-libs')
-#_commit=29f1039a7285a5c3a9c353d054140bf2556d4c4d
 source=(
   "llvm-project::git+https://github.com/llvm/llvm-project.git"
   'llvm-config.h'
 )
-
 sha256sums=('SKIP'
   '597dc5968c695bbdbb0eac9e8eb5117fcd2773bc91edf5ec103ecffffab8bc48')
-
 options=('staticlibs')
 
 pkgver() {
@@ -191,7 +183,6 @@ package() {
   install -Dm644 "${srcdir:?}/llvm-project/lldb/LICENSE.TXT" "${pkgdir:?}/usr/share/licenses/${pkgname}/lldb-LICENSE"
   install -Dm644 "${srcdir:?}/llvm-project/polly/LICENSE.TXT" "${pkgdir:?}/usr/share/licenses/${pkgname}/polly-LICENSE"
   install -Dm644 "${srcdir:?}/llvm-project/openmp/LICENSE.TXT" "${pkgdir:?}/usr/share/licenses/${pkgname}/openmp-LICENSE"
-  install -Dm644 "${srcdir:?}/llvm-project/bolt/LICENSE.TXT" "${pkgdir:?}/usr/share/licenses/${pkgname}/bolt-LICENSE"
   # Fallback for llvm 13
 #  _llvm_libs=(libLLVM-13.so libLTO.so.13 libRemarks.so.13 libclang.so.13.0.1 libclang-cpp.so.13)
 #  for lib in "${_llvm_libs[@]}"; do

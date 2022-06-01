@@ -167,13 +167,15 @@ END
 
   # disabled for the default build, as it seems to cause issues in some configurations
   # 2022-01-21: re-enabled because it seems to not mess things up anymore nowadays?
-  msg2 "Debian patch to enable global menubar"
-  patch -Np1 -i ${_patches_dir}/librewolf/unity-menubar.patch
+#  msg2 "Debian patch to enable global menubar"
+#  patch -Np1 -i ${_patches_dir}/librewolf/unity-menubar.patch
 
   # KDE patches (W. Rosenauer)
   msg2 "---- Patching for KDE"
-  patch -Np1 -i ${_patches_dir}/kde/mozilla-nongnome-proxies.patch
-  patch -Np1 -i ${_patches_dir}/kde/mozilla-kde.patch
+#  patch -Np1 -i ${_patches_dir}/kde/mozilla-nongnome-proxies.patch
+#  patch -Np1 -i ${_patches_dir}/kde/mozilla-kde.patch
+## merged mozilla-kde.patch and unity.patch to avoid issues
+  patch -Np1 -i ${_patches_dir}/kde/0001-kde-unity.patch
 
   msg2  "Disabling Pocket"
   patch -Np1 -i ${_patches_dir}/sed-patches/disable-pocket.patch
