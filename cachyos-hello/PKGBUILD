@@ -1,15 +1,15 @@
 # Maintainer: Vladislav Nepogodin <nepogodin.vlad@gmail.com>
 
 pkgname=cachyos-hello
-pkgver=0.6.11
+pkgver=0.7.0
 pkgrel=2
 pkgdesc='Welcome screen for CachyOS'
 arch=('x86_64' 'x86_64_v3')
 groups=('cachyos')
 license=(GPLv3)
 url="https://github.com/CachyOS/CachyOS-Welcome"
-depends=('gtkmm3' 'fmt')
-makedepends=('meson' 'git')
+depends=('rust-nightly-bin')
+makedepends=('meson' 'git' 'mold')
 source=("${pkgname}::git+$url.git")
 sha512sums=('SKIP')
 
@@ -18,6 +18,7 @@ build() {
 
   _cpuCount=$(grep -c -w ^processor /proc/cpuinfo)
 
+  export RUSTFLAGS="-Cembed-bitcode -C opt-level=3 -Ccodegen-units=1 -Clinker=clang -C link-arg=-flto -Clink-arg=-fuse-ld=/usr/bin/mold"
   meson --buildtype=release --prefix=/usr build
 
   meson compile -C build --jobs $_cpuCount
@@ -25,6 +26,8 @@ build() {
 
 package() {
   cd ${srcdir}/$pkgname/build
+
+  export RUSTFLAGS="-Cembed-bitcode -C opt-level=3 -Ccodegen-units=1 -Clinker=clang -C link-arg=-flto -Clink-arg=-fuse-ld=/usr/bin/mold"
   DESTDIR="${pkgdir}" meson install
 
   install -Dvm644 ../$pkgname.desktop \
