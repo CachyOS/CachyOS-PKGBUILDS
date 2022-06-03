@@ -88,14 +88,6 @@ build() {
       else
         echo -e "\E[1;31mClang not found. Will use default system compiler! \E[0m"
       fi
-    
-      if ld.lld --version 2>/dev/null | grep -iq "LLD\s*[0-9]"; then
-        export LD=ld.lld
-        export CC_LD=lld
-        export CXX_LD=lld
-        export HOSTLD=ld.lld
-        _extra_build_flags+=(-DLLVM_USE_LINKER=lld)
-      fi
 
       while true; do
         echo -ne "\n\E[1;33mUse LLVM THIN LTO? [Y/n] \E[0m"
@@ -103,11 +95,11 @@ build() {
         case ${yn} in
         [Yy] | "")
           _llvm_lto=0
+          _extra_build_flags+=(-DCMAKE_INTERPROCEDURAL_OPTIMIZATION=ON)
           break
           ;;
         [Nn])
           _llvm_lto=1
-          _extra_build_flags+=(-DCMAKE_INTERPROCEDURAL_OPTIMIZATION=ON)
           break
           ;;
         *) echo -e "\E[1;31mPlease answer Y or N! \E[0m" ;;
@@ -170,6 +162,7 @@ build() {
     -DLIBOMP_INSTALL_ALIASES=OFF \
     -DLLVM_INSTALL_TOOLCHAIN_ONLY=OFF \
     -DPOLLY_ENABLE_GPGPU_CODEGEN=ON \
+    -DLLVM_USE_LINKER=lld \
     -DCMAKE_POLICY_DEFAULT_CMP0069=NEW \
     -DCMAKE_CXX_FLAGS="-O3 -march=native -m64 -mavx -fomit-frame-pointer" \
     -DCMAKE_C_FLAGS="-O3 -march=native -m64 -mavx -fomit-frame-pointer" \
