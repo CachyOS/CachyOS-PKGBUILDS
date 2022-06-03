@@ -5,7 +5,7 @@ pkgname=llvm
 pkgdesc="LLVM Toolchain with clang, clang-tools-extra, compiler-rt, openmp, polly, lldb, lld, libc++"
 pkgver=14.0.4
 pkgrel=1
-arch=('x86_64')
+arch=('x86_64' 'x86_64_v3')
 url="https://llvm.org/"
 license=('custom:Apache 2.0 with LLVM Exception')
 
@@ -38,7 +38,8 @@ source=(
   '0001-KCFI-sanitizer.patch'
 )
 sha256sums=('SKIP'
-  '597dc5968c695bbdbb0eac9e8eb5117fcd2773bc91edf5ec103ecffffab8bc48')
+            '597dc5968c695bbdbb0eac9e8eb5117fcd2773bc91edf5ec103ecffffab8bc48'
+            '142f952122b3a19f2dae7769a03c4df99ae2fb6d23093c04faaa31d0f79c31d8')
 options=('staticlibs')
 
 _patch() {
@@ -164,8 +165,8 @@ build() {
     -DPOLLY_ENABLE_GPGPU_CODEGEN=ON \
     -DLLVM_USE_LINKER=lld \
     -DCMAKE_POLICY_DEFAULT_CMP0069=NEW \
-    -DCMAKE_CXX_FLAGS="-O3 -march=native -m64 -mavx -fomit-frame-pointer" \
-    -DCMAKE_C_FLAGS="-O3 -march=native -m64 -mavx -fomit-frame-pointer" \
+    -DCMAKE_CXX_FLAGS="-O3 -march=x86-64-v3 -m64 -mavx -fomit-frame-pointer" \
+    -DCMAKE_C_FLAGS="-O3 -march=x86-64-v3 -m64 -mavx -fomit-frame-pointer" \
     -DCMAKE_EXE_LINKER_FLAGS="-Wl,--as-needed -Wl,--build-id=sha1 -Wl,--emit-relocs" \
     -DCMAKE_MODULE_LINKER_FLAGS="-Wl,--as-needed -Wl,--build-id=sha1 -Wl,--emit-relocs" \
     -DCMAKE_SHARED_LINKER_FLAGS="-Wl,--as-needed -Wl,--build-id=sha1 -Wl,--emit-relocs" \
