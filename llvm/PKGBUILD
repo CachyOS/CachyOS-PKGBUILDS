@@ -96,7 +96,9 @@ build() {
         case ${yn} in
         [Yy] | "")
           _llvm_lto=0
-          _extra_build_flags+=(-DCMAKE_INTERPROCEDURAL_OPTIMIZATION=ON)
+          _extra_build_flags+=(
+          -DCMAKE_INTERPROCEDURAL_OPTIMIZATION=ON
+          -DLLVM_ENABLE_LTO=Thin)
           break
           ;;
         [Nn])
