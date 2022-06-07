@@ -11,6 +11,7 @@ url="https://github.com/calamares/calamares"
 license=('LGPL')
 conflicts=('calamares')
 provides=('calamares')
+_commit=f5c58c80657ebba1769d679843a036f85870a1ae
 depends=('kconfig' 'kcoreaddons' 'kiconthemes' 'ki18n' 'kio' 'solid' 'yaml-cpp' 'kpmcore' 'mkinitcpio-openswap'
          'boost-libs' 'ckbcomp' 'hwinfo' 'qt5-svg' 'polkit-qt5' 'gtk-update-icon-cache' 'plasma-framework'
          'qt5-xmlpatterns' 'squashfs-tools' 'libpwquality' 'efibootmgr' 'icu')
@@ -19,22 +20,23 @@ backup=('usr/share/calamares/modules/bootloader.conf'
         'usr/share/calamares/modules/displaymanager.conf'
         'usr/share/calamares/modules/initcpio.conf'
         'usr/share/calamares/modules/unpackfs.conf')
-
-source=(settings_online.conf
+source=(git+https://github.com/calamares/calamares.git#commit={_commit}
+		settings_online.conf
         settings_offline.conf
-        0001-Force-LTO.patch)
-source+=("calamares-$pkgver::git+git@github.com:calamares/calamares.git")
+        0001-Force-LTO.patch
+        0001-FORCE-LTO-3.3.patch)
+#source+=("")
 #source+=("calamares-$pkgver.tar.gz::$url/archive/v$pkgver.tar.gz")
 source+=("${pkgname}-config::git+https://github.com/cachyos/calamares-config.git")
-git@github.com:calamares/calamares.git
-sha256sums=('2bb91134b71d705de3103f70a1e45db72c43d0220b7a2e0178a012c3929c76a6'
+sha256sums=('SKIP'
+            '2bb91134b71d705de3103f70a1e45db72c43d0220b7a2e0178a012c3929c76a6'
             '3989743e5f4ac697809188de058e2985a9b1940d73c40c606119461c5ec8f904'
             '1138e096ab21558c9e518c070a7f4dd205e828aa134334bc2499194e57dd00e3'
-            'ef7f564ec2cd8baaf94a44982ce1db88c1192696617f21538d0b8472a63b4c2b'
+            '0b15bd1647faf809f901aa4b7eaf770426a5106de2a7c44afde3a0db375c50f9'
             'SKIP')
 
 prepare() {
-  cd ${srcdir}/calamares-${pkgver}
+  cd ${srcdir}/calamares
   sed -i -e 's/"Install configuration files" OFF/"Install configuration files" ON/' CMakeLists.txt
 
   rm -r "src/modules/"{fstab,mount,packages}
@@ -55,13 +57,13 @@ prepare() {
 
   # remove default branding
   rm -r src/branding/default
-
-  patch -Np1 -i ${srcdir}/0001-Force-LTO.patch
+   patch -Np1 -i ${srcdir}/0001-FORCE-LTO-3.3.patch
+#  patch -Np1 -i ${srcdir}/0001-Force-LTO.patch
 }
 
 
 build() {
-  cd ${srcdir}/calamares-${pkgver}
+  cd ${srcdir}/calamares
 
   _cpuCount=$(grep -c -w ^processor /proc/cpuinfo)
 
@@ -86,7 +88,7 @@ build() {
 }
 
 package() {
-  cd ${srcdir}/calamares-${pkgver}/build
+  cd ${srcdir}/calamares/build
   DESTDIR="${pkgdir}" cmake --build . --target install
 
   #cp ${srcdir}/settings_offline.conf "$pkgdir/etc/calamares/settings.conf"
