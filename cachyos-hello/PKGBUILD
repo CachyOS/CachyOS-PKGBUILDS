@@ -12,6 +12,9 @@ depends=('rust-nightly-bin')
 makedepends=('meson' 'git' 'mold')
 source=("${pkgname}::git+$url.git")
 sha512sums=('SKIP')
+provides=('cachyos-hello')
+conflicts=('cachyos-hello')
+options=(strip)
 
 build() {
   cd ${srcdir}/$pkgname
