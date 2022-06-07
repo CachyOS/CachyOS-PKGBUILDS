@@ -8,8 +8,8 @@ arch=('x86_64' 'x86_64_v3')
 groups=('cachyos')
 license=(GPLv3)
 url="https://github.com/CachyOS/CachyOS-Welcome"
-depends=('rust-nightly-bin')
-makedepends=('meson' 'git' 'mold' 'clang')
+depends=('gtk3' 'glib2')
+makedepends=('meson' 'git' 'mold' 'rustup' 'clang')
 source=("${pkgname}::git+$url.git")
 sha512sums=('SKIP')
 provides=('cachyos-hello')
@@ -17,7 +17,13 @@ conflicts=('cachyos-hello')
 options=(strip)
 
 build() {
-  cd ${srcdir}/$pkgname
+  cd "${srcdir}/${pkgname}"
+
+  if ! rustc --version | grep nightly >/dev/null 2>&1; then
+    echo "Installing nightly compiler…"
+    rustup toolchain install nightly
+    rustup default nightly
+  fi
 
   _cpuCount=$(grep -c -w ^processor /proc/cpuinfo)
 
@@ -28,7 +34,7 @@ build() {
 }
 
 package() {
-  cd ${srcdir}/$pkgname/build
+  cd "${srcdir}/${pkgname}"/build
 
   export RUSTFLAGS="-Cembed-bitcode -C opt-level=3 -Ccodegen-units=1 -Clinker=clang -C link-arg=-flto -Clink-arg=-fuse-ld=/usr/bin/mold"
   DESTDIR="${pkgdir}" meson install
