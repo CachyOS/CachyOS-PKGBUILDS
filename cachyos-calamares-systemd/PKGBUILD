@@ -1,9 +1,10 @@
 # Maintainer: Vladislav Nepogodin <nepogodin.vlad@gmail.com>
 # Contributor: Philip Müller <philm[at]manjaro[dog]org>
 
-pkgname=cachyos-calamares
+pkgname=cachyos-calamares-systemd
+_pkgname=cachyos-calamares
 pkgver=3.3.0
-pkgrel=10
+pkgrel=1
 pkgdesc='Distribution-independent installer framework'
 arch=('i686' 'x86_64' 'x86_64_v3')
 license=(GPL)
@@ -40,7 +41,7 @@ prepare() {
 
   rm -r "src/modules/"{fstab,mount,packages}
 
-  cp -rf "${srcdir}/${pkgname}-config/usr/lib/calamares/modules"/{fstab,mount,packages} src/modules/
+  cp -rf "${srcdir}/${_pkgname}-config/usr/lib/calamares/modules"/{fstab,mount,packages} src/modules/
 
   # patches here
 
