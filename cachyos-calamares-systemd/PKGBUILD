@@ -4,7 +4,7 @@
 pkgname=cachyos-calamares-systemd
 _pkgname=cachyos-calamares
 pkgver=3.3.0
-pkgrel=1
+pkgrel=6
 pkgdesc='Distribution-independent installer framework'
 arch=('i686' 'x86_64' 'x86_64_v3')
 license=(GPL)
@@ -12,7 +12,7 @@ url="https://github.com/calamares/calamares"
 license=('LGPL')
 conflicts=('calamares')
 provides=('calamares')
-_commit=f5c58c80657ebba1769d679843a036f85870a1ae
+_commit=fb910d7c41a6d90251e4a473ea67d797859bcc0b
 makedepends=('git' 'cmake' 'extra-cmake-modules' 'kpmcore' 'boost' 'python-jsonschema' 'python-pyaml' 'python-unidecode')
 depends=( 'qt5-svg' 'qt5-webengine' 'yaml-cpp' 'networkmanager' 'upower' 'kcoreaddons' 'kconfig' 'ki18n' 'kservice' \
 'kwidgetsaddons' 'kpmcore' 'squashfs-tools' 'rsync' 'cryptsetup' 'qt5-xmlpatterns' 'doxygen' 'dmidecode' \
@@ -27,7 +27,7 @@ source=(git+https://github.com/calamares/calamares.git#commit=${_commit}
         0001-Force-LTO.patch
         0001-FORCE-LTO-3.3.patch
         0001-fix-missing-import-libcalamares.patch
-        ${pkgname}-config::git+https://github.com/cachyos/calamares-config.git)
+        ${_pkgname}-config::git+https://github.com/cachyos/calamares-config.git#branch=systemd-boot)
 sha256sums=('SKIP'
             '2bb91134b71d705de3103f70a1e45db72c43d0220b7a2e0178a012c3929c76a6'
             '3989743e5f4ac697809188de058e2985a9b1940d73c40c606119461c5ec8f904'
@@ -57,7 +57,7 @@ prepare() {
 
   # remove default branding
   rm -r src/branding/default
-   patch -Np1 -i ${srcdir}/0001-fix-missing-import-libcalamares.patch
+#   patch -Np1 -i ${srcdir}/0001-fix-missing-import-libcalamares.patch
 #  patch -Np1 -i ${srcdir}/0001-Force-LTO.patch
 }
 
