@@ -10,7 +10,7 @@ pkgbase=glibc
 pkgname=(glibc lib32-glibc)
 pkgver=2.35
 _commit=d7d1eebd4d5806be55ffacbf18917ad68d4ae7fd
-pkgrel=9
+pkgrel=10
 arch=(x86_64)
 url='https://www.gnu.org/software/libc'
 license=(GPL LGPL)
@@ -51,8 +51,8 @@ prepare() {
   # Patch src: https://patchwork.ozlabs.org/project/glibc/patch/87eebkf8ph.fsf@oldenburg.str.redhat.com/
   patch -Np1 -i "${srcdir}"/disable-clone3.diff
   patch -Np1 -i "${srcdir}"/0001-security-before-rogue-company-support-patch.patch
-  patch -Np1 -i "${srcdir}"/0001-clearlinux.patch
-  patch -Np1 -i "${srcdir}"/0001-rogue-company-support.patch
+#  patch -Np1 -i "${srcdir}"/0001-clearlinux.patch
+#  patch -Np1 -i "${srcdir}"/0001-rogue-company-support.patch
 }
 
 build() {

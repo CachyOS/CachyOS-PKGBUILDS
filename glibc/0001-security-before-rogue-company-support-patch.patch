@@ -1,0 +1,2530 @@
+From b0a45749f73986927a30ca1555e75550b14e01fa Mon Sep 17 00:00:00 2001
+From: Vladislav Nepogodin <nepogodin.vlad@gmail.com>
+Date: Wed, 8 Jun 2022 04:19:40 +0400
+Subject: [PATCH] security before rogue-company-support patch
+
+---
+ argp/argp-help.c                              |   5 +
+ argp/argp-parse.c                             |   2 +
+ argp/argp.h                                   |   2 +
+ bits/sysmacros.h                              |   4 +-
+ csu/libc-tls.c                                |   2 +-
+ ctype/ctype-c99_l.c                           |   2 +-
+ ctype/ctype-extn.c                            |   4 +-
+ ctype/ctype_l.c                               |  28 ++---
+ ctype/isctype.c                               |   2 +-
+ elf/dl-cache.c                                |   1 +
+ elf/dl-load.c                                 |   2 +
+ elf/dl-lookup-direct.c                        |   1 +
+ elf/dl-lookup.c                               |   1 +
+ elf/dl-minimal-malloc.c                       |   2 +
+ elf/dl-open.c                                 |   2 +
+ elf/dl-sysdep-open.h                          |   1 +
+ iconv/gconv_cache.c                           |   2 +-
+ iconv/gconv_conf.c                            |   2 +-
+ iconv/gconv_db.c                              |   6 +-
+ include/dlfcn.h                               |   2 +-
+ include/rounding-mode.h                       |   2 +-
+ include/time.h                                |   6 +-
+ inet/deadline.c                               |   3 +-
+ inet/inet6_rth.c                              |   3 +-
+ inet/inet_net.c                               |   1 +
+ inet/rcmd.c                                   |   1 +
+ intl/explodename.c                            |   2 +-
+ intl/hash-string.c                            |   2 +-
+ intl/l10nflist.c                              |   2 +-
+ io/file_change_detection.c                    |   2 +-
+ io/fts.c                                      |   2 +-
+ libio/__fbufsize.c                            |   2 +-
+ libio/__flbf.c                                |   2 +-
+ libio/__fpending.c                            |   2 +-
+ libio/__freadable.c                           |   2 +-
+ libio/__freading.c                            |   2 +-
+ libio/__fwritable.c                           |   2 +-
+ libio/__fwriting.c                            |   2 +-
+ libio/bits/types/struct_FILE.h                |   2 +-
+ libio/feof_u.c                                |   2 +-
+ libio/ferror_u.c                              |   2 +-
+ libio/genops.c                                |  12 +-
+ libio/iofwide.c                               |   2 +-
+ libio/strops.c                                |   2 +-
+ libio/wgenops.c                               |   6 +-
+ libio/wstrops.c                               |   2 +-
+ locale/coll-lookup.c                          |   4 +-
+ locale/localename.c                           |   2 +-
+ locale/mb_cur_max.c                           |   2 +-
+ locale/nl_langinfo_l.c                        |   2 +-
+ locale/outdigitswc.h                          |   2 +-
+ locale/programs/xmalloc.c                     |   2 +
+ malloc/malloc.c                               |   2 +-
+ misc/mntent_r.c                               |   2 +-
+ nptl/nptl-stack.c                             |   2 +-
+ nptl/pthread_getconcurrency.c                 |   2 +-
+ nptl/pthread_self.c                           |   2 +-
+ nptl/thrd_current.c                           |   2 +-
+ nss/nss_action.c                              |   1 +
+ nss/nss_database.c                            |   1 +
+ nss/nss_hash.c                                |   1 +
+ nss/valid_field.c                             |   1 +
+ nss/valid_list_field.c                        |   1 +
+ posix/glob.c                                  |   2 +-
+ posix/glob_internal.h                         |   2 +-
+ posix/glob_pattern_p.c                        |   2 +-
+ posix/regexec.c                               |   4 +-
+ posix/sched_cpualloc.c                        |   2 +-
+ posix/sched_cpucount.c                        |   2 +-
+ resolv/gai_error.c                            |   2 +-
+ resolv/gai_misc.c                             |   1 +
+ resolv/res-name-checking.c                    |   2 +
+ resolv/res_get_nsaddr.c                       |   1 +
+ resolv/res_hconf.c                            |   2 +
+ rt/aio_misc.c                                 |   2 +
+ rt/aio_return.c                               |   2 +-
+ signal/allocrtsig.c                           |   4 +-
+ signal/sigsetops.c                            |   2 +-
+ stdio-common/printf_fp.c                      |   2 +-
+ stdlib/cmp.c                                  |   2 +-
+ stdlib/getenv.c                               |   2 +-
+ stdlib/grouping.c                             |   2 +-
+ stdlib/mod_1.c                                |   2 +-
+ string/argz-next.c                            |   2 +-
+ string/basename.c                             |   2 +-
+ string/str-two-way.h                          |   2 +-
+ string/strcasecmp.c                           |   2 +-
+ string/strcoll_l.c                            |   2 +-
+ string/string-inlines.c                       |  16 +--
+ string/strncase.c                             |   2 +-
+ string/strstr.c                               |   4 +-
+ string/strxfrm_l.c                            |   2 +-
+ sysdeps/generic/dl-hash.h                     |   1 +
+ sysdeps/ieee754/dbl-64/dbl2mpn.c              |   2 +-
+ sysdeps/ieee754/dbl-64/mpn2dbl.c              |   2 +-
+ sysdeps/ieee754/float128/mpn2float128.c       |   2 +-
+ sysdeps/ieee754/flt-32/mpn2flt.c              |   2 +-
+ sysdeps/ieee754/ldbl-96/mpn2ldbl.c            |   2 +-
+ sysdeps/posix/getaddrinfo.c                   |   2 +-
+ sysdeps/posix/sprofil.c                       |   1 +
+ sysdeps/unix/sysv/linux/cmsg_nxthdr.c         |   1 +
+ sysdeps/unix/sysv/linux/dirfd.c               |   2 +-
+ sysdeps/unix/sysv/linux/dl-osinfo.h           |   4 +-
+ sysdeps/unix/sysv/linux/getclktck.c           |   1 +
+ sysdeps/unix/sysv/linux/getsourcefilter.c     |   2 +-
+ sysdeps/unix/sysv/linux/pathconf.c            |   6 +-
+ sysdeps/unix/sysv/linux/prof-freq.c           |   2 +-
+ sysdeps/unix/sysv/linux/sigsetops.h           |   6 +-
+ sysdeps/unix/sysv/linux/speed.c               |   4 +-
+ .../sysv/linux/sysconf-pthread_stack_min.h    |   1 +
+ sysdeps/unix/sysv/linux/sysconf-sigstksz.h    |   1 +
+ sysdeps/unix/sysv/linux/x86/cpu-features.c    |   2 +-
+ sysdeps/x86/cacheinfo.c                       |   2 +-
+ sysdeps/x86/cpu-features.c                    |   2 +-
+ sysdeps/x86/dl-cacheinfo.h                    | 114 +++++++++---------
+ sysdeps/x86/ldbl2mpn.c                        |   2 +-
+ sysdeps/x86_64/dl-irel.h                      |   2 +-
+ wcsmbs/mbsinit.c                              |   2 +-
+ wcsmbs/wcsncmp.c                              |   2 +-
+ wcsmbs/wcsnlen.c                              |   2 +-
+ wcsmbs/wcswidth.c                             |   2 +-
+ wcsmbs/wcwidth.c                              |   2 +-
+ wcsmbs/wmemcmp.c                              |   2 +-
+ wctype/iswctype.c                             |   2 +-
+ wctype/iswctype_l.c                           |   2 +-
+ wctype/towctrans.c                            |   2 +-
+ wctype/towctrans_l.c                          |   2 +-
+ wctype/wcfuncs.c                              |  20 +--
+ wctype/wcfuncs_l.c                            |  28 ++---
+ wctype/wctrans.c                              |   2 +-
+ wctype/wctrans_l.c                            |   2 +-
+ wctype/wctype.c                               |   2 +-
+ wctype/wctype_l.c                             |   2 +-
+ 133 files changed, 269 insertions(+), 225 deletions(-)
+
+diff --git a/argp/argp-help.c b/argp/argp-help.c
+index 90a2795c..060bba95 100644
+--- a/argp/argp-help.c
++++ b/argp/argp-help.c
+@@ -698,6 +698,7 @@ hol_sibling_cluster_cmp (const struct hol_cluster *cl1,
+ /* Compare clusters CL1 and CL2 by the order that they should appear in
+    output.  Assume CL1 and CL2 are at the same depth.  */
+ static int
++__attribute__((pure))
+ hol_cousin_cluster_cmp (const struct hol_cluster *cl1,
+ 			const struct hol_cluster *cl2)
+ {
+@@ -723,6 +724,7 @@ hol_cousin_cluster_cmp (const struct hol_cluster *cl1,
+ /* Compare clusters CL1 and CL2 by the order that they should appear in
+    output.  */
+ static int
++__attribute__((pure))
+ hol_cluster_cmp (const struct hol_cluster *cl1, const struct hol_cluster *cl2)
+ {
+   /* If one cluster is deeper than the other, use its ancestor at the same
+@@ -757,6 +759,7 @@ hol_cluster_cmp (const struct hol_cluster *cl1, const struct hol_cluster *cl2)
+ /* Return the ancestor of CL that's just below the root (i.e., has a parent
+    of 0).  */
+ static struct hol_cluster *
++__attribute__((pure))
+ hol_cluster_base (struct hol_cluster *cl)
+ {
+   while (cl->parent)
+@@ -1160,6 +1163,7 @@ print_header (const char *str, const struct argp *argp,
+ 
+ /* Return true if CL1 is a child of CL2.  */
+ static int
++__attribute__((pure))
+ hol_cluster_is_child (const struct hol_cluster *cl1,
+ 		      const struct hol_cluster *cl2)
+ {
+@@ -1484,6 +1488,7 @@ hol_usage (struct hol *hol, argp_fmtstream_t stream)
+ /* Calculate how many different levels with alternative args strings exist in
+    ARGP.  */
+ static size_t
++__attribute__((pure))
+ argp_args_levels (const struct argp *argp)
+ {
+   size_t levels = 0;
+diff --git a/argp/argp-parse.c b/argp/argp-parse.c
+index 68dc4541..2c687756 100644
+--- a/argp/argp-parse.c
++++ b/argp/argp-parse.c
+@@ -197,6 +197,7 @@ static const struct argp argp_version_argp =
+    long option with called NAME, or -1 if none is found.  Passing NULL as
+    NAME will return the number of options.  */
+ static int
++__attribute__((pure))
+ find_long_option (struct option *long_options, const char *name)
+ {
+   struct option *l = long_options;
+@@ -931,6 +932,7 @@ weak_alias (__argp_parse, argp_parse)
+ /* Return the input field for ARGP in the parser corresponding to STATE; used
+    by the help routines.  */
+ void *
++__attribute__((pure))
+ __argp_input (const struct argp *argp, const struct argp_state *state)
+ {
+   if (state)
+diff --git a/argp/argp.h b/argp/argp.h
+index d6a04069..2155653d 100644
+--- a/argp/argp.h
++++ b/argp/argp.h
+@@ -529,6 +529,7 @@ __argp_usage (const struct argp_state *__state)
+ }
+ 
+ ARGP_EI int
++__attribute__((pure))
+ __NTH (__option_is_short (const struct argp_option *__opt))
+ {
+   if (__opt->flags & OPTION_DOC)
+@@ -541,6 +542,7 @@ __NTH (__option_is_short (const struct argp_option *__opt))
+ }
+ 
+ ARGP_EI int
++__attribute__((pure))
+ __NTH (__option_is_end (const struct argp_option *__opt))
+ {
+   return !__opt->key && !__opt->name && !__opt->doc && !__opt->group;
+diff --git a/bits/sysmacros.h b/bits/sysmacros.h
+index cd764724..473e0387 100644
+--- a/bits/sysmacros.h
++++ b/bits/sysmacros.h
+@@ -41,7 +41,7 @@
+   {								\
+     unsigned int __major;					\
+     __major  = ((__dev & (__dev_t) 0x00000000000fff00u) >>  8); \
+-    __major |= ((__dev & (__dev_t) 0xfffff00000000000u) >> 32); \
++    __major |= (unsigned int) ((__dev & (__dev_t) 0xfffff00000000000u) >> 32); \
+     return __major;						\
+   }
+ 
+@@ -53,7 +53,7 @@
+   {								\
+     unsigned int __minor;					\
+     __minor  = ((__dev & (__dev_t) 0x00000000000000ffu) >>  0); \
+-    __minor |= ((__dev & (__dev_t) 0x00000ffffff00000u) >> 12); \
++    __minor |= (unsigned int) ((__dev & (__dev_t) 0x00000ffffff00000u) >> 12); \
+     return __minor;						\
+   }
+ 
+diff --git a/csu/libc-tls.c b/csu/libc-tls.c
+index bef92a75..dcecfa14 100644
+--- a/csu/libc-tls.c
++++ b/csu/libc-tls.c
+@@ -169,7 +169,7 @@ __libc_setup_tls (void)
+ #if TLS_TCB_AT_TP
+   _dl_static_dtv[2].pointer.val = ((char *) tlsblock + tcb_offset
+ 			       - roundup (memsz, align ?: 1));
+-  main_map->l_tls_offset = roundup (memsz, align ?: 1);
++  main_map->l_tls_offset = (ptrdiff_t) roundup (memsz, align ?: 1);
+ #elif TLS_DTV_AT_TP
+   _dl_static_dtv[2].pointer.val = (char *) tlsblock + tcb_offset;
+   main_map->l_tls_offset = tcb_offset;
+diff --git a/ctype/ctype-c99_l.c b/ctype/ctype-c99_l.c
+index b618b749..22c0f0e6 100644
+--- a/ctype/ctype-c99_l.c
++++ b/ctype/ctype-c99_l.c
+@@ -19,7 +19,7 @@
+ #define	__NO_CTYPE
+ #include <ctype.h>
+ 
+-int
++int __attribute__((pure))
+ __isblank_l (int c, locale_t l)
+ {
+   return __isctype_l (c, _ISblank, l);
+diff --git a/ctype/ctype-extn.c b/ctype/ctype-extn.c
+index 83500505..dcd96445 100644
+--- a/ctype/ctype-extn.c
++++ b/ctype/ctype-extn.c
+@@ -25,12 +25,12 @@
+ 
+ /* Real function versions of the non-ANSI ctype functions.  */
+ 
+-int
++int __attribute__((pure))
+ _tolower (int c)
+ {
+   return __ctype_tolower[c];
+ }
+-int
++int __attribute__((pure))
+ _toupper (int c)
+ {
+   return __ctype_toupper[c];
+diff --git a/ctype/ctype_l.c b/ctype/ctype_l.c
+index b34d7cbc..a2442d2e 100644
+--- a/ctype/ctype_l.c
++++ b/ctype/ctype_l.c
+@@ -24,26 +24,26 @@
+   int __##name (int c, locale_t l) { return __isctype_l (c, type, l); } \
+   weak_alias (__##name, name)
+ 
+-func (isalnum_l, _ISalnum)
+-func (isalpha_l, _ISalpha)
+-func (iscntrl_l, _IScntrl)
+-func (isdigit_l, _ISdigit)
+-func (islower_l, _ISlower)
+-func (isgraph_l, _ISgraph)
+-func (isprint_l, _ISprint)
+-func (ispunct_l, _ISpunct)
+-func (isspace_l, _ISspace)
+-func (isupper_l, _ISupper)
+-func (isxdigit_l, _ISxdigit)
+-
+-int
++__attribute__((pure)) func (isalnum_l, _ISalnum)
++__attribute__((pure)) func (isalpha_l, _ISalpha)
++__attribute__((pure)) func (iscntrl_l, _IScntrl)
++__attribute__((pure)) func (isdigit_l, _ISdigit)
++__attribute__((pure)) func (islower_l, _ISlower)
++__attribute__((pure)) func (isgraph_l, _ISgraph)
++__attribute__((pure)) func (isprint_l, _ISprint)
++__attribute__((pure)) func (ispunct_l, _ISpunct)
++__attribute__((pure)) func (isspace_l, _ISspace)
++__attribute__((pure)) func (isupper_l, _ISupper)
++__attribute__((pure)) func (isxdigit_l, _ISxdigit)
++
++int __attribute__((pure))
+ (__tolower_l) (int c, locale_t l)
+ {
+   return l->__ctype_tolower[c];
+ }
+ weak_alias (__tolower_l, tolower_l)
+ 
+-int
++int __attribute__((pure))
+ (__toupper_l) (int c, locale_t l)
+ {
+   return l->__ctype_toupper[c];
+diff --git a/ctype/isctype.c b/ctype/isctype.c
+index dd6ca328..82764987 100644
+--- a/ctype/isctype.c
++++ b/ctype/isctype.c
+@@ -19,7 +19,7 @@
+ 
+ #undef __isctype
+ 
+-int
++int __attribute__((pure))
+ __isctype (int ch, int mask)
+ {
+   return (((uint16_t *) _NL_CURRENT (LC_CTYPE, _NL_CTYPE_CLASS) + 128)
+diff --git a/elf/dl-cache.c b/elf/dl-cache.c
+index 88bf78ad..f8eefbd0 100644
+--- a/elf/dl-cache.c
++++ b/elf/dl-cache.c
+@@ -402,6 +402,7 @@ _dl_cache_libcmp (const char *p1, const char *p2)
+    this function must take care that it does not return references to
+    any data in the mapping.  */
+ char *
++__attribute__((malloc))
+ _dl_load_cache_lookup (const char *name)
+ {
+   /* Print a message if the loading of libs is traced.  */
+diff --git a/elf/dl-load.c b/elf/dl-load.c
+index 5b0ff41e..e7220915 100644
+--- a/elf/dl-load.c
++++ b/elf/dl-load.c
+@@ -125,6 +125,7 @@ static const size_t system_dirs_len[] =
+ #define nsystem_dirs_len array_length (system_dirs_len)
+ 
+ static bool
++__attribute__((pure))
+ is_trusted_path_normalize (const char *path, size_t len)
+ {
+   if (len == 0)
+@@ -234,6 +235,7 @@ is_dst (const char *input, const char *ref)
+    is responsible for enforcing the security of the substitution rules
+    (usually _dl_dst_substitute).  */
+ size_t
++__attribute__((pure))
+ _dl_dst_count (const char *input)
+ {
+   size_t cnt = 0;
+diff --git a/elf/dl-lookup-direct.c b/elf/dl-lookup-direct.c
+index e74ca956..5d6c03f1 100644
+--- a/elf/dl-lookup-direct.c
++++ b/elf/dl-lookup-direct.c
+@@ -68,6 +68,7 @@ check_match (const struct link_map *const map, const char *const undef_name,
+    variant here is simplified because it does not search object
+    dependencies.  It is optimized for a successful lookup.  */
+ const ElfW(Sym) *
++__attribute__((pure))
+ _dl_lookup_direct (struct link_map *map,
+                    const char *undef_name, uint32_t new_hash,
+                    const char *version, uint32_t version_hash)
+diff --git a/elf/dl-lookup.c b/elf/dl-lookup.c
+index cbf46fda..f1c7e9c6 100644
+--- a/elf/dl-lookup.c
++++ b/elf/dl-lookup.c
+@@ -575,6 +575,7 @@ skip:
+ 
+ 
+ static uint_fast32_t
++__attribute__((pure))
+ dl_new_hash (const char *s)
+ {
+   uint_fast32_t h = 5381;
+diff --git a/elf/dl-minimal-malloc.c b/elf/dl-minimal-malloc.c
+index 7cca5420..b775db98 100644
+--- a/elf/dl-minimal-malloc.c
++++ b/elf/dl-minimal-malloc.c
+@@ -31,6 +31,7 @@ static void *alloc_ptr, *alloc_end, *alloc_last_block;
+ 
+ /* Allocate an aligned memory block.  */
+ void *
++__attribute__((malloc))
+ __minimal_malloc (size_t n)
+ {
+   if (alloc_end == 0)
+@@ -74,6 +75,7 @@ __minimal_malloc (size_t n)
+    be optimized when it can assume the memory it returns already is
+    set to NUL.  */
+ void *
++__attribute__((malloc))
+ __minimal_calloc (size_t nmemb, size_t size)
+ {
+   /* New memory from the trivial malloc above is always already cleared.
+diff --git a/elf/dl-open.c b/elf/dl-open.c
+index a23e6592..61a0d1b4 100644
+--- a/elf/dl-open.c
++++ b/elf/dl-open.c
+@@ -230,6 +230,7 @@ rtld_hidden_def (_dl_find_dso_for_object);
+ 
+ /* Return true if NEW is found in the scope for MAP.  */
+ static size_t
++__attribute__((pure))
+ scope_has_map (struct link_map *map, struct link_map *new)
+ {
+   size_t cnt;
+@@ -241,6 +242,7 @@ scope_has_map (struct link_map *map, struct link_map *new)
+ 
+ /* Return the length of the scope for MAP.  */
+ static size_t
++__attribute__((pure))
+ scope_size (struct link_map *map)
+ {
+   size_t cnt;
+diff --git a/elf/dl-sysdep-open.h b/elf/dl-sysdep-open.h
+index 59ff55de..0e06ac68 100644
+--- a/elf/dl-sysdep-open.h
++++ b/elf/dl-sysdep-open.h
+@@ -36,6 +36,7 @@
+    then __strdup (NAME) is fine (modulo error checking).  */
+ 
+ static inline char *
++__attribute__((pure))
+ _dl_sysdep_open_object (const char *name, size_t namelen, int *fd)
+ {
+   assert (*fd == -1);
+diff --git a/iconv/gconv_cache.c b/iconv/gconv_cache.c
+index c772856d..4c69e5a4 100644
+--- a/iconv/gconv_cache.c
++++ b/iconv/gconv_cache.c
+@@ -36,7 +36,7 @@ static size_t cache_size;
+ static int cache_malloced;
+ 
+ 
+-void *
++void * __attribute__((pure))
+ __gconv_get_cache (void)
+ {
+   return gconv_cache;
+diff --git a/iconv/gconv_conf.c b/iconv/gconv_conf.c
+index f069e283..4ebb2c4f 100644
+--- a/iconv/gconv_conf.c
++++ b/iconv/gconv_conf.c
+@@ -97,7 +97,7 @@ const char *__gconv_path_envvar;
+ 
+ 
+ /* Test whether there is already a matching module known.  */
+-static int
++static int __attribute__((pure))
+ detect_conflict (const char *alias)
+ {
+   struct gconv_module *node = __gconv_modules_db;
+diff --git a/iconv/gconv_db.c b/iconv/gconv_db.c
+index bf385ac7..a2b5ecf3 100644
+--- a/iconv/gconv_db.c
++++ b/iconv/gconv_db.c
+@@ -42,13 +42,13 @@ __libc_lock_define_initialized (, __gconv_lock)
+ 
+ 
+ /* Provide access to module database.  */
+-struct gconv_module *
++struct gconv_module * __attribute__((pure))
+ __gconv_get_modules_db (void)
+ {
+   return __gconv_modules_db;
+ }
+ 
+-void *
++void * __attribute__((pure))
+ __gconv_get_alias_db (void)
+ {
+   return __gconv_alias_db;
+@@ -56,7 +56,7 @@ __gconv_get_alias_db (void)
+ 
+ 
+ /* Function for searching alias.  */
+-int
++int __attribute__((pure))
+ __gconv_alias_compare (const void *p1, const void *p2)
+ {
+   const struct gconv_alias *s1 = (const struct gconv_alias *) p1;
+diff --git a/include/dlfcn.h b/include/dlfcn.h
+index ae25f053..20e01105 100644
+--- a/include/dlfcn.h
++++ b/include/dlfcn.h
+@@ -48,7 +48,7 @@ extern char **__libc_argv attribute_hidden;
+    RTLD_LAZY is not a big difference in performance, but RTLD_NOW has
+    better error handling semantics for the library.  */
+ #define __libc_dlopen(name) \
+-  __libc_dlopen_mode (name, RTLD_NOW | __RTLD_DLOPEN)
++  __libc_dlopen_mode (name, (int) RTLD_NOW | __RTLD_DLOPEN)
+ extern void *__libc_dlopen_mode  (const char *__name, int __mode)
+   attribute_hidden;
+ extern void *__libc_dlsym   (void *__map, const char *__name)
+diff --git a/include/rounding-mode.h b/include/rounding-mode.h
+index 184fbd2e..8bb1d4d4 100644
+--- a/include/rounding-mode.h
++++ b/include/rounding-mode.h
+@@ -39,7 +39,7 @@
+    MORE_BITS is true if the number is not exactly equal to the
+    truncated value or the half-way value, false otherwise.  */
+ 
+-static bool
++static bool __attribute__((pure))
+ round_away (bool negative, bool last_digit_odd, bool half_bit, bool more_bits,
+ 	    int mode)
+ {
+diff --git a/include/time.h b/include/time.h
+index 127347eb..cd3d0c8f 100644
+--- a/include/time.h
++++ b/include/time.h
+@@ -469,7 +469,7 @@ valid_timeval32_to_timeval64 (const struct __timeval32 tv)
+ static inline struct __timeval32
+ valid_timeval64_to_timeval32 (const struct __timeval64 tv64)
+ {
+-  return (struct __timeval32) { tv64.tv_sec, tv64.tv_usec };
++  return (struct __timeval32) { (__int32_t)tv64.tv_sec, (__int32_t)tv64.tv_usec };
+ }
+ 
+ static inline struct timeval
+@@ -481,7 +481,7 @@ valid_timeval32_to_timeval (const struct __timeval32 tv)
+ static inline struct __timeval32
+ valid_timeval_to_timeval32 (const struct timeval tv)
+ {
+-  return (struct __timeval32) { tv.tv_sec, tv.tv_usec };
++  return (struct __timeval32) { (__int32_t)tv.tv_sec, (__int32_t)tv.tv_usec };
+ }
+ 
+ static inline struct timespec
+@@ -493,7 +493,7 @@ valid_timeval32_to_timespec (const struct __timeval32 tv)
+ static inline struct __timeval32
+ valid_timespec_to_timeval32 (const struct timespec ts)
+ {
+-  return (struct __timeval32) { (time_t) ts.tv_sec, ts.tv_nsec / 1000 };
++  return (struct __timeval32) { (__int32_t) ts.tv_sec, (__int32_t)(ts.tv_nsec / 1000) };
+ }
+ 
+ static inline struct __timeval64
+diff --git a/inet/deadline.c b/inet/deadline.c
+index 7deb39b0..07c3f3cc 100644
+--- a/inet/deadline.c
++++ b/inet/deadline.c
+@@ -43,6 +43,7 @@ infinite_deadline (void)
+ }
+ 
+ struct deadline
++__attribute__((pure))
+ __deadline_from_timeval (struct deadline_current_time current,
+                          struct timeval tv)
+ {
+@@ -73,7 +74,7 @@ __deadline_from_timeval (struct deadline_current_time current,
+   return (struct deadline) { { sec, nsec } };
+ }
+ 
+-int
++int __attribute__((pure))
+ __deadline_to_ms (struct deadline_current_time current,
+                   struct deadline deadline)
+ {
+diff --git a/inet/inet6_rth.c b/inet/inet6_rth.c
+index 20f383cc..b50a5fc0 100644
+--- a/inet/inet6_rth.c
++++ b/inet/inet6_rth.c
+@@ -152,7 +152,7 @@ inet6_rth_reverse (const void *in, void *out)
+ 
+    This function returns the number of segments (addresses) contained in
+    the Routing header described by BP.  */
+-int
++int __attribute__((pure))
+ inet6_rth_segments (const void *bp)
+ {
+   struct ip6_rthdr *rthdr = (struct ip6_rthdr *) bp;
+@@ -175,6 +175,7 @@ inet6_rth_segments (const void *bp)
+    value returned by 'inet6_rth_segments') in the Routing header
+    described by BP.  */
+ struct in6_addr *
++__attribute__((pure))
+ inet6_rth_getaddr (const void *bp, int index)
+ {
+   struct ip6_rthdr *rthdr = (struct ip6_rthdr *) bp;
+diff --git a/inet/inet_net.c b/inet/inet_net.c
+index e718b215..b557f94a 100644
+--- a/inet/inet_net.c
++++ b/inet/inet_net.c
+@@ -55,6 +55,7 @@
+  * network numbers.
+  */
+ uint32_t
++__attribute__((pure))
+ __inet_network (const char *cp)
+ {
+ 	uint32_t val, base, n, i;
+diff --git a/inet/rcmd.c b/inet/rcmd.c
+index 0d6b5955..99d93b41 100644
+--- a/inet/rcmd.c
++++ b/inet/rcmd.c
+@@ -730,6 +730,7 @@ __icheckuser (const char *luser, const char *ruser)
+  * Returns 1 for blank lines (or only comment lines) and 0 otherwise
+  */
+ static int
++__attribute__((pure))
+ __isempty (char *p)
+ {
+     while (*p && isspace (*p)) {
+diff --git a/intl/explodename.c b/intl/explodename.c
+index 04d072d4..21147424 100644
+--- a/intl/explodename.c
++++ b/intl/explodename.c
+@@ -40,7 +40,7 @@
+    i.e. to the first byte of the rest.  */
+ static char *_nl_find_language (const char *name);
+ 
+-static char *
++static char * __attribute__((pure))
+ _nl_find_language (const char *name)
+ {
+   while (name[0] != '\0' && name[0] != '_' && name[0] != '@' && name[0] != '.')
+diff --git a/intl/hash-string.c b/intl/hash-string.c
+index d9552ce3..6f3e51f6 100644
+--- a/intl/hash-string.c
++++ b/intl/hash-string.c
+@@ -27,7 +27,7 @@
+ /* Defines the so called `hashpjw' function by P.J. Weinberger
+    [see Aho/Sethi/Ullman, COMPILERS: Principles, Techniques and Tools,
+    1986, 1987 Bell Telephone Laboratories, Inc.]  */
+-unsigned long int
++unsigned long int __attribute__((pure))
+ __hash_string (const char *str_param)
+ {
+   unsigned long int hval, g;
+diff --git a/intl/l10nflist.c b/intl/l10nflist.c
+index 078a450d..ce4cde25 100644
+--- a/intl/l10nflist.c
++++ b/intl/l10nflist.c
+@@ -67,7 +67,7 @@ static char *stpcpy (char *dest, const char *src);
+ # define __argz_count argz_count
+ #else
+ /* Returns the number of strings in ARGZ.  */
+-static size_t
++static size_t __attribute__((pure))
+ argz_count__ (const char *argz, size_t len)
+ {
+   size_t count = 0;
+diff --git a/io/file_change_detection.c b/io/file_change_detection.c
+index a0720c4e..fcc5570b 100644
+--- a/io/file_change_detection.c
++++ b/io/file_change_detection.c
+@@ -21,7 +21,7 @@
+ #include <errno.h>
+ #include <stddef.h>
+ 
+-bool
++bool __attribute__((pure))
+ __file_is_unchanged (const struct file_change_detection *left,
+                      const struct file_change_detection *right)
+ {
+diff --git a/io/fts.c b/io/fts.c
+index 283cf179..be6874fa 100644
+--- a/io/fts.c
++++ b/io/fts.c
+@@ -1090,7 +1090,7 @@ fts_padjust (FTSOBJ *sp, FTSENTRY *head)
+ 	}
+ }
+ 
+-static size_t
++static size_t __attribute__((pure))
+ fts_maxarglen (char * const *argv)
+ {
+ 	size_t len, max;
+diff --git a/libio/__fbufsize.c b/libio/__fbufsize.c
+index beb03226..c5c99c94 100644
+--- a/libio/__fbufsize.c
++++ b/libio/__fbufsize.c
+@@ -17,7 +17,7 @@
+ 
+ #include <stdio_ext.h>
+ 
+-size_t
++size_t __attribute__((pure))
+ __fbufsize (FILE *fp)
+ {
+   if (fp->_mode > 0)
+diff --git a/libio/__flbf.c b/libio/__flbf.c
+index 14791621..2082d2ac 100644
+--- a/libio/__flbf.c
++++ b/libio/__flbf.c
+@@ -17,7 +17,7 @@
+ 
+ #include <stdio_ext.h>
+ 
+-int
++int __attribute__((pure))
+ __flbf (FILE *fp)
+ {
+   return fp->_flags & _IO_LINE_BUF;
+diff --git a/libio/__fpending.c b/libio/__fpending.c
+index f66dc00c..d408cc96 100644
+--- a/libio/__fpending.c
++++ b/libio/__fpending.c
+@@ -17,7 +17,7 @@
+ 
+ #include <stdio_ext.h>
+ 
+-size_t
++size_t __attribute__((pure))
+ __fpending (FILE *fp)
+ {
+   if (fp->_mode > 0)
+diff --git a/libio/__freadable.c b/libio/__freadable.c
+index 737819f3..a7b1451f 100644
+--- a/libio/__freadable.c
++++ b/libio/__freadable.c
+@@ -17,7 +17,7 @@
+ 
+ #include <stdio_ext.h>
+ 
+-int
++int __attribute__((pure))
+ __freadable (FILE *fp)
+ {
+   return (fp->_flags & _IO_NO_READS) == 0;
+diff --git a/libio/__freading.c b/libio/__freading.c
+index 168e4ed7..1fabb186 100644
+--- a/libio/__freading.c
++++ b/libio/__freading.c
+@@ -17,7 +17,7 @@
+ 
+ #include <stdio_ext.h>
+ 
+-int
++int __attribute__((pure))
+ __freading (FILE *fp)
+ {
+   return ((fp->_flags & _IO_NO_WRITES)
+diff --git a/libio/__fwritable.c b/libio/__fwritable.c
+index f1271f82..04e40938 100644
+--- a/libio/__fwritable.c
++++ b/libio/__fwritable.c
+@@ -17,7 +17,7 @@
+ 
+ #include <stdio_ext.h>
+ 
+-int
++int __attribute__((pure))
+ __fwritable (FILE *fp)
+ {
+   return (fp->_flags & _IO_NO_WRITES) == 0;
+diff --git a/libio/__fwriting.c b/libio/__fwriting.c
+index 8614f30c..6ece8fec 100644
+--- a/libio/__fwriting.c
++++ b/libio/__fwriting.c
+@@ -17,7 +17,7 @@
+ 
+ #include <stdio_ext.h>
+ 
+-int
++int __attribute__((pure))
+ __fwriting (FILE *fp)
+ {
+   return fp->_flags & (_IO_NO_READS | _IO_CURRENTLY_PUTTING);
+diff --git a/libio/bits/types/struct_FILE.h b/libio/bits/types/struct_FILE.h
+index 1eb42988..77a3f4db 100644
+--- a/libio/bits/types/struct_FILE.h
++++ b/libio/bits/types/struct_FILE.h
+@@ -106,7 +106,7 @@ struct _IO_FILE_complete
+ #define __putc_unlocked_body(_ch, _fp)					\
+   (__glibc_unlikely ((_fp)->_IO_write_ptr >= (_fp)->_IO_write_end)	\
+    ? __overflow (_fp, (unsigned char) (_ch))				\
+-   : (unsigned char) (*(_fp)->_IO_write_ptr++ = (_ch)))
++   : (unsigned char) (*(_fp)->_IO_write_ptr++ = (char) (_ch)))
+ 
+ #define _IO_EOF_SEEN 0x0010
+ #define __feof_unlocked_body(_fp) (((_fp)->_flags & _IO_EOF_SEEN) != 0)
+diff --git a/libio/feof_u.c b/libio/feof_u.c
+index 5b7477ef..4776b678 100644
+--- a/libio/feof_u.c
++++ b/libio/feof_u.c
+@@ -29,7 +29,7 @@
+ 
+ #undef feof_unlocked
+ 
+-int
++int __attribute__((pure))
+ __feof_unlocked (FILE *fp)
+ {
+   CHECK_FILE (fp, EOF);
+diff --git a/libio/ferror_u.c b/libio/ferror_u.c
+index edba404d..dafb38c1 100644
+--- a/libio/ferror_u.c
++++ b/libio/ferror_u.c
+@@ -29,7 +29,7 @@
+ 
+ #undef ferror_unlocked
+ 
+-int
++int __attribute__((pure))
+ __ferror_unlocked (FILE *fp)
+ {
+   CHECK_FILE (fp, EOF);
+diff --git a/libio/genops.c b/libio/genops.c
+index 1b629eb6..60443b83 100644
+--- a/libio/genops.c
++++ b/libio/genops.c
+@@ -110,7 +110,7 @@ libc_hidden_def (_IO_link_in)
+    Assumes the current get area is the main get area. */
+ ssize_t _IO_least_marker (FILE *fp, char *end_p);
+ 
+-ssize_t
++ssize_t __attribute__((pure))
+ _IO_least_marker (FILE *fp, char *end_p)
+ {
+   ssize_t least_so_far = end_p - fp->_IO_read_base;
+@@ -670,7 +670,7 @@ _IO_sungetc (FILE *fp)
+   return result;
+ }
+ 
+-unsigned
++unsigned __attribute__((pure))
+ _IO_adjust_column (unsigned start, const char *line, int count)
+ {
+   const char *ptr = line + count;
+@@ -915,14 +915,14 @@ _IO_remove_marker (struct _IO_marker *marker)
+ 
+ #define BAD_DELTA EOF
+ 
+-int
++int __attribute__((pure))
+ _IO_marker_difference (struct _IO_marker *mark1, struct _IO_marker *mark2)
+ {
+   return mark1->_pos - mark2->_pos;
+ }
+ 
+ /* Return difference between MARK and current position of MARK's stream. */
+-int
++int __attribute__((pure))
+ _IO_marker_delta (struct _IO_marker *mark)
+ {
+   int cur_pos;
+@@ -1061,7 +1061,7 @@ _IO_default_imbue (FILE *fp, void *locale)
+ {
+ }
+ 
+-_IO_ITER
++_IO_ITER __attribute__((pure))
+ _IO_iter_begin (void)
+ {
+   return (_IO_ITER) _IO_list_all;
+@@ -1075,7 +1075,7 @@ _IO_iter_end (void)
+ }
+ libc_hidden_def (_IO_iter_end)
+ 
+-_IO_ITER
++_IO_ITER __attribute__((pure))
+ _IO_iter_next (_IO_ITER iter)
+ {
+   return iter->_chain;
+diff --git a/libio/iofwide.c b/libio/iofwide.c
+index 01616e06..a73cb156 100644
+--- a/libio/iofwide.c
++++ b/libio/iofwide.c
+@@ -210,7 +210,7 @@ __libio_codecvt_in (struct _IO_codecvt *codecvt, __mbstate_t *statep,
+ }
+ 
+ 
+-int
++int __attribute__((pure))
+ __libio_codecvt_encoding (struct _IO_codecvt *codecvt)
+ {
+   /* See whether the encoding is stateful.  */
+diff --git a/libio/strops.c b/libio/strops.c
+index 6a9a8846..5e674b57 100644
+--- a/libio/strops.c
++++ b/libio/strops.c
+@@ -157,7 +157,7 @@ libc_hidden_def (_IO_str_underflow)
+ 
+ /* The size of the valid part of the buffer.  */
+ 
+-ssize_t
++ssize_t __attribute__((pure))
+ _IO_str_count (FILE *fp)
+ {
+   return ((fp->_IO_write_ptr > fp->_IO_read_end
+diff --git a/libio/wgenops.c b/libio/wgenops.c
+index e7ea75ae..f784744d 100644
+--- a/libio/wgenops.c
++++ b/libio/wgenops.c
+@@ -36,7 +36,7 @@ static int save_for_wbackup (FILE *fp, wchar_t *end_p) __THROW;
+ 
+ /* Return minimum _pos markers
+    Assumes the current get area is the main get area. */
+-ssize_t
++ssize_t __attribute__((pure))
+ _IO_least_wmarker (FILE *fp, wchar_t *end_p)
+ {
+   ssize_t least_so_far = end_p - fp->_wide_data->_IO_read_base;
+@@ -529,7 +529,7 @@ _IO_sungetwc (FILE *fp)
+ }
+ 
+ 
+-unsigned
++unsigned __attribute__((pure))
+ _IO_adjust_wcolumn (unsigned start, const wchar_t *line, int count)
+ {
+   const wchar_t *ptr = line + count;
+@@ -559,7 +559,7 @@ _IO_init_wmarker (struct _IO_marker *marker, FILE *fp)
+ #define BAD_DELTA EOF
+ 
+ /* Return difference between MARK and current position of MARK's stream. */
+-int
++int __attribute__((pure))
+ _IO_wmarker_delta (struct _IO_marker *mark)
+ {
+   int cur_pos;
+diff --git a/libio/wstrops.c b/libio/wstrops.c
+index 8e44f86c..a35fcdeb 100644
+--- a/libio/wstrops.c
++++ b/libio/wstrops.c
+@@ -153,7 +153,7 @@ _IO_wstr_underflow (FILE *fp)
+ 
+ 
+ /* The size of the valid part of the buffer.  */
+-ssize_t
++ssize_t __attribute__((pure))
+ _IO_wstr_count (FILE *fp)
+ {
+   struct _IO_wide_data *wd = fp->_wide_data;
+diff --git a/locale/coll-lookup.c b/locale/coll-lookup.c
+index 112bebaf..d0673485 100644
+--- a/locale/coll-lookup.c
++++ b/locale/coll-lookup.c
+@@ -18,7 +18,7 @@
+ #include <stdint.h>
+ 
+ /* Lookup in a table of int32_t, with default value 0.  */
+-int32_t
++int32_t __attribute__((pure))
+ __collidx_table_lookup (const char *table, uint32_t wc)
+ {
+   uint32_t shift1 = ((const uint32_t *) table)[0];
+@@ -48,7 +48,7 @@ __collidx_table_lookup (const char *table, uint32_t wc)
+ 
+ 
+ /* Lookup in a table of uint32_t, with default value 0xffffffff.  */
+-uint32_t
++uint32_t __attribute__((pure))
+ __collseq_table_lookup (const char *table, uint32_t wc)
+ {
+   uint32_t shift1 = ((const uint32_t *) table)[0];
+diff --git a/locale/localename.c b/locale/localename.c
+index 947be68a..bcbb108c 100644
+--- a/locale/localename.c
++++ b/locale/localename.c
+@@ -19,7 +19,7 @@
+ #include "localeinfo.h"
+ 
+ attribute_hidden
+-const char *
++const char * __attribute__((pure))
+ __current_locale_name (int category)
+ {
+   return _NL_CURRENT_LOCALE->__names[category];
+diff --git a/locale/mb_cur_max.c b/locale/mb_cur_max.c
+index f442ca4c..3912da08 100644
+--- a/locale/mb_cur_max.c
++++ b/locale/mb_cur_max.c
+@@ -24,7 +24,7 @@
+ 
+ 
+ size_t
+-weak_function
++weak_function __attribute__((pure))
+ __ctype_get_mb_cur_max (void)
+ {
+   return _NL_CURRENT_WORD (LC_CTYPE, _NL_CTYPE_MB_CUR_MAX);
+diff --git a/locale/nl_langinfo_l.c b/locale/nl_langinfo_l.c
+index 6aeb5599..2cc2cf1a 100644
+--- a/locale/nl_langinfo_l.c
++++ b/locale/nl_langinfo_l.c
+@@ -26,7 +26,7 @@
+ 
+ /* Return a string with the data for locale-dependent parameter ITEM.  */
+ 
+-char *
++char * __attribute__((pure))
+ __nl_langinfo_l (nl_item item, locale_t l)
+ {
+   int category = _NL_ITEM_CATEGORY (item);
+diff --git a/locale/outdigitswc.h b/locale/outdigitswc.h
+index 8a24d524..ad16f91a 100644
+--- a/locale/outdigitswc.h
++++ b/locale/outdigitswc.h
+@@ -24,7 +24,7 @@
+    -1 this means it is not yet decided which form it is and we have to
+    search through all available digits.  Otherwise we know which script
+    the digits are from.  */
+-static inline wchar_t
++static inline wchar_t __attribute__((pure))
+ outdigitwc_value (int n)
+ {
+   assert (0 <= n && n <= 9);
+diff --git a/locale/programs/xmalloc.c b/locale/programs/xmalloc.c
+index 29ad8e7d..beb23224 100644
+--- a/locale/programs/xmalloc.c
++++ b/locale/programs/xmalloc.c
+@@ -67,6 +67,7 @@ fixup_null_alloc (size_t n)
+ /* Allocate N bytes of memory dynamically, with error checking.  */
+ 
+ VOID *
++__attribute__((malloc))
+ xmalloc (size_t n)
+ {
+   VOID *p;
+@@ -80,6 +81,7 @@ xmalloc (size_t n)
+ /* Allocate memory for N elements of S bytes, with error checking.  */
+ 
+ VOID *
++__attribute__((malloc))
+ xcalloc (size_t n, size_t s)
+ {
+   VOID *p;
+diff --git a/malloc/malloc.c b/malloc/malloc.c
+index 1a1ac1d8..413bc358 100644
+--- a/malloc/malloc.c
++++ b/malloc/malloc.c
+@@ -5133,7 +5133,7 @@ musable (void *mem)
+ }
+ 
+ #if IS_IN (libc)
+-size_t
++size_t __attribute__((pure))
+ __malloc_usable_size (void *m)
+ {
+   if (m == NULL)
+diff --git a/misc/mntent_r.c b/misc/mntent_r.c
+index 3311ba0b..10a7cfaf 100644
+--- a/misc/mntent_r.c
++++ b/misc/mntent_r.c
+@@ -264,7 +264,7 @@ weak_alias (__addmntent, addmntent)
+ 
+ /* Search MNT->mnt_opts for an option matching OPT.
+    Returns the address of the substring, or null if none found.  */
+-char *
++char * __attribute__((pure))
+ __hasmntopt (const struct mntent *mnt, const char *opt)
+ {
+   const size_t optlen = strlen (opt);
+diff --git a/nptl/nptl-stack.c b/nptl/nptl-stack.c
+index 20ce78ed..de3e8b0c 100644
+--- a/nptl/nptl-stack.c
++++ b/nptl/nptl-stack.c
+@@ -137,7 +137,7 @@ libc_hidden_def (__nptl_deallocate_stack)
+    allocation on the stack.  Once the TCB is separately allocated,
+    this function should be removed or renamed (if it is still
+    necessary at that point).  */
+-size_t
++size_t __attribute__((pure))
+ __pthread_get_minstack (const pthread_attr_t *attr)
+ {
+   return (GLRO(dl_pagesize) + __nptl_tls_static_size_for_stack ()
+diff --git a/nptl/pthread_getconcurrency.c b/nptl/pthread_getconcurrency.c
+index 4f5fe0e6..b2675ecb 100644
+--- a/nptl/pthread_getconcurrency.c
++++ b/nptl/pthread_getconcurrency.c
+@@ -18,7 +18,7 @@
+ #include "pthreadP.h"
+ #include <shlib-compat.h>
+ 
+-int
++int __attribute__((pure))
+ __pthread_getconcurrency (void)
+ {
+   return __concurrency_level;
+diff --git a/nptl/pthread_self.c b/nptl/pthread_self.c
+index dac847f6..d2b21b7e 100644
+--- a/nptl/pthread_self.c
++++ b/nptl/pthread_self.c
+@@ -18,7 +18,7 @@
+ #include "pthreadP.h"
+ #include <tls.h>
+ 
+-pthread_t
++pthread_t __attribute__((pure))
+ __pthread_self (void)
+ {
+   return (pthread_t) THREAD_SELF;
+diff --git a/nptl/thrd_current.c b/nptl/thrd_current.c
+index 2aa0debe..80d456e6 100644
+--- a/nptl/thrd_current.c
++++ b/nptl/thrd_current.c
+@@ -18,7 +18,7 @@
+ 
+ #include "thrd_priv.h"
+ 
+-thrd_t
++thrd_t __attribute__((pure))
+ thrd_current (void)
+ {
+   return (thrd_t) THREAD_SELF;
+diff --git a/nss/nss_action.c b/nss/nss_action.c
+index babea4e7..43d0174f 100644
+--- a/nss/nss_action.c
++++ b/nss/nss_action.c
+@@ -69,6 +69,7 @@ action_lists_equal (const struct nss_action *a, const struct nss_action *b,
+ /* Returns a pre-allocated action list for COUNT actions at ACTIONS,
+    or NULL if no such list exists.  */
+ static nss_action_list
++__attribute__((pure))
+ find_allocated (struct nss_action *actions, size_t count)
+ {
+   for (struct nss_action_list_wrapper *p = nss_actions; p != NULL; p = p->next)
+diff --git a/nss/nss_database.c b/nss/nss_database.c
+index d56c5b79..1d9e4570 100644
+--- a/nss/nss_database.c
++++ b/nss/nss_database.c
+@@ -194,6 +194,7 @@ name_search (const void *left, const void *right)
+ }
+ 
+ static int
++__attribute__((pure))
+ name_to_database_index (const char *name)
+ {
+   database_name *name_entry = bsearch (name, nss_database_name_array,
+diff --git a/nss/nss_hash.c b/nss/nss_hash.c
+index 27a348ea..10734818 100644
+--- a/nss/nss_hash.c
++++ b/nss/nss_hash.c
+@@ -28,6 +28,7 @@
+  * OZ's original sdbm hash
+  */
+ uint32_t
++__attribute__((pure))
+ __nss_hash (const void *keyarg, size_t len)
+ {
+   const unsigned char *key;
+diff --git a/nss/valid_field.c b/nss/valid_field.c
+index 6ea0819b..0869e3c2 100644
+--- a/nss/valid_field.c
++++ b/nss/valid_field.c
+@@ -24,6 +24,7 @@ const char __nss_invalid_field_characters[] = NSS_INVALID_FIELD_CHARACTERS;
+    does not contain characters not permitted in NSS database
+    fields.  */
+ _Bool
++__attribute__((pure))
+ __nss_valid_field (const char *value)
+ {
+   return value == NULL
+diff --git a/nss/valid_list_field.c b/nss/valid_list_field.c
+index cdc112c7..c61256cb 100644
+--- a/nss/valid_list_field.c
++++ b/nss/valid_list_field.c
+@@ -24,6 +24,7 @@ static const char invalid_characters[] = NSS_INVALID_FIELD_CHARACTERS ",";
+ /* Check that all list members match the field syntax requirements and
+    do not contain the character ','.  */
+ _Bool
++__attribute__((pure))
+ __nss_valid_list_field (char **list)
+ {
+   if (list == NULL)
+diff --git a/posix/glob.c b/posix/glob.c
+index a2b5aaba..53e589f3 100644
+--- a/posix/glob.c
++++ b/posix/glob.c
+@@ -261,7 +261,7 @@ is_dir (char const *filename, int flags, glob_t const *pglob)
+ }
+ 
+ /* Find the end of the sub-pattern in a brace expression.  */
+-static const char *
++static const char * __attribute__((pure))
+ next_brace_sub (const char *cp, int flags)
+ {
+   size_t depth = 0;
+diff --git a/posix/glob_internal.h b/posix/glob_internal.h
+index bd023927..1a5c5801 100644
+--- a/posix/glob_internal.h
++++ b/posix/glob_internal.h
+@@ -27,7 +27,7 @@ enum
+   GLOBPAT_BRACKET   = 0x4
+ };
+ 
+-static inline int
++static inline int __attribute__((pure))
+ __glob_pattern_type (const char *pattern, int quote)
+ {
+   const char *p;
+diff --git a/posix/glob_pattern_p.c b/posix/glob_pattern_p.c
+index 4044a508..1da63d9f 100644
+--- a/posix/glob_pattern_p.c
++++ b/posix/glob_pattern_p.c
+@@ -25,7 +25,7 @@
+ 
+ /* Return nonzero if PATTERN contains any metacharacters.
+    Metacharacters can be quoted with backslashes if QUOTE is nonzero.  */
+-int
++int __attribute__((pure))
+ __glob_pattern_p (const char *pattern, int quote)
+ {
+   return __glob_pattern_type (pattern, quote) == GLOBPAT_SPECIAL;
+diff --git a/posix/regexec.c b/posix/regexec.c
+index cffeaf28..2aa84a59 100644
+--- a/posix/regexec.c
++++ b/posix/regexec.c
+@@ -3869,7 +3869,7 @@ check_node_accept_bytes (const re_dfa_t *dfa, Idx node_idx,
+ }
+ 
+ # ifdef _LIBC
+-static unsigned int
++static unsigned int __attribute__((pure))
+ find_collation_sequence_value (const unsigned char *mbs, size_t mbs_len)
+ {
+   uint32_t nrules = _NL_CURRENT_WORD (LC_COLLATE, _NL_COLLATE_NRULES);
+@@ -4174,7 +4174,7 @@ match_ctx_add_entry (re_match_context_t *mctx, Idx node, Idx str_idx, Idx from,
+ /* Return the first entry with the same str_idx, or -1 if none is
+    found.  Note that MCTX->BKREF_ENTS is already sorted by MCTX->STR_IDX.  */
+ 
+-static Idx
++static Idx __attribute__((pure))
+ search_cur_bkref_entry (const re_match_context_t *mctx, Idx str_idx)
+ {
+   Idx left, right, mid, last;
+diff --git a/posix/sched_cpualloc.c b/posix/sched_cpualloc.c
+index 62de6177..641248d0 100644
+--- a/posix/sched_cpualloc.c
++++ b/posix/sched_cpualloc.c
+@@ -19,7 +19,7 @@
+ #include <stdlib.h>
+ 
+ 
+-cpu_set_t *
++cpu_set_t * __attribute__((malloc))
+ __sched_cpualloc (size_t count)
+ {
+   return malloc (CPU_ALLOC_SIZE (count));
+diff --git a/posix/sched_cpucount.c b/posix/sched_cpucount.c
+index 51078be0..bdf96764 100644
+--- a/posix/sched_cpucount.c
++++ b/posix/sched_cpucount.c
+@@ -30,7 +30,7 @@ countbits (__cpu_mask v)
+   return s;
+ }
+ 
+-int
++int __attribute__((pure))
+ __sched_cpucount (size_t setsize, const cpu_set_t *setp)
+ {
+   int s = 0;
+diff --git a/resolv/gai_error.c b/resolv/gai_error.c
+index 4ba54c96..55ef5c91 100644
+--- a/resolv/gai_error.c
++++ b/resolv/gai_error.c
+@@ -19,7 +19,7 @@
+ #include <shlib-compat.h>
+ #include <gai_misc.h>
+ 
+-int
++int __attribute__((pure))
+ __gai_error (struct gaicb *req)
+ {
+   return req->__return;
+diff --git a/resolv/gai_misc.c b/resolv/gai_misc.c
+index 8ce3c778..c44fad47 100644
+--- a/resolv/gai_misc.c
++++ b/resolv/gai_misc.c
+@@ -160,6 +160,7 @@ get_elem (void)
+ 
+ 
+ struct requestlist *
++__attribute__((pure))
+ __gai_find_request (const struct gaicb *gaicbp)
+ {
+   struct requestlist *runp;
+diff --git a/resolv/res-name-checking.c b/resolv/res-name-checking.c
+index 07a412d8..cae8772e 100644
+--- a/resolv/res-name-checking.c
++++ b/resolv/res-name-checking.c
+@@ -89,6 +89,7 @@
+ /* Return true if the string consists of printable ASCII characters
+    only.  */
+ static bool
++__attribute__((pure))
+ printable_string (const char *dn)
+ {
+   while (true)
+@@ -106,6 +107,7 @@ printable_string (const char *dn)
+    characters.  DN must be in DNS wire format, without
+    compression.  */
+ static bool
++__attribute__((pure))
+ binary_hnok (const unsigned char *dn)
+ {
+   while (true)
+diff --git a/resolv/res_get_nsaddr.c b/resolv/res_get_nsaddr.c
+index cab4cb14..facb95a0 100644
+--- a/resolv/res_get_nsaddr.c
++++ b/resolv/res_get_nsaddr.c
+@@ -21,6 +21,7 @@
+ #include <resolv-internal.h>
+ 
+ struct sockaddr *
++__attribute__((pure))
+ __res_get_nsaddr (res_state statp, unsigned int n)
+ {
+   assert (n < statp->nscount);
+diff --git a/resolv/res_hconf.c b/resolv/res_hconf.c
+index dd09a2a2..19b964d4 100644
+--- a/resolv/res_hconf.c
++++ b/resolv/res_hconf.c
+@@ -81,6 +81,7 @@ struct hconf _res_hconf;
+ 
+ /* Skip white space.  */
+ static const char *
++__attribute__((pure))
+ skip_ws (const char *str)
+ {
+   while (isspace (*str)) ++str;
+@@ -90,6 +91,7 @@ skip_ws (const char *str)
+ 
+ /* Skip until whitespace, comma, end of line, or comment character.  */
+ static const char *
++__attribute__((pure))
+ skip_string (const char *str)
+ {
+   while (*str && !isspace (*str) && *str != '#' && *str != ',')
+diff --git a/rt/aio_misc.c b/rt/aio_misc.c
+index b4304d0a..350d0b6e 100644
+--- a/rt/aio_misc.c
++++ b/rt/aio_misc.c
+@@ -181,6 +181,7 @@ __aio_free_request (struct requestlist *elem)
+ 
+ 
+ struct requestlist *
++__attribute__((pure))
+ __aio_find_req (aiocb_union *elem)
+ {
+   struct requestlist *runp = requests;
+@@ -203,6 +204,7 @@ __aio_find_req (aiocb_union *elem)
+ 
+ 
+ struct requestlist *
++__attribute__((pure))
+ __aio_find_req_fd (int fildes)
+ {
+   struct requestlist *runp = requests;
+diff --git a/rt/aio_return.c b/rt/aio_return.c
+index fb0990a4..96f4573b 100644
+--- a/rt/aio_return.c
++++ b/rt/aio_return.c
+@@ -29,7 +29,7 @@
+ 
+ #include <shlib-compat.h>
+ 
+-ssize_t
++ssize_t __attribute__((pure))
+ __aio_return (struct aiocb *aiocbp)
+ {
+   return aiocbp->__return_value;
+diff --git a/signal/allocrtsig.c b/signal/allocrtsig.c
+index ce139594..9e2aed65 100644
+--- a/signal/allocrtsig.c
++++ b/signal/allocrtsig.c
+@@ -29,7 +29,7 @@ static int current_rtmax = __SIGRTMAX;
+ #endif
+ 
+ /* Return number of available real-time signal with highest priority.  */
+-int
++int __attribute__((pure))
+ __libc_current_sigrtmin (void)
+ {
+ #ifdef __SIGRTMIN
+@@ -41,7 +41,7 @@ __libc_current_sigrtmin (void)
+ libc_hidden_def (__libc_current_sigrtmin)
+ 
+ /* Return number of available real-time signal with lowest priority.  */
+-int
++int __attribute__((pure))
+ __libc_current_sigrtmax (void)
+ {
+ #ifdef __SIGRTMIN
+diff --git a/signal/sigsetops.c b/signal/sigsetops.c
+index 09ee4ee0..56e30052 100644
+--- a/signal/sigsetops.c
++++ b/signal/sigsetops.c
+@@ -25,7 +25,7 @@
+ #if SHLIB_COMPAT (libc, GLIBC_2_0, GLIBC_2_26)
+ 
+ int
+-attribute_compat_text_section
++attribute_compat_text_section __attribute__((pure))
+ __sigismember_compat (const __sigset_t *set, int sig)
+ {
+   return __sigismember (set, sig);
+diff --git a/stdio-common/printf_fp.c b/stdio-common/printf_fp.c
+index 3a5560fc..025065b6 100644
+--- a/stdio-common/printf_fp.c
++++ b/stdio-common/printf_fp.c
+@@ -1285,7 +1285,7 @@ ldbl_strong_alias (___printf_fp, __printf_fp)
+ /* Return the number of extra grouping characters that will be inserted
+    into a number with INTDIG_MAX integer digits.  */
+ 
+-unsigned int
++unsigned int __attribute__((pure))
+ __guess_grouping (unsigned int intdig_max, const char *grouping)
+ {
+   unsigned int groups;
+diff --git a/stdlib/cmp.c b/stdlib/cmp.c
+index 18187cc8..b914263e 100644
+--- a/stdlib/cmp.c
++++ b/stdlib/cmp.c
+@@ -26,7 +26,7 @@ along with the GNU MP Library; see the file COPYING.LIB.  If not, see
+    the two arguments.
+    Return 1 if OP1 > OP2, 0 if they are equal, and -1 if OP1 < OP2.  */
+ 
+-int
++int __attribute__((pure))
+ mpn_cmp (mp_srcptr op1_ptr, mp_srcptr op2_ptr, mp_size_t size)
+ {
+   mp_size_t i;
+diff --git a/stdlib/getenv.c b/stdlib/getenv.c
+index f610d936..87f33dd9 100644
+--- a/stdlib/getenv.c
++++ b/stdlib/getenv.c
+@@ -29,7 +29,7 @@
+    one character names so that for the general case we can assume at least
+    two characters which we can access.  By doing this we can avoid using the
+    `strncmp' most of the time.  */
+-char *
++char * __attribute__((pure))
+ getenv (const char *name)
+ {
+   char **ep;
+diff --git a/stdlib/grouping.c b/stdlib/grouping.c
+index be7922f5..00f2518e 100644
+--- a/stdlib/grouping.c
++++ b/stdlib/grouping.c
+@@ -42,7 +42,7 @@
+    satisfies the grouping rules.  It is assumed that at least one digit
+    follows BEGIN directly.  */
+ 
+-const STRING_TYPE *
++const STRING_TYPE * __attribute__((pure))
+ #ifdef USE_WIDE_CHAR
+ __correctly_grouped_prefixwc (const STRING_TYPE *begin, const STRING_TYPE *end,
+ 			      wchar_t thousands,
+diff --git a/stdlib/mod_1.c b/stdlib/mod_1.c
+index a0bbd32c..659b0258 100644
+--- a/stdlib/mod_1.c
++++ b/stdlib/mod_1.c
+@@ -36,7 +36,7 @@ along with the GNU MP Library; see the file COPYING.LIB.  If not, see
+ /* FIXME: We should be using invert_limb (or invert_normalized_limb)
+    here (not udiv_qrnnd).  */
+ 
+-mp_limb_t
++mp_limb_t __attribute__((pure))
+ mpn_mod_1 (mp_srcptr dividend_ptr, mp_size_t dividend_size,
+ 	   mp_limb_t divisor_limb)
+ {
+diff --git a/string/argz-next.c b/string/argz-next.c
+index f23520df..b545c506 100644
+--- a/string/argz-next.c
++++ b/string/argz-next.c
+@@ -19,7 +19,7 @@
+ #include <argz.h>
+ #include <string.h>
+ 
+-char *
++char * __attribute__((pure))
+ __argz_next (const char *argz, size_t argz_len, const char *entry)
+ {
+   if (entry)
+diff --git a/string/basename.c b/string/basename.c
+index e2cafb58..2bcd077d 100644
+--- a/string/basename.c
++++ b/string/basename.c
+@@ -18,7 +18,7 @@
+ 
+ #include <string.h>
+ 
+-char *
++char * __attribute__((pure))
+ __basename (const char *filename)
+ {
+   char *p = strrchr (filename, '/');
+diff --git a/string/str-two-way.h b/string/str-two-way.h
+index 3efc31de..35209e28 100644
+--- a/string/str-two-way.h
++++ b/string/str-two-way.h
+@@ -386,7 +386,7 @@ two_way_short_needle (const unsigned char *haystack, size_t haystack_len,
+ 
+    Since this function is large and complex, block inlining to avoid
+    slowing down the common case of small needles.  */
+-__attribute__((noinline)) static RETURN_TYPE
++__attribute__((noinline)) static RETURN_TYPE __attribute__((pure))
+ two_way_long_needle (const unsigned char *haystack, size_t haystack_len,
+ 		     const unsigned char *needle, size_t needle_len)
+ {
+diff --git a/string/strcasecmp.c b/string/strcasecmp.c
+index 5db59ff1..a986a581 100644
+--- a/string/strcasecmp.c
++++ b/string/strcasecmp.c
+@@ -42,7 +42,7 @@
+ /* Compare S1 and S2, ignoring case, returning less than, equal to or
+    greater than zero if S1 is lexicographically less than,
+    equal to or greater than S2.  */
+-int
++int __attribute__((pure))
+ __strcasecmp (const char *s1, const char *s2 LOCALE_PARAM)
+ {
+ #if defined _LIBC && !defined USE_IN_EXTENDED_LOCALE_MODEL
+diff --git a/string/strcoll_l.c b/string/strcoll_l.c
+index 1b08f11b..05281ae3 100644
+--- a/string/strcoll_l.c
++++ b/string/strcoll_l.c
+@@ -253,7 +253,7 @@ out:
+   return result;
+ }
+ 
+-int
++int __attribute__((pure))
+ STRCOLL (const STRING_TYPE *s1, const STRING_TYPE *s2, locale_t l)
+ {
+   struct __locale_data *current = l->__locales[LC_COLLATE];
+diff --git a/string/string-inlines.c b/string/string-inlines.c
+index 0bba485b..18463b88 100644
+--- a/string/string-inlines.c
++++ b/string/string-inlines.c
+@@ -119,7 +119,7 @@ compat_symbol (libc, __old_strsep_3c, __strsep_3c, GLIBC_2_1_1);
+ #if SHLIB_COMPAT (libc, GLIBC_2_1_1, GLIBC_2_24)
+ /* These functions were removed from string.h in glibc 2.24.  */
+ 
+-size_t
++size_t __attribute__((pure))
+ __old_strcspn_c1 (const char *__s, int __reject)
+ {
+   size_t __result = 0;
+@@ -129,7 +129,7 @@ __old_strcspn_c1 (const char *__s, int __reject)
+ }
+ compat_symbol (libc, __old_strcspn_c1, __strcspn_c1, GLIBC_2_1_1);
+ 
+-size_t
++size_t __attribute__((pure))
+ __old_strcspn_c2 (const char *__s, int __reject1, int __reject2)
+ {
+   size_t __result = 0;
+@@ -140,7 +140,7 @@ __old_strcspn_c2 (const char *__s, int __reject1, int __reject2)
+ }
+ compat_symbol (libc, __old_strcspn_c2, __strcspn_c2, GLIBC_2_1_1);
+ 
+-size_t
++size_t __attribute__((pure))
+ __old_strcspn_c3 (const char *__s, int __reject1, int __reject2,
+ 	      int __reject3)
+ {
+@@ -152,7 +152,7 @@ __old_strcspn_c3 (const char *__s, int __reject1, int __reject2,
+ }
+ compat_symbol (libc, __old_strcspn_c3, __strcspn_c3, GLIBC_2_1_1);
+ 
+-size_t
++size_t __attribute__((pure))
+ __old_strspn_c1 (const char *__s, int __accept)
+ {
+   size_t __result = 0;
+@@ -163,7 +163,7 @@ __old_strspn_c1 (const char *__s, int __accept)
+ }
+ compat_symbol (libc, __old_strspn_c1, __strspn_c1, GLIBC_2_1_1);
+ 
+-size_t
++size_t __attribute__((pure))
+ __old_strspn_c2 (const char *__s, int __accept1, int __accept2)
+ {
+   size_t __result = 0;
+@@ -174,7 +174,7 @@ __old_strspn_c2 (const char *__s, int __accept1, int __accept2)
+ }
+ compat_symbol (libc, __old_strspn_c2, __strspn_c2, GLIBC_2_1_1);
+ 
+-size_t
++size_t __attribute__((pure))
+ __old_strspn_c3 (const char *__s, int __accept1, int __accept2,
+ 		 int __accept3)
+ {
+@@ -187,7 +187,7 @@ __old_strspn_c3 (const char *__s, int __accept1, int __accept2,
+ }
+ compat_symbol (libc, __old_strspn_c3, __strspn_c3, GLIBC_2_1_1);
+ 
+-char *
++char * __attribute__((pure))
+ __old_strpbrk_c2 (const char *__s, int __accept1, int __accept2)
+ {
+   /* Please note that __accept1 and __accept2 never can be '\0'.  */
+@@ -197,7 +197,7 @@ __old_strpbrk_c2 (const char *__s, int __accept1, int __accept2)
+ }
+ compat_symbol (libc, __old_strpbrk_c2, __strpbrk_c2, GLIBC_2_1_1);
+ 
+-char *
++char * __attribute__((pure))
+ __old_strpbrk_c3 (const char *__s, int __accept1, int __accept2, int __accept3)
+ {
+   /* Please note that __accept1 to __accept3 never can be '\0'.  */
+diff --git a/string/strncase.c b/string/strncase.c
+index c8143ae4..d4313467 100644
+--- a/string/strncase.c
++++ b/string/strncase.c
+@@ -45,7 +45,7 @@
+    ignoring case, returning less than, equal to or
+    greater than zero if S1 is lexicographically less
+    than, equal to or greater than S2.  */
+-int
++int __attribute__((pure))
+ __strncasecmp (const char *s1, const char *s2, size_t n LOCALE_PARAM)
+ {
+ #if defined _LIBC && !defined USE_IN_EXTENDED_LOCALE_MODEL
+diff --git a/string/strstr.c b/string/strstr.c
+index b4b94738..da440ead 100644
+--- a/string/strstr.c
++++ b/string/strstr.c
+@@ -35,7 +35,7 @@
+ #define STRSTR strstr
+ #endif
+ 
+-static inline char *
++static inline char * __attribute__((pure))
+ strstr2 (const unsigned char *hs, const unsigned char *ne)
+ {
+   uint32_t h1 = (ne[0] << 16) | ne[1];
+@@ -45,7 +45,7 @@ strstr2 (const unsigned char *hs, const unsigned char *ne)
+   return h1 == h2 ? (char *)hs - 2 : NULL;
+ }
+ 
+-static inline char *
++static inline char * __attribute__((pure))
+ strstr3 (const unsigned char *hs, const unsigned char *ne)
+ {
+   uint32_t h1 = ((uint32_t)ne[0] << 24) | (ne[1] << 16) | (ne[2] << 8);
+diff --git a/string/strxfrm_l.c b/string/strxfrm_l.c
+index 5519c3cf..bd4f1e99 100644
+--- a/string/strxfrm_l.c
++++ b/string/strxfrm_l.c
+@@ -116,7 +116,7 @@ find_idx (const USTRING_TYPE **us, int32_t *weight_idx,
+   return len;
+ }
+ 
+-static int
++static int __attribute__((pure))
+ find_position (const USTRING_TYPE *us, const locale_data_t *l_data,
+ 	       const int pass)
+ {
+diff --git a/sysdeps/generic/dl-hash.h b/sysdeps/generic/dl-hash.h
+index 9bc7e3bd..5fd4670e 100644
+--- a/sysdeps/generic/dl-hash.h
++++ b/sysdeps/generic/dl-hash.h
+@@ -25,6 +25,7 @@
+    bit.  */
+ static unsigned int
+ __attribute__ ((unused))
++__attribute__((pure))
+ _dl_elf_hash (const char *name_arg)
+ {
+   const unsigned char *name = (const unsigned char *) name_arg;
+diff --git a/sysdeps/ieee754/dbl-64/dbl2mpn.c b/sysdeps/ieee754/dbl-64/dbl2mpn.c
+index ec7cdaba..8d227207 100644
+--- a/sysdeps/ieee754/dbl-64/dbl2mpn.c
++++ b/sysdeps/ieee754/dbl-64/dbl2mpn.c
+@@ -57,7 +57,7 @@ __mpn_extract_double (mp_ptr res_ptr, mp_size_t size,
+     {
+       /* A biased exponent of zero is a special case.
+ 	 Either it is a zero or it is a denormal number.  */
+-      if (res_ptr[0] == 0 && res_ptr[N - 1] == 0) /* Assumes N<=2.  */
++      if (!(res_ptr[0] & res_ptr[N - 1])) /* Assumes N<=2.  */
+ 	/* It's zero.  */
+ 	*expt = 0;
+       else
+diff --git a/sysdeps/ieee754/dbl-64/mpn2dbl.c b/sysdeps/ieee754/dbl-64/mpn2dbl.c
+index 7bbea2d9..284d630e 100644
+--- a/sysdeps/ieee754/dbl-64/mpn2dbl.c
++++ b/sysdeps/ieee754/dbl-64/mpn2dbl.c
+@@ -24,7 +24,7 @@
+    double) and an integral power of two to a `double' in IEEE754 double-
+    precision format.  */
+ 
+-double
++double __attribute__((pure))
+ __mpn_construct_double (mp_srcptr frac_ptr, int expt, int negative)
+ {
+   union ieee754_double u;
+diff --git a/sysdeps/ieee754/float128/mpn2float128.c b/sysdeps/ieee754/float128/mpn2float128.c
+index a0bb414f..689a8983 100644
+--- a/sysdeps/ieee754/float128/mpn2float128.c
++++ b/sysdeps/ieee754/float128/mpn2float128.c
+@@ -27,7 +27,7 @@
+    binary128) and an integral power of two to a `_Float128' in IEEE854
+    quad-precision format.  */
+ 
+-_Float128
++_Float128 __attribute__((pure))
+ __mpn_construct_float128 (mp_srcptr frac_ptr, int expt, int sign)
+ {
+   union ieee854_float128 u;
+diff --git a/sysdeps/ieee754/flt-32/mpn2flt.c b/sysdeps/ieee754/flt-32/mpn2flt.c
+index 3b6aa952..303196cd 100644
+--- a/sysdeps/ieee754/flt-32/mpn2flt.c
++++ b/sysdeps/ieee754/flt-32/mpn2flt.c
+@@ -24,7 +24,7 @@
+    float) and an integral power of two to a `float' in IEEE754 single-
+    precision format.  */
+ 
+-float
++float __attribute__((pure))
+ __mpn_construct_float (mp_srcptr frac_ptr, int expt, int sign)
+ {
+   union ieee754_float u;
+diff --git a/sysdeps/ieee754/ldbl-96/mpn2ldbl.c b/sysdeps/ieee754/ldbl-96/mpn2ldbl.c
+index 0ffdcebc..3b4a6a55 100644
+--- a/sysdeps/ieee754/ldbl-96/mpn2ldbl.c
++++ b/sysdeps/ieee754/ldbl-96/mpn2ldbl.c
+@@ -25,7 +25,7 @@
+    long double) and an integral power of two to a `long double' in IEEE854
+    extended-precision format.  */
+ 
+-long double
++long double __attribute__((pure))
+ __mpn_construct_long_double (mp_srcptr frac_ptr, int expt, int sign)
+ {
+   union ieee854_long_double u;
+diff --git a/sysdeps/posix/getaddrinfo.c b/sysdeps/posix/getaddrinfo.c
+index 18dccd59..a8923e82 100644
+--- a/sysdeps/posix/getaddrinfo.c
++++ b/sysdeps/posix/getaddrinfo.c
+@@ -1155,7 +1155,7 @@ static const struct scopeentry
+ static const struct scopeentry *scopes;
+ 
+ 
+-static int
++static int __attribute__((pure))
+ get_scope (const struct sockaddr_in6 *in6)
+ {
+   int scope;
+diff --git a/sysdeps/posix/sprofil.c b/sysdeps/posix/sprofil.c
+index 5f03bd0e..9ea1b514 100644
+--- a/sysdeps/posix/sprofil.c
++++ b/sysdeps/posix/sprofil.c
+@@ -82,6 +82,7 @@ pc_to_index (size_t pc, size_t offset, unsigned int scale, int prof_uint)
+ }
+ 
+ static inline size_t
++__attribute__((pure))
+ index_to_pc (unsigned long int n, size_t offset, unsigned int scale,
+ 	     int prof_uint)
+ {
+diff --git a/sysdeps/unix/sysv/linux/cmsg_nxthdr.c b/sysdeps/unix/sysv/linux/cmsg_nxthdr.c
+index 15b7a3a9..0af04010 100644
+--- a/sysdeps/unix/sysv/linux/cmsg_nxthdr.c
++++ b/sysdeps/unix/sysv/linux/cmsg_nxthdr.c
+@@ -21,6 +21,7 @@
+ 
+ 
+ struct cmsghdr *
++__attribute__((pure))
+ __cmsg_nxthdr (struct msghdr *mhdr, struct cmsghdr *cmsg)
+ {
+   if ((size_t) cmsg->cmsg_len < sizeof (struct cmsghdr))
+diff --git a/sysdeps/unix/sysv/linux/dirfd.c b/sysdeps/unix/sysv/linux/dirfd.c
+index cd556d21..207ac203 100644
+--- a/sysdeps/unix/sysv/linux/dirfd.c
++++ b/sysdeps/unix/sysv/linux/dirfd.c
+@@ -21,7 +21,7 @@
+ 
+ #undef dirfd
+ 
+-int
++int __attribute__((pure))
+ __dirfd (DIR *dirp)
+ {
+   return dirp->fd;
+diff --git a/sysdeps/unix/sysv/linux/dl-osinfo.h b/sysdeps/unix/sysv/linux/dl-osinfo.h
+index 349d93e8..ddeeff0d 100644
+--- a/sysdeps/unix/sysv/linux/dl-osinfo.h
++++ b/sysdeps/unix/sysv/linux/dl-osinfo.h
+@@ -35,8 +35,8 @@
+     if (__glibc_likely (version >= 0))					      \
+       {									      \
+ 	if (__builtin_expect (GLRO(dl_osversion) == 0, 1)		      \
+-	    || GLRO(dl_osversion) > version)				      \
+-	  GLRO(dl_osversion) = version;					      \
++	    || GLRO(dl_osversion) > (unsigned int) version)				      \
++	  GLRO(dl_osversion) = (unsigned int) version;					      \
+ 									      \
+ 	/* Now we can test with the required version.  */		      \
+ 	if (__LINUX_KERNEL_VERSION > 0 && version < __LINUX_KERNEL_VERSION)   \
+diff --git a/sysdeps/unix/sysv/linux/getclktck.c b/sysdeps/unix/sysv/linux/getclktck.c
+index 771df88f..323eecbb 100644
+--- a/sysdeps/unix/sysv/linux/getclktck.c
++++ b/sysdeps/unix/sysv/linux/getclktck.c
+@@ -25,6 +25,7 @@
+ 
+ /* Return frequency of times().  */
+ int
++__attribute__((pure))
+ __getclktck (void)
+ {
+   return GLRO(dl_clktck) ?: SYSTEM_CLK_TCK;
+diff --git a/sysdeps/unix/sysv/linux/getsourcefilter.c b/sysdeps/unix/sysv/linux/getsourcefilter.c
+index 43a31450..26aaeaee 100644
+--- a/sysdeps/unix/sysv/linux/getsourcefilter.c
++++ b/sysdeps/unix/sysv/linux/getsourcefilter.c
+@@ -57,7 +57,7 @@ static const struct
+    family are set.  But sometimes only the size is correct and the
+    family value might be bogus.  Loop over the array entries and look
+    for a perfect match or the first match based on size.  */
+-int
++int __attribute__((pure))
+ __get_sol (int af, socklen_t len)
+ {
+   int first_size_sol = -1;
+diff --git a/sysdeps/unix/sysv/linux/pathconf.c b/sysdeps/unix/sysv/linux/pathconf.c
+index 107cf987..d8b9f6a3 100644
+--- a/sysdeps/unix/sysv/linux/pathconf.c
++++ b/sysdeps/unix/sysv/linux/pathconf.c
+@@ -193,7 +193,7 @@ __statfs_link_max (int result, const struct statfs *fsbuf, const char *file,
+ 
+ 
+ /* Used like: return statfs_filesize_max (__statfs (name, &buf), &buf); */
+-long int
++long int __attribute__((pure))
+ __statfs_filesize_max (int result, const struct statfs *fsbuf)
+ {
+   if (result < 0)
+@@ -242,7 +242,7 @@ __statfs_filesize_max (int result, const struct statfs *fsbuf)
+ 
+ 
+ /* Used like: return statfs_link_max (__statfs (name, &buf), &buf); */
+-long int
++long int __attribute__((pure))
+ __statfs_symlinks (int result, const struct statfs *fsbuf)
+ {
+   if (result < 0)
+@@ -277,7 +277,7 @@ __statfs_symlinks (int result, const struct statfs *fsbuf)
+ 
+ 
+ /* Used like: return __statfs_chown_restricted (__statfs (name, &buf), &buf);*/
+-long int
++long int __attribute__((pure))
+ __statfs_chown_restricted (int result, const struct statfs *fsbuf)
+ {
+   if (result < 0)
+diff --git a/sysdeps/unix/sysv/linux/prof-freq.c b/sysdeps/unix/sysv/linux/prof-freq.c
+index b0b2fd77..eabb14e0 100644
+--- a/sysdeps/unix/sysv/linux/prof-freq.c
++++ b/sysdeps/unix/sysv/linux/prof-freq.c
+@@ -21,7 +21,7 @@
+ #include <ldsodefs.h>
+ 
+ 
+-int
++int __attribute__((pure))
+ __profile_frequency (void)
+ {
+   return GLRO(dl_clktck);
+diff --git a/sysdeps/unix/sysv/linux/sigsetops.h b/sysdeps/unix/sysv/linux/sigsetops.h
+index 2d4924ec..3695bf45 100644
+--- a/sysdeps/unix/sysv/linux/sigsetops.h
++++ b/sysdeps/unix/sysv/linux/sigsetops.h
+@@ -31,7 +31,7 @@
+ static inline unsigned long int
+ __sigword (int sig)
+ {
+-  return (sig - 1) / ULONG_WIDTH;
++  return (unsigned long int)(sig - 1) / ULONG_WIDTH;
+ }
+ 
+ /* Linux sig* functions only handle up to __NSIG_WORDS words instead of
+@@ -66,9 +66,9 @@ static inline int
+ __sigisemptyset (const sigset_t *set)
+ {
+   int cnt = __NSIG_WORDS;
+-  int ret = set->__val[--cnt];
++  int ret = (int)set->__val[--cnt];
+   while (ret == 0 && --cnt >= 0)
+-    ret = set->__val[cnt];
++    ret = (int)set->__val[cnt];
+   return ret == 0;
+ }
+ 
+diff --git a/sysdeps/unix/sysv/linux/speed.c b/sysdeps/unix/sysv/linux/speed.c
+index 51622d0d..da271a41 100644
+--- a/sysdeps/unix/sysv/linux/speed.c
++++ b/sysdeps/unix/sysv/linux/speed.c
+@@ -33,7 +33,7 @@
+ 
+ 
+ /* Return the output baud rate stored in *TERMIOS_P.  */
+-speed_t
++speed_t __attribute__((pure))
+ cfgetospeed (const struct termios *termios_p)
+ {
+   return termios_p->c_cflag & (CBAUD | CBAUDEX);
+@@ -43,7 +43,7 @@ cfgetospeed (const struct termios *termios_p)
+    Although for Linux there is no difference between input and output
+    speed, the numerical 0 is a special case for the input baud rate. It
+    should set the input baud rate to the output baud rate. */
+-speed_t
++speed_t __attribute__((pure))
+ cfgetispeed (const struct termios *termios_p)
+ {
+   return ((termios_p->c_iflag & IBAUD0)
+diff --git a/sysdeps/unix/sysv/linux/sysconf-pthread_stack_min.h b/sysdeps/unix/sysv/linux/sysconf-pthread_stack_min.h
+index 4a2c7afd..e553f26d 100644
+--- a/sysdeps/unix/sysv/linux/sysconf-pthread_stack_min.h
++++ b/sysdeps/unix/sysv/linux/sysconf-pthread_stack_min.h
+@@ -19,6 +19,7 @@
+ /* Return sysconf (_SC_THREAD_STACK_MIN).  */
+ 
+ static inline long int
++__attribute__((pure))
+ __get_pthread_stack_min (void)
+ {
+   /* sysconf (_SC_THREAD_STACK_MIN) >= sysconf (_SC_MINSIGSTKSZ).  */
+diff --git a/sysdeps/unix/sysv/linux/sysconf-sigstksz.h b/sysdeps/unix/sysv/linux/sysconf-sigstksz.h
+index 71d9bb63..e215ed1e 100644
+--- a/sysdeps/unix/sysv/linux/sysconf-sigstksz.h
++++ b/sysdeps/unix/sysv/linux/sysconf-sigstksz.h
+@@ -19,6 +19,7 @@
+ /* Return sysconf (_SC_SIGSTKSZ).  */
+ 
+ static long int
++__attribute__((pure))
+ sysconf_sigstksz (void)
+ {
+   long int minsigstacksize = GLRO(dl_minsigstacksize);
+diff --git a/sysdeps/unix/sysv/linux/x86/cpu-features.c b/sysdeps/unix/sysv/linux/x86/cpu-features.c
+index a449cda7..1afa4de5 100644
+--- a/sysdeps/unix/sysv/linux/x86/cpu-features.c
++++ b/sysdeps/unix/sysv/linux/x86/cpu-features.c
+@@ -25,7 +25,7 @@ get_cet_status (void)
+ {
+   unsigned long long cet_status[3];
+   if (INTERNAL_SYSCALL_CALL (arch_prctl, ARCH_CET_STATUS, cet_status) == 0)
+-    return cet_status[0];
++    return (int) cet_status[0];
+   return 0;
+ }
+ 
+diff --git a/sysdeps/x86/cacheinfo.c b/sysdeps/x86/cacheinfo.c
+index b04744ac..4d52132d 100644
+--- a/sysdeps/x86/cacheinfo.c
++++ b/sysdeps/x86/cacheinfo.c
+@@ -23,7 +23,7 @@
+ 
+ /* Get the value of the system variable NAME.  */
+ long int
+-attribute_hidden
++attribute_hidden __attribute__((pure))
+ __cache_sysconf (int name)
+ {
+   const struct cpu_features *cpu_features = __get_cpu_features ();
+diff --git a/sysdeps/x86/cpu-features.c b/sysdeps/x86/cpu-features.c
+index 514226b3..b6a154ae 100644
+--- a/sysdeps/x86/cpu-features.c
++++ b/sysdeps/x86/cpu-features.c
+@@ -821,7 +821,7 @@ no_cpuid:
+ # endif
+ 
+   /* Check CET status.  */
+-  unsigned int cet_status = get_cet_status ();
++  unsigned int cet_status = (unsigned int) get_cet_status ();
+ 
+   if ((cet_status & GNU_PROPERTY_X86_FEATURE_1_IBT) == 0)
+     CPU_FEATURE_UNSET (cpu_features, IBT)
+diff --git a/sysdeps/x86/dl-cacheinfo.h b/sysdeps/x86/dl-cacheinfo.h
+index f64a2fb0..4a28d5b5 100644
+--- a/sysdeps/x86/dl-cacheinfo.h
++++ b/sysdeps/x86/dl-cacheinfo.h
+@@ -169,7 +169,7 @@ intel_check_word (int name, unsigned int value, bool *has_level_2,
+ 		  || (level == 3 && folded_rel_name == M(_SC_LEVEL3_CACHE_SIZE))
+ 		  || (level == 4 && folded_rel_name == M(_SC_LEVEL4_CACHE_SIZE)))
+ 		{
+-		  unsigned int offset = M(name) - folded_rel_name;
++		  unsigned int offset = M((unsigned int) name) - folded_rel_name;
+ 
+ 		  if (offset == 0)
+ 		    /* Cache size.  */
+@@ -213,14 +213,14 @@ intel_check_word (int name, unsigned int value, bool *has_level_2,
+ 	  struct intel_02_cache_info *found;
+ 	  struct intel_02_cache_info search;
+ 
+-	  search.idx = byte;
++	  search.idx = (unsigned char) byte;
+ 	  found = bsearch (&search, intel_02_known, nintel_02_known,
+ 			   sizeof (intel_02_known[0]), intel_02_known_compare);
+ 	  if (found != NULL)
+ 	    {
+ 	      if (found->rel_name == folded_rel_name)
+ 		{
+-		  unsigned int offset = M(name) - folded_rel_name;
++		  const unsigned int offset = M(name) - folded_rel_name;
+ 
+ 		  if (offset == 0)
+ 		    /* Cache size.  */
+@@ -249,7 +249,7 @@ intel_check_word (int name, unsigned int value, bool *has_level_2,
+ static long int __attribute__ ((noinline))
+ handle_intel (int name, const struct cpu_features *cpu_features)
+ {
+-  unsigned int maxidx = cpu_features->basic.max_cpuid;
++  const unsigned int maxidx = (unsigned int) cpu_features->basic.max_cpuid;
+ 
+   /* Return -1 for older CPUs.  */
+   if (maxidx < 2)
+@@ -455,7 +455,7 @@ handle_zhaoxin (int name)
+         || (level == 2 && folded_rel_name == M(_SC_LEVEL2_CACHE_SIZE))
+         || (level == 3 && folded_rel_name == M(_SC_LEVEL3_CACHE_SIZE)))
+         {
+-          unsigned int offset = M(name) - folded_rel_name;
++          unsigned int offset = M((unsigned int) name) - folded_rel_name;
+ 
+           if (offset == 0)
+             /* Cache size.  */
+@@ -644,7 +644,7 @@ get_common_cache_info (long int *shared_ptr, unsigned int *threads_ptr,
+             {
+               if (threads_l2)
+                 {
+-                  threads = threads_l2;
++                  threads = (unsigned int) threads_l2;
+                   if (cpu_features->basic.kind == arch_kind_intel
+                       && threads > 2
+                       && family == 6)
+@@ -664,7 +664,7 @@ get_common_cache_info (long int *shared_ptr, unsigned int *threads_ptr,
+                 }
+             }
+           else if (threads_l3)
+-            threads = threads_l3;
++            threads = (unsigned int) threads_l3;
+         }
+       else
+         {
+@@ -726,26 +726,26 @@ dl_init_cacheinfo (struct cpu_features *cpu_features)
+       shared = handle_intel (_SC_LEVEL3_CACHE_SIZE, cpu_features);
+ 
+       level1_icache_size
+-	= handle_intel (_SC_LEVEL1_ICACHE_SIZE, cpu_features);
++	= (unsigned long int) handle_intel (_SC_LEVEL1_ICACHE_SIZE, cpu_features);
+       level1_icache_linesize
+-	= handle_intel (_SC_LEVEL1_ICACHE_LINESIZE, cpu_features);
+-      level1_dcache_size = data;
++	= (unsigned long int) handle_intel (_SC_LEVEL1_ICACHE_LINESIZE, cpu_features);
++      level1_dcache_size = (unsigned long int) data;
+       level1_dcache_assoc
+-	= handle_intel (_SC_LEVEL1_DCACHE_ASSOC, cpu_features);
++	= (unsigned long int) handle_intel (_SC_LEVEL1_DCACHE_ASSOC, cpu_features);
+       level1_dcache_linesize
+-	= handle_intel (_SC_LEVEL1_DCACHE_LINESIZE, cpu_features);
+-      level2_cache_size = core;
++	= (unsigned long int) handle_intel (_SC_LEVEL1_DCACHE_LINESIZE, cpu_features);
++      level2_cache_size = (unsigned long int) core;
+       level2_cache_assoc
+-	= handle_intel (_SC_LEVEL2_CACHE_ASSOC, cpu_features);
++	= (unsigned long int) handle_intel (_SC_LEVEL2_CACHE_ASSOC, cpu_features);
+       level2_cache_linesize
+-	= handle_intel (_SC_LEVEL2_CACHE_LINESIZE, cpu_features);
+-      level3_cache_size = shared;
++	= (unsigned long int) handle_intel (_SC_LEVEL2_CACHE_LINESIZE, cpu_features);
++      level3_cache_size = (unsigned long int) shared;
+       level3_cache_assoc
+-	= handle_intel (_SC_LEVEL3_CACHE_ASSOC, cpu_features);
++	= (unsigned long int) handle_intel (_SC_LEVEL3_CACHE_ASSOC, cpu_features);
+       level3_cache_linesize
+-	= handle_intel (_SC_LEVEL3_CACHE_LINESIZE, cpu_features);
++	= (unsigned long int) handle_intel (_SC_LEVEL3_CACHE_LINESIZE, cpu_features);
+       level4_cache_size
+-	= handle_intel (_SC_LEVEL4_CACHE_SIZE, cpu_features);
++	= (unsigned long int) handle_intel (_SC_LEVEL4_CACHE_SIZE, cpu_features);
+ 
+       get_common_cache_info (&shared, &threads, core);
+     }
+@@ -755,17 +755,17 @@ dl_init_cacheinfo (struct cpu_features *cpu_features)
+       core = handle_zhaoxin (_SC_LEVEL2_CACHE_SIZE);
+       shared = handle_zhaoxin (_SC_LEVEL3_CACHE_SIZE);
+ 
+-      level1_icache_size = handle_zhaoxin (_SC_LEVEL1_ICACHE_SIZE);
+-      level1_icache_linesize = handle_zhaoxin (_SC_LEVEL1_ICACHE_LINESIZE);
+-      level1_dcache_size = data;
+-      level1_dcache_assoc = handle_zhaoxin (_SC_LEVEL1_DCACHE_ASSOC);
+-      level1_dcache_linesize = handle_zhaoxin (_SC_LEVEL1_DCACHE_LINESIZE);
+-      level2_cache_size = core;
+-      level2_cache_assoc = handle_zhaoxin (_SC_LEVEL2_CACHE_ASSOC);
+-      level2_cache_linesize = handle_zhaoxin (_SC_LEVEL2_CACHE_LINESIZE);
+-      level3_cache_size = shared;
+-      level3_cache_assoc = handle_zhaoxin (_SC_LEVEL3_CACHE_ASSOC);
+-      level3_cache_linesize = handle_zhaoxin (_SC_LEVEL3_CACHE_LINESIZE);
++      level1_icache_size = (unsigned long int) handle_zhaoxin (_SC_LEVEL1_ICACHE_SIZE);
++      level1_icache_linesize = (unsigned long int) handle_zhaoxin (_SC_LEVEL1_ICACHE_LINESIZE);
++      level1_dcache_size = (unsigned long int) data;
++      level1_dcache_assoc = (unsigned long int) handle_zhaoxin (_SC_LEVEL1_DCACHE_ASSOC);
++      level1_dcache_linesize = (unsigned long int) handle_zhaoxin (_SC_LEVEL1_DCACHE_LINESIZE);
++      level2_cache_size = (unsigned long int) core;
++      level2_cache_assoc = (unsigned long int) handle_zhaoxin (_SC_LEVEL2_CACHE_ASSOC);
++      level2_cache_linesize = (unsigned long int) handle_zhaoxin (_SC_LEVEL2_CACHE_LINESIZE);
++      level3_cache_size = (unsigned long int) shared;
++      level3_cache_assoc = (unsigned long int) handle_zhaoxin (_SC_LEVEL3_CACHE_ASSOC);
++      level3_cache_linesize = (unsigned long int) handle_zhaoxin (_SC_LEVEL3_CACHE_LINESIZE);
+ 
+       get_common_cache_info (&shared, &threads, core);
+     }
+@@ -775,17 +775,17 @@ dl_init_cacheinfo (struct cpu_features *cpu_features)
+       core = handle_amd (_SC_LEVEL2_CACHE_SIZE);
+       shared = handle_amd (_SC_LEVEL3_CACHE_SIZE);
+ 
+-      level1_icache_size = handle_amd (_SC_LEVEL1_ICACHE_SIZE);
+-      level1_icache_linesize = handle_amd (_SC_LEVEL1_ICACHE_LINESIZE);
+-      level1_dcache_size = data;
+-      level1_dcache_assoc = handle_amd (_SC_LEVEL1_DCACHE_ASSOC);
+-      level1_dcache_linesize = handle_amd (_SC_LEVEL1_DCACHE_LINESIZE);
+-      level2_cache_size = core;
+-      level2_cache_assoc = handle_amd (_SC_LEVEL2_CACHE_ASSOC);
+-      level2_cache_linesize = handle_amd (_SC_LEVEL2_CACHE_LINESIZE);
+-      level3_cache_size = shared;
+-      level3_cache_assoc = handle_amd (_SC_LEVEL3_CACHE_ASSOC);
+-      level3_cache_linesize = handle_amd (_SC_LEVEL3_CACHE_LINESIZE);
++      level1_icache_size = (unsigned long int) handle_amd (_SC_LEVEL1_ICACHE_SIZE);
++      level1_icache_linesize = (unsigned long int) handle_amd (_SC_LEVEL1_ICACHE_LINESIZE);
++      level1_dcache_size = (unsigned long int) data;
++      level1_dcache_assoc = (unsigned long int) handle_amd (_SC_LEVEL1_DCACHE_ASSOC);
++      level1_dcache_linesize = (unsigned long int) handle_amd (_SC_LEVEL1_DCACHE_LINESIZE);
++      level2_cache_size = (unsigned long int) core;
++      level2_cache_assoc = (unsigned long int) handle_amd (_SC_LEVEL2_CACHE_ASSOC);
++      level2_cache_linesize = (unsigned long int) handle_amd (_SC_LEVEL2_CACHE_LINESIZE);
++      level3_cache_size = (unsigned long int) shared;
++      level3_cache_assoc = (unsigned long int) handle_amd (_SC_LEVEL3_CACHE_ASSOC);
++      level3_cache_linesize = (unsigned long int) handle_amd (_SC_LEVEL3_CACHE_LINESIZE);
+ 
+       /* Get maximum extended function. */
+       __cpuid (0x80000000, max_cpuid_ex, ebx, ecx, edx);
+@@ -796,7 +796,7 @@ dl_init_cacheinfo (struct cpu_features *cpu_features)
+       else
+ 	{
+ 	  /* Figure out the number of logical threads that share L3.  */
+-	  if (max_cpuid_ex >= 0x80000008)
++	  if (max_cpuid_ex >= (int) 0x80000008)
+ 	    {
+ 	      /* Get width of APIC ID.  */
+ 	      __cpuid (0x80000008, max_cpuid_ex, ebx, ecx, edx);
+@@ -837,18 +837,18 @@ dl_init_cacheinfo (struct cpu_features *cpu_features)
+ 	}
+     }
+ 
+-  cpu_features->level1_icache_size = level1_icache_size;
+-  cpu_features->level1_icache_linesize = level1_icache_linesize;
+-  cpu_features->level1_dcache_size = level1_dcache_size;
+-  cpu_features->level1_dcache_assoc = level1_dcache_assoc;
+-  cpu_features->level1_dcache_linesize = level1_dcache_linesize;
+-  cpu_features->level2_cache_size = level2_cache_size;
+-  cpu_features->level2_cache_assoc = level2_cache_assoc;
+-  cpu_features->level2_cache_linesize = level2_cache_linesize;
+-  cpu_features->level3_cache_size = level3_cache_size;
+-  cpu_features->level3_cache_assoc = level3_cache_assoc;
+-  cpu_features->level3_cache_linesize = level3_cache_linesize;
+-  cpu_features->level4_cache_size = level4_cache_size;
++  cpu_features->level1_icache_size = (unsigned long int) level1_icache_size;
++  cpu_features->level1_icache_linesize = (unsigned long int) level1_icache_linesize;
++  cpu_features->level1_dcache_size = (unsigned long int) level1_dcache_size;
++  cpu_features->level1_dcache_assoc = (unsigned long int) level1_dcache_assoc;
++  cpu_features->level1_dcache_linesize = (unsigned long int) level1_dcache_linesize;
++  cpu_features->level2_cache_size = (unsigned long int) level2_cache_size;
++  cpu_features->level2_cache_assoc = (unsigned long int) level2_cache_assoc;
++  cpu_features->level2_cache_linesize = (unsigned long int) level2_cache_linesize;
++  cpu_features->level3_cache_size = (unsigned long int) level3_cache_size;
++  cpu_features->level3_cache_assoc = (unsigned long int) level3_cache_assoc;
++  cpu_features->level3_cache_linesize = (unsigned long int) level3_cache_linesize;
++  cpu_features->level4_cache_size = (unsigned long int) level4_cache_size;
+ 
+   /* The default setting for the non_temporal threshold is 3/4 of one
+      thread's share of the chip's cache. For most Intel and AMD processors
+@@ -860,7 +860,7 @@ dl_init_cacheinfo (struct cpu_features *cpu_features)
+      active data. If the threshold is set higher than one thread's
+      share of the cache, it has a substantial risk of negatively
+      impacting the performance of other threads running on the chip. */
+-  unsigned long int non_temporal_threshold = shared * 3 / 4;
++  unsigned long int non_temporal_threshold = (unsigned long int) shared * 3 / 4;
+ 
+ #if HAVE_TUNABLES
+   /* NB: The REP MOVSB threshold must be greater than VEC_SIZE * 8.  */
+@@ -929,11 +929,11 @@ dl_init_cacheinfo (struct cpu_features *cpu_features)
+   tunable_size = TUNABLE_GET (x86_non_temporal_threshold, long int, NULL);
+   /* NB: Ignore the default value 0.  */
+   if (tunable_size != 0)
+-    non_temporal_threshold = tunable_size;
++    non_temporal_threshold = (unsigned long int) tunable_size;
+ 
+   tunable_size = TUNABLE_GET (x86_rep_movsb_threshold, long int, NULL);
+   if (tunable_size > minimum_rep_movsb_threshold)
+-    rep_movsb_threshold = tunable_size;
++    rep_movsb_threshold = (unsigned int) tunable_size;
+ 
+   /* NB: The default value of the x86_rep_stosb_threshold tunable is the
+      same as the default value of __x86_rep_stosb_threshold and the
+diff --git a/sysdeps/x86/ldbl2mpn.c b/sysdeps/x86/ldbl2mpn.c
+index d0dc5604..f22eff72 100644
+--- a/sysdeps/x86/ldbl2mpn.c
++++ b/sysdeps/x86/ldbl2mpn.c
+@@ -55,7 +55,7 @@ __mpn_extract_long_double (mp_ptr res_ptr, mp_size_t size,
+     {
+       /* A biased exponent of zero is a special case.
+ 	 Either it is a zero or it is a denormal number.  */
+-      if (res_ptr[0] == 0 && res_ptr[N - 1] == 0) /* Assumes N<=2.  */
++      if (!(res_ptr[0] & res_ptr[N - 1])) /* Assumes N<=2.  */
+ 	/* It's zero.  */
+ 	*expt = 0;
+       else
+diff --git a/sysdeps/x86_64/dl-irel.h b/sysdeps/x86_64/dl-irel.h
+index 412bf18d..72814487 100644
+--- a/sysdeps/x86_64/dl-irel.h
++++ b/sysdeps/x86_64/dl-irel.h
+@@ -41,7 +41,7 @@ elf_irela (const ElfW(Rela) *reloc)
+ 
+   if (__glibc_likely (r_type == R_X86_64_IRELATIVE))
+     {
+-      ElfW(Addr) value = elf_ifunc_invoke(reloc->r_addend);
++      ElfW(Addr) value = elf_ifunc_invoke((ElfW(Addr)) reloc->r_addend);
+       *reloc_addr = value;
+     }
+   else
+diff --git a/wcsmbs/mbsinit.c b/wcsmbs/mbsinit.c
+index db71a5c4..b0a09329 100644
+--- a/wcsmbs/mbsinit.c
++++ b/wcsmbs/mbsinit.c
+@@ -29,7 +29,7 @@
+    information is a counter of the processed bytes so far and the
+    value collected so far.  Especially, we don't have different shift
+    states.  */
+-int
++int __attribute__((pure))
+ __mbsinit (const mbstate_t *ps)
+ {
+   return ps == NULL || ps->__count == 0;
+diff --git a/wcsmbs/wcsncmp.c b/wcsmbs/wcsncmp.c
+index dfdaed7b..cbf1ccb2 100644
+--- a/wcsmbs/wcsncmp.c
++++ b/wcsmbs/wcsncmp.c
+@@ -25,7 +25,7 @@
+    returning less than, equal to or greater than zero
+    if S1 is lexicographically less than, equal to or
+    greater than S2.  */
+-int
++int __attribute__((pure))
+ WCSNCMP (const wchar_t *s1, const wchar_t *s2, size_t n)
+ {
+   wchar_t c1 = L'\0';
+diff --git a/wcsmbs/wcsnlen.c b/wcsmbs/wcsnlen.c
+index a0a71bd1..924134bd 100644
+--- a/wcsmbs/wcsnlen.c
++++ b/wcsmbs/wcsnlen.c
+@@ -22,7 +22,7 @@
+ #endif
+ 
+ /* Return length of string S at most maxlen.  */
+-size_t
++size_t __attribute__((pure))
+ __wcsnlen (const wchar_t *s, size_t maxlen)
+ {
+   const wchar_t *ret = __wmemchr (s, L'\0', maxlen);
+diff --git a/wcsmbs/wcswidth.c b/wcsmbs/wcswidth.c
+index f6aad01f..f1931695 100644
+--- a/wcsmbs/wcswidth.c
++++ b/wcsmbs/wcswidth.c
+@@ -19,7 +19,7 @@
+ 
+ /* Determine number of column positions required for first N wide
+    characters (or fewer if S ends before this) in S.  */
+-int
++int __attribute__((pure))
+ wcswidth (const wchar_t *s, size_t n)
+ {
+   int result = 0;
+diff --git a/wcsmbs/wcwidth.c b/wcsmbs/wcwidth.c
+index e01ab5bf..617534f3 100644
+--- a/wcsmbs/wcwidth.c
++++ b/wcsmbs/wcwidth.c
+@@ -18,7 +18,7 @@
+ #include "wcwidth.h"
+ 
+ /* Determine number of column positions required for CH.  */
+-int
++int __attribute__((pure))
+ wcwidth (wchar_t ch)
+ {
+   return internal_wcwidth (ch);
+diff --git a/wcsmbs/wmemcmp.c b/wcsmbs/wmemcmp.c
+index a88e9156..7b7c000c 100644
+--- a/wcsmbs/wmemcmp.c
++++ b/wcsmbs/wmemcmp.c
+@@ -21,7 +21,7 @@
+ # define __wmemcmp WMEMCMP
+ #endif
+ 
+-int
++int __attribute__((pure))
+ __wmemcmp (const wchar_t *s1, const wchar_t *s2, size_t n)
+ {
+   wchar_t c1;
+diff --git a/wctype/iswctype.c b/wctype/iswctype.c
+index 50da5e9f..aa8e6910 100644
+--- a/wctype/iswctype.c
++++ b/wctype/iswctype.c
+@@ -22,7 +22,7 @@
+ 
+ #undef __iswctype
+ 
+-int
++int __attribute__((pure))
+ __iswctype (wint_t wc, wctype_t desc)
+ {
+   /* If the user passes in an invalid DESC valid (the one returned from
+diff --git a/wctype/iswctype_l.c b/wctype/iswctype_l.c
+index 216e44fc..4655953d 100644
+--- a/wctype/iswctype_l.c
++++ b/wctype/iswctype_l.c
+@@ -22,7 +22,7 @@
+ #include "wchar-lookup.h"
+ 
+ 
+-int
++int __attribute__((pure))
+ __iswctype_l (wint_t wc, wctype_t desc, locale_t locale)
+ {
+   /* If the user passes in an invalid DESC valid (the one returned from
+diff --git a/wctype/towctrans.c b/wctype/towctrans.c
+index 5ba83db0..7376e3ca 100644
+--- a/wctype/towctrans.c
++++ b/wctype/towctrans.c
+@@ -21,7 +21,7 @@
+ /* Define the lookup function.  */
+ #include "wchar-lookup.h"
+ 
+-wint_t
++wint_t __attribute__((pure))
+ __towctrans (wint_t wc, wctrans_t desc)
+ {
+   /* If the user passes in an invalid DESC valid (the one returned from
+diff --git a/wctype/towctrans_l.c b/wctype/towctrans_l.c
+index 3261008f..564ac4c1 100644
+--- a/wctype/towctrans_l.c
++++ b/wctype/towctrans_l.c
+@@ -22,7 +22,7 @@
+ #define USE_IN_EXTENDED_LOCALE_MODEL	1
+ #include "wchar-lookup.h"
+ 
+-wint_t
++wint_t __attribute__((pure))
+ __towctrans_l (wint_t wc, wctrans_t desc, locale_t locale)
+ {
+   /* If the user passes in an invalid DESC valid (the one returned from
+diff --git a/wctype/wcfuncs.c b/wctype/wcfuncs.c
+index 451575ba..fe6d2f25 100644
+--- a/wctype/wcfuncs.c
++++ b/wctype/wcfuncs.c
+@@ -41,32 +41,32 @@ func (alnum, __ISwalnum)
+ libc_hidden_def (__iswalnum)
+ libc_hidden_weak (iswalnum)
+ #undef iswalpha
+-func (alpha, __ISwalpha)
++__attribute__((pure)) func (alpha, __ISwalpha)
+ libc_hidden_weak (iswalpha)
+ #undef iswblank
+-func (blank, __ISwblank)
++__attribute__((pure)) func (blank, __ISwblank)
+ #undef iswcntrl
+-func (cntrl, __ISwcntrl)
++__attribute__((pure)) func (cntrl, __ISwcntrl)
+ #undef iswdigit
+-func (digit, __ISwdigit)
++__attribute__((pure)) func (digit, __ISwdigit)
+ libc_hidden_weak (iswdigit)
+ #undef iswlower
+ func (lower, __ISwlower)
+ libc_hidden_def (__iswlower)
+ libc_hidden_weak (iswlower)
+ #undef iswgraph
+-func (graph, __ISwgraph)
++__attribute__((pure)) func (graph, __ISwgraph)
+ #undef iswprint
+-func (print, __ISwprint)
++__attribute__((pure)) func (print, __ISwprint)
+ #undef iswpunct
+-func (punct, __ISwpunct)
++__attribute__((pure)) func (punct, __ISwpunct)
+ #undef iswspace
+-func (space, __ISwspace)
++__attribute__((pure)) func (space, __ISwspace)
+ libc_hidden_weak (iswspace)
+ #undef iswupper
+-func (upper, __ISwupper)
++__attribute__((pure)) func (upper, __ISwupper)
+ #undef iswxdigit
+-func (xdigit, __ISwxdigit)
++__attribute__((pure)) func (xdigit, __ISwxdigit)
+ libc_hidden_weak (iswxdigit)
+ 
+ #undef towlower
+diff --git a/wctype/wcfuncs_l.c b/wctype/wcfuncs_l.c
+index 1cab3410..300a4999 100644
+--- a/wctype/wcfuncs_l.c
++++ b/wctype/wcfuncs_l.c
+@@ -38,22 +38,22 @@
+   libc_hidden_def (__isw##name)						      \
+   weak_alias (__isw##name, isw##name)
+ 
+-func (alnum_l, __ISwalnum)
+-func (alpha_l, __ISwalpha)
+-func (blank_l, __ISwblank)
+-func (cntrl_l, __ISwcntrl)
++__attribute__((pure)) func (alnum_l, __ISwalnum)
++__attribute__((pure)) func (alpha_l, __ISwalpha)
++__attribute__((pure)) func (blank_l, __ISwblank)
++__attribute__((pure)) func (cntrl_l, __ISwcntrl)
+ #undef iswdigit_l
+ #undef __iswdigit_l
+-func (digit_l, __ISwdigit)
+-func (lower_l, __ISwlower)
+-func (graph_l, __ISwgraph)
+-func (print_l, __ISwprint)
+-func (punct_l, __ISwpunct)
+-func (space_l, __ISwspace)
+-func (upper_l, __ISwupper)
+-func (xdigit_l, __ISwxdigit)
++__attribute__((pure)) func (digit_l, __ISwdigit)
++__attribute__((pure)) func (lower_l, __ISwlower)
++__attribute__((pure)) func (graph_l, __ISwgraph)
++__attribute__((pure)) func (print_l, __ISwprint)
++__attribute__((pure)) func (punct_l, __ISwpunct)
++__attribute__((pure)) func (space_l, __ISwspace)
++__attribute__((pure)) func (upper_l, __ISwupper)
++__attribute__((pure)) func (xdigit_l, __ISwxdigit)
+ 
+-wint_t
++wint_t __attribute__((pure))
+ (__towlower_l) (wint_t wc, locale_t locale)
+ {
+   size_t i = locale->__locales[LC_CTYPE]->values[_NL_ITEM_INDEX (_NL_CTYPE_MAP_OFFSET)].word + __TOW_tolower;
+@@ -63,7 +63,7 @@ wint_t
+ libc_hidden_def (__towlower_l)
+ weak_alias (__towlower_l, towlower_l)
+ 
+-wint_t
++wint_t __attribute__((pure))
+ (__towupper_l) (wint_t wc, locale_t locale)
+ {
+   size_t i = locale->__locales[LC_CTYPE]->values[_NL_ITEM_INDEX (_NL_CTYPE_MAP_OFFSET)].word + __TOW_toupper;
+diff --git a/wctype/wctrans.c b/wctype/wctrans.c
+index e9919111..28788b22 100644
+--- a/wctype/wctrans.c
++++ b/wctype/wctrans.c
+@@ -20,7 +20,7 @@
+ #include <wctype.h>
+ #include "../locale/localeinfo.h"
+ 
+-wctrans_t
++wctrans_t __attribute__((pure))
+ __wctrans (const char *property)
+ {
+   const char *names;
+diff --git a/wctype/wctrans_l.c b/wctype/wctrans_l.c
+index 057e70c2..f938e071 100644
+--- a/wctype/wctrans_l.c
++++ b/wctype/wctrans_l.c
+@@ -20,7 +20,7 @@
+ #include <wctype.h>
+ #include "../locale/localeinfo.h"
+ 
+-wctrans_t
++wctrans_t __attribute__((pure))
+ __wctrans_l (const char *property, locale_t locale)
+ {
+   const char *names;
+diff --git a/wctype/wctype.c b/wctype/wctype.c
+index 8b085c92..8b9bf22c 100644
+--- a/wctype/wctype.c
++++ b/wctype/wctype.c
+@@ -20,7 +20,7 @@
+ #include <wctype.h>
+ #include <locale/localeinfo.h>
+ 
+-wctype_t
++wctype_t __attribute__((pure))
+ __wctype (const char *property)
+ {
+   const char *names;
+diff --git a/wctype/wctype_l.c b/wctype/wctype_l.c
+index 473d7eda..e1890c72 100644
+--- a/wctype/wctype_l.c
++++ b/wctype/wctype_l.c
+@@ -21,7 +21,7 @@
+ #include <wctype.h>
+ #include <locale/localeinfo.h>
+ 
+-wctype_t
++wctype_t __attribute__((pure))
+ __wctype_l (const char *property, locale_t locale)
+ {
+   const char *names;
+-- 
+2.36.1
+
