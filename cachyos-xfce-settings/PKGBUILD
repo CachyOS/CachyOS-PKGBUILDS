@@ -1,0 +1,34 @@
+# Maintainer: Vladislav Nepogodin <nepogodin.vlad@gmail.com>
+
+pkgname=cachyos-xfce-settings
+pkgdesc='CachyOS XFCE settings'
+pkgver=1.0.4
+pkgrel=2
+arch=('any')
+url="https://github.com/cachyos/$pkgname"
+license=('GPL')
+makedepends=('coreutils')
+source=("$pkgname-$pkgver.tar.gz::$url/archive/$pkgver.tar.gz")
+sha512sums=('95f06119333fc6ffa243bcf00ab476b62bc78b9ec185acfd43ba3bcd7346ddc32a12b2aa56258e84d507258b479432d21103918f306ef9eeb8202729311f61e4')
+depends=('cachyos-zsh-config'
+         'nerd-fonts-fantasque-sans-mono'
+         'noto-fonts'
+         'ttf-fira-sans'
+         'kvantum-qt5'
+         'qt5ct'
+         'xfce4-whiskermenu-plugin'
+         'char-white'
+         'capitaine-cursors'
+         'cachyos-wallpapers'
+         'kvantum-theme-nordic-git'
+         'cachyos-nord-gtk-theme-git')
+install=$pkgname.install
+provides=('cachyos-desktop-settings')
+conflicts=('cachyos-desktop-settings')
+
+package() {
+    install -d $pkgdir/etc
+    cp -rf $srcdir/$pkgname-$pkgver/etc $pkgdir
+    install -d $pkgdir/usr
+    cp -rf $srcdir/$pkgname-$pkgver/usr $pkgdir
+}

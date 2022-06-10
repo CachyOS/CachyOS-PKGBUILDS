@@ -1,0 +1,95 @@
+post_install() {
+	echo -e "--------------------------------------"
+	echo -e "| Hardened-Anonymized-DNSCrypt-Proxy |"
+	echo -e "| Wipe Snoopers Out Of Your Networks |"
+	echo -e "|      Creator : BL4CKH47H4CK3R      |"
+	echo -e "--------------------------------------"
+	echo -e "--------------------------------------"
+	echo -e "| Disabling SystemD-Resolved Service |"
+	echo -e "--------------------------------------"
+	systemctl daemon-reload && systemctl disable --now systemd-resolved -f
+	echo -e "---------------------------------------------------"
+	echo -e "| Initializing Hardened-Anonymized-DNSCrypt-Proxy |"
+	echo -e "---------------------------------------------------"
+	systemctl daemon-reload && systemctl enable --now dnscrypt-proxy.{socket,service} -f
+	echo -e "--------------------------------------------------------------"
+	echo -e "| Applying Hardened-Anonymized-DNSCrypt-Proxy Configurations |"
+	echo -e "--------------------------------------------------------------"
+	touch /etc/dnscrypt-proxy/captive-portals.txt
+	touch /etc/dnscrypt-proxy/{cloaking,forwarding}-rules.txt
+	touch /etc/dnscrypt-proxy/{allowed,blocked}-{ips,names}.txt
+	chattr -i /etc/*resolv* && rm -rf /etc/*resolv* /etc/NetworkManager/conf.d/*
+	rm -rf /etc/NetworkManager/*NetworkManager* /var/lib/NetworkManager/*conf*
+	echo -e "[main]\ndns=none\n" >>/etc/NetworkManager/NetworkManager.conf
+	echo -e "[device]\nwifi.scan-rand-mac-address=yes" >>/etc/NetworkManager/NetworkManager.conf
+	echo -e "ethernet.cloned-mac-address=random" >>/etc/NetworkManager/NetworkManager.conf
+	echo -e "wifi.cloned-mac-address=random" >>/etc/NetworkManager/NetworkManager.conf
+	echo -e "[connectivity]\n.set.enabled=false" >>/var/lib/NetworkManager/NetworkManager-intern.conf
+	echo -e "nameserver 127.0.0.1\noptions edns0 single-request-reopen" >/etc/resolv.conf && chattr +i /etc/*resolv*
+	echo -e "-------------------------------------------"
+	echo -e "| Configuring & Restarting NetworkManager |"
+	echo -e "-------------------------------------------"
+	systemctl daemon-reload && systemctl restart --now NetworkManager -f  && sleep 15
+	echo -e "------------------------------------------------------"
+	echo -e "| Checking Hardened-Anonymized-DNSCrypt-Proxy Status |"
+	echo -e "------------------------------------------------------"
+	dnscrypt-proxy -config /etc/dnscrypt-proxy/dnscrypt-proxy.toml --show-certs
+	echo -e "--------------------------------------"
+	echo -e "| Hardened-Anonymized-DNSCrypt-Proxy |"
+	echo -e "|     Successfully Configured !      |"
+	echo -e "--------------------------------------"
+}
+
+post_remove() {
+	echo -e "--------------------------------------"
+	echo -e "| Hardened-Anonymized-DNSCrypt-Proxy |"
+	echo -e "| Wipe Snoopers Out Of Your Networks |"
+	echo -e "|      Creator : BL4CKH47H4CK3R      |"
+	echo -e "--------------------------------------"
+	echo -e "------------------------------------------------"
+	echo -e "| Disabling Hardened-Anonymized-DNSCrypt-Proxy |"
+	echo -e "------------------------------------------------"
+	systemctl daemon-reload && systemctl disable --now dnscrypt-proxy.{socket,service} -f
+	echo -e "---------------------------------------------------------------"
+	echo -e "| Reverting Hardened-Anonymized-DNSCrypt-Proxy Configurations |"
+	echo -e "---------------------------------------------------------------"
+	rm -rf /etc/dnscrypt-proxy
+	echo -e "-------------------------------------------"
+	echo -e "| Configuring & Restarting NetworkManager |"
+	echo -e "-------------------------------------------"
+	chattr -i /etc/*resolv* && rm -rf /etc/*resolv* /etc/NetworkManager/conf.d/*
+	rm -rf /etc/NetworkManager/*NetworkManager* /var/lib/NetworkManager/*conf*
+	echo -e "[device]\nwifi.scan-rand-mac-address=yes" >>/etc/NetworkManager/NetworkManager.conf
+	echo -e "ethernet.cloned-mac-address=random" >>/etc/NetworkManager/NetworkManager.conf
+	echo -e "wifi.cloned-mac-address=random" >>/etc/NetworkManager/NetworkManager.conf
+	echo -e "[connectivity]\n.set.enabled=false" >>/var/lib/NetworkManager/NetworkManager-intern.conf
+	systemctl daemon-reload && systemctl restart --now NetworkManager -f
+	echo -e "--------------------------------------"
+	echo -e "| Hardened-Anonymized-DNSCrypt-Proxy |"
+	echo -e "|    Successfully Deconfigured !     |"
+	echo -e "--------------------------------------"
+}
+
+post_upgrade() {
+	echo -e "--------------------------------------"
+	echo -e "| Hardened-Anonymized-DNSCrypt-Proxy |"
+	echo -e "| Wipe Snoopers Out Of Your Networks |"
+	echo -e "|      Creator : BL4CKH47H4CK3R      |"
+	echo -e "--------------------------------------"
+	echo -e "-------------------------------------------------"
+	echo -e "| Restarting Hardened-Anonymized-DNSCrypt-Proxy |"
+	echo -e "-------------------------------------------------"
+	systemctl daemon-reload && systemctl restart --now dnscrypt-proxy.{socket,service} -f
+	echo -e "--------------------------------------------------"
+	echo -e "| Restarting NetworkManager & Necessary Services |"
+	echo -e "--------------------------------------------------"
+	systemctl daemon-reload && systemctl restart --now NetworkManager -f && sleep 15
+	echo -e "------------------------------------------------------"
+	echo -e "| Checking Hardened-Anonymized-DNSCrypt-Proxy Status |"
+	echo -e "------------------------------------------------------"
+	dnscrypt-proxy -config /etc/dnscrypt-proxy/dnscrypt-proxy.toml --show-certs
+	echo -e "-----------------------------------------"
+	echo -e "| Hardened-Anonymized-DNSCrypt-Proxy    |"
+	echo -e "| Configuaration Successfully Updated ! |"
+	echo -e "-----------------------------------------"
+}

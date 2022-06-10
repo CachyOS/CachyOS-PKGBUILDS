@@ -1,0 +1,21 @@
+pkgname=char-white
+pkgdesc="Char-White Icons"
+pkgver=r29.5730a02
+pkgrel=1
+arch=('any')
+url="https://github.com/CachyOS/$pkgname.git"
+license=('GPL')
+makedepends=('git')
+source=("git+$url.git")
+sha256sums=('SKIP')
+groups=('cachyos')
+
+pkgver() {
+	cd "$srcdir/$pkgname"
+	printf "r%s.%s" "$(git rev-list --count HEAD)" "$(git rev-parse --short HEAD)"
+}
+
+package() {
+    install -d $pkgdir/usr
+    cp -rf $srcdir/$pkgname/usr $pkgdir
+}

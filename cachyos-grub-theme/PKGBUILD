@@ -1,0 +1,21 @@
+# Maintainer: ptr1337 <admin@ptr1337.dev>
+
+pkgname=cachyos-grub-theme
+pkgver=1
+pkgrel=2
+pkgdesc="CachyOS - GRUB-THEME"
+arch=('any')
+license=('GPL')
+depends=(grub)
+groups=('cachyos')
+install="$pkgname.install"
+source=('git+https://gitlab.com/cachyos/themes-and-settings/theme/cachyos-grub-theme.git')
+makedepends=('git')
+sha256sums=('SKIP')
+conflicts=("$pkgname")
+provides=("$pkgname=$pkgver")
+
+package() {
+  mkdir -p "${pkgdir}/boot/grub/themes/${pkgname}"
+  cp -TR "${srcdir}/${pkgname}/theme" "${pkgdir}/boot/grub/themes/${pkgname}"
+}

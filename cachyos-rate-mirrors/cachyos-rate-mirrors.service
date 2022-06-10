@@ -1,0 +1,13 @@
+[Unit]
+Description=Refresh arch / cachyos mirror lists
+Wants=network-online.target
+After=network-online.target nss-lookup.target
+
+[Service]
+Type=oneshot
+StandardOutput=null
+StandardError=journal
+ExecStart=/bin/bash -c '/usr/bin/cachyos-rate-mirrors'
+
+[Install]
+WantedBy=multi-user.target
