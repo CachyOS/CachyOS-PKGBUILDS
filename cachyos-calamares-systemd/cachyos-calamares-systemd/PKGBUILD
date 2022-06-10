@@ -2,9 +2,9 @@
 # Contributor: Philip Müller <philm[at]manjaro[dog]org>
 
 pkgname=cachyos-calamares-systemd
-_pkgname=cachyos-calamares
+_pkgname=cachyos-calamares-systemd
 pkgver=3.3.0
-pkgrel=10
+pkgrel=20
 pkgdesc='Distribution-independent installer framework'
 arch=('i686' 'x86_64' 'x86_64_v3')
 license=(GPL)
@@ -27,7 +27,7 @@ source=(git+https://github.com/calamares/calamares.git#commit=${_commit}
         0001-Force-LTO.patch
         0001-FORCE-LTO-3.3.patch
         0001-fix-missing-import-libcalamares.patch
-        ${_pkgname}-config::git+https://github.com/cachyos/calamares-config.git#branch=systemd-boot)
+        "${pkgname}-config::git+https://github.com/cachyos/calamares-config.git#commit=e7cc6e6eb27fd5121295dff75d9b7d06c0d7d644")
 sha256sums=('SKIP'
             '2bb91134b71d705de3103f70a1e45db72c43d0220b7a2e0178a012c3929c76a6'
             '3989743e5f4ac697809188de058e2985a9b1940d73c40c606119461c5ec8f904'
@@ -41,7 +41,7 @@ prepare() {
 
   rm -r "src/modules/"{fstab,mount,packages}
 
-  cp -rf "${srcdir}/${_pkgname}-config/usr/lib/calamares/modules"/{fstab,mount,packages} src/modules/
+  cp -rf "${srcdir}/${pkgname}-config/usr/lib/calamares/modules"/{fstab,mount,packages} src/modules/
 
   # patches here
 
@@ -83,7 +83,7 @@ build() {
     openrcdmcryptcfg packagechooserq \
     plymouthcfg plasmalnf services-openrc \
     summaryq tracking usersq webview welcomeq"
-    
+
   cmake --build build --parallel $_cpuCount
 }
 
