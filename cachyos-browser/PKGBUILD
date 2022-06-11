@@ -154,6 +154,16 @@ END
   patch -Np1 -i ${_patches_dir}/gentoo/0029-bmo-1559213-fix-system-av1-libs.patch
   patch -Np1 -i ${_patches_dir}/gentoo/0030-bmo-1196777-Set-GDK_FOCUS_CHANGE_MASK.patch
   patch -Np1 -i ${_patches_dir}/gentoo/0031-bmo-1765361-resolve_objdir_from_virtualenv_if_mozinfo_not_ancestor.patch
+
+  # address build failure when building with most recent (>=0.24.0) cbindgen
+  # also catch systems (Manjaro, at the time of writing this) where cbindgen
+  # is not yet at 24. probably not elegant, but it works.
+  _cbindgen_ver=$(cbindgen --version | sed -e 's/cbindgen[[:space:]]0.\([0-9]*\).[0-9]/\1/g')
+  if [ "${_cbindgen_ver}" -gt 23 ]; then
+    patch -Np1 -i ../0032-bmo-1773259-cbindgen-root_clip_chain-fix.patch
+  fi
+
+
   # Use more system libs
   msg2 "---- Patching for system libs"
 #  patch -Np1 -i ${_patches_dir}/gentoo/0004-bmo-847568-Support-system-harfbuzz.patch
@@ -172,9 +182,9 @@ END
 
   # KDE patches (W. Rosenauer)
   msg2 "---- Patching for KDE"
-  patch -Np1 -i ${_patches_dir}/kde/mozilla-nongnome-proxies.patch
+#  patch -Np1 -i ${_patches_dir}/kde/mozilla-nongnome-proxies.patch
 #  patch -Np1 -i ${_patches_dir}/kde/mozilla-kde.patch
-
+  patch -Np1 -i ${_patches_dir}/kde/mozilla-kde-after-unity.patch
   msg2  "Disabling Pocket"
   patch -Np1 -i ${_patches_dir}/sed-patches/disable-pocket.patch
 
@@ -219,6 +229,7 @@ END
   msg2 "add custom uBO assets (on first launch only)"
   patch -Np1 -i ${_patches_dir}/librewolf/custom-ubo-assets-bootstrap-location.patch
 
+  patch -Np1 -i ${_patches_dir}/librewolf/faster-package-multi-locale.patch
   # ui patches
 
   # Experimental
