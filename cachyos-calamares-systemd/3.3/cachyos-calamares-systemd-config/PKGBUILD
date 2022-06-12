@@ -1,19 +1,19 @@
 # Maintainer: Vladislav Nepogodin <nepogodin.vlad@gmail.com>
 
-pkgname=cachyos-calamares-config
-pkgver=r93.6cb4b21
+pkgname=cachyos-calamares-systemd-config-git
+pkgver=5
 pkgrel=1
 pkgdesc="CachyOS config for the Calamares installer"
 arch=(any)
 url="https://github.com/cachyos/calamares-config"
 license=('GPL')
 makedepends=('git')
-source=("${pkgname}::git+$url.git")
+source=("${pkgname}::git+$url.git#commit=8ad18569bcc78923744659a253bd914d48b2fea7")
 sha512sums=('SKIP')
 
 pkgver() {
-  cd "${srcdir}/${pkgname}"
-  printf "r%s.%s" "$(git rev-list --count HEAD)" "$(git rev-parse --short HEAD)"
+  cd "$srcdir/$_pkgname"
+  printf 'r%s.%s' "$(git rev-list --count HEAD)" "$(git rev-parse --short HEAD)"
 }
 
 package() {
