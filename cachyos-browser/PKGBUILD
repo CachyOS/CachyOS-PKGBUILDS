@@ -58,16 +58,17 @@ prepare() {
 ac_add_options --enable-application=browser
 mk_add_options MOZ_OBJDIR=${PWD@Q}/obj
 
-ac_add_options --enable-linker=lld
 ac_add_options --prefix=/usr
 ac_add_options --enable-release
 ac_add_options --enable-hardening
+ac_add_options --enable-optimize
 ac_add_options --enable-rust-simd
-ac_add_options --enable-default-toolkit=cairo-gtk3-wayland
+ac_add_options --enable-linker=mold
+ac_add_options --disable-elf-hack
+ac_add_options --disable-bootstrap
 ac_add_options --with-wasi-sysroot=/usr/share/wasi-sysroot
-export CC='clang'
-export CXX='clang++'
-
+export CC=clang
+export CXX=clang++
 # Branding
 ac_add_options --enable-update-channel=release
 ac_add_options --with-app-name=${pkgname}
@@ -121,11 +122,6 @@ mk_add_options MOZ_TELEMETRY_REPORTING=0
 # options for ci / weaker build systems
 # mk_add_options MOZ_MAKE_FLAGS="-j4"
 # ac_add_options --enable-linker=gold
-END
-
-  cat >>../mozconfig <<END
-# probably not needed, enabled by default?
-ac_add_options --enable-optimize
 END
 
   # Gentoo patches
@@ -254,6 +250,7 @@ END
   msg2 "Hide passwordmgr"
   patch -Np1 -i ${_patches_dir}/librewolf/hide-passwordmgr.patch
   patch -Np1 -i ${_patches_dir}/fix-psutil-dev.patch
+  patch -Np1 -i ${_patches_dir}/add-mold-linker.patch
 
   rm -f ${srcdir}/cachyos-browser-common/source_files/mozconfig
   cp -r ${srcdir}/cachyos-browser-common/source_files/browser ./
@@ -309,8 +306,6 @@ ac_add_options --enable-lto=cross
 ac_add_options --enable-profile-use=cross
 ac_add_options --with-pgo-profile-path=${PWD@Q}/merged.profdata
 ac_add_options --with-pgo-jarlog=${PWD@Q}/jarlog
-ac_add_options --enable-linker=lld
-ac_add_options --disable-bootstrap
 END
 
   ./mach build

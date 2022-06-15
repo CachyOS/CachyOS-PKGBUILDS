@@ -12,7 +12,7 @@ url="https://github.com/calamares/calamares"
 license=('LGPL')
 conflicts=('calamares')
 provides=('calamares')
-_commit=2f3fb4a3874d2929a0056aedee59beb43481d83e
+_commit=2696bd5b447874663be2b5191364d2740be24cdd
 makedepends=('git' 'cmake' 'extra-cmake-modules' 'kpmcore' 'boost' 'python-jsonschema' 'python-pyaml' 'python-unidecode')
 depends=( 'qt5-svg' 'qt5-webengine' 'yaml-cpp' 'networkmanager' 'upower' 'kcoreaddons' 'kconfig' 'ki18n' 'kservice' \
 'kwidgetsaddons' 'kpmcore' 'squashfs-tools' 'rsync' 'cryptsetup' 'qt5-xmlpatterns' 'doxygen' 'dmidecode' \
@@ -21,23 +21,19 @@ backup=('usr/share/calamares/modules/bootloader.conf'
         'usr/share/calamares/modules/displaymanager.conf'
         'usr/share/calamares/modules/initcpio.conf'
         'usr/share/calamares/modules/unpackfs.conf')
-source=(git+https://github.com/calamares/calamares.git#commit=${_commit}
+source=(calamares::git+https://github.com/calamares/calamares.git#commit=${_commit}
 		settings_online.conf
         settings_offline.conf
         0001-Force-LTO.patch
         0001-FORCE-LTO-3.3.patch
         0001-fix-missing-import-libcalamares.patch
-        "${pkgname}-config::git+https://github.com/cachyos/calamares-config.git#commit=8ad18569bcc78923744659a253bd914d48b2fea7")
+        ${pkgname}-config::git+https://github.com/cachyos/calamares-config.git#branch=systemd-boot-3.3)
 sha256sums=('SKIP'
             '2bb91134b71d705de3103f70a1e45db72c43d0220b7a2e0178a012c3929c76a6'
             '3989743e5f4ac697809188de058e2985a9b1940d73c40c606119461c5ec8f904'
             '1138e096ab21558c9e518c070a7f4dd205e828aa134334bc2499194e57dd00e3'
             '0b15bd1647faf809f901aa4b7eaf770426a5106de2a7c44afde3a0db375c50f9'
             'SKIP')
-pkgver() {
-  cd "$srcdir/$_pkgname"
-  printf 'r%s.%s' "$(git rev-list --count HEAD)" "$(git rev-parse --short HEAD)"
-}
 
 prepare() {
   cd ${srcdir}/calamares
