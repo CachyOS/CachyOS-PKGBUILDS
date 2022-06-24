@@ -8,7 +8,7 @@ pkgname=cachy-browser
 _pkgname=Cachy
 __pkgname=cachy
 pkgver=101.0.1
-pkgrel=3
+pkgrel=4
 pkgdesc="Community-maintained fork of Firefox, focused on privacy, security and freedom."
 arch=(x86_64 x86_64_v3)
 license=(MPL GPL LGPL)
@@ -21,7 +21,7 @@ makedepends=(unzip zip diffutils yasm mesa imake inetutils
              rust xorg-server-xwayland xorg-server-xvfb
              autoconf2.13 clang llvm jack nodejs cbindgen nasm
              python-setuptools python-zstandard git binutils lld dump_syms
-             wasi-compiler-rt wasi-libc wasi-libc++ wasi-libc++abi mold)
+             wasi-compiler-rt wasi-libc wasi-libc++ wasi-libc++abi mold python-pipenv)
 optdepends=('networkmanager: Location detection via available WiFi networks'
             'libnotify: Notification integration'
             'pulseaudio: Audio support'
@@ -82,8 +82,8 @@ export MOZ_ADDON_SIGNING=1
 export MOZ_APP_REMOTINGNAME=${pkgname//-/}
 
 # System libraries
-#ac_add_options --with-system-av1
-#ac_add_options --with-system-graphite2
+ac_add_options --with-system-av1
+# ac_add_options --with-system-graphite2
 ac_add_options --with-system-harfbuzz
 ac_add_options --with-system-icu
 ac_add_options --with-system-jpeg
@@ -263,7 +263,7 @@ build() {
   export MOZ_NOSPAM=1
   export MOZBUILD_STATE_PATH="$srcdir/mozbuild"
   #export MOZ_ENABLE_FULL_SYMBOLS=1
-  export MACH_BUILD_PYTHON_NATIVE_PACKAGE_SOURCE=pip
+  export MACH_BUILD_PYTHON_NATIVE_PACKAGE_SOURCE=system
   export PIP_NETWORK_INSTALL_RESTRICTED_VIRTUALENVS=mach # let us hope this is a working _new_ workaround for the pip env issues?
 
   # LTO needs more open files
