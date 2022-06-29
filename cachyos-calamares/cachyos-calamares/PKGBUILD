@@ -2,8 +2,8 @@
 # Contributor: Philip Müller <philm[at]manjaro[dog]org>
 
 pkgname=cachyos-calamares
-pkgver=3.2.59
-pkgrel=1
+pkgver=3.2.60
+pkgrel=3
 pkgdesc='Distribution-independent installer framework'
 arch=('i686' 'x86_64' 'x86_64_v3')
 license=(GPL)
@@ -11,7 +11,7 @@ url="https://github.com/calamares/calamares"
 license=('LGPL')
 conflicts=('calamares')
 provides=('calamares')
-_commit=5f55f14f9dca7b15d9f11f13c39ad6a3f457045c
+_commit=b11ee3abc583e571e588fd00afb99d1a528373e6
 makedepends=('git' 'cmake' 'extra-cmake-modules' 'kpmcore' 'boost' 'python-jsonschema' 'python-pyaml' 'python-unidecode')
 depends=( 'qt5-svg' 'qt5-webengine' 'yaml-cpp' 'networkmanager' 'upower' 'kcoreaddons' 'kconfig' 'ki18n' 'kservice' \
 'kwidgetsaddons' 'kpmcore' 'squashfs-tools' 'rsync' 'cryptsetup' 'qt5-xmlpatterns' 'doxygen' 'dmidecode' \
@@ -25,7 +25,7 @@ source=(git+https://github.com/calamares/calamares.git#commit=${_commit}
         settings_offline.conf
         0001-Force-LTO.patch
         0001-FORCE-LTO-3.3.patch
-        ${pkgname}-config::git+https://github.com/cachyos/calamares-config.git)
+        ${pkgname}-config::git+https://github.com/cachyos/calamares-config.git#branch=grub-3.3)
 sha256sums=('SKIP'
             '2bb91134b71d705de3103f70a1e45db72c43d0220b7a2e0178a012c3929c76a6'
             '3989743e5f4ac697809188de058e2985a9b1940d73c40c606119461c5ec8f904'

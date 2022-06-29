@@ -1,21 +1,22 @@
 # Maintainer: Vladislav Nepogodin <nepogodin.vlad@gmail.com>
 
-pkgname=cachyos-calamares-config
-pkgver=r93.6cb4b21
+pkgname=cachyos-calamares-next-config
+_pkgname=cachyos-calamares-config
+pkgver=1
 pkgrel=1
 pkgdesc="CachyOS config for the Calamares installer"
 arch=(any)
 url="https://github.com/cachyos/calamares-config"
 license=('GPL')
 makedepends=('git')
-provides=('$pkgname=$pkgver')
-conflicts=('$pkgname')
-source=("${pkgname}::git+$url.git#branch=grub-3.2")
+source=("${pkgname}::git+$url.git#branch=grub-3.3")
 sha512sums=('SKIP')
+provides=('$_pkgname=$pkgver')
+conflicts=('$_pkgname')
 
 pkgver() {
-  cd "${srcdir}/${pkgname}"
-  printf "r%s.%s" "$(git rev-list --count HEAD)" "$(git rev-parse --short HEAD)"
+  cd "$srcdir/$_pkgname"
+  printf 'r%s.%s' "$(git rev-list --count HEAD)" "$(git rev-parse --short HEAD)"
 }
 
 package() {

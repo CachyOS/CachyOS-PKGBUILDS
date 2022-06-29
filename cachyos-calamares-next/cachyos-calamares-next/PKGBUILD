@@ -1,9 +1,9 @@
 # Maintainer: Vladislav Nepogodin <nepogodin.vlad@gmail.com>
 # Contributor: Philip Müller <philm[at]manjaro[dog]org>
 
-pkgname=cachyos-calamares-bootloader-select
+pkgname=cachyos-calamares-next
 pkgver=3.3.0
-pkgrel=2
+pkgrel=4
 pkgdesc='Distribution-independent installer framework'
 arch=('i686' 'x86_64' 'x86_64_v3')
 license=(GPL)
@@ -19,13 +19,10 @@ backup=('usr/share/calamares/modules/bootloader.conf'
         'usr/share/calamares/modules/displaymanager.conf'
         'usr/share/calamares/modules/initcpio.conf'
         'usr/share/calamares/modules/unpackfs.conf')
-source=(git+https://github.com/cachyos/calamares.git#branch=bootloader-selection
+source=(calamares::git+https://github.com/calamares/calamares.git}
 		settings_online.conf
         settings_offline.conf
-        0001-Force-LTO.patch
-        0001-FORCE-LTO-3.3.patch
-        0001-fix-missing-import-libcalamares.patch
-        ${pkgname}-config::git+https://github.com/cachyos/calamares-config.git#branch=bootloader-selection)
+        ${pkgname}-config::git+https://github.com/cachyos/calamares-config.git#branch=grub-3.3)
 sha256sums=('SKIP'
             '2bb91134b71d705de3103f70a1e45db72c43d0220b7a2e0178a012c3929c76a6'
             '3989743e5f4ac697809188de058e2985a9b1940d73c40c606119461c5ec8f904'
@@ -36,6 +33,10 @@ sha256sums=('SKIP'
 prepare() {
   cd ${srcdir}/calamares
   sed -i -e 's/"Install configuration files" OFF/"Install configuration files" ON/' CMakeLists.txt
+
+  rm -r "src/modules/"{fstab,mount,packages}
+
+  cp -rf "${srcdir}/${pkgname}-config/usr/lib/calamares/modules"/{fstab,mount,packages} src/modules/
 
   # patches here
 
@@ -51,8 +52,6 @@ prepare() {
 
   # remove default branding
   rm -r src/branding/default
-#   patch -Np1 -i ${srcdir}/0001-fix-missing-import-libcalamares.patch
-#  patch -Np1 -i ${srcdir}/0001-Force-LTO.patch
 }
 
 
@@ -74,10 +73,10 @@ build() {
     -DSKIP_MODULES="dracut dracutlukscfg \
     dummycpp dummyprocess dummypython dummypythonqt \
     finishedq keyboardq license localeq notesqml oemid \
-    openrcdmcryptcfg \
+    openrcdmcryptcfg packagechooserq \
     plymouthcfg plasmalnf services-openrc \
     summaryq tracking usersq webview welcomeq"
-    
+
   cmake --build build --parallel $_cpuCount
 }
 
