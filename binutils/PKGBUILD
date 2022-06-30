@@ -1,0 +1,117 @@
+# Maintainer: Giancarlo Razzolini <grazzolini@archlinux.org>
+# Maintainer: Frederik Schwan <freswa at archlinux dot org>
+# Contributor:  Bartłomiej Piotrowski <bpiotrowski@archlinux.org>
+# Contributor: Allan McRae <allan@archlinux.org>
+
+# toolchain build order: linux-api-headers->glibc->binutils->gcc->glibc->binutils->gcc
+
+pkgname=binutils
+pkgver=2.38
+_commit=9c67f6382ac2c90fbde5729feaf7d59ce662147a
+pkgrel=6
+pkgdesc='A set of programs to assemble and manipulate binary and object files'
+arch=(x86_64)
+url='https://www.gnu.org/software/binutils/'
+license=('GPL3' 'GPL' 'FDL1.3' 'custom:FSFAP')
+groups=(base-devel)
+depends=(glibc zlib libelf)
+makedepends=(git)
+checkdepends=(dejagnu debuginfod bc)
+optdepends=('debuginfod: for debuginfod server/client functionality')
+conflicts=(binutils-multilib)
+replaces=(binutils-multilib)
+options=(staticlibs !distcc !ccache debug)
+source=(git+https://sourceware.org/git/binutils-gdb.git#commit=${_commit}
+        debug_loclists.patch
+        gold-warn-unsupported.patch)
+sha256sums=('SKIP'
+            'fda14fc4879dba6e7822065e7c938a848ace3ee8f8984f4227aba0fb26912bb4'
+            '2d430b66f84a19c154725ec535280c493be1d34f1a90f95208dce02fecd0e4e4')
+validpgpkeys=(3A24BC1E8FB409FA9F14371813FCEF89DD9E3C4F)
+
+prepare() {
+  [[ ! -d binutils-gdb ]] && ln -s binutils-$pkgver binutils-gdb
+  mkdir -p binutils-build
+
+  cd binutils-gdb
+
+  # Turn off development mode (-Werror, gas run-time checks, date in sonames)
+  sed -i '/^development=/s/true/false/' bfd/development.sh
+
+  # https://sourceware.org/bugzilla/show_bug.cgi?id=28981
+  patch -Np1 -i "${srcdir}"/debug_loclists.patch
+
+  # Creds @Fedora
+  # Change the gold configuration script to only warn about
+  # unsupported targets.  This allows the binutils to be built with
+  # BPF support enabled.
+  patch -Np1 -i "${srcdir}"/gold-warn-unsupported.patch
+}
+
+build() {
+  cd binutils-build
+
+  "$srcdir/binutils-gdb/configure" \
+    --prefix=/usr \
+    --with-lib-path=/usr/lib:/usr/local/lib \
+    --with-bugurl=https://bugs.archlinux.org/ \
+    --enable-cet \
+    --enable-deterministic-archives \
+    --enable-gold \
+    --enable-install-libiberty \
+    --enable-ld=default \
+    --enable-pgo-build=lto \
+    --enable-plugins \
+    --enable-relro \
+    --enable-shared \
+    --enable-targets=x86_64-pep,bpf-unknown-none \
+    --enable-threads \
+    --disable-gdb \
+    --disable-gdbserver \
+    --disable-libdecnumber \
+    --disable-readline \
+    --disable-sim \
+    --disable-werror \
+    --with-debuginfod \
+    --with-pic \
+    --with-system-zlib
+
+  make -O tooldir=/usr
+
+  # Extract the FSF All Permissive License
+  # <https://www.gnu.org/prep/maintain/html_node/License-Notices-for-Other-Files.html>
+  # used for some linker scripts.
+  tail -n 5 "${srcdir}"/binutils-gdb/ld/scripttempl/README > FSFAP
+}
+
+check() {
+  cd binutils-build
+
+  # Use minimal flags for testsuite
+  # ld testsuite uses CFLAGS_FOR_TARGET and requires -g
+  # gold testsuite requires CXXFLAGS/CFLAGS with default PIE/PIC disabled
+  make -O CFLAGS_FOR_TARGET="-O2 -g" \
+          CXXFLAGS="-O2 -no-pie -fno-PIC" \
+          CFLAGS="-O2 -no-pie" \
+          LDFLAGS="" \
+          check
+}
+
+package() {
+  cd binutils-build
+  make prefix="$pkgdir/usr" tooldir="$pkgdir/usr" install
+
+  # install PIC version of libiberty
+  install -m644 libiberty/pic/libiberty.a "$pkgdir/usr/lib"
+
+  # Remove unwanted files
+  rm -f "$pkgdir"/usr/share/man/man1/{dlltool,windres,windmc}*
+
+  # No shared linking to these files outside binutils
+  rm -f "$pkgdir"/usr/lib/lib{bfd,opcodes}.so
+  echo 'INPUT( /usr/lib/libbfd.a -liberty -lz -ldl )' > "$pkgdir/usr/lib/libbfd.so"
+  echo 'INPUT( /usr/lib/libopcodes.a -lbfd )' > "$pkgdir/usr/lib/libopcodes.so"
+
+  # install FSF All Permissive License
+  install -Dm644 -t "${pkgdir}"/usr/share/licenses/${pkgname}/ FSFAP
+}
