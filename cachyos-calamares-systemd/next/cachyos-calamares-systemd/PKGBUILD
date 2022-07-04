@@ -1,8 +1,7 @@
 # Maintainer: Vladislav Nepogodin <nepogodin.vlad@gmail.com>
 # Contributor: Philip Müller <philm[at]manjaro[dog]org>
 
-pkgname=cachyos-calamares-systemd-git
-_pkgname=cachyos-calamares-systemd-git
+pkgname=cachyos-calamares-next-systemd
 pkgver=3.3.0
 pkgrel=1
 pkgdesc='Distribution-independent installer framework'
@@ -24,9 +23,6 @@ backup=('usr/share/calamares/modules/bootloader.conf'
 source=(calamares::git+https://github.com/calamares/calamares.git#commit=${_commit}
 		settings_online.conf
         settings_offline.conf
-        0001-Force-LTO.patch
-        0001-FORCE-LTO-3.3.patch
-        0001-fix-missing-import-libcalamares.patch
         ${pkgname}-config::git+https://github.com/cachyos/calamares-config.git#branch=systemd-boot-3.3)
 sha256sums=('SKIP'
             '2bb91134b71d705de3103f70a1e45db72c43d0220b7a2e0178a012c3929c76a6'
@@ -57,8 +53,6 @@ prepare() {
 
   # remove default branding
   rm -r src/branding/default
-#   patch -Np1 -i ${srcdir}/0001-fix-missing-import-libcalamares.patch
-#  patch -Np1 -i ${srcdir}/0001-Force-LTO.patch
 }
 
 
@@ -69,7 +63,7 @@ build() {
 
   cmake -S . -Bbuild \
         -GNinja \
-        -DCMAKE_BUILD_TYPE=Debug \
+        -DCMAKE_BUILD_TYPE=Release \
         -DCMAKE_INSTALL_PREFIX=/usr \
         -DCMAKE_INSTALL_LIBDIR=lib \
         -DWITH_PYTHONQT=OFF \

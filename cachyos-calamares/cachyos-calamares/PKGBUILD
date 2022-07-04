@@ -3,7 +3,7 @@
 
 pkgname=cachyos-calamares
 pkgver=3.2.60
-pkgrel=3
+pkgrel=4
 pkgdesc='Distribution-independent installer framework'
 arch=('i686' 'x86_64' 'x86_64_v3')
 license=(GPL)
@@ -25,7 +25,7 @@ source=(git+https://github.com/calamares/calamares.git#commit=${_commit}
         settings_offline.conf
         0001-Force-LTO.patch
         0001-FORCE-LTO-3.3.patch
-        ${pkgname}-config::git+https://github.com/cachyos/calamares-config.git#branch=grub-3.3)
+        ${pkgname}-config::git+https://github.com/cachyos/calamares-config.git#branch=grub-3.2)
 sha256sums=('SKIP'
             '2bb91134b71d705de3103f70a1e45db72c43d0220b7a2e0178a012c3929c76a6'
             '3989743e5f4ac697809188de058e2985a9b1940d73c40c606119461c5ec8f904'
@@ -67,7 +67,7 @@ build() {
 
   cmake -S . -Bbuild \
         -GNinja \
-        -DCMAKE_BUILD_TYPE=Debug \
+        -DCMAKE_BUILD_TYPE=Release \
         -DCMAKE_INSTALL_PREFIX=/usr \
         -DCMAKE_INSTALL_LIBDIR=lib \
         -DWITH_PYTHONQT=OFF \

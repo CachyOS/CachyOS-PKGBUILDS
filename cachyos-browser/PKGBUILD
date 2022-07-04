@@ -91,14 +91,14 @@ export MOZ_APP_REMOTINGNAME=${pkgname//-/}
 #ac_add_options --with-system-av1
 # ac_add_options --with-system-graphite2
 
-ac_add_options --with-system-harfbuzz
-ac_add_options --with-system-icu
-ac_add_options --with-system-jpeg
-ac_add_options --with-system-libevent
-ac_add_options --with-system-libvpx
+# ac_add_options --with-system-harfbuzz
+#ac_add_options --with-system-icu
+#ac_add_options --with-system-jpeg
+#ac_add_options --with-system-libevent
+#ac_add_options --with-system-libvpx
 ac_add_options --with-system-nspr
 ac_add_options --with-system-nss
-ac_add_options --with-system-zlib
+# ac_add_options --with-system-zlib
 
 # Features
 ac_add_options --enable-pulseaudio
@@ -200,6 +200,9 @@ END
     patch -Np1 -i ${_patches_dir}/librewolf-ui/lw-logo-devtools.patch
 
     patch -Np1 -i ${_patches_dir}/librewolf-ui/handlers.patch
+    
+   	msg2 "change bus/dbus/remoting names to org.cachyos"
+    patch -Np1 -i ${_patches_dir}/librewolf/dbus_name.patch
 
     msg2 "customized pref panel"
     patch -Np1 -i ${_patches_dir}/librewolf/librewolf-pref-pane.patch
