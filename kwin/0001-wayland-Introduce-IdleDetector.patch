@@ -1,0 +1,1422 @@
+From 800ca65787dd238ab33aecbbf367e0c122aa4d5a Mon Sep 17 00:00:00 2001
+From: Peter Jung <admin@ptr1337.dev>
+Date: Fri, 1 Jul 2022 09:55:10 +0200
+Subject: [PATCH] wayland: Introduce IdleDetector
+
+The IdleDetector is an idle detection helper. Its purpose is to reduce
+code duplication in our private KIdleTime plugin and the idle wayland
+protocol, and make user activity simulation less error prone.
+
+Signed-off-by: Peter Jung <admin@ptr1337.dev>
+---
+ .../integration/idle_inhibition_test.cpp      | 103 ++-----
+ src/CMakeLists.txt                            |   1 +
+ src/idle_inhibition.cpp                       |  22 +-
+ src/idle_inhibition.h                         |  20 +-
+ src/idledetector.cpp                          |  64 +++++
+ src/idledetector.h                            |  38 +++
+ src/input.cpp                                 |  46 ++-
+ src/input.h                                   |  12 +
+ src/plugins/idletime/poller.cpp               | 114 ++------
+ src/plugins/idletime/poller.h                 |  12 +-
+ src/wayland/autotests/client/CMakeLists.txt   |  11 -
+ src/wayland/autotests/client/test_idle.cpp    | 271 ------------------
+ src/wayland/idle_interface.cpp                | 110 ++-----
+ src/wayland/idle_interface.h                  |  50 ----
+ src/wayland/idle_interface_p.h                |  19 +-
+ src/wayland_server.cpp                        |   7 -
+ src/wayland_server.h                          |   2 -
+ 17 files changed, 247 insertions(+), 655 deletions(-)
+ create mode 100644 src/idledetector.cpp
+ create mode 100644 src/idledetector.h
+ delete mode 100644 src/wayland/autotests/client/test_idle.cpp
+
+diff --git a/autotests/integration/idle_inhibition_test.cpp b/autotests/integration/idle_inhibition_test.cpp
+index ca14deb8e..13dc642eb 100644
+--- a/autotests/integration/idle_inhibition_test.cpp
++++ b/autotests/integration/idle_inhibition_test.cpp
+@@ -10,8 +10,6 @@
+ 
+ #include "platform.h"
+ #include "virtualdesktops.h"
+-#include "wayland/display.h"
+-#include "wayland/idle_interface.h"
+ #include "wayland_server.h"
+ #include "window.h"
+ #include "workspace.h"
+@@ -20,7 +18,6 @@
+ 
+ using namespace KWin;
+ using namespace KWayland::Client;
+-using KWaylandServer::IdleInterface;
+ 
+ static const QString s_socketName = QStringLiteral("wayland_test_kwin_idle_inhbition_test-0");
+ 
+@@ -69,11 +66,8 @@ void TestIdleInhibition::cleanup()
+ 
+ void TestIdleInhibition::testInhibit()
+ {
+-    auto idle = waylandServer()->display()->findChild<IdleInterface *>();
+-    QVERIFY(idle);
+-    QVERIFY(!idle->isInhibited());
+-    QSignalSpy inhibitedSpy(idle, &IdleInterface::inhibitedChanged);
+-    QVERIFY(inhibitedSpy.isValid());
++    // no idle inhibitors at the start
++    QCOMPARE(input()->idleInhibitors(), QList<Window *>{});
+ 
+     // now create window
+     QScopedPointer<KWayland::Client::Surface> surface(Test::createSurface());
+@@ -88,22 +82,23 @@ void TestIdleInhibition::testInhibit()
+     QVERIFY(window);
+ 
+     // this should inhibit our server object
+-    QVERIFY(idle->isInhibited());
++    QCOMPARE(input()->idleInhibitors(), QList<Window *>{window});
+ 
+     // deleting the object should uninhibit again
+     inhibitor.reset();
+-    QVERIFY(inhibitedSpy.wait());
+-    QVERIFY(!idle->isInhibited());
++    Test::flushWaylandConnection(); // don't use QTRY_COMPARE(), it doesn't spin event loop
++    QGuiApplication::processEvents();
++    QCOMPARE(input()->idleInhibitors(), QList<Window *>{});
+ 
+     // inhibit again and destroy window
+     QScopedPointer<Test::IdleInhibitorV1> inhibitor2(Test::createIdleInhibitorV1(surface.data()));
+-    QVERIFY(inhibitedSpy.wait());
+-    QVERIFY(idle->isInhibited());
++    Test::flushWaylandConnection();
++    QGuiApplication::processEvents();
++    QCOMPARE(input()->idleInhibitors(), QList<Window *>{window});
+ 
+     shellSurface.reset();
+     QVERIFY(Test::waitForWindowDestroyed(window));
+-    QTRY_VERIFY(!idle->isInhibited());
+-    QCOMPARE(inhibitedSpy.count(), 4);
++    QCOMPARE(input()->idleInhibitors(), QList<Window *>{});
+ }
+ 
+ void TestIdleInhibition::testDontInhibitWhenNotOnCurrentDesktop()
+@@ -114,13 +109,6 @@ void TestIdleInhibition::testDontInhibitWhenNotOnCurrentDesktop()
+     VirtualDesktopManager::self()->setCount(2);
+     QCOMPARE(VirtualDesktopManager::self()->count(), 2u);
+ 
+-    // Get reference to the idle interface.
+-    auto idle = waylandServer()->display()->findChild<IdleInterface *>();
+-    QVERIFY(idle);
+-    QVERIFY(!idle->isInhibited());
+-    QSignalSpy inhibitedSpy(idle, &IdleInterface::inhibitedChanged);
+-    QVERIFY(inhibitedSpy.isValid());
+-
+     // Create the test window.
+     QScopedPointer<KWayland::Client::Surface> surface(Test::createSurface());
+     QVERIFY(!surface.isNull());
+@@ -140,30 +128,26 @@ void TestIdleInhibition::testDontInhibitWhenNotOnCurrentDesktop()
+     QCOMPARE(window->desktops().first(), VirtualDesktopManager::self()->desktops().first());
+ 
+     // This should inhibit our server object.
+-    QVERIFY(idle->isInhibited());
+-    QCOMPARE(inhibitedSpy.count(), 1);
++    QCOMPARE(input()->idleInhibitors(), QList<Window *>{window});
+ 
+     // Switch to the second virtual desktop.
+     VirtualDesktopManager::self()->setCurrent(2);
+ 
+     // The surface is no longer visible, so the compositor don't have to honor the
+     // idle inhibitor object.
+-    QVERIFY(!idle->isInhibited());
+-    QCOMPARE(inhibitedSpy.count(), 2);
++    QCOMPARE(input()->idleInhibitors(), QList<Window *>{});
+ 
+     // Switch back to the first virtual desktop.
+     VirtualDesktopManager::self()->setCurrent(1);
+ 
+     // The test window became visible again, so the compositor has to honor the idle
+     // inhibitor object back again.
+-    QVERIFY(idle->isInhibited());
+-    QCOMPARE(inhibitedSpy.count(), 3);
++    QCOMPARE(input()->idleInhibitors(), QList<Window *>{window});
+ 
+     // Destroy the test window.
+     shellSurface.reset();
+     QVERIFY(Test::waitForWindowDestroyed(window));
+-    QTRY_VERIFY(!idle->isInhibited());
+-    QCOMPARE(inhibitedSpy.count(), 4);
++    QCOMPARE(input()->idleInhibitors(), QList<Window *>{});
+ }
+ 
+ void TestIdleInhibition::testDontInhibitWhenMinimized()
+@@ -171,13 +155,6 @@ void TestIdleInhibition::testDontInhibitWhenMinimized()
+     // This test verifies that the idle inhibitor object is not honored when the
+     // associated surface is minimized.
+ 
+-    // Get reference to the idle interface.
+-    auto idle = waylandServer()->display()->findChild<IdleInterface *>();
+-    QVERIFY(idle);
+-    QVERIFY(!idle->isInhibited());
+-    QSignalSpy inhibitedSpy(idle, &IdleInterface::inhibitedChanged);
+-    QVERIFY(inhibitedSpy.isValid());
+-
+     // Create the test window.
+     QScopedPointer<KWayland::Client::Surface> surface(Test::createSurface());
+     QVERIFY(!surface.isNull());
+@@ -193,24 +170,20 @@ void TestIdleInhibition::testDontInhibitWhenMinimized()
+     QVERIFY(window);
+ 
+     // This should inhibit our server object.
+-    QVERIFY(idle->isInhibited());
+-    QCOMPARE(inhibitedSpy.count(), 1);
++    QCOMPARE(input()->idleInhibitors(), QList<Window *>{window});
+ 
+     // Minimize the window, the idle inhibitor object should not be honored.
+     window->minimize();
+-    QVERIFY(!idle->isInhibited());
+-    QCOMPARE(inhibitedSpy.count(), 2);
++    QCOMPARE(input()->idleInhibitors(), QList<Window *>{});
+ 
+     // Unminimize the window, the idle inhibitor object should be honored back again.
+     window->unminimize();
+-    QVERIFY(idle->isInhibited());
+-    QCOMPARE(inhibitedSpy.count(), 3);
++    QCOMPARE(input()->idleInhibitors(), QList<Window *>{window});
+ 
+     // Destroy the test window.
+     shellSurface.reset();
+     QVERIFY(Test::waitForWindowDestroyed(window));
+-    QTRY_VERIFY(!idle->isInhibited());
+-    QCOMPARE(inhibitedSpy.count(), 4);
++    QCOMPARE(input()->idleInhibitors(), QList<Window *>{});
+ }
+ 
+ void TestIdleInhibition::testDontInhibitWhenUnmapped()
+@@ -218,13 +191,6 @@ void TestIdleInhibition::testDontInhibitWhenUnmapped()
+     // This test verifies that the idle inhibitor object is not honored by KWin
+     // when the associated window is unmapped.
+ 
+-    // Get reference to the idle interface.
+-    auto idle = waylandServer()->display()->findChild<IdleInterface *>();
+-    QVERIFY(idle);
+-    QVERIFY(!idle->isInhibited());
+-    QSignalSpy inhibitedSpy(idle, &IdleInterface::inhibitedChanged);
+-    QVERIFY(inhibitedSpy.isValid());
+-
+     // Create the test window.
+     QScopedPointer<KWayland::Client::Surface> surface(Test::createSurface());
+     QVERIFY(!surface.isNull());
+@@ -253,8 +219,7 @@ void TestIdleInhibition::testDontInhibitWhenUnmapped()
+     QCOMPARE(surfaceConfigureRequestedSpy.count(), 1);
+ 
+     // This should inhibit our server object.
+-    QVERIFY(idle->isInhibited());
+-    QCOMPARE(inhibitedSpy.count(), 1);
++    QCOMPARE(input()->idleInhibitors(), QList<Window *>{window});
+ 
+     // Unmap the window.
+     surface->attachBuffer(Buffer::Ptr());
+@@ -263,8 +228,7 @@ void TestIdleInhibition::testDontInhibitWhenUnmapped()
+ 
+     // The surface is no longer visible, so the compositor doesn't have to honor the
+     // idle inhibitor object.
+-    QVERIFY(!idle->isInhibited());
+-    QCOMPARE(inhibitedSpy.count(), 2);
++    QCOMPARE(input()->idleInhibitors(), QList<Window *>{});
+ 
+     // Tell the compositor that we want to map the surface.
+     surface->commit(KWayland::Client::Surface::CommitFlag::None);
+@@ -283,14 +247,12 @@ void TestIdleInhibition::testDontInhibitWhenUnmapped()
+ 
+     // The test window became visible again, so the compositor has to honor the idle
+     // inhibitor object back again.
+-    QVERIFY(idle->isInhibited());
+-    QCOMPARE(inhibitedSpy.count(), 3);
++    QCOMPARE(input()->idleInhibitors(), QList<Window *>{window});
+ 
+     // Destroy the test window.
+     shellSurface.reset();
+     QVERIFY(Test::waitForWindowDestroyed(window));
+-    QTRY_VERIFY(!idle->isInhibited());
+-    QCOMPARE(inhibitedSpy.count(), 4);
++    QCOMPARE(input()->idleInhibitors(), QList<Window *>{});
+ }
+ 
+ void TestIdleInhibition::testDontInhibitWhenLeftCurrentDesktop()
+@@ -301,13 +263,6 @@ void TestIdleInhibition::testDontInhibitWhenLeftCurrentDesktop()
+     VirtualDesktopManager::self()->setCount(2);
+     QCOMPARE(VirtualDesktopManager::self()->count(), 2u);
+ 
+-    // Get reference to the idle interface.
+-    auto idle = waylandServer()->display()->findChild<IdleInterface *>();
+-    QVERIFY(idle);
+-    QVERIFY(!idle->isInhibited());
+-    QSignalSpy inhibitedSpy(idle, &IdleInterface::inhibitedChanged);
+-    QVERIFY(inhibitedSpy.isValid());
+-
+     // Create the test window.
+     QScopedPointer<KWayland::Client::Surface> surface(Test::createSurface());
+     QVERIFY(!surface.isNull());
+@@ -327,30 +282,26 @@ void TestIdleInhibition::testDontInhibitWhenLeftCurrentDesktop()
+     QCOMPARE(window->desktops().first(), VirtualDesktopManager::self()->desktops().first());
+ 
+     // This should inhibit our server object.
+-    QVERIFY(idle->isInhibited());
+-    QCOMPARE(inhibitedSpy.count(), 1);
++    QCOMPARE(input()->idleInhibitors(), QList<Window *>{window});
+ 
+     // Let the window enter the second virtual desktop.
+     window->enterDesktop(VirtualDesktopManager::self()->desktops().at(1));
+-    QCOMPARE(inhibitedSpy.count(), 1);
++    QCOMPARE(input()->idleInhibitors(), QList<Window *>{window});
+ 
+     // If the window leaves the first virtual desktop, then the associated idle
+     // inhibitor object should not be honored.
+     window->leaveDesktop(VirtualDesktopManager::self()->desktops().at(0));
+-    QVERIFY(!idle->isInhibited());
+-    QCOMPARE(inhibitedSpy.count(), 2);
++    QCOMPARE(input()->idleInhibitors(), QList<Window *>{});
+ 
+     // If the window enters the first desktop, then the associated idle inhibitor
+     // object should be honored back again.
+     window->enterDesktop(VirtualDesktopManager::self()->desktops().at(0));
+-    QVERIFY(idle->isInhibited());
+-    QCOMPARE(inhibitedSpy.count(), 3);
++    QCOMPARE(input()->idleInhibitors(), QList<Window *>{window});
+ 
+     // Destroy the test window.
+     shellSurface.reset();
+     QVERIFY(Test::waitForWindowDestroyed(window));
+-    QTRY_VERIFY(!idle->isInhibited());
+-    QCOMPARE(inhibitedSpy.count(), 4);
++    QCOMPARE(input()->idleInhibitors(), QList<Window *>{});
+ }
+ 
+ WAYLANDTEST_MAIN(TestIdleInhibition)
+diff --git a/src/CMakeLists.txt b/src/CMakeLists.txt
+index 290f399a7..9fef87e00 100644
+--- a/src/CMakeLists.txt
++++ b/src/CMakeLists.txt
+@@ -60,6 +60,7 @@ target_sources(kwin PRIVATE
+     globalshortcuts.cpp
+     group.cpp
+     idle_inhibition.cpp
++    idledetector.cpp
+     input.cpp
+     input_event.cpp
+     input_event_spy.cpp
+diff --git a/src/idle_inhibition.cpp b/src/idle_inhibition.cpp
+index 29917afe8..4474e3db5 100644
+--- a/src/idle_inhibition.cpp
++++ b/src/idle_inhibition.cpp
+@@ -9,7 +9,7 @@
+ */
+ #include "idle_inhibition.h"
+ #include "deleted.h"
+-#include "wayland/idle_interface.h"
++#include "input.h"
+ #include "wayland/surface_interface.h"
+ #include "window.h"
+ #include "workspace.h"
+@@ -22,9 +22,8 @@ using KWaylandServer::SurfaceInterface;
+ namespace KWin
+ {
+ 
+-IdleInhibition::IdleInhibition(IdleInterface *idle)
+-    : QObject(idle)
+-    , m_idle(idle)
++IdleInhibition::IdleInhibition(QObject *parent)
++    : QObject(parent)
+ {
+     // Workspace is created after the wayland server is initialized.
+     connect(kwinApp(), &Application::workspaceCreated, this, &IdleInhibition::slotWorkspaceCreated);
+@@ -58,24 +57,13 @@ void IdleInhibition::registerClient(Window *client)
+ 
+ void IdleInhibition::inhibit(Window *client)
+ {
+-    if (isInhibited(client)) {
+-        // already inhibited
+-        return;
+-    }
+-    m_idleInhibitors << client;
+-    m_idle->inhibit();
++    input()->addIdleInhibitor(client);
+     // TODO: notify powerdevil?
+ }
+ 
+ void IdleInhibition::uninhibit(Window *client)
+ {
+-    auto it = std::find(m_idleInhibitors.begin(), m_idleInhibitors.end(), client);
+-    if (it == m_idleInhibitors.end()) {
+-        // not inhibited
+-        return;
+-    }
+-    m_idleInhibitors.erase(it);
+-    m_idle->uninhibit();
++    input()->removeIdleInhibitor(client);
+ }
+ 
+ void IdleInhibition::update(Window *client)
+diff --git a/src/idle_inhibition.h b/src/idle_inhibition.h
+index 9d03e33d3..31d254887 100644
+--- a/src/idle_inhibition.h
++++ b/src/idle_inhibition.h
+@@ -13,13 +13,6 @@
+ #include <QObject>
+ #include <QVector>
+ 
+-namespace KWaylandServer
+-{
+-class IdleInterface;
+-}
+-
+-using KWaylandServer::IdleInterface;
+-
+ namespace KWin
+ {
+ class Window;
+@@ -28,20 +21,11 @@ class IdleInhibition : public QObject
+ {
+     Q_OBJECT
+ public:
+-    explicit IdleInhibition(IdleInterface *idle);
++    explicit IdleInhibition(QObject *parent = nullptr);
+     ~IdleInhibition() override;
+ 
+     void registerClient(Window *client);
+ 
+-    bool isInhibited() const
+-    {
+-        return !m_idleInhibitors.isEmpty();
+-    }
+-    bool isInhibited(Window *client) const
+-    {
+-        return m_idleInhibitors.contains(client);
+-    }
+-
+ private Q_SLOTS:
+     void slotWorkspaceCreated();
+     void slotDesktopChanged();
+@@ -51,8 +35,6 @@ private:
+     void uninhibit(Window *client);
+     void update(Window *client);
+ 
+-    IdleInterface *m_idle;
+-    QVector<Window *> m_idleInhibitors;
+     QMap<Window *, QMetaObject::Connection> m_connections;
+ };
+ }
+diff --git a/src/idledetector.cpp b/src/idledetector.cpp
+new file mode 100644
+index 000000000..cf46465dc
+--- /dev/null
++++ b/src/idledetector.cpp
+@@ -0,0 +1,64 @@
++/*
++    SPDX-FileCopyrightText: 2021 Vlad Zahorodnii <vlad.zahorodnii@kde.org>
++
++    SPDX-License-Identifier: GPL-2.0-or-later
++*/
++
++#include "idledetector.h"
++#include "input.h"
++
++namespace KWin
++{
++
++IdleDetector::IdleDetector(std::chrono::milliseconds timeout, QObject *parent)
++    : QObject(parent)
++    , m_timer(new QTimer(this))
++{
++    m_timer->setSingleShot(true);
++    m_timer->setInterval(timeout);
++    connect(m_timer, &QTimer::timeout, this, &IdleDetector::idle);
++    m_timer->start();
++
++    input()->addIdleDetector(this);
++}
++
++IdleDetector::~IdleDetector()
++{
++    if (input()) {
++        input()->removeIdleDetector(this);
++    }
++}
++
++bool IdleDetector::isInhibited() const
++{
++    return m_isInhibited;
++}
++
++void IdleDetector::setInhibited(bool inhibited)
++{
++    if (m_isInhibited == inhibited) {
++        return;
++    }
++    m_isInhibited = inhibited;
++
++    if (inhibited) {
++        if (!m_timer->isActive()) {
++            Q_EMIT resumed();
++        }
++        m_timer->stop();
++    } else {
++        m_timer->start();
++    }
++}
++
++void IdleDetector::activity()
++{
++    if (!m_isInhibited) {
++        if (!m_timer->isActive()) {
++            Q_EMIT resumed();
++        }
++        m_timer->start();
++    }
++}
++
++} // namespace KWin
+diff --git a/src/idledetector.h b/src/idledetector.h
+new file mode 100644
+index 000000000..09dc4253a
+--- /dev/null
++++ b/src/idledetector.h
+@@ -0,0 +1,38 @@
++/*
++    SPDX-FileCopyrightText: 2021 Vlad Zahorodnii <vlad.zahorodnii@kde.org>
++
++    SPDX-License-Identifier: GPL-2.0-or-later
++*/
++
++#pragma once
++
++#include <kwin_export.h>
++
++#include <QTimer>
++
++namespace KWin
++{
++
++class KWIN_EXPORT IdleDetector : public QObject
++{
++    Q_OBJECT
++
++public:
++    explicit IdleDetector(std::chrono::milliseconds timeout, QObject *parent = nullptr);
++    ~IdleDetector() override;
++
++    void activity();
++
++    bool isInhibited() const;
++    void setInhibited(bool inhibited);
++
++Q_SIGNALS:
++    void idle();
++    void resumed();
++
++private:
++    QTimer *m_timer;
++    bool m_isInhibited = false;
++};
++
++} // namespace KWin
+diff --git a/src/input.cpp b/src/input.cpp
+index 3d0b817f2..01c47079a 100644
+--- a/src/input.cpp
++++ b/src/input.cpp
+@@ -17,6 +17,7 @@
+ #include "gestures.h"
+ #include "globalshortcuts.h"
+ #include "hide_cursor_spy.h"
++#include "idledetector.h"
+ #include "input_event.h"
+ #include "input_event_spy.h"
+ #include "inputbackend.h"
+@@ -2848,7 +2849,7 @@ public:
+ private:
+     void notifyActivity()
+     {
+-        waylandServer()->simulateUserActivity();
++        input()->simulateUserActivity();
+     }
+ };
+ 
+@@ -3148,6 +3149,49 @@ Qt::MouseButtons InputRedirection::qtButtonStates() const
+     return m_pointer->buttons();
+ }
+ 
++void InputRedirection::simulateUserActivity()
++{
++    for (IdleDetector *idleDetector : std::as_const(m_idleDetectors)) {
++        idleDetector->activity();
++    }
++}
++
++void InputRedirection::addIdleDetector(IdleDetector *detector)
++{
++    Q_ASSERT(!m_idleDetectors.contains(detector));
++    detector->setInhibited(!m_idleInhibitors.isEmpty());
++    m_idleDetectors.append(detector);
++}
++
++void InputRedirection::removeIdleDetector(IdleDetector *detector)
++{
++    m_idleDetectors.removeOne(detector);
++}
++
++QList<Window *> InputRedirection::idleInhibitors() const
++{
++    return m_idleInhibitors;
++}
++
++void InputRedirection::addIdleInhibitor(Window *inhibitor)
++{
++    if (!m_idleInhibitors.contains(inhibitor)) {
++        m_idleInhibitors.append(inhibitor);
++        for (IdleDetector *idleDetector : std::as_const(m_idleDetectors)) {
++            idleDetector->setInhibited(true);
++        }
++    }
++}
++
++void InputRedirection::removeIdleInhibitor(Window *inhibitor)
++{
++    if (m_idleInhibitors.removeOne(inhibitor) && m_idleInhibitors.isEmpty()) {
++        for (IdleDetector *idleDetector : std::as_const(m_idleDetectors)) {
++            idleDetector->setInhibited(false);
++        }
++    }
++}
++
+ Window *InputRedirection::findToplevel(const QPoint &pos)
+ {
+     if (!Workspace::self()) {
+diff --git a/src/input.h b/src/input.h
+index 980160d21..a5bf0fdd0 100644
+--- a/src/input.h
++++ b/src/input.h
+@@ -32,6 +32,7 @@ class QWheelEvent;
+ 
+ namespace KWin
+ {
++class IdleDetector;
+ class Window;
+ class GlobalShortcutsManager;
+ class InputEventFilter;
+@@ -166,6 +167,15 @@ public:
+      */
+     void uninstallInputEventSpy(InputEventSpy *spy);
+ 
++    void simulateUserActivity();
++
++    void addIdleDetector(IdleDetector *detector);
++    void removeIdleDetector(IdleDetector *detector);
++
++    QList<Window *> idleInhibitors() const;
++    void addIdleInhibitor(Window *inhibitor);
++    void removeIdleInhibitor(Window *inhibitor);
++
+     Window *findToplevel(const QPoint &pos);
+     Window *findManagedToplevel(const QPoint &pos);
+     GlobalShortcutsManager *shortcuts() const
+@@ -324,6 +334,8 @@ private:
+     QList<InputBackend *> m_inputBackends;
+     QList<InputDevice *> m_inputDevices;
+ 
++    QList<IdleDetector *> m_idleDetectors;
++    QList<Window *> m_idleInhibitors;
+     WindowSelectorFilter *m_windowSelector = nullptr;
+ 
+     QVector<InputEventFilter *> m_filters;
+diff --git a/src/plugins/idletime/poller.cpp b/src/plugins/idletime/poller.cpp
+index c06051e5e..d29b2980d 100644
+--- a/src/plugins/idletime/poller.cpp
++++ b/src/plugins/idletime/poller.cpp
+@@ -7,12 +7,8 @@
+     SPDX-License-Identifier: GPL-2.0-or-later
+ */
+ #include "poller.h"
+-
+-#include <KIdleTime>
+-
+-#include "wayland/idle_interface.h"
+-#include "wayland/seat_interface.h"
+-#include "wayland_server.h"
++#include "idledetector.h"
++#include "input.h"
+ 
+ namespace KWin
+ {
+@@ -22,8 +18,6 @@ KWinIdleTimePoller::KWinIdleTimePoller(QObject *parent)
+ {
+ }
+ 
+-KWinIdleTimePoller::~KWinIdleTimePoller() = default;
+-
+ bool KWinIdleTimePoller::isAvailable()
+ {
+     return true;
+@@ -31,110 +25,55 @@ bool KWinIdleTimePoller::isAvailable()
+ 
+ bool KWinIdleTimePoller::setUpPoller()
+ {
+-    connect(waylandServer()->idle(), &KWaylandServer::IdleInterface::inhibitedChanged, this, &KWinIdleTimePoller::onInhibitedChanged);
+-    connect(waylandServer()->seat(), &KWaylandServer::SeatInterface::timestampChanged, this, &KWinIdleTimePoller::onTimestampChanged);
+-
+     return true;
+ }
+ 
+ void KWinIdleTimePoller::unloadPoller()
+ {
+-    if (waylandServer() && waylandServer()->idle()) {
+-        disconnect(waylandServer()->idle(), &KWaylandServer::IdleInterface::inhibitedChanged, this, &KWinIdleTimePoller::onInhibitedChanged);
+-        disconnect(waylandServer()->seat(), &KWaylandServer::SeatInterface::timestampChanged, this, &KWinIdleTimePoller::onTimestampChanged);
+-    }
+-
+-    qDeleteAll(m_timeouts);
+-    m_timeouts.clear();
+-
+-    m_idling = false;
+ }
+ 
+-void KWinIdleTimePoller::addTimeout(int newTimeout)
++void KWinIdleTimePoller::addTimeout(int nextTimeout)
+ {
+-    if (m_timeouts.contains(newTimeout)) {
++    if (m_timeouts.contains(nextTimeout)) {
+         return;
+     }
+ 
+-    auto timer = new QTimer();
+-    timer->setInterval(newTimeout);
+-    timer->setSingleShot(true);
+-    timer->callOnTimeout(this, [newTimeout, this]() {
+-        m_idling = true;
+-        Q_EMIT timeoutReached(newTimeout);
++    auto detector = new IdleDetector(std::chrono::milliseconds(nextTimeout), this);
++    m_timeouts.insert(nextTimeout, detector);
++    connect(detector, &IdleDetector::idle, this, [this, nextTimeout] {
++        Q_EMIT timeoutReached(nextTimeout);
+     });
+-
+-    m_timeouts.insert(newTimeout, timer);
+-
+-    if (!waylandServer()->idle()->isInhibited()) {
+-        timer->start();
+-    }
+-}
+-
+-void KWinIdleTimePoller::processActivity()
+-{
+-    if (m_idling) {
+-        Q_EMIT resumingFromIdle();
+-        m_idling = false;
+-    }
+-
+-    for (QTimer *timer : qAsConst(m_timeouts)) {
+-        timer->start();
+-    }
++    connect(detector, &IdleDetector::resumed, this, &KWinIdleTimePoller::resumingFromIdle);
+ }
+ 
+-void KWinIdleTimePoller::onInhibitedChanged()
++void KWinIdleTimePoller::removeTimeout(int nextTimeout)
+ {
+-    if (waylandServer()->idle()->isInhibited()) {
+-        // must stop the timers
+-        stopCatchingIdleEvents();
+-    } else {
+-        // resume the timers
+-        catchIdleEvent();
+-
+-        // register some activity
+-        Q_EMIT resumingFromIdle();
+-    }
++    delete m_timeouts.take(nextTimeout);
+ }
+ 
+-void KWinIdleTimePoller::onTimestampChanged()
++QList< int > KWinIdleTimePoller::timeouts() const
+ {
+-    if (!waylandServer()->idle()->isInhibited()) {
+-        processActivity();
+-    }
++    return m_timeouts.keys();
+ }
+ 
+ void KWinIdleTimePoller::catchIdleEvent()
+ {
+-    for (QTimer *timer : qAsConst(m_timeouts)) {
+-        timer->start();
+-    }
+-}
+-
+-void KWinIdleTimePoller::stopCatchingIdleEvents()
+-{
+-    for (QTimer *timer : qAsConst(m_timeouts)) {
+-        timer->stop();
+-    }
+-}
+-
+-void KWinIdleTimePoller::simulateUserActivity()
+-{
+-    if (waylandServer()->idle()->isInhibited()) {
++    if (m_catchResumeTimeout) {
++        // already setup
+         return;
+     }
+-    processActivity();
+-    waylandServer()->simulateUserActivity();
+-}
+-
+-void KWinIdleTimePoller::removeTimeout(int nextTimeout)
+-{
+-    delete m_timeouts.take(nextTimeout);
++    m_catchResumeTimeout = new IdleDetector(std::chrono::milliseconds::zero(), this);
++    connect(m_catchResumeTimeout, &IdleDetector::resumed, this, [this]() {
++        m_catchResumeTimeout->deleteLater();
++        m_catchResumeTimeout = nullptr;
++        Q_EMIT resumingFromIdle();
++    });
+ }
+ 
+-QList<int> KWinIdleTimePoller::timeouts() const
++void KWinIdleTimePoller::stopCatchingIdleEvents()
+ {
+-    return m_timeouts.keys();
++    delete m_catchResumeTimeout;
++    m_catchResumeTimeout = nullptr;
+ }
+ 
+ int KWinIdleTimePoller::forcePollRequest()
+@@ -142,6 +81,9 @@ int KWinIdleTimePoller::forcePollRequest()
+     return 0;
+ }
+ 
++void KWinIdleTimePoller::simulateUserActivity()
++{
++    input()->simulateUserActivity();
+ }
+ 
+-#include "poller.moc"
++} // namespace KWin
+diff --git a/src/plugins/idletime/poller.h b/src/plugins/idletime/poller.h
+index 0f28aeacd..fca765538 100644
+--- a/src/plugins/idletime/poller.h
++++ b/src/plugins/idletime/poller.h
+@@ -16,6 +16,8 @@
+ namespace KWin
+ {
+ 
++class IdleDetector;
++
+ class KWinIdleTimePoller : public AbstractSystemPoller
+ {
+     Q_OBJECT
+@@ -24,7 +26,6 @@ class KWinIdleTimePoller : public AbstractSystemPoller
+ 
+ public:
+     KWinIdleTimePoller(QObject *parent = nullptr);
+-    ~KWinIdleTimePoller() override;
+ 
+     bool isAvailable() override;
+     bool setUpPoller() override;
+@@ -39,14 +40,9 @@ public Q_SLOTS:
+     void stopCatchingIdleEvents() override;
+     void simulateUserActivity() override;
+ 
+-private Q_SLOTS:
+-    void onInhibitedChanged();
+-    void onTimestampChanged();
+-
+ private:
+-    void processActivity();
+-    QHash<int, QTimer *> m_timeouts;
+-    bool m_idling = false;
++    IdleDetector *m_catchResumeTimeout = nullptr;
++    QHash<int, IdleDetector *> m_timeouts;
+ };
+ 
+ }
+diff --git a/src/wayland/autotests/client/CMakeLists.txt b/src/wayland/autotests/client/CMakeLists.txt
+index 37ca71c29..79cff410e 100644
+--- a/src/wayland/autotests/client/CMakeLists.txt
++++ b/src/wayland/autotests/client/CMakeLists.txt
+@@ -162,17 +162,6 @@ target_link_libraries( testPlasmaShell Qt::Test Qt::Gui KF5::WaylandClient kwin
+ add_test(NAME kwayland-testPlasmaShell COMMAND testPlasmaShell)
+ ecm_mark_as_test(testPlasmaShell)
+ 
+-########################################################
+-# Test Idle
+-########################################################
+-set( testIdle_SRCS
+-        test_idle.cpp
+-    )
+-add_executable(testIdle ${testIdle_SRCS})
+-target_link_libraries( testIdle Qt::Test Qt::Gui KF5::WaylandClient kwin)
+-add_test(NAME kwayland-testIdle COMMAND testIdle)
+-ecm_mark_as_test(testIdle)
+-
+ ########################################################
+ # Test Shadow
+ ########################################################
+diff --git a/src/wayland/autotests/client/test_idle.cpp b/src/wayland/autotests/client/test_idle.cpp
+deleted file mode 100644
+index d434a921d..000000000
+--- a/src/wayland/autotests/client/test_idle.cpp
++++ /dev/null
+@@ -1,271 +0,0 @@
+-/*
+-    SPDX-FileCopyrightText: 2016 Martin Gräßlin <mgraesslin@kde.org>
+-
+-    SPDX-License-Identifier: LGPL-2.1-only OR LGPL-3.0-only OR LicenseRef-KDE-Accepted-LGPL
+-*/
+-// Qt
+-#include <QtTest>
+-// client
+-#include "KWayland/Client/connection_thread.h"
+-#include "KWayland/Client/event_queue.h"
+-#include "KWayland/Client/idle.h"
+-#include "KWayland/Client/registry.h"
+-#include "KWayland/Client/seat.h"
+-// server
+-#include "wayland/display.h"
+-#include "wayland/idle_interface.h"
+-#include "wayland/seat_interface.h"
+-
+-using namespace KWayland::Client;
+-using namespace KWaylandServer;
+-
+-class IdleTest : public QObject
+-{
+-    Q_OBJECT
+-private Q_SLOTS:
+-    void init();
+-    void cleanup();
+-
+-    void testTimeout();
+-    void testSimulateUserActivity();
+-    void testServerSimulateUserActivity();
+-    void testIdleInhibit();
+-    void testIdleInhibitBlocksTimeout();
+-
+-private:
+-    KWaylandServer::Display *m_display = nullptr;
+-    SeatInterface *m_seatInterface = nullptr;
+-    IdleInterface *m_idleInterface = nullptr;
+-    ConnectionThread *m_connection = nullptr;
+-    QThread *m_thread = nullptr;
+-    EventQueue *m_queue = nullptr;
+-    Seat *m_seat = nullptr;
+-    Idle *m_idle = nullptr;
+-};
+-
+-static const QString s_socketName = QStringLiteral("kwayland-test-idle-0");
+-
+-void IdleTest::init()
+-{
+-    delete m_display;
+-    m_display = new KWaylandServer::Display(this);
+-    m_display->addSocketName(s_socketName);
+-    m_display->start();
+-    QVERIFY(m_display->isRunning());
+-    m_display->createShm();
+-    m_seatInterface = new SeatInterface(m_display);
+-    m_seatInterface->setName(QStringLiteral("seat0"));
+-    m_idleInterface = new IdleInterface(m_display);
+-
+-    // setup connection
+-    m_connection = new KWayland::Client::ConnectionThread;
+-    QSignalSpy connectedSpy(m_connection, &ConnectionThread::connected);
+-    QVERIFY(connectedSpy.isValid());
+-    m_connection->setSocketName(s_socketName);
+-
+-    m_thread = new QThread(this);
+-    m_connection->moveToThread(m_thread);
+-    m_thread->start();
+-
+-    m_connection->initConnection();
+-    QVERIFY(connectedSpy.wait());
+-
+-    m_queue = new EventQueue(this);
+-    m_queue->setup(m_connection);
+-
+-    Registry registry;
+-    QSignalSpy interfacesAnnouncedSpy(&registry, &Registry::interfacesAnnounced);
+-    QVERIFY(interfacesAnnouncedSpy.isValid());
+-    registry.setEventQueue(m_queue);
+-    registry.create(m_connection);
+-    QVERIFY(registry.isValid());
+-    registry.setup();
+-    QVERIFY(interfacesAnnouncedSpy.wait());
+-
+-    m_seat = registry.createSeat(registry.interface(Registry::Interface::Seat).name, registry.interface(Registry::Interface::Seat).version, this);
+-    QVERIFY(m_seat->isValid());
+-    m_idle = registry.createIdle(registry.interface(Registry::Interface::Idle).name, registry.interface(Registry::Interface::Idle).version, this);
+-    QVERIFY(m_idle->isValid());
+-}
+-
+-void IdleTest::cleanup()
+-{
+-#define CLEANUP(variable)   \
+-    if (variable) {         \
+-        delete variable;    \
+-        variable = nullptr; \
+-    }
+-    CLEANUP(m_idle)
+-    CLEANUP(m_seat)
+-    CLEANUP(m_queue)
+-    if (m_connection) {
+-        m_connection->deleteLater();
+-        m_connection = nullptr;
+-    }
+-    if (m_thread) {
+-        m_thread->quit();
+-        m_thread->wait();
+-        delete m_thread;
+-        m_thread = nullptr;
+-    }
+-
+-    CLEANUP(m_display)
+-#undef CLEANUP
+-
+-    // these are the children of the display
+-    m_idleInterface = nullptr;
+-    m_seatInterface = nullptr;
+-}
+-
+-void IdleTest::testTimeout()
+-{
+-    // this test verifies the basic functionality of a timeout, that it gets fired
+-    // and that it resumes from idle, etc.
+-    QScopedPointer<IdleTimeout> timeout(m_idle->getTimeout(1, m_seat));
+-    QVERIFY(timeout->isValid());
+-    QSignalSpy idleSpy(timeout.data(), &IdleTimeout::idle);
+-    QVERIFY(idleSpy.isValid());
+-    QSignalSpy resumedFormIdleSpy(timeout.data(), &IdleTimeout::resumeFromIdle);
+-    QVERIFY(resumedFormIdleSpy.isValid());
+-
+-    // we requested a timeout of 1 msec, but the minimum the server sets is 5 sec
+-    QVERIFY(!idleSpy.wait(500));
+-    // the default of 5 sec will now pass
+-    QVERIFY(idleSpy.wait());
+-
+-    // simulate some activity
+-    QVERIFY(resumedFormIdleSpy.isEmpty());
+-    m_idleInterface->simulateUserActivity();
+-    QVERIFY(resumedFormIdleSpy.wait());
+-
+-    timeout.reset();
+-    m_connection->flush();
+-    m_display->dispatchEvents();
+-}
+-
+-void IdleTest::testSimulateUserActivity()
+-{
+-    // this test verifies that simulate user activity doesn't fire the timer
+-    QScopedPointer<IdleTimeout> timeout(m_idle->getTimeout(6000, m_seat));
+-    QVERIFY(timeout->isValid());
+-    QSignalSpy idleSpy(timeout.data(), &IdleTimeout::idle);
+-    QVERIFY(idleSpy.isValid());
+-    QSignalSpy resumedFormIdleSpy(timeout.data(), &IdleTimeout::resumeFromIdle);
+-    QVERIFY(resumedFormIdleSpy.isValid());
+-    m_connection->flush();
+-
+-    QTest::qWait(4000);
+-    timeout->simulateUserActivity();
+-    // waiting default five sec should fail
+-    QVERIFY(!idleSpy.wait());
+-    // another 2 sec should fire
+-    QVERIFY(idleSpy.wait(2000));
+-
+-    // now simulating user activity should emit a resumedFromIdle
+-    QVERIFY(resumedFormIdleSpy.isEmpty());
+-    timeout->simulateUserActivity();
+-    QVERIFY(resumedFormIdleSpy.wait());
+-
+-    timeout.reset();
+-    m_connection->flush();
+-    m_display->dispatchEvents();
+-}
+-
+-void IdleTest::testServerSimulateUserActivity()
+-{
+-    // this test verifies that simulate user activity doesn't fire the timer
+-    QScopedPointer<IdleTimeout> timeout(m_idle->getTimeout(6000, m_seat));
+-    QVERIFY(timeout->isValid());
+-    QSignalSpy idleSpy(timeout.data(), &IdleTimeout::idle);
+-    QVERIFY(idleSpy.isValid());
+-    QSignalSpy resumedFormIdleSpy(timeout.data(), &IdleTimeout::resumeFromIdle);
+-    QVERIFY(resumedFormIdleSpy.isValid());
+-    m_connection->flush();
+-
+-    QTest::qWait(4000);
+-    m_idleInterface->simulateUserActivity();
+-    // waiting default five sec should fail
+-    QVERIFY(!idleSpy.wait());
+-    // another 2 sec should fire
+-    QVERIFY(idleSpy.wait(2000));
+-
+-    // now simulating user activity should emit a resumedFromIdle
+-    QVERIFY(resumedFormIdleSpy.isEmpty());
+-    m_idleInterface->simulateUserActivity();
+-    QVERIFY(resumedFormIdleSpy.wait());
+-
+-    timeout.reset();
+-    m_connection->flush();
+-    m_display->dispatchEvents();
+-}
+-
+-void IdleTest::testIdleInhibit()
+-{
+-    QCOMPARE(m_idleInterface->isInhibited(), false);
+-    QSignalSpy idleInhibitedSpy(m_idleInterface, &IdleInterface::inhibitedChanged);
+-    QVERIFY(idleInhibitedSpy.isValid());
+-    m_idleInterface->inhibit();
+-    QCOMPARE(m_idleInterface->isInhibited(), true);
+-    QCOMPARE(idleInhibitedSpy.count(), 1);
+-    m_idleInterface->inhibit();
+-    QCOMPARE(m_idleInterface->isInhibited(), true);
+-    QCOMPARE(idleInhibitedSpy.count(), 1);
+-    m_idleInterface->uninhibit();
+-    QCOMPARE(m_idleInterface->isInhibited(), true);
+-    QCOMPARE(idleInhibitedSpy.count(), 1);
+-    m_idleInterface->uninhibit();
+-    QCOMPARE(m_idleInterface->isInhibited(), false);
+-    QCOMPARE(idleInhibitedSpy.count(), 2);
+-}
+-
+-void IdleTest::testIdleInhibitBlocksTimeout()
+-{
+-    // this test verifies that a timeout does not fire when the system is inhibited
+-
+-    // so first inhibit
+-    QCOMPARE(m_idleInterface->isInhibited(), false);
+-    m_idleInterface->inhibit();
+-
+-    QScopedPointer<IdleTimeout> timeout(m_idle->getTimeout(1, m_seat));
+-    QVERIFY(timeout->isValid());
+-    QSignalSpy idleSpy(timeout.data(), &IdleTimeout::idle);
+-    QVERIFY(idleSpy.isValid());
+-    QSignalSpy resumedFormIdleSpy(timeout.data(), &IdleTimeout::resumeFromIdle);
+-    QVERIFY(resumedFormIdleSpy.isValid());
+-
+-    // we requested a timeout of 1 msec, but the minimum the server sets is 5 sec
+-    QVERIFY(!idleSpy.wait(500));
+-    // the default of 5 sec won't pass
+-    QVERIFY(!idleSpy.wait());
+-
+-    // simulate some activity
+-    QVERIFY(resumedFormIdleSpy.isEmpty());
+-    m_seatInterface->setTimestamp(1);
+-    // resume from idle should not fire
+-    QVERIFY(!resumedFormIdleSpy.wait());
+-
+-    // let's uninhibit
+-    m_idleInterface->uninhibit();
+-    QCOMPARE(m_idleInterface->isInhibited(), false);
+-    // we requested a timeout of 1 msec, but the minimum the server sets is 5 sec
+-    QVERIFY(!idleSpy.wait(500));
+-    // the default of 5 sec will now pass
+-    QVERIFY(idleSpy.wait());
+-
+-    // if we inhibit now it will trigger a resume from idle
+-    QVERIFY(resumedFormIdleSpy.isEmpty());
+-    m_idleInterface->inhibit();
+-    QVERIFY(resumedFormIdleSpy.wait());
+-
+-    // let's wait again just to verify that also inhibit for already existing IdleTimeout works
+-    QVERIFY(!idleSpy.wait(500));
+-    QVERIFY(!idleSpy.wait());
+-    QCOMPARE(idleSpy.count(), 1);
+-
+-    timeout.reset();
+-    m_connection->flush();
+-    m_display->dispatchEvents();
+-}
+-
+-QTEST_GUILESS_MAIN(IdleTest)
+-#include "test_idle.moc"
+diff --git a/src/wayland/idle_interface.cpp b/src/wayland/idle_interface.cpp
+index 0ce461496..e894dc0f5 100644
+--- a/src/wayland/idle_interface.cpp
++++ b/src/wayland/idle_interface.cpp
+@@ -7,13 +7,18 @@
+ #include "idle_interface_p.h"
+ #include "seat_interface.h"
+ 
++#include "idledetector.h"
++#include "input.h"
++
++using namespace KWin;
++
+ namespace KWaylandServer
+ {
++
+ static const quint32 s_version = 1;
+ 
+-IdleInterfacePrivate::IdleInterfacePrivate(IdleInterface *_q, Display *display)
++IdleInterfacePrivate::IdleInterfacePrivate(Display *display)
+     : QtWaylandServer::org_kde_kwin_idle(*display, s_version)
+-    , q(_q)
+ {
+ }
+ 
+@@ -28,75 +33,29 @@ void IdleInterfacePrivate::org_kde_kwin_idle_get_idle_timeout(Resource *resource
+         return;
+     }
+ 
+-    IdleTimeoutInterface *idleTimeout = new IdleTimeoutInterface(s, q, idleTimoutResource);
+-    idleTimeouts << idleTimeout;
+-
+-    QObject::connect(idleTimeout, &IdleTimeoutInterface::destroyed, q, [this, idleTimeout]() {
+-        idleTimeouts.removeOne(idleTimeout);
+-    });
+-    idleTimeout->setup(timeout);
++    new IdleTimeoutInterface(std::chrono::milliseconds(timeout), idleTimoutResource);
+ }
+ 
+ IdleInterface::IdleInterface(Display *display, QObject *parent)
+     : QObject(parent)
+-    , d(new IdleInterfacePrivate(this, display))
++    , d(new IdleInterfacePrivate(display))
+ {
+ }
+ 
+ IdleInterface::~IdleInterface() = default;
+ 
+-void IdleInterface::inhibit()
+-{
+-    d->inhibitCount++;
+-    if (d->inhibitCount == 1) {
+-        Q_EMIT inhibitedChanged();
+-    }
+-}
+-
+-void IdleInterface::uninhibit()
+-{
+-    d->inhibitCount--;
+-    if (d->inhibitCount == 0) {
+-        Q_EMIT inhibitedChanged();
+-    }
+-}
+-
+-bool IdleInterface::isInhibited() const
+-{
+-    return d->inhibitCount > 0;
+-}
+-
+-void IdleInterface::simulateUserActivity()
+-{
+-    for (auto i : qAsConst(d->idleTimeouts)) {
+-        i->simulateUserActivity();
+-    }
+-}
+-
+-IdleTimeoutInterface::IdleTimeoutInterface(SeatInterface *seat, IdleInterface *manager, wl_resource *resource)
+-    : QObject()
+-    , QtWaylandServer::org_kde_kwin_idle_timeout(resource)
+-    , seat(seat)
+-    , manager(manager)
++IdleTimeoutInterface::IdleTimeoutInterface(std::chrono::milliseconds timeout, wl_resource *resource)
++    : QtWaylandServer::org_kde_kwin_idle_timeout(resource)
+ {
+-    connect(manager, &IdleInterface::inhibitedChanged, this, [this, manager] {
+-        if (!timer) {
+-            // not yet configured
+-            return;
+-        }
+-        if (manager->isInhibited()) {
+-            if (!timer->isActive()) {
+-                send_resumed();
+-            }
+-            timer->stop();
+-        } else {
+-            timer->start();
+-        }
++    auto detector = new IdleDetector(timeout, this);
++    connect(detector, &IdleDetector::idle, this, [this]() {
++        send_idle();
++    });
++    connect(detector, &IdleDetector::resumed, this, [this]() {
++        send_resumed();
+     });
+ }
+ 
+-IdleTimeoutInterface::~IdleTimeoutInterface() = default;
+-
+ void IdleTimeoutInterface::org_kde_kwin_idle_timeout_release(Resource *resource)
+ {
+     wl_resource_destroy(resource->handle);
+@@ -111,40 +70,7 @@ void IdleTimeoutInterface::org_kde_kwin_idle_timeout_destroy_resource(Resource *
+ void IdleTimeoutInterface::org_kde_kwin_idle_timeout_simulate_user_activity(Resource *resource)
+ {
+     Q_UNUSED(resource)
+-    simulateUserActivity();
+-}
+-void IdleTimeoutInterface::simulateUserActivity()
+-{
+-    if (!timer) {
+-        // not yet configured
+-        return;
+-    }
+-    if (manager->isInhibited()) {
+-        // ignored while inhibited
+-        return;
+-    }
+-    if (!timer->isActive()) {
+-        send_resumed();
+-    }
+-    timer->start();
++    input()->simulateUserActivity();
+ }
+ 
+-void IdleTimeoutInterface::setup(quint32 timeout)
+-{
+-    if (timer) {
+-        return;
+-    }
+-    timer = new QTimer(this);
+-    timer->setSingleShot(true);
+-    // less than 500 msec is not idle by definition
+-    timer->setInterval(qMax(timeout, 500u));
+-    QObject::connect(timer, &QTimer::timeout, this, [this] {
+-        send_idle();
+-    });
+-    if (manager->isInhibited()) {
+-        // don't start if inhibited
+-        return;
+-    }
+-    timer->start();
+-}
+ }
+diff --git a/src/wayland/idle_interface.h b/src/wayland/idle_interface.h
+index 9527c6a24..632c710ed 100644
+--- a/src/wayland/idle_interface.h
++++ b/src/wayland/idle_interface.h
+@@ -42,56 +42,6 @@ public:
+     explicit IdleInterface(Display *display, QObject *parent = nullptr);
+     ~IdleInterface() override;
+ 
+-    /**
+-     * Inhibits the IdleInterface. While inhibited no IdleTimeoutInterface interface gets
+-     * notified about an idle timeout.
+-     *
+-     * This can be used to inhibit power management, screen locking, etc. directly from
+-     * Compositor side.
+-     *
+-     * To resume idle timeouts invoke @link{uninhibit}. It is possible to invoke inhibit several
+-     * times, in that case uninhibit needs to called the same amount as inhibit has been called.
+-     * @see uninhibit
+-     * @see isInhibited
+-     * @see inhibitedChanged
+-     */
+-    void inhibit();
+-
+-    /**
+-     * Inhibits the IdleInterface. The idle timeouts are only restarted if uninhibit has been
+-     * called the same amount as inhibit.
+-     *
+-     * @see inhibit
+-     * @see isInhibited
+-     * @see inhibitedChanged
+-     */
+-    void uninhibit();
+-
+-    /**
+-     * @returns Whether idle timeouts are currently inhibited
+-     * @see inhibit
+-     * @see uninhibit
+-     * @see inhibitedChanged
+-     */
+-    bool isInhibited() const;
+-
+-    /**
+-     * Calling this method allows the Compositor to simulate user activity.
+-     * This means the same action is performed as if the user interacted with
+-     * an input device on the SeatInterface.
+-     * Idle timeouts are resumed and the idle time gets restarted.
+-     */
+-    void simulateUserActivity();
+-
+-Q_SIGNALS:
+-    /**
+-     * Emitted when the system gets inhibited or uninhibited.
+-     * @see inhibit
+-     * @see uninhibit
+-     * @see isInhibited
+-     */
+-    void inhibitedChanged();
+-
+ private:
+     QScopedPointer<IdleInterfacePrivate> d;
+ };
+diff --git a/src/wayland/idle_interface_p.h b/src/wayland/idle_interface_p.h
+index 45103e912..3a57adb37 100644
+--- a/src/wayland/idle_interface_p.h
++++ b/src/wayland/idle_interface_p.h
+@@ -21,29 +21,18 @@ class IdleTimeoutInterface;
+ class IdleInterfacePrivate : public QtWaylandServer::org_kde_kwin_idle
+ {
+ public:
+-    IdleInterfacePrivate(IdleInterface *_q, Display *display);
+-
+-    int inhibitCount = 0;
+-    QVector<IdleTimeoutInterface *> idleTimeouts;
+-    IdleInterface *q;
++    IdleInterfacePrivate(Display *display);
+ 
+ protected:
+     void org_kde_kwin_idle_get_idle_timeout(Resource *resource, uint32_t id, wl_resource *seat, uint32_t timeout) override;
+ };
+ 
+-class IdleTimeoutInterface : public QObject, QtWaylandServer::org_kde_kwin_idle_timeout
++class IdleTimeoutInterface : public QObject, public QtWaylandServer::org_kde_kwin_idle_timeout
+ {
+     Q_OBJECT
++
+ public:
+-    explicit IdleTimeoutInterface(SeatInterface *seat, IdleInterface *parent, wl_resource *resource);
+-    ~IdleTimeoutInterface() override;
+-    void setup(quint32 timeout);
+-    void simulateUserActivity();
+-
+-private:
+-    SeatInterface *seat;
+-    IdleInterface *manager;
+-    QTimer *timer = nullptr;
++    explicit IdleTimeoutInterface(std::chrono::milliseconds timeout, wl_resource *resource);
+ 
+ protected:
+     void org_kde_kwin_idle_timeout_destroy_resource(Resource *resource) override;
+diff --git a/src/wayland_server.cpp b/src/wayland_server.cpp
+index 4007726aa..9cf352794 100644
+--- a/src/wayland_server.cpp
++++ b/src/wayland_server.cpp
+@@ -737,13 +737,6 @@ bool WaylandServer::hasGlobalShortcutSupport() const
+     return !m_initFlags.testFlag(InitializationFlag::NoGlobalShortcuts);
+ }
+ 
+-void WaylandServer::simulateUserActivity()
+-{
+-    if (m_idle) {
+-        m_idle->simulateUserActivity();
+-    }
+-}
+-
+ bool WaylandServer::isKeyboardShortcutsInhibited() const
+ {
+     auto surface = seat()->focusedKeyboardSurface();
+diff --git a/src/wayland_server.h b/src/wayland_server.h
+index 58729a3db..d06e3876a 100644
+--- a/src/wayland_server.h
++++ b/src/wayland_server.h
+@@ -208,8 +208,6 @@ public:
+      */
+     SocketPairConnection createConnection();
+ 
+-    void simulateUserActivity();
+-
+     QSet<KWaylandServer::LinuxDmaBufV1ClientBuffer *> linuxDmabufBuffers() const
+     {
+         return m_linuxDmabufBuffers;
+-- 
+2.37.0
+
