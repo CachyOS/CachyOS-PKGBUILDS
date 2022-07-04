@@ -1,0 +1,56 @@
+# Maintainer: pavbaranov <pavbaranov at gmail dot com>
+# especialy for CachyOS and only for version with bugfixes and improves from upcomming version
+# based on the original works by:
+# Maintainer: Felix Yan <felixonmars@archlinux.org>
+# Maintainer: Antonio Rojas <arojas@archlinux.org>
+# Contributor: Andrea Scarpino <andrea@archlinux.org>
+
+pkgname=kio
+pkgver=5.95.0
+pkgrel=1.2
+pkgdesc='Resource and network access abstraction'
+arch=(x86_64)
+url='https://community.kde.org/Frameworks'
+license=(LGPL)
+depends=(solid kjobwidgets kbookmarks libxslt kwallet ktextwidgets kded)
+makedepends=(extra-cmake-modules kdoctools doxygen qt5-tools qt5-doc)
+optdepends=('kio-extras: extra protocols support (sftp, fish and more)' 'kdoctools: for the help kioslave'
+            'kio-fuse: to mount remote filesystems via FUSE')
+groups=(kf5)
+source=(https://download.kde.org/stable/frameworks/${pkgver%.*}/$pkgname-$pkgver.tar.xz{,.sig}
+kdebug-297003.patch::"https://invent.kde.org/frameworks/kio/-/commit/da65b36c78644ce39fcb8c2db1b02461644eb81d.patch" #fix in 5.96
+kdebug-456091.patch::"https://invent.kde.org/frameworks/kio/-/commit/ebe6706ccad4bd94d767dff4ebd4fde4c73cb31c.patch" #finx in 5.96
+kdebug-456046.patch::"https://invent.kde.org/frameworks/kio/-/commit/0dd0e96c10f634974c63f85c2068e44019c27591.patch" #fix in 5.96
+)
+sha256sums=('97c7f0df5aec1249b0f1ceed52bfbcea49ba5742b78395a1e84815b31ce37687'
+            'SKIP'
+            '19642fae2628d9461d42a6e5f864e9fa7bb1d0ec120571a8b1050228120f1cd0'
+            '3f4392614af7c767e0d7a75bc6cce6953b43c200a6dbf78963cf976f090b67fe'
+            '387c6b7c25c9f8bdb4046366420d0e53df088e1884679ff8b27f6666870e4e50')
+validpgpkeys=(53E6B47B45CEA3E0D5B7457758D0EE648A48B3BB) # David Faure <faure@kde.org>
+#options=(debug)
+
+prepare() {
+cd $pkgname-$pkgver
+### Patching sources
+        local src
+        for src in "${source[@]}"; do
+          src="${src%%::*}"
+          src="${src##*/}"
+          [[ $src = *.patch ]] || continue
+          echo "Applying patch $src..."
+          patch -Np1 < "../$src"
+        done
+}
+
+build() {
+  cmake -B build -S $pkgname-$pkgver \
+    -DCMAKE_INSTALL_LIBEXECDIR=lib \
+    -DBUILD_TESTING=OFF \
+    -DBUILD_QCH=ON
+  cmake --build build
+}
+
+package() {
+  DESTDIR="$pkgdir" cmake --install build
+}

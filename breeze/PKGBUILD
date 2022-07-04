@@ -1,0 +1,52 @@
+# Maintainer: pavbaranov <pavbaranov at gmail dot com>
+# only for version with bugfixes and improves from upcomming version
+# based on the original works by:
+# Maintainer: Felix Yan <felixonmars@archlinux.org>
+# Maintainer: Antonio Rojas <arojas@archlinux.org>
+# Contributor: Andrea Scarpino <andrea@archlinux.org>
+
+pkgname=breeze
+pkgver=5.25.2
+pkgrel=1.1
+arch=(x86_64)
+pkgdesc='Artwork, styles and assets for the Breeze visual style for the Plasma Desktop'
+url='https://kde.org/plasma-desktop/'
+license=(LGPL)
+depends=(frameworkintegration kdecoration breeze-icons kwayland kirigami2 hicolor-icon-theme)
+makedepends=(extra-cmake-modules kcmutils)
+optdepends=('breeze-gtk: Breeze widget style for GTK applications'
+            'kcmutils: for breeze-settings')
+groups=(plasma)
+source=(https://download.kde.org/stable/plasma/$pkgver/$pkgname-$pkgver.tar.xz{,.sig}
+improve-c00fd4f4.patch::"https://invent.kde.org/plasma/breeze/-/commit/c00fd4f4db197ad3b762613f9dbb2ded1bf5e270.patch")
+sha256sums=('1c90b3196095f57d292892766305c243722ca462e89d8e88fd992f4961fd1ba5'
+            'SKIP'
+            'fd9d69d49e1a9cf25ed5863bfd3da6d4d4dca0d09938721038b1b53ce6be251c')
+validpgpkeys=('E0A3EB202F8E57528E13E72FD7574483BB57B18D'  # Jonathan Esk-Riddell <jr@jriddell.org>
+              '0AAC775BB6437A8D9AF7A3ACFE0784117FBCE11D'  # Bhushan Shah <bshah@kde.org>
+              'D07BD8662C56CB291B316EB2F5675605C74E02CF'  # David Edmundson <davidedmundson@kde.org>
+              '1FA881591C26B276D7A5518EEAAF29B42A678C20') # Marco Martin <notmart@gmail.com>
+#options=(debug)
+
+prepare() {
+cd $pkgname-$pkgver
+### Patching sources
+        local src
+        for src in "${source[@]}"; do
+          src="${src%%::*}"
+          src="${src##*/}"
+          [[ $src = *.patch ]] || continue
+          echo "Applying patch $src..."
+          patch -Np1 < "../$src"
+        done
+}
+
+build() {
+  cmake -B build -S $pkgname-$pkgver \
+    -DBUILD_TESTING=OFF
+  cmake --build build
+}
+
+package() {
+  DESTDIR="$pkgdir" cmake --install build
+}

@@ -1,0 +1,50 @@
+# Maintainer: pavbaranov <pavbaranov at gmail dot com>
+# only for version with bugfixes and improves from upcomming version
+# based on the original works by:
+# Maintainer: Felix Yan <felixonmars@archlinux.org>
+# Maintainer: Antonio Rojas <arojas@archlinux.org>
+# Contributor: Andrea Scarpino <andrea@archlinux.org>
+
+pkgname=kscreen
+pkgver=5.25.2
+pkgrel=1.1
+pkgdesc='KDE screen management software'
+arch=(x86_64)
+url='https://kde.org/plasma-desktop/'
+license=(LGPL)
+depends=(libkscreen plasma-framework qt5-sensors)
+makedepends=(extra-cmake-modules kcmutils)
+groups=(plasma)
+source=(https://download.kde.org/stable/plasma/$pkgver/$pkgname-$pkgver.tar.xz{,.sig}
+improve-ac4f9bdc.patch::"https://invent.kde.org/plasma/kscreen/-/commit/ac4f9bdc3c9a788e50b38c6b5e645f34cc2d127e.patch")
+sha256sums=('aaab9d39de391ac6082e3c27a0607974d1861504eda98b109b9b08ebb0d68a52'
+            'SKIP'
+            '60781dd7e0ee64b4aeeff1093d72692dc34401f4a4c21da3ef7d6833bf2e4ac8')
+validpgpkeys=('E0A3EB202F8E57528E13E72FD7574483BB57B18D'  # Jonathan Esk-Riddell <jr@jriddell.org>
+              '0AAC775BB6437A8D9AF7A3ACFE0784117FBCE11D'  # Bhushan Shah <bshah@kde.org>
+              'D07BD8662C56CB291B316EB2F5675605C74E02CF'  # David Edmundson <davidedmundson@kde.org>
+              '1FA881591C26B276D7A5518EEAAF29B42A678C20') # Marco Martin <notmart@gmail.com>
+#options=(debug)
+
+prepare() {
+cd $pkgname-$pkgver
+### Patching sources
+        local src
+        for src in "${source[@]}"; do
+          src="${src%%::*}"
+          src="${src##*/}"
+          [[ $src = *.patch ]] || continue
+          echo "Applying patch $src..."
+          patch -Np1 < "../$src"
+        done
+}
+
+build() {
+  cmake -B build -S $pkgname-$pkgver \
+    -DBUILD_TESTING=OFF
+  cmake --build build
+}
+
+package() {
+  DESTDIR="$pkgdir" cmake --install build
+}

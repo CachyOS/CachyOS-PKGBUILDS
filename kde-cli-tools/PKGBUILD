@@ -1,0 +1,55 @@
+# Maintainer: pavbaranov <pavbaranov at gmail dot com>
+# only for version with bugfixes and improves from upcomming version
+# based on the original works by:
+# Maintainer: Felix Yan <felixonmars@archlinux.org>
+# Maintainer: Antonio Rojas <arojas@archlinux.org>
+# Contributor: Andrea Scarpino <andrea@archlinux.org>
+
+pkgname=kde-cli-tools
+pkgver=5.25.2
+pkgrel=1.1
+pkgdesc='Tools based on KDE Frameworks 5 to better interact with the system'
+arch=(x86_64_v3)
+url='https://kde.org/plasma-desktop/'
+license=(LGPL)
+depends=(kdesu kcmutils kactivities)
+makedepends=(extra-cmake-modules kdoctools plasma-workspace)
+optdepends=('plasma-workspace: for kcmshell5')
+groups=(plasma)
+source=(https://download.kde.org/stable/plasma/$pkgver/$pkgname-$pkgver.tar.xz{,.sig}
+kdebug-455943.patch::"https://invent.kde.org/plasma/kde-cli-tools/commit/e8ee619cbc410f39a264060f18f771546575d268.patch" #fix in 5.25.3
+)
+sha256sums=('23f33a59e371870437243cf6a857353c761952e8793a01baa2a1b4d06d47dbe8'
+            'SKIP'
+            '7078450a0a5dd0190eb87de47ba188e71083f5cc119ead416703affc1b76199f')
+validpgpkeys=('E0A3EB202F8E57528E13E72FD7574483BB57B18D'  # Jonathan Esk-Riddell <jr@jriddell.org>
+              '0AAC775BB6437A8D9AF7A3ACFE0784117FBCE11D'  # Bhushan Shah <bshah@kde.org>
+              'D07BD8662C56CB291B316EB2F5675605C74E02CF'  # David Edmundson <davidedmundson@kde.org>
+              '1FA881591C26B276D7A5518EEAAF29B42A678C20') # Marco Martin <notmart@gmail.com>
+options=(debug)
+
+prepare() {
+cd $pkgname-$pkgver
+### Patching sources
+        local src
+        for src in "${source[@]}"; do
+          src="${src%%::*}"
+          src="${src##*/}"
+          [[ $src = *.patch ]] || continue
+          echo "Applying patch $src..."
+          patch -Np1 < "../$src"
+        done
+}
+
+build() {
+  cmake -B build -S $pkgname-$pkgver \
+    -DCMAKE_INSTALL_LIBEXECDIR=lib \
+    -DBUILD_TESTING=OFF
+  cmake --build build
+}
+
+package() {
+  DESTDIR="$pkgdir" cmake --install build
+
+  ln -s /usr/lib/kf5/kdesu "$pkgdir"/usr/bin/
+}

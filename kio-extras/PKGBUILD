@@ -1,0 +1,53 @@
+# Maintainer: pavbaranov <pavbaranov at gmail dot com>
+# Maintainer: Felix Yan <felixonmars@archlinux.org>
+# Maintainer: Antonio Rojas <arojas@archlinux.org>
+# Contributor: Andrea Scarpino <andrea@archlinux.org>
+
+pkgname=kio-extras
+pkgver=22.04.2
+pkgrel=1.2
+pkgdesc='Additional components to increase the functionality of KIO'
+arch=(x86_64)
+url='https://www.kde.org/'
+license=(LGPL)
+depends=(kio kdnssd libssh smbclient libmtp phonon-qt5 syntax-highlighting kdsoap-ws-discovery-client libxcursor)
+makedepends=(extra-cmake-modules kdoctools gperf taglib libappimage openexr kactivities-stats)
+optdepends=('qt5-imageformats: thumbnails for additional image formats' 'perl: info kioslave'
+            'kimageformats: thumbnails for additional image formats' 'taglib: audio file thumbnails'
+            'libappimage: AppImage thumbnails' 'icoutils: Windows executable thumbnails'
+            'openexr: EXR format thumbnails' 'kactivities-stats: recently used kioslave')
+groups=(kde-applications kde-network)
+source=(https://download.kde.org/stable/release-service/$pkgver/src/$pkgname-$pkgver.tar.xz{,.sig}
+kdebug-448114.patch::"https://invent.kde.org/network/kio-extras/-/commit/f60b327c5ab3a48b1eb781a67e553f33f2ced71a.patch")
+sha256sums=('319959fd733eec1e22a72554255412ef6771b7ed8c1f4558a05d2097b5860717'
+            'SKIP'
+            '7978c40742141a24eba3fa97e7873219a4a34efe78a8ea40b9d10604d9c71b7b')
+validpgpkeys=(CA262C6C83DE4D2FB28A332A3A6A4DB839EAA6D7  # Albert Astals Cid <aacid@kde.org>
+              F23275E4BF10AFC1DF6914A6DBD2CE893E2D1C87  # Christoph Feck <cfeck@kde.org>
+              D81C0CB38EB725EF6691C385BB463350D6EF31EF) # Heiko Becker <heiko.becker@kde.org>
+options=(debug)
+
+prepare() {
+cd $pkgname-$pkgver
+### Patching sources
+        local src
+        for src in "${source[@]}"; do
+          src="${src%%::*}"
+          src="${src##*/}"
+          [[ $src = *.patch ]] || continue
+          echo "Applying patch $src..."
+          patch -Np1 < "../$src"
+        done
+}
+
+build() {
+  cmake -B build -S $pkgname-$pkgver \
+    -DLIBAPPIMAGE_LIBRARIES=libappimage.so \
+    -DCMAKE_INSTALL_LIBEXECDIR=lib \
+    -DBUILD_TESTING=OFF
+  cmake --build build
+}
+
+package() {
+  DESTDIR="$pkgdir" cmake --install build
+}

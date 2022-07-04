@@ -1,0 +1,62 @@
+From: nycko123 <nycko123@gmail.com>
+Date: Fri, 28 Feb 2020 11:36:47 +0100
+Subject: [PATCH] polish translation
+
+---
+ ClamAV-GUI/Makefile       | 4 +++-
+ ClamAV-GUI/clamav-gui.pro | 5 +++--
+ 2 files changed, 6 insertions(+), 3 deletions(-)
+
+diff --git a/ClamAV-GUI/Makefile b/ClamAV-GUI/Makefile
+index 3e3d3d6..1ae51f1 100644
+--- a/ClamAV-GUI/Makefile
++++ b/ClamAV-GUI/Makefile
+@@ -248,7 +248,7 @@ qmake:  FORCE
+ 
+ dist: 
+ 	@$(CHK_DIR_EXISTS) .tmp/clamav-gui1.0.0 || $(MKDIR) .tmp/clamav-gui1.0.0 
+-	$(COPY_FILE) --parents $(SOURCES) $(DIST) .tmp/clamav-gui1.0.0/ && $(COPY_FILE) --parents src/clamav_gui.h src/cfilesystemmodel.h src/optionsdialog.h src/scantab.h src/setupfilehandler.h src/clamav_ctrl.h src/scanlimitstab.h src/includeexcludeoptions.h src/freshclamsetter.h src/dragablepushbutton.h src/scheduler.h src/highlighter.h src/infodialog.h src/schedulescanobject.h src/logviewobject.h src/partiallogobject.h src/logviewerobject.h src/qroundprogressbar.h src/progressdialog.h src/profilewizarddialog.h src/profilemanager.h .tmp/clamav-gui1.0.0/ && $(COPY_FILE) --parents resources.qrc .tmp/clamav-gui1.0.0/ && $(COPY_FILE) --parents src/main.cpp src/clamav_gui.cpp src/cfilesystemmodel.cpp src/optionsdialog.cpp src/scantab.cpp src/setupfilehandler.cpp src/clamav_ctrl.cpp src/scanlimitstab.cpp src/includeexcludeoptions.cpp src/freshclamsetter.cpp src/dragablepushbutton.cpp src/scheduler.cpp src/highlighter.cpp src/infodialog.cpp src/schedulescanobject.cpp src/logviewobject.cpp src/partiallogobject.cpp src/logviewerobject.cpp src/qroundprogressbar.cpp src/progressdialog.cpp src/profilewizarddialog.cpp src/profilemanager.cpp .tmp/clamav-gui1.0.0/ && $(COPY_FILE) --parents ui/clamav_gui.ui ui/optionsdialog.ui ui/scantab.ui ui/clamav_ctrl.ui ui/scanlimitstab.ui ui/includeexcludeoptions.ui ui/freshclamsetter.ui ui/dragablepushbutton.ui ui/scheduler.ui ui/infodialog.ui ui/schedulescanobject.ui ui/logviewobject.ui ui/partiallogobject.ui ui/logviewerobject.ui ui/progressdialog.ui ui/profilewizarddialog.ui ui/profilemanager.ui .tmp/clamav-gui1.0.0/ && $(COPY_FILE) --parents translations/clamav-gui-de_DE.ts translations/clamav-gui-en_GB.ts translations/clamav-gui-da_DK.ts .tmp/clamav-gui1.0.0/ && (cd `dirname .tmp/clamav-gui1.0.0` && $(TAR) clamav-gui1.0.0.tar clamav-gui1.0.0 && $(COMPRESS) clamav-gui1.0.0.tar) && $(MOVE) `dirname .tmp/clamav-gui1.0.0`/clamav-gui1.0.0.tar.gz . && $(DEL_FILE) -r .tmp/clamav-gui1.0.0
++	$(COPY_FILE) --parents $(SOURCES) $(DIST) .tmp/clamav-gui1.0.0/ && $(COPY_FILE) --parents src/clamav_gui.h src/cfilesystemmodel.h src/optionsdialog.h src/scantab.h src/setupfilehandler.h src/clamav_ctrl.h src/scanlimitstab.h src/includeexcludeoptions.h src/freshclamsetter.h src/dragablepushbutton.h src/scheduler.h src/highlighter.h src/infodialog.h src/schedulescanobject.h src/logviewobject.h src/partiallogobject.h src/logviewerobject.h src/qroundprogressbar.h src/progressdialog.h src/profilewizarddialog.h src/profilemanager.h .tmp/clamav-gui1.0.0/ && $(COPY_FILE) --parents resources.qrc .tmp/clamav-gui1.0.0/ && $(COPY_FILE) --parents src/main.cpp src/clamav_gui.cpp src/cfilesystemmodel.cpp src/optionsdialog.cpp src/scantab.cpp src/setupfilehandler.cpp src/clamav_ctrl.cpp src/scanlimitstab.cpp src/includeexcludeoptions.cpp src/freshclamsetter.cpp src/dragablepushbutton.cpp src/scheduler.cpp src/highlighter.cpp src/infodialog.cpp src/schedulescanobject.cpp src/logviewobject.cpp src/partiallogobject.cpp src/logviewerobject.cpp src/qroundprogressbar.cpp src/progressdialog.cpp src/profilewizarddialog.cpp src/profilemanager.cpp .tmp/clamav-gui1.0.0/ && $(COPY_FILE) --parents ui/clamav_gui.ui ui/optionsdialog.ui ui/scantab.ui ui/clamav_ctrl.ui ui/scanlimitstab.ui ui/includeexcludeoptions.ui ui/freshclamsetter.ui ui/dragablepushbutton.ui ui/scheduler.ui ui/infodialog.ui ui/schedulescanobject.ui ui/logviewobject.ui ui/partiallogobject.ui ui/logviewerobject.ui ui/progressdialog.ui ui/profilewizarddialog.ui ui/profilemanager.ui .tmp/clamav-gui1.0.0/ && $(COPY_FILE) --parents translations/clamav-gui-de_DE.ts translations/clamav-gui-en_GB.ts translations/clamav-gui-da_DK.ts translations/clamav-gui-pl_PL.ts .tmp/clamav-gui1.0.0/ && (cd `dirname .tmp/clamav-gui1.0.0` && $(TAR) clamav-gui1.0.0.tar clamav-gui1.0.0 && $(COMPRESS) clamav-gui1.0.0.tar) && $(MOVE) `dirname .tmp/clamav-gui1.0.0`/clamav-gui1.0.0.tar.gz . && $(DEL_FILE) -r .tmp/clamav-gui1.0.0
+ 
+ 
+ clean:compiler_clean 
+@@ -810,12 +810,14 @@ install_translation: first FORCE
+ 	-$(INSTALL_FILE) /home/wusel/Development/QT4/ClamAV-GUI/translations/clamav-gui-de_DE.qm $(INSTALL_ROOT)/$(DESTDIR)/usr/share/clamav-gui/
+ 	-$(INSTALL_FILE) /home/wusel/Development/QT4/ClamAV-GUI/translations/clamav-gui-en_GB.qm $(INSTALL_ROOT)/$(DESTDIR)/usr/share/clamav-gui/
+ 	-$(INSTALL_FILE) /home/wusel/Development/QT4/ClamAV-GUI/translations/clamav-gui-da_DK.qm $(INSTALL_ROOT)/$(DESTDIR)/usr/share/clamav-gui/
++	-$(INSTALL_FILE) /home/wusel/Development/QT4/ClamAV-GUI/translations/clamav-gui-pl_PL.qm $(INSTALL_ROOT)/$(DESTDIR)/usr/share/clamav-gui/
+ 
+ 
+ uninstall_translation:  FORCE
+ 	-$(DEL_FILE) -r $(INSTALL_ROOT)/$(DESTDIR)/usr/share/clamav-gui/clamav-gui-de_DE.qm 
+ 	 -$(DEL_FILE) -r $(INSTALL_ROOT)/$(DESTDIR)/usr/share/clamav-gui/clamav-gui-en_GB.qm 
+ 	 -$(DEL_FILE) -r $(INSTALL_ROOT)/$(DESTDIR)/usr/share/clamav-gui/clamav-gui-da_DK.qm
++	 -$(DEL_FILE) -r $(INSTALL_ROOT)/$(DESTDIR)/usr/share/clamav-gui/clamav-gui-pl_PL.qm
+ 	-$(DEL_DIR) $(INSTALL_ROOT)/$(DESTDIR)/usr/share/clamav-gui/ 
+ 
+ 
+diff --git a/ClamAV-GUI/clamav-gui.pro b/ClamAV-GUI/clamav-gui.pro
+index f0cca43..07c5d84 100644
+--- a/ClamAV-GUI/clamav-gui.pro
++++ b/ClamAV-GUI/clamav-gui.pro
+@@ -80,7 +80,8 @@ RESOURCES += \
+ 
+ TRANSLATIONS += translations/clamav-gui-de_DE.ts \
+     translations/clamav-gui-en_GB.ts \
+-    translations/clamav-gui-da_DK.ts
++    translations/clamav-gui-da_DK.ts \
++    translations/clamav-gui-pl_PL.ts
+ 
+ INSTALLS += target \
+     appicon \
+@@ -129,7 +130,7 @@ desktopfile.path = /$(DESTDIR)/usr/share/applications
+ desktopfile.files = extra/clamav-gui.desktop
+ 
+ translation.path = /$(DESTDIR)/usr/share/clamav-gui
+-translation.files = translations/clamav-gui-de_DE.qm translations/clamav-gui-en_GB.qm translations/clamav-gui-da_DK.qm
++translation.files = translations/clamav-gui-de_DE.qm translations/clamav-gui-en_GB.qm translations/clamav-gui-da_DK.qm translations/clamav-gui-pl_PL.qm
+ 
+ manpages_de.path = /$(DESTDIR)/usr/share/man/de/man1
+ manpages_de.files = man/de/clamav-gui.1.gz
+-- 
+2.24.1

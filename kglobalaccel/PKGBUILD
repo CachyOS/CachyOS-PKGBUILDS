@@ -1,0 +1,45 @@
+# Maintainer: Felix Yan <felixonmars@archlinux.org>
+# Maintainer: Antonio Rojas <arojas@archlinux.org>
+# Contributor: Andrea Scarpino <andrea@archlinux.org>
+
+pkgname=kglobalaccel
+pkgver=5.95.0
+pkgrel=1.2
+pkgdesc='Add support for global workspace shortcuts'
+arch=(x86_64)
+url='https://community.kde.org/Frameworks'
+license=(LGPL)
+depends=(kdbusaddons kconfig kcrash)
+makedepends=(extra-cmake-modules doxygen qt5-tools qt5-doc)
+groups=(kf5)
+source=(https://download.kde.org/stable/frameworks/${pkgver%.*}/$pkgname-$pkgver.tar.xz{,.sig}
+kdebug-454704.patch::"https://invent.kde.org/frameworks/kglobalaccel/-/commit/1a8e8cb00cda5807926a90ae8e5d5597354f3541.patch")
+sha256sums=('93ca1e46cac137dec3ee83d7fcd704d8a8a786bd60c499e46c06b263a95904cb'
+            'SKIP'
+            'd7f1ab20fa4420fab2c714f1470e11fa9654240e6ad6527e912754c9358dc2ac')
+validpgpkeys=(53E6B47B45CEA3E0D5B7457758D0EE648A48B3BB) # David Faure <faure@kde.org>
+options=(debug)
+
+prepare() {
+cd $pkgname-$pkgver
+### Patching sources
+        local src
+        for src in "${source[@]}"; do
+          src="${src%%::*}"
+          src="${src##*/}"
+          [[ $src = *.patch ]] || continue
+          echo "Applying patch $src..."
+          patch -Np1 < "../$src"
+        done
+}
+
+build() {
+  cmake -B build -S $pkgname-$pkgver \
+    -DBUILD_TESTING=OFF \
+    -DBUILD_QCH=ON
+  cmake --build build
+}
+
+package() {
+  DESTDIR="$pkgdir" cmake --install build
+}

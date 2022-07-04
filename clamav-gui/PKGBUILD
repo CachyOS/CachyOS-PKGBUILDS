@@ -1,0 +1,46 @@
+# Maintainer: pavbaranov <pavbaranov at gmail dot com>
+# Contributor: Damian N. <nycko123 at gmail>
+# sirlucjan
+
+pkgname=clamav-gui
+_pkgname=ClamAV-GUI
+pkgver=0.4.2
+pkgrel=1
+pkgdesc='Front-end for ClamAV'
+arch=('x86_64')
+url='https://www.opendesktop.org/p/1127892/'
+license=('GPL3')
+depends=('qt5-base' 'hicolor-icon-theme' 'clamav')
+#makedepends=()
+#optdepends=('clamav: For functionality')
+
+source=("ClamAV-GUI-0.4.2.tgz"
+		"clamav-gui-pl_PL.ts"
+#		"clamav-gui-pl_PL.patch"
+		"clamav-gui-pl_PL.qm"
+		Qt5.15.patch::"https://raw.githubusercontent.com/polaur/wip/master/clamav-gui-patches/0001-src-Add-QPainterPath.patch")
+sha512sums=('2411d81de148d06fdb9d86e87cbd744ed3444b9f507c490f8d83cf2f747dc143ba9e4825e923ad17050a9f227d6bb3c5c19295f03ae66cb3a6d8cfb55a11a4b8'
+            'bb3cca28c9b9bdcecc47a27bd5f78aa884c2b3a829064af49a69e38681eee666a790a60aca3d922c624b235258d076d2094fe4b9bb2f3e84c777ec99e24bfa04'
+            'fa8c3f4565c6c56d6450f7c94dfef1b9da1f5a0fbccae38b967f748571d281ccdf6702a33e38c2cf4b14b728547c74a0fb03c7e6244aa8bcca188d38d19c8726'
+            'a1de345abe3dbcd6b963992f61ef272fa80589ba399b71f5d42c18fa202f0335f8f3a2ae20e00c77ed1f35ae23609202d29dd88d9328fba790107c7de7fcd6d3')
+
+# kopiuje tylko pliki tłumaczeń i dodaje odwołania do nich w Makefile oraz clamav-gui.pro, nie ma wpływu na ostateczny rezultat
+prepare() {
+    cd $_pkgname-$pkgver/
+    #patch -p1 -i ../clamav-gui-pl_PL.patch
+    patch -p1 -i ../Qt5.15.patch
+	#cp ../clamav-gui-pl_PL.{qm,ts} "${srcdir}/${_pkgname}-$pkgver/translations/"
+	#patch -p1 < "../clamav-gui-pl_PL.patch"
+}
+
+build() {
+  cd $_pkgname-$pkgver
+  qmake PREFIX=/usr clamav-gui.pro
+  make
+}
+
+package() {
+  cd $_pkgname-$pkgver
+  make INSTALL_ROOT="$pkgdir" install
+  install -Dm644 "$srcdir/clamav-gui-pl_PL.qm" "$pkgdir/usr/share/clamav-gui/"
+}

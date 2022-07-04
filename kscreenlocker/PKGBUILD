@@ -1,0 +1,50 @@
+# Maintainer: pavbaranov <pavbaranov at gmail dot com>
+# only for version with bugfixes and improves from upcomming version
+# based on the original works by:
+# Maintainer: Antonio Rojas <arojas@archlinux.org>
+
+pkgname=kscreenlocker
+pkgver=5.25.2
+pkgrel=1.1
+pkgdesc='Library and components for secure lock screen architecture'
+arch=(x86_64)
+url='https://kde.org/plasma-desktop/'
+license=(LGPL)
+groups=(plasma)
+depends=(layer-shell-qt kidletime kwayland kdeclarative perl)
+makedepends=(extra-cmake-modules kdoctools kcmutils libxcursor)
+optdepends=('kcmutils: configuration module')
+source=(https://download.kde.org/stable/plasma/$pkgver/$pkgname-$pkgver.tar.xz{,.sig}
+kdebug-455608.patch::"https://invent.kde.org/plasma/kscreenlocker/-/commit/13dfae3fbc7e4d7e8b6692aed65baa272252ec36.patch")
+sha256sums=('3e26b40ffcd275150642c718a18185b89db39fbdf1cadd3f538da5cd78aff397'
+            'SKIP'
+            'bb81918b5142f6f450f2dbdc9aaf07ad37220de326eef9280cafaad94b5b0d74')
+validpgpkeys=('E0A3EB202F8E57528E13E72FD7574483BB57B18D'  # Jonathan Esk-Riddell <jr@jriddell.org>
+              '0AAC775BB6437A8D9AF7A3ACFE0784117FBCE11D'  # Bhushan Shah <bshah@kde.org>
+              'D07BD8662C56CB291B316EB2F5675605C74E02CF'  # David Edmundson <davidedmundson@kde.org>
+              '1FA881591C26B276D7A5518EEAAF29B42A678C20') # Marco Martin <notmart@gmail.com>
+options=(debug)
+
+prepare() {
+cd $pkgname-$pkgver
+### Patching sources
+        local src
+        for src in "${source[@]}"; do
+          src="${src%%::*}"
+          src="${src##*/}"
+          [[ $src = *.patch ]] || continue
+          echo "Applying patch $src..."
+          patch -Np1 < "../$src"
+        done
+}
+
+build() {
+  cmake -B build -S $pkgname-$pkgver \
+    -DCMAKE_INSTALL_LIBEXECDIR=/usr/lib \
+    -DBUILD_TESTING=OFF
+  cmake --build build
+}
+
+package() {
+  DESTDIR="$pkgdir" cmake --install build
+}

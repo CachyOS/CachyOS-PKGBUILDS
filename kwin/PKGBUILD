@@ -1,0 +1,70 @@
+# Maintainer: pavbaranov <pavbaranov at gmail dot com>
+# only for version with bugfixes and improves from upcomming version
+# based on the original works by:
+# Maintainer: pavbaranov <pavbaranov at gmail dot com>
+# Maintainer: Felix Yan <felixonmars@archlinux.org>
+# Maintainer: Antonio Rojas <arojas@archlinux.org>
+# Contributor: Andrea Scarpino <andrea@archlinux.org>
+
+pkgname=kwin
+pkgver=5.25.2
+pkgrel=1.3
+pkgdesc='An easy to use, but flexible, composited Window Manager'
+arch=(x86_64)
+url='https://kde.org/plasma-desktop/'
+license=(LGPL)
+depends=(kscreenlocker xcb-util-cursor plasma-framework kcmutils breeze
+         pipewire-session-manager libqaccessibilityclient lcms2 libxcvt python3 python)
+makedepends=(extra-cmake-modules qt5-tools kdoctools krunner wayland-protocols plasma-wayland-protocols python)
+optdepends=('maliit-keyboard: virtual keyboard for kwin-wayland')
+replaces=(kwayland-server)
+groups=(plasma)
+source=(https://download.kde.org/stable/plasma/$pkgver/$pkgname-$pkgver.tar.xz{,.sig}
+#kdebug-455807.patch::"https://invent.kde.org/plasma/kwin/-/commit/66d127879461aed2e6c6312d52219502a6354f71.patch" #also fix 455783 and 455633
+improve-fd18401.patch::"https://invent.kde.org/plasma/kwin/-/commit/fd18401dbf8cc876e6716ee76ac75ea2f24091cc.patch"
+kdebug-456089.patch::"https://invent.kde.org/plasma/kwin/-/commit/e10ecec362bd0bb39d10ad17d4ac6e4f921254db.patch"
+kdebug-455477.patch::"https://invent.kde.org/plasma/kwin/commit/d4d4a05444e18963359f3fa6fe482ed6a419aa19.patch" #fix in 5.25.3
+kdebug-456144.patch::"https://invent.kde.org/plasma/kwin/-/commit/524e65813b78e59115a2345fd8b438171d9b0aac.patch" #fix in 5.26
+kdebug-456133.patch::"https://invent.kde.org/plasma/kwin/commit/b079c8caa23f8b40733a45159f51607928596a4b.patch" #fix in 5.25.3
+kdebug-431259.patch::"https://invent.kde.org/plasma/kwin/commit/67f6a323f83dca99b7502fa1d8fe0bdc1b0db3cf.patch" #fix in 5.25.3
+0001-wayland-Introduce-IdleDetector.patch
+)
+install=$pkgname.install
+sha256sums=('54741ea0de2348a688aad48c67916eb514a27ca6d5a14c1ead3a8e8defe553d7'
+            'SKIP'
+            '1ab95a63e91ab898c3ad3c35cf3939e7850970ab13f7df99f777e1f7f7e3dce6'
+            'f2489ded716621f9b8475737393b00bf5c53fb6b07073336c1ab604e0924e753'
+            'de2e052255d624211df5d2d4a2fcc2b5c12c6849af124cfeeba1be9929043470'
+            '44fdc53ea26be9449c9d3d2e93e9b746b244c08694fa53ea816fa5fe13b6f7ea'
+            '5b8cc1acdb9a248c3890650af699d801399178fb3648e4479da9d78bc8639581'
+            '69358ef6c99aa6a6dd8a5c4c0ce57c38664019f707bdb1ea7de7415749ca9b9c'
+            'b0b0ae1eb4c7f529334de01b91989cd31e58bfb22957ec167f82df1188e17e21')
+validpgpkeys=('E0A3EB202F8E57528E13E72FD7574483BB57B18D'  # Jonathan Esk-Riddell <jr@jriddell.org>
+              '0AAC775BB6437A8D9AF7A3ACFE0784117FBCE11D'  # Bhushan Shah <bshah@kde.org>
+              'D07BD8662C56CB291B316EB2F5675605C74E02CF'  # David Edmundson <davidedmundson@kde.org>
+              '1FA881591C26B276D7A5518EEAAF29B42A678C20') # Marco Martin <notmart@gmail.com>
+options=(debug)
+
+prepare() {
+cd $pkgname-$pkgver
+### Patching sources
+        local src
+        for src in "${source[@]}"; do
+          src="${src%%::*}"
+          src="${src##*/}"
+          [[ $src = *.patch ]] || continue
+          echo "Applying patch $src..."
+          patch -Np1 < "../$src"
+        done
+}
+
+build() {
+  cmake -B build -S $pkgname-$pkgver \
+    -DCMAKE_INSTALL_LIBEXECDIR=lib \
+    -DBUILD_TESTING=OFF
+  cmake --build build
+}
+
+package() {
+  DESTDIR="$pkgdir" cmake --install build
+}

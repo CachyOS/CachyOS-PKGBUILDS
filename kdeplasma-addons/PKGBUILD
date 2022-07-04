@@ -1,0 +1,65 @@
+# Maintainer: pavbaranov <pavbaranov at gmail dot com>
+# only for version with bugfixes and improves from upcomming version
+# based on the original works by:
+# Maintainer: Felix Yan <felixonmars@archlinux.org>
+# Maintainer: Antonio Rojas <arojas@archlinux.org>
+# Contributor: Andrea Scarpino <andrea@archlinux.org>
+
+pkgname=kdeplasma-addons
+pkgver=5.25.2
+pkgrel=1.4
+pkgdesc='All kind of addons to improve your Plasma experience'
+arch=(x86_64)
+url='https://kde.org/plasma-desktop/'
+license=(LGPL)
+depends=(plasma-workspace kunitconversion)
+makedepends=(extra-cmake-modules qt5-webengine)
+optdepends=('purpose: Quickshare applet'
+            'quota-tools: disk quota applet'
+            'qt5-webengine: dictionary and webbrowser applets')
+groups=(plasma)
+source=(https://download.kde.org/stable/plasma/$pkgver/$pkgname-$pkgver.tar.xz{,.sig}
+kdebug-453878.patch::"https://invent.kde.org/plasma/kdeplasma-addons/-/commit/be5f636c0baa63de4981b89b6970ba02fe2abb87.patch" # fix in 5.26
+#kdebug-429892.patch::"https://invent.kde.org/plasma/kdeplasma-addons/-/commit/47bcfc37665348b12fa7100e48c41463825b8277.patch" #dix in 5.26
+#improve-1ffba97c.patch::"https://invent.kde.org/plasma/kdeplasma-addons/-/commit/1ffba07cef9fdcdd56c650d945fdf83258493d2c.patch" #fix in 5.26
+kdebug-441241.patch::"https://invent.kde.org/plasma/kdeplasma-addons/-/commit/2b0069baa5bf8b901bfffa288fe1188ef3faaeed.patch" #fix in 5.25.3
+kdebug-451997.patch::"https://invent.kde.org/plasma/kdeplasma-addons/-/commit/e58ad3af86850b21706f139b0025c6c42317cc6d.patch" #fix in 5.25.3
+kdebug-422447.patch::"https://invent.kde.org/plasma/kdeplasma-addons/-/commit/8fd7c783f6f21fac7eb8c6761902942db1ecea2b.patch" #fix in 5.25.3
+kdebug-449150.patch::"https://invent.kde.org/plasma/kdeplasma-addons/-/commit/0852fff37d034b18d70803dc8dd294a426565888.patch"
+)
+sha256sums=('f3633ae9f851d93e8d196c70af59bc1f8be3d770416f1443577c33f18d06c012'
+            'SKIP'
+            '4c1a2fe0e39ec7f421764be17c4893ceca3e96595f7f8ef6201bfefd52c42f0b'
+            '813617713064b62242887e868b287381748a8e02627cbd94f2a47b15cd3ffd85'
+            '0d852c87870c9f7a5577859d466d1dff6ab018908327a5be615db34740769e80'
+            '9f033ca0d8c2cab9612d9dea087bce3c284b0a0f10e8e5fd671cbf4bd22dad1b'
+            'd183706fd5ce4fa38075db2a6d3c0c56adad7eaf89eac976db27b23f3c9a9612')
+validpgpkeys=('E0A3EB202F8E57528E13E72FD7574483BB57B18D'  # Jonathan Esk-Riddell <jr@jriddell.org>
+              '0AAC775BB6437A8D9AF7A3ACFE0784117FBCE11D'  # Bhushan Shah <bshah@kde.org>
+              'D07BD8662C56CB291B316EB2F5675605C74E02CF'  # David Edmundson <davidedmundson@kde.org>
+              '1FA881591C26B276D7A5518EEAAF29B42A678C20') # Marco Martin <notmart@gmail.com>
+#options=(debug)
+
+prepare() {
+cd $pkgname-$pkgver
+### Patching sources
+        local src
+        for src in "${source[@]}"; do
+          src="${src%%::*}"
+          src="${src##*/}"
+          [[ $src = *.patch ]] || continue
+          echo "Applying patch $src..."
+          patch -Np1 < "../$src"
+        done
+}
+
+build() {
+  cmake -B build -S $pkgname-$pkgver \
+    -DCMAKE_INSTALL_LIBEXECDIR=lib \
+    -DBUILD_TESTING=OFF
+  cmake --build build
+}
+
+package() {
+  DESTDIR="$pkgdir" cmake --install build
+}
