@@ -8,7 +8,7 @@ pkgname=cachy-browser
 _pkgname=Cachy
 __pkgname=cachy
 pkgver=102.0
-pkgrel=1
+pkgrel=2
 pkgdesc="Community-maintained fork of Firefox, focused on privacy, security and freedom."
 arch=(x86_64 x86_64_v3)
 license=(MPL GPL LGPL)
@@ -68,8 +68,13 @@ ac_add_options --disable-elf-hack
 ac_add_options --disable-bootstrap
 ac_add_options --with-wasi-sysroot=/usr/share/wasi-sysroot
 ac_add_options --enable-default-toolkit=cairo-gtk3-wayland
-export CC=clang
-export CXX=clang++
+
+export AR=llvm-ar
+export CC='clang'
+export CXX='clang++'
+export NM=llvm-nm
+export RANLIB=llvm-ranlib
+
 # Branding
 ac_add_options --enable-update-channel=release
 ac_add_options --with-app-name=${pkgname}
@@ -83,8 +88,9 @@ export MOZ_ADDON_SIGNING=1
 export MOZ_APP_REMOTINGNAME=${pkgname//-/}
 
 # System libraries
-ac_add_options --with-system-av1
+#ac_add_options --with-system-av1
 # ac_add_options --with-system-graphite2
+
 ac_add_options --with-system-harfbuzz
 ac_add_options --with-system-icu
 ac_add_options --with-system-jpeg
@@ -210,6 +216,11 @@ END
     msg2 "Fix build with zstandard 1.8.0"
     patch -Np1 -i ${_patches_dir}/zstandard-0.18.0.patch
 
+  	msg2  "stop some undesired requests (https://gitlab.com/librewolf-community/browser/common/-/issues/10)"
+  	patch -Np1 -i ${_patches_dir}/sed-patches/stop-undesired-requests.patch # fails with 100
+  	
+  	msg2 "Debian patch to enable global menubar"
+    patch -Np1 -i ${_patches_dir}/fix-psutil-dev.patch
     rm -f ${srcdir}/cachyos-browser-common/source_files/mozconfig
     cp -r ${srcdir}/cachyos-browser-common/source_files/browser ./
 }
