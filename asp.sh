@@ -30,7 +30,7 @@ for f in $files
 do
         d=$(dirname $f)
         cd $d
-        time docker run --name lto-v3 -e EXPORT_PKG=1 -e SYNC_DATABASE=1 -v $PWD:/pkg pttrr/docker-makepkg-lto-v3
+        time docker run --name lto-v3 -e EXPORT_PKG=1 -e SYNC_DATABASE=1 -v /tmp/docker-makepkg-v3:/tmp/makepkg -v $PWD:/pkg pttrr/docker-makepkg-v3
         docker rm lto-v3
         cd ..
 done
