@@ -1,21 +1,21 @@
-pkgbase = zstd-git
-	pkgdesc = A fast and efficient compression algorithm.
-	pkgver = 1.4.7.r1086.g64efba4c5
-	pkgrel = 1
-	url = https://github.com/facebook/zstd
-	arch = i686
+pkgbase = zstd
+	pkgdesc = Zstandard - Fast real-time compression algorithm
+	pkgver = 1.5.3
+	pkgrel = 2
+	url = https://facebook.github.io/zstd/
 	arch = x86_64
-	arch = aarch64
-	license = custom:BSD3
+	license = BSD
 	license = GPL2
-	makedepends = git
-	depends = xz
+	makedepends = gtest
+	depends = glibc
+	depends = gcc-libs
 	depends = zlib
+	depends = xz
 	depends = lz4
-	provides = zstd
 	provides = libzstd.so
-	conflicts = zstd
-	source = git+https://github.com/facebook/zstd.git#branch=dev
-	md5sums = SKIP
+	options = !debug
+	options = lto
+	source = git+https://github.com/facebook/zstd.git#commit=5d2fb4288f8230cc32c12f235b716fd25ecc89e1
+	sha256sums = SKIP
 
-pkgname = zstd-git
+pkgname = zstd

@@ -5,7 +5,7 @@
 
 pkgname=zstd
 pkgver=1.5.3
-pkgrel=1
+pkgrel=2
 pkgdesc='Zstandard - Fast real-time compression algorithm'
 url='https://facebook.github.io/zstd/'
 arch=(x86_64)
@@ -13,15 +13,17 @@ license=(BSD GPL2)
 depends=(glibc gcc-libs zlib xz lz4)
 makedepends=(gtest)
 provides=(libzstd.so)
-options=(!debug)
+options=(!debug lto)
 source=(git+https://github.com/facebook/zstd.git#commit=5d2fb4288f8230cc32c12f235b716fd25ecc89e1)
 sha256sums=('SKIP')
 
 build() {
   cd ${pkgname}
-   export CFLAGS+=' -ffat-lto-objects'
-   export CXXFLAGS+=' -ffat-lto-objects'
-
+  	export CC='clang'
+  	export CXX='clang++'
+  	export CFLAGS+=' -fno-semantic-interposition'
+   	export CXXFLAGS+=' -fno-semantic-interposition'
+	export LDFLAGS+=' -fuse-ld=lld'
   # Set PREFIX, as libzstd.pc is otherwise generated with -L/usr/local
   make PREFIX=/usr
   make -C contrib/pzstd
