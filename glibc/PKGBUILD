@@ -10,12 +10,12 @@ pkgbase=glibc
 pkgname=(glibc lib32-glibc)
 pkgver=2.35
 _commit=0e5b239f45992e4b54c6f946ecb0c410afc8bb08
-pkgrel=19
+pkgrel=20
 arch=(x86_64)
 url='https://www.gnu.org/software/libc'
 license=(GPL LGPL)
 makedepends=(git gd lib32-gcc-libs python)
-options=(debug staticlibs !lto)
+options=(!debug staticlibs !lto)
 source=(git+https://sourceware.org/git/glibc.git#commit=${_commit}
         locale.gen.txt
         locale-gen
