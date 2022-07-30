@@ -1,0 +1,24 @@
+From b140b67c9fddb96701e46d23e9a72ddfbe77e0d0 Mon Sep 17 00:00:00 2001
+From: Vitor Lopes <vmnlop@gmail.com>
+Date: Fri, 29 Jul 2022 13:02:48 +0100
+Subject: [PATCH] add hdpi support
+
+---
+ src/calamares/main.cpp | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/src/calamares/main.cpp b/src/calamares/main.cpp
+index fcc946485..20d69a2fa 100644
+--- a/src/calamares/main.cpp
++++ b/src/calamares/main.cpp
+@@ -103,6 +103,7 @@ handle_args( CalamaresApplication& a )
+ int
+ main( int argc, char* argv[] )
+ {
++    QApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
+     CalamaresApplication a( argc, argv );
+ 
+     KAboutData aboutData( "calamares",
+-- 
+GitLab
+
