@@ -1,9 +1,8 @@
-From c5a4f0ef332275d3d2002e1e6d3a53b6e5de6290 Mon Sep 17 00:00:00 2001
+From a6a23cfaecf3df14a4f6fd3a465d6ad5ac560784 Mon Sep 17 00:00:00 2001
 From: Peter Jung <admin@ptr1337.dev>
-Date: Tue, 7 Jun 2022 15:17:35 +0200
+Date: Mon, 1 Aug 2022 13:11:18 +0200
 Subject: [PATCH] clearlinux
 
-Signed-off-by: Peter Jung <admin@ptr1337.dev>
 ---
  bits/floatn-common.h                    | 36 +++++++-------
  crypt/Makefile                          |  2 +
@@ -13,7 +12,6 @@ Signed-off-by: Peter Jung <admin@ptr1337.dev>
  math/Makefile                           |  2 +
  math/w_sqrt_compat.c                    |  1 +
  misc/sys/cdefs.h                        | 10 ++--
- nptl/pthread_mutex_lock.c               |  8 ++-
  nss/XXX-lookup.c                        |  3 ++
  sunrpc/netname.c                        |  5 ++
  sysdeps/ieee754/dbl-64/e_exp.c          |  1 +
@@ -23,8 +21,7 @@ Signed-off-by: Peter Jung <admin@ptr1337.dev>
  sysdeps/x86/bits/floatn.h               |  8 +--
  sysdeps/x86_64/ffs.c                    |  1 +
  sysdeps/x86_64/ffsll.c                  |  1 +
- sysdeps/x86_64/fpu/Makefile             |  5 +-
- 19 files changed, 118 insertions(+), 72 deletions(-)
+ 17 files changed, 107 insertions(+), 70 deletions(-)
 
 diff --git a/bits/floatn-common.h b/bits/floatn-common.h
 index 92982d6460..18c3a88982 100644
@@ -202,10 +199,10 @@ index 396a0d76c0..bd27bf0f31 100644
    if (stream != NULL)
      return stream;
 diff --git a/localedata/Makefile b/localedata/Makefile
-index 7741ac3b5e..aedf3418b0 100644
+index da92b67ef7..47a38b8931 100644
 --- a/localedata/Makefile
 +++ b/localedata/Makefile
-@@ -200,7 +200,7 @@ install-others := $(addprefix $(inst_i18ndir)/, \
+@@ -202,7 +202,7 @@ install-others := $(addprefix $(inst_i18ndir)/, \
  			      $(locales))
  else
  install-others := $(addprefix $(inst_i18ndir)/, \
@@ -214,7 +211,7 @@ index 7741ac3b5e..aedf3418b0 100644
  			      $(locales))
  endif
  
-@@ -330,12 +330,12 @@ $(inst_i18ndir)/charmaps/%: charmaps/% $(+force)
+@@ -334,12 +334,12 @@ $(inst_i18ndir)/charmaps/%: charmaps/% $(+force)
  	rm -f $@
  	$(INSTALL_DATA) $< $@
  else
@@ -233,10 +230,10 @@ index 7741ac3b5e..aedf3418b0 100644
  
  # Install the locale source files in the appropriate directory.
 diff --git a/malloc/malloc.c b/malloc/malloc.c
-index 1a1ac1d8f0..ba6e55020c 100644
+index bd3c76ed31..4f10b5a713 100644
 --- a/malloc/malloc.c
 +++ b/malloc/malloc.c
-@@ -921,7 +921,7 @@ libc_hidden_proto (__libc_mallopt)
+@@ -916,7 +916,7 @@ libc_hidden_proto (__libc_mallopt)
  #define M_TRIM_THRESHOLD       -1
  
  #ifndef DEFAULT_TRIM_THRESHOLD
@@ -245,7 +242,7 @@ index 1a1ac1d8f0..ba6e55020c 100644
  #endif
  
  /*
-@@ -954,7 +954,7 @@ libc_hidden_proto (__libc_mallopt)
+@@ -949,7 +949,7 @@ libc_hidden_proto (__libc_mallopt)
  #define M_TOP_PAD              -2
  
  #ifndef DEFAULT_TOP_PAD
@@ -254,7 +251,7 @@ index 1a1ac1d8f0..ba6e55020c 100644
  #endif
  
  /*
-@@ -2041,6 +2041,24 @@ madvise_thp (void *p, INTERNAL_SIZE_T size)
+@@ -2035,6 +2035,24 @@ madvise_thp (void *p, INTERNAL_SIZE_T size)
  #endif
  }
  
@@ -279,7 +276,7 @@ index 1a1ac1d8f0..ba6e55020c 100644
  /* ------------------- Support for multiple arenas -------------------- */
  #include "arena.c"
  
-@@ -3708,6 +3726,9 @@ __libc_calloc (size_t n, size_t elem_size)
+@@ -3703,6 +3721,9 @@ __libc_calloc (size_t n, size_t elem_size)
  
    INTERNAL_SIZE_T csz = chunksize (p);
  
@@ -289,7 +286,7 @@ index 1a1ac1d8f0..ba6e55020c 100644
    /* Two optional cases in which clearing not necessary */
    if (chunk_is_mmapped (p))
      {
-@@ -3730,35 +3751,8 @@ __libc_calloc (size_t n, size_t elem_size)
+@@ -3725,35 +3746,8 @@ __libc_calloc (size_t n, size_t elem_size)
       minimally 3.  */
    d = (INTERNAL_SIZE_T *) mem;
    clearsize = csz - SIZE_SZ;
@@ -326,7 +323,7 @@ index 1a1ac1d8f0..ba6e55020c 100644
  }
  #endif /* IS_IN (libc) */
  
-@@ -4428,6 +4422,7 @@ _int_free (mstate av, mchunkptr p, int have_lock)
+@@ -4424,6 +4418,7 @@ _int_free (mstate av, mchunkptr p, int have_lock)
    mchunkptr bck;               /* misc temp for linking */
    mchunkptr fwd;               /* misc temp for linking */
  
@@ -334,7 +331,7 @@ index 1a1ac1d8f0..ba6e55020c 100644
    size = chunksize (p);
  
    /* Little security check which won't hurt performance: the
-@@ -4676,8 +4671,14 @@ _int_free (mstate av, mchunkptr p, int have_lock)
+@@ -4672,8 +4667,14 @@ _int_free (mstate av, mchunkptr p, int have_lock)
        if (av == &main_arena) {
  #ifndef MORECORE_CANNOT_TRIM
  	if ((unsigned long)(chunksize(av->top)) >=
@@ -377,7 +374,7 @@ index a8b05e0014..a88d4dd587 100644
  {
    if (__builtin_expect (isless (x, 0.0), 0) && _LIB_VERSION != _IEEE_)
 diff --git a/misc/sys/cdefs.h b/misc/sys/cdefs.h
-index 1c2b044a0d..1aa734ba3b 100644
+index f525f67547..6119755fb9 100644
 --- a/misc/sys/cdefs.h
 +++ b/misc/sys/cdefs.h
 @@ -463,7 +463,7 @@
@@ -425,30 +422,11 @@ index 1c2b044a0d..1aa734ba3b 100644
  /* Designates dealloc as a function to call to deallocate objects
     allocated by the declared function.  */
  # define __attr_dealloc(dealloc, argno) \
-diff --git a/nptl/pthread_mutex_lock.c b/nptl/pthread_mutex_lock.c
-index d2e652d151..6c869eb084 100644
---- a/nptl/pthread_mutex_lock.c
-+++ b/nptl/pthread_mutex_lock.c
-@@ -145,7 +145,13 @@ PTHREAD_MUTEX_LOCK (pthread_mutex_t *mutex)
- 		  LLL_MUTEX_LOCK (mutex);
- 		  break;
- 		}
--	      atomic_spin_nop ();
-+		/* MO read while spinning */
-+		do
-+		  {
-+		    atomic_spin_nop ();
-+		  }
-+		while (atomic_load_relaxed (&mutex->__data.__lock) != 0 &&
-+			++cnt < max_cnt);
- 	    }
- 	  while (LLL_MUTEX_READ_LOCK (mutex) != 0
- 		 || LLL_MUTEX_TRYLOCK (mutex) != 0);
 diff --git a/nss/XXX-lookup.c b/nss/XXX-lookup.c
-index db95937674..7ad6681dd9 100644
+index bfc57b8e64..425d5217a7 100644
 --- a/nss/XXX-lookup.c
 +++ b/nss/XXX-lookup.c
-@@ -52,6 +52,9 @@ DB_LOOKUP_FCT (nss_action_list *ni, const char *fct_name, const char *fct2_name,
+@@ -53,6 +53,9 @@ DB_LOOKUP_FCT (nss_action_list *ni, const char *fct_name, const char *fct2_name,
    if (! __nss_database_get (DATABASE_NAME_ID, &DATABASE_NAME_SYMBOL))
      return -1;
  
@@ -457,7 +435,7 @@ index db95937674..7ad6681dd9 100644
 +
    *ni = DATABASE_NAME_SYMBOL;
  
-   return __nss_lookup (ni, fct_name, fct2_name, fctp);
+   /* We want to know about it if we've somehow got a NULL action list;
 diff --git a/sunrpc/netname.c b/sunrpc/netname.c
 index bf7f0b81c4..bf45b8bcf1 100644
 --- a/sunrpc/netname.c
@@ -531,7 +509,7 @@ index 9ae7b30373..64675aadaa 100644
  #  endif
  
 diff --git a/sysdeps/unix/sysv/linux/x86_64/sysdep.h b/sysdeps/unix/sysv/linux/x86_64/sysdep.h
-index e1ce3b62eb..964fd3cd1b 100644
+index 740abefcfd..cbfbcbfae4 100644
 --- a/sysdeps/unix/sysv/linux/x86_64/sysdep.h
 +++ b/sysdeps/unix/sysv/linux/x86_64/sysdep.h
 @@ -238,11 +238,19 @@
@@ -666,22 +644,6 @@ index 842ebaeb4c..46b4708324 100644
  ffsll (long long int x)
  {
    long long int cnt;
-diff --git a/sysdeps/x86_64/fpu/Makefile b/sysdeps/x86_64/fpu/Makefile
-index 9fb587cf8f..9f517854b4 100644
---- a/sysdeps/x86_64/fpu/Makefile
-+++ b/sysdeps/x86_64/fpu/Makefile
-@@ -70,7 +70,10 @@ ifeq ($(subdir)$(config-cflags-mprefer-vector-width),mathyes)
- #
- # Limit vector width to 128 bits to work around this issue.  It improves
- # performance of sin and cos by more than 40% on Skylake.
--CFLAGS-branred.c = -mprefer-vector-width=128
-+CFLAGS-branred.c = -mprefer-vector-width=128 -fno-tree-vectorize
-+CFLAGS-s_sincos.c = -mprefer-vector-width=256 -fno-tree-vectorize
-+CFLAGS-e_exp.c = -mprefer-vector-width=128 -fno-tree-vectorize
-+CFLAGS-e_exp2.c = -mprefer-vector-width=128 -fno-tree-vectorize
- endif
- 
- ifeq ($(subdir),benchtests)
 -- 
-2.36.1
+2.37.1
 
