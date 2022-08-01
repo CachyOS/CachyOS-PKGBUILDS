@@ -28,8 +28,6 @@ source=(git+https://sourceware.org/git/glibc.git#commit=${_commit}
     lib32-glibc.conf
     sdt.h sdt-config.h
     disable-clone3.diff
-    0001-clearlinux.patch
-
 )
 validpgpkeys=(7273542B39962DF7B299931416792B4EA25340F8 # Carlos O'Donell
 BC7C7372637EC10C57D7AA6579C43DFBF1CF2187) # Siddhesh Poyarekar
@@ -52,8 +50,6 @@ prepare() {
     # https://github.com/electron/electron/commit/993ecb5bdd5c57024c8718ca6203a8f924d6d574
     # Patch src: https://patchwork.ozlabs.org/project/glibc/patch/87eebkf8ph.fsf@oldenburg.str.redhat.com/
     patch -Np1 -i "${srcdir}"/disable-clone3.diff
-    ## Clearlinux patch
-    patch -Np1 -i "${srcdir}"/0001-clearlinux.patch
 }
 
 build() {
