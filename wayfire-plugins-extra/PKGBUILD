@@ -1,29 +1,36 @@
 # Maintainer: Adrian Perez de Castro <aperez@igalia.com>
 pkgname=wayfire-plugins-extra
-pkgver=0.7.0
-pkgrel=2
+pkgver=0.8.0
+pkgrel=1
 pkgdesc='Additional plugins for Wayfire'
-url=https://wayfire.org
+url=https://github.com/WayfireWM/wayfire-plugins-extra
 arch=(x86_64)
 license=(custom:MIT)
 conflicts=("${pkgname}-git")
 depends=('wayfire>=0.7' cairo glibmm wlroots iio-sensor-proxy)
 makedepends=(meson wayland-protocols ninja glm git)
-source=("https://github.com/WayfireWM/${pkgname}/releases/download/v${pkgver}/${pkgname}-${pkgver}.tar.xz")
-sha256sums=(01dcb040ced5509cf8f8a1f46dba6f61b613209b76b82550906140266c4921eb)
+source=("${pkgname}::git+$url.git")
+sha512sums=('SKIP')
+options=(strip)
 
 build () {
-    rm -rf build
-    arch-meson "${pkgname}-${pkgver}" build
-    ninja -C build
+  cd ${srcdir}/$pkgname
+  _cpuCount=$(grep -c -w ^processor /proc/cpuinfo)
+
+  arch-meson build
+  meson compile -C build --jobs $_cpuCount
 }
 
 check () {
-    meson test -C build
+  meson test -C build
 }
 
 package () {
-    DESTDIR="${pkgdir}" ninja -C build install
-    cd "${pkgname}-${pkgver}"
-    install -Dm644 LICENSE "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE"
+  cd "${srcdir}/$pkgname/build"
+  DESTDIR="${pkgdir}" meson install
+
+  cd "${srcdir}/$pkgname"
+  install -Dm644 LICENSE "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE"
 }
+
+# vim:set sw=2 sts=2 et:
