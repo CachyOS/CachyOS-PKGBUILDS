@@ -1,4 +1,5 @@
 # Maintainer: Adrian Perez de Castro <aperez@igalia.com>
+
 pkgname=wayfire-plugins-extra
 pkgver=0.8.0
 pkgrel=1
@@ -9,7 +10,8 @@ license=(custom:MIT)
 conflicts=("${pkgname}-git")
 depends=('wayfire>=0.7' cairo glibmm wlroots iio-sensor-proxy)
 makedepends=(meson wayland-protocols ninja glm git)
-source=("${pkgname}::git+$url.git")
+_commit=5076dc1100071d8ed220e06a4723bde16ac864f7
+source=("${pkgname}::git+$url.git#commit=${_commit}")
 sha512sums=('SKIP')
 options=(strip)
 
