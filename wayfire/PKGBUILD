@@ -1,31 +1,43 @@
 # Maintainer: Adrian Perez de Castro <aperez@igalia.com>
+
 pkgname=wayfire
-pkgver=0.7.3
+pkgver=0.7.4
 pkgrel=1
 pkgdesc="3D wayland compositor"
-arch=(x86_64)
+arch=('x86_64')
 url=https://wayfire.org
 license=(custom:MIT)
-depends=(cairo pango 'wf-config>=0.5' libjpeg libinput 'wlroots>=0.15' 'wlroots<0.16')
-makedepends=(meson ninja wayland-protocols glm cmake doctest)
+depends=('cairo' 'pango' 'wf-config>=0.5' 'libjpeg' 'libinput' 'wlroots>=0.15' 'wlroots<0.16')
+makedepends=('meson' 'ninja' 'wayland-protocols' 'xorg-xwayland' 'glm' 'cmake' 'doctest' 'doxygen')
 conflicts=("${pkgname}-git")
 source=("https://github.com/WayfireWM/${pkgname}/releases/download/v${pkgver}/${pkgname}-${pkgver}.tar.xz")
-sha256sums=('99d1d51b1db88c30de6484094fd02df39a82cbb503361e52abc1d94f8357cb5f')
+sha512sums=('c0aa2209db507f382f844134ebad840202d2b39abb9b8c3f013d4e35b2de00827fd90033095e388cb6e85844b2c44dac2e6ac18622c3b98e92dc04baee06ba96')
+options=(strip)
 
 build() {
-    rm -rf build
-    arch-meson "${pkgname}-${pkgver}" build -Duse_system_wfconfig=enabled -Duse_system_wlroots=enabled
-    ninja -C build
+  cd "${pkgname}-${pkgver}"
+  _cpuCount=$(grep -c -w ^processor /proc/cpuinfo)
+
+  arch-meson -Duse_system_wfconfig=enabled \
+             -Duse_system_wlroots=enabled \
+             build
+
+  meson compile -C build --jobs $_cpuCount
 }
 
 check () {
-    meson test -C build
+  cd "${pkgname}-${pkgver}"
+  meson test -C build --print-errorlogs
 }
 
 package() {
-    DESTDIR="${pkgdir}/" ninja -C build install
-    cd "${pkgname}-${pkgver}"
-    install -Dm644 wayfire.desktop "${pkgdir}/usr/share/wayland-sessions/wayfire.desktop"
-    install -Dm644 wayfire.ini "${pkgdir}/usr/share/doc/${pkgname}/wayfire.ini"
-    install -Dm645 LICENSE "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE"
+  cd "${pkgname}-${pkgver}/build"
+  DESTDIR="${pkgdir}" meson install
+
+  cd "${srcdir}/${pkgname}-${pkgver}"
+  install -Dm644 wayfire.desktop "${pkgdir}/usr/share/wayland-sessions/wayfire.desktop"
+  install -Dm644 wayfire.ini "${pkgdir}/usr/share/doc/${pkgname}/wayfire.ini"
+  install -Dm645 LICENSE "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE"
 }
+
+# vim:set sw=2 sts=2 et:

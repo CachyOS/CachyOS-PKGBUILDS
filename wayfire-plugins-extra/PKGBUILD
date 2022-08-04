@@ -9,7 +9,7 @@ arch=(x86_64)
 license=(custom:MIT)
 conflicts=("${pkgname}-git")
 depends=('wayfire>=0.7' cairo glibmm wlroots iio-sensor-proxy)
-makedepends=(meson wayland-protocols ninja glm git)
+makedepends=(meson wayland-protocols ninja glm git cmake)
 _commit=5076dc1100071d8ed220e06a4723bde16ac864f7
 source=("${pkgname}::git+$url.git#commit=${_commit}")
 sha512sums=('SKIP')
@@ -19,7 +19,15 @@ build () {
   cd ${srcdir}/$pkgname
   _cpuCount=$(grep -c -w ^processor /proc/cpuinfo)
 
-  arch-meson build
+  #arch-meson build
+  meson --prefix        /usr \
+        --libexecdir    lib \
+        --sbindir       bin \
+        --buildtype     release \
+        --auto-features enabled \
+        -D              b_pie=true \
+        -D              b_lto=true \
+        build
   meson compile -C build --jobs $_cpuCount
 }
 
