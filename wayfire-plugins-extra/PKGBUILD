@@ -1,7 +1,7 @@
 # Maintainer: Adrian Perez de Castro <aperez@igalia.com>
 
 pkgname=wayfire-plugins-extra
-pkgver=0.8.0
+pkgver=0.7.0
 pkgrel=1
 pkgdesc='Additional plugins for Wayfire'
 url=https://github.com/WayfireWM/wayfire-plugins-extra
@@ -11,35 +11,34 @@ conflicts=("${pkgname}-git")
 depends=('wayfire>=0.7' cairo glibmm wlroots iio-sensor-proxy)
 makedepends=(meson wayland-protocols ninja glm git cmake)
 _commit=5076dc1100071d8ed220e06a4723bde16ac864f7
-source=("${pkgname}::git+$url.git#commit=${_commit}")
-sha512sums=('SKIP')
-options=(strip)
+source=("https://github.com/WayfireWM/${pkgname}/releases/download/v${pkgver}/${pkgname}-${pkgver}.tar.xz"
+        "fix-build.patch")
+sha512sums=('ff25a4685c88ca0129a2372b216166246cab072c2cb4f84eb7bd500db525bf5881bd7e54d0d888473d4aab0e5b33d2ee13eb7f788bb2a524e1e8e0c5efc1a6bd'
+            'b0283ccce25f717c0bdfef868bb4830241c696f2536de656ca68df01dcc5ab8e57ca877348e8c2f7dfca4e7389096e4a9990ac20c0fc16b5e6a3d3fa34ba4624')
+
+prepare() {
+  cd "${srcdir}/$pkgname-$pkgver"
+  patch -Np1 -i "$srcdir/fix-build.patch"
+}
 
 build () {
-  cd ${srcdir}/$pkgname
+  cd "${srcdir}/$pkgname-$pkgver"
   _cpuCount=$(grep -c -w ^processor /proc/cpuinfo)
 
-  #arch-meson build
-  meson --prefix        /usr \
-        --libexecdir    lib \
-        --sbindir       bin \
-        --buildtype     release \
-        --auto-features enabled \
-        -D              b_pie=true \
-        -D              b_lto=true \
-        build
+  arch-meson build
   meson compile -C build --jobs $_cpuCount
 }
 
 check () {
+  cd "${srcdir}/$pkgname-$pkgver"
   meson test -C build
 }
 
 package () {
-  cd "${srcdir}/$pkgname/build"
+  cd "${srcdir}/$pkgname-$pkgver/build"
   DESTDIR="${pkgdir}" meson install
 
-  cd "${srcdir}/$pkgname"
+  cd "${srcdir}/$pkgname-$pkgver"
   install -Dm644 LICENSE "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE"
 }
 
