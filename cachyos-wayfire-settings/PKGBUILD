@@ -1,0 +1,37 @@
+# Maintainer: Vladislav Nepogodin <nepogodin.vlad@gmail.com>
+
+pkgname=cachyos-wayfire-settings
+pkgdesc='CachyOS GNOME settings'
+pkgver=1.0.0
+pkgrel=1
+arch=('any')
+url="https://github.com/cachyos/$pkgname"
+license=('GPL')
+makedepends=('coreutils')
+source=("$pkgname-$pkgver.tar.gz::$url/archive/$pkgver.tar.gz")
+sha512sums=('4c7340f6fc62804026f6f6d1a017ba5b8a981ef2b89ed987114aafbf6528ef71bc2120cb1bbb757ed06020c7abe160064518185e8807eb46a54986ee0801285e')
+depends=('cachyos-fish-config'
+         'nerd-fonts-fantasque-sans-mono'
+         'noto-fonts'
+         'ttf-fira-sans'
+         'kvantum-qt5'
+         'qt5ct'
+         'char-white'
+         'bemenu'
+         'bemenu-wayland'
+         'xorg-xwayland'
+         'wayfire-desktop-git'
+         'capitaine-cursors'
+         'cachyos-wallpapers'
+         'kvantum-theme-nordic-git'
+         'cachyos-nord-gtk-theme-git')
+install=$pkgname.install
+provides=('cachyos-desktop-settings')
+conflicts=('cachyos-desktop-settings')
+
+package() {
+    install -d $pkgdir/etc
+    cp -rf $srcdir/$pkgname-$pkgver/etc $pkgdir
+    install -d $pkgdir/usr
+    cp -rf $srcdir/$pkgname-$pkgver/usr $pkgdir
+}
