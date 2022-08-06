@@ -1,9 +1,9 @@
 pkgname=systemd-boot-manager
-pkgver=4
+pkgver=5
 pkgrel=1
 pkgdesc='A simple tool to maintain systemd-boot & systemd-boot entries for CachyOS'
 arch=(any)
-url="https://gitlab.com/cachyos/PKGBUILDS/-/raw/master/$pkgname"
+url="https://github.com/CachyOS/CachyOS-PKGBUILDS/tree/master/$pkgname"
 license=(GPL2)
 backup=('etc/sdboot-manage.conf')
 depends=(systemd
