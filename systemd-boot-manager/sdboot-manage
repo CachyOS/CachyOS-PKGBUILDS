@@ -107,6 +107,16 @@ generate_entries() {
                 zfs)
                     sdoptions="zfs=${srcdev} rw"
                     ;;
+                btrfs)
+                    if [[ -n ${srcdev_partuuid} ]]; then
+                        sdoptions="root=PARTUUID=${srcdev_partuuid} rw rootflags=subvol=${srcdev_fsroot}"
+                    elif [[ -n ${srcdev_uuid} ]]; then
+                        sdoptions="root=UUID=${srcdev_uuid} rw rootflags=subvol=${srcdev_fsroot}"
+                    fi
+                    if [[ ${CDISCARD,,} == "yes" ]]; then
+                        sdoptions="${sdoptions},discard"
+                    fi
+                    ;;                
                 *)
                     if [[ -n ${srcdev_partuuid} ]]; then
                         sdoptions="root=PARTUUID=${srcdev_partuuid} rw"
