@@ -5,8 +5,11 @@
 
 # toolchain build order: linux-api-headers->glibc->binutils->gcc->glibc->binutils->gcc
 # NOTE: valgrind requires rebuilt with each major glibc version
+
 # set a variable if youre building with glibc 2.35
 firstbuild=
+# set a variable if you want to have a fix for rogue company eac fix
+rog_company_fix=
 
 pkgbase=glibc
 pkgname=(glibc lib32-glibc)
@@ -15,7 +18,7 @@ _commit=c74bb93cfdb04d49155b0e30983a3c866167bbca
 if [ "$firstbuild" = "y" ]; then
     pkgrel=1
 else
-    pkgrel=2
+    pkgrel=3
 fi
 arch=(x86_64)
 url='https://www.gnu.org/software/libc'
@@ -29,17 +32,20 @@ source=(git+https://sourceware.org/git/glibc.git#commit=${_commit}
     sdt.h sdt-config.h
     disable-clone3.diff
     e47de5cb.patch
+    0001-support-rogue-company.patch
 )
 validpgpkeys=(7273542B39962DF7B299931416792B4EA25340F8 # Carlos O'Donell
               BC7C7372637EC10C57D7AA6579C43DFBF1CF2187 # Siddhesh Poyarekar
 )
 b2sums=('SKIP'
-    '46d533d25c7a2ce4ae75d452eee7ebb8e3ce4d191af9be3daa43718b78cb81d33cfd8046a117a15d87de9f5e940448c66005b0490515bf731c9e4691c53908d6'
-    '04fbb3b0b28705f41ccc6c15ed5532faf0105370f22133a2b49867e790df0491f5a1255220ff6ebab91a462f088d0cf299491b3eb8ea53534cb8638a213e46e3'
-    '7c265e6d36a5c0dff127093580827d15519b6c7205c2e1300e82f0fb5b9dd00b6accb40c56581f18179c4fbbc95bd2bf1b900ace867a83accde0969f7b609f8a'
-    'a6a5e2f2a627cc0d13d11a82458cfd0aa75ec1c5a3c7647e5d5a3bb1d4c0770887a3909bfda1236803d5bc9801bfd6251e13483e9adf797e4725332cd0d91a0e'
-    '214e995e84b342fe7b2a7704ce011b7c7fc74c2971f98eeb3b4e677b99c860addc0a7d91b8dc0f0b8be7537782ee331999e02ba48f4ccc1c331b60f27d715678'
-    'edef5f724f68ea95c6b0127bd13a10245f548afc381b2d0a6d1d06ee9f87b7dd89c6becd35d5ae722bf838594eb870a747f67f07f46e7d63f8c8d1a43cce4a52')
+        '46d533d25c7a2ce4ae75d452eee7ebb8e3ce4d191af9be3daa43718b78cb81d33cfd8046a117a15d87de9f5e940448c66005b0490515bf731c9e4691c53908d6'
+        '04fbb3b0b28705f41ccc6c15ed5532faf0105370f22133a2b49867e790df0491f5a1255220ff6ebab91a462f088d0cf299491b3eb8ea53534cb8638a213e46e3'
+        '7c265e6d36a5c0dff127093580827d15519b6c7205c2e1300e82f0fb5b9dd00b6accb40c56581f18179c4fbbc95bd2bf1b900ace867a83accde0969f7b609f8a'
+        'a6a5e2f2a627cc0d13d11a82458cfd0aa75ec1c5a3c7647e5d5a3bb1d4c0770887a3909bfda1236803d5bc9801bfd6251e13483e9adf797e4725332cd0d91a0e'
+        '214e995e84b342fe7b2a7704ce011b7c7fc74c2971f98eeb3b4e677b99c860addc0a7d91b8dc0f0b8be7537782ee331999e02ba48f4ccc1c331b60f27d715678'
+        'edef5f724f68ea95c6b0127bd13a10245f548afc381b2d0a6d1d06ee9f87b7dd89c6becd35d5ae722bf838594eb870a747f67f07f46e7d63f8c8d1a43cce4a52'
+        'ddc3d4ea0ec0eae549d89348d5b6f3d34a07e69355e69a79e111cb53496d6832cdf0dab95fcb87b80f7b7801816dd7bd521616d9dd0bb8adf1fd75e5029b4830'
+        'd81a2bc94836ffb11e49b41d1745cd3c693615bcdb64ec21bd0b1e662fcab6418e0ae869695edb5271eccd1c910b2770403159a38a6842da6d5360c25db76036')
 
 prepare() {
     mkdir -p glibc-build lib32-glibc-build
@@ -54,6 +60,10 @@ prepare() {
     patch -Np1 -i "${srcdir}"/disable-clone3.diff
     # Reverting e47de5cb2d4dbecb58f569ed241e8e95c568f03c ## fixes eac for glibc 2.36
   	patch -Np1 -R -i "${srcdir}"/e47de5cb.patch
+  	## Fixes rogue company
+	if [ "$rog_company_fix" = "y" ]; then
+ 	patch -Np1 -i "${srcdir}"/0001-support-rogue-company.patch
+ 	fi
 }
 
 build() {
