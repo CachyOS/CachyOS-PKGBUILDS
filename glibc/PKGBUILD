@@ -11,11 +11,11 @@ firstbuild=
 pkgbase=glibc
 pkgname=(glibc lib32-glibc)
 pkgver=2.36
-_commit=c804cd1c00adde061ca51711f63068c103e94eef
+_commit=c74bb93cfdb04d49155b0e30983a3c866167bbca
 if [ "$firstbuild" = "y" ]; then
     pkgrel=1
 else
-    pkgrel=1.2
+    pkgrel=2
 fi
 arch=(x86_64)
 url='https://www.gnu.org/software/libc'
@@ -28,6 +28,7 @@ source=(git+https://sourceware.org/git/glibc.git#commit=${_commit}
     lib32-glibc.conf
     sdt.h sdt-config.h
     disable-clone3.diff
+    e47de5cb.patch
 )
 validpgpkeys=(7273542B39962DF7B299931416792B4EA25340F8 # Carlos O'Donell
               BC7C7372637EC10C57D7AA6579C43DFBF1CF2187 # Siddhesh Poyarekar
@@ -51,6 +52,8 @@ prepare() {
     # https://github.com/electron/electron/commit/993ecb5bdd5c57024c8718ca6203a8f924d6d574
     # Patch src: https://patchwork.ozlabs.org/project/glibc/patch/87eebkf8ph.fsf@oldenburg.str.redhat.com/
     patch -Np1 -i "${srcdir}"/disable-clone3.diff
+    # Reverting e47de5cb2d4dbecb58f569ed241e8e95c568f03c ## fixes eac for glibc 2.36
+  	patch -Np1 -R -i "${srcdir}"/e47de5cb.patch
 }
 
 build() {
