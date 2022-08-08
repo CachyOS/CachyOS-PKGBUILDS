@@ -48,6 +48,7 @@ export LINUX_OPTIONS \
     LINUX_FALLBACK_OPTIONS \
     LINUX_USE_SWAP_FOR_RESUME \
     DEFAULT_ENTRY="manual" \
+    DISABLE_FALLBACK="no" \
     KERNEL_PATTERN="vmlinuz-*" \
     REMOVE_EXISTING="yes" \
     OVERWRITE_EXISTING \
@@ -213,7 +214,10 @@ generate_entries() {
                 [[ $(dirname ${kernel}) == "/" ]] && kernelpath="" || kernelpath=$(dirname ${kernel})
 
                 echo -e "title\t${title}\nlinux\t${kernel}\n${initrd}initrd\t${kernelpath}$initramfs.img\noptions\t${sdoptions} ${LINUX_OPTIONS}" >"$(get_entry_root "$ESP")$entry.conf"
-                echo -e "title\t${title} (Fallback)\nlinux\t${kernel}\n${initrd}initrd\t${kernelpath}$initramfs-fallback.img\noptions\t${sdoptions} ${LINUX_FALLBACK_OPTIONS}" >"$(get_entry_root "$ESP")$entry-fallback.conf"
+
+                if [[ ${DISABLE_FALLBACK} != "yes" ]]; then
+                    echo -e "title\t${title} (Fallback)\nlinux\t${kernel}\n${initrd}initrd\t${kernelpath}$initramfs-fallback.img\noptions\t${sdoptions} ${LINUX_FALLBACK_OPTIONS}" >"$(get_entry_root "$ESP")$entry-fallback.conf"
+                fi
             done < <(find "${ESP}" -maxdepth 1 -type f -name "${KERNEL_PATTERN}" -printf "/%P\n")
 
             if [[ ! "$(ls -A ${ESP}/loader/entries)" ]]; then
