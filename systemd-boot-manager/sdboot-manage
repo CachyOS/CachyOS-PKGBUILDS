@@ -214,7 +214,7 @@ generate_entries() {
 
                 echo -e "title\t${title}\nlinux\t${kernel}\n${initrd}initrd\t${kernelpath}$initramfs.img\noptions\t${sdoptions} ${LINUX_OPTIONS}" >"$(get_entry_root "$ESP")$entry.conf"
                 echo -e "title\t${title} (Fallback)\nlinux\t${kernel}\n${initrd}initrd\t${kernelpath}$initramfs-fallback.img\noptions\t${sdoptions} ${LINUX_FALLBACK_OPTIONS}" >"$(get_entry_root "$ESP")$entry-fallback.conf"
-            done < <(find "${ESP}" -maxdepth 2 -type f -name "${KERNEL_PATTERN}" -printf "/%P\n")
+            done < <(find "${ESP}" -maxdepth 1 -type f -name "${KERNEL_PATTERN}" -printf "/%P\n")
 
             if [[ ! "$(ls -A ${ESP}/loader/entries)" ]]; then
                 echo "Error: There are no boot loader entries after entry generation"
