@@ -28,7 +28,8 @@ makedepends=('git' 'cmake' 'ninja' 'libffi' 'libedit' 'ncurses' 'libxml2' 'pytho
 checkdepends=("python-psutil")
 source=("llvm-project::git+https://github.com/llvm/llvm-project.git"
         "llvm-config.h"
-        "https://raw.githubusercontent.com/CachyOS/CachyOS-PKGBUILDS/master/llvm-git/0001-KCFI-sanitizer.patch")
+        "https://raw.githubusercontent.com/CachyOS/CachyOS-PKGBUILDS/master/llvm-git/0001-KCFI-sanitizer.patch"
+        "only-invoke-DiagnoseNullConversions-for-CPlusPlus.patch")
 
 md5sums=('SKIP'
          '295c343dcd457dc534662f011d7cff1a')
@@ -63,6 +64,8 @@ prepare() {
     cd llvm-project
     # Add kernel cfi
     patch -Np1 < ../0001-KCFI-sanitizer.patch
+    ## Speedup kernel builds https://reviews.llvm.org/D131532
+    patch -Np1 < ../only-invoke-DiagnoseNullConversions-for-CPlusPlus.patch
 }
 build() {
 	export CC=clang
