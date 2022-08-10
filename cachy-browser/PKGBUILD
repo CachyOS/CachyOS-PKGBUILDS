@@ -17,11 +17,15 @@ depends=(gtk3 libxt mime-types dbus-glib
     ffmpeg nss ttf-font libpulse
     aom harfbuzz graphite
 libvpx libjpeg zlib icu libevent pipewire dav1d)
-makedepends=(unzip zip diffutils yasm mesa imake inetutils
-    rust xorg-server-xwayland xorg-server-xvfb
-    autoconf2.13 clang llvm jack nodejs cbindgen nasm
-    python-setuptools python-zstandard git binutils lld dump_syms
-wasi-compiler-rt wasi-libc wasi-libc++ wasi-libc++abi mold python-pipenv python-pyqt5 python-cmd2)
+#makedepends=(unzip zip diffutils yasm mesa imake inetutils
+#    rust xorg-server-xwayland xorg-server-xvfb
+#    autoconf2.13 clang llvm jack nodejs cbindgen nasm
+#    python-setuptools python-zstandard git binutils lld dump_syms
+#wasi-compiler-rt wasi-libc wasi-libc++ wasi-libc++abi mold python-pipenv python-pyqt5 python-cmd2)
+makedepends=(unzip zip diffutils yasm mesa imake inetutils xorg-server-xvfb
+             autoconf2.13 rust clang llvm jack nodejs cbindgen nasm
+             python-setuptools python-zstandard git binutils lld dump_syms
+             'wasi-compiler-rt>13' 'wasi-libc>=1:0+258+30094b6' 'wasi-libc++>13' 'wasi-libc++abi>13' pciutils) # pciutils: only to avoid some PGO warning
 optdepends=('networkmanager: Location detection via available WiFi networks'
     'libnotify: Notification integration'
     'pulseaudio: Audio support'
@@ -68,9 +72,6 @@ ac_add_options --disable-elf-hack
 ac_add_options --disable-bootstrap
 ac_add_options --with-wasi-sysroot=/usr/share/wasi-sysroot
 ac_add_options --enable-default-toolkit=cairo-gtk3-wayland
-#ac_add_options --enable-default-toolkit=cairo-gtk3-x11-wayland
-
-export LDFLAGS+=" -Wl,--no-keep-memory"
 
 export AR=llvm-ar
 export CC='clang'
@@ -245,11 +246,6 @@ build() {
 
     # LTO needs more open files
     ulimit -n 4096
-
-    # -fno-plt with cross-LTO causes obscure LLVM errors
-    # LLVM ERROR: Function Import: link error
-    # CFLAGS="${CFLAGS/-fno-plt/}"
-    # CXXFLAGS="${CXXFLAGS/-fno-plt/}"
 
     # Do 3-tier PGO
     echo "Building instrumented browser..."
