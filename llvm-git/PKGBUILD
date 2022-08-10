@@ -15,8 +15,8 @@
 # Contributor: Tomas Wilhelmsson <tomas.wilhelmsson@gmail.com>
 
 
-pkgname=('llvm-git' 'llvm-libs-git' 'llvm-ocaml-git')
-pkgver=16.0.0_r431551.91d9b7b40794
+pkgname=('llvm-git' 'llvm-libs-git')
+pkgver=16.0.0_r432541.d7a47a9bb5bd
 pkgrel=1
 arch=('x86_64')
 url="https://llvm.org/"
@@ -86,22 +86,20 @@ build() {
         -D LLVM_BUILD_LLVM_DYLIB=ON \
         -D LLVM_LINK_LLVM_DYLIB=ON \
         -D LLVM_INSTALL_UTILS=ON \
-        -D LLVM_BUILD_DOCS=ON \
+        -D LLVM_BUILD_DOCS=OFF \
         -D LLVM_ENABLE_DOXYGEN=OFF \
-        -D CMAKE_C_COMPILER=clang \
-        -D CMAKE_CXX_COMPILER=clang++ \
-        -D LLVM_USE_LINKER=lld \
-        -D LLVM_ENABLE_SPHINX=ON \
+        -D LLVM_ENABLE_SPHINX=OFF \
+        -D LLVM_ENABLE_BINDINGS=OFF \
+        -D LLVM_ENABLE_OCAMLDOC=OFF \
         -D SPHINX_OUTPUT_HTML:BOOL=OFF \
         -D SPHINX_WARNINGS_AS_ERRORS=OFF \
         -D POLLY_ENABLE_GPGPU_CODEGEN=ON \
         -D LLDB_USE_SYSTEM_SIX=1 \
-        -D LLVM_ENABLE_PROJECTS="polly;lldb;lld;compiler-rt;clang-tools-extra;clang;lldb" \
+        -D LLVM_ENABLE_PROJECTS="polly;lldb;lld;compiler-rt;clang-tools-extra;clang" \
         -D LLVM_LIT_ARGS="-sv --ignore-fail" \
         -Wno-dev
 
     ninja -C _build $NINJAFLAGS
-    ninja -C _build $NINJAFLAGS ocaml_doc
 }
 
 check() {
@@ -111,7 +109,6 @@ check() {
     ninja -C _build $NINJAFLAGS check-polly
     ninja -C _build $NINJAFLAGS check-lld
     ninja -C _build $NINJAFLAGS check-lldb
-    ninja -C _build $NINJAFLAGS check-llvm-bolt
 }
 
 package_llvm-git() {
@@ -145,15 +142,7 @@ package_llvm-git() {
 
     # OCaml bindings go to a separate package
     rm -rf "$srcdir"/ocaml.{lib,doc}
-    mv "$pkgdir"/usr/lib/ocaml "$srcdir"/ocaml.lib
 
-    if [[ -d "${pkgdir}/usr/share/doc/LLVM/llvm/ocaml-html" && ! -d "${pkgdir}/usr/share/doc/llvm/ocaml-html" ]]
-    then
-        mv "$pkgdir"/usr/share/doc/LLVM/llvm/ocaml-html "$srcdir"/ocaml.doc
-    else
-        mv "$pkgdir"/usr/share/doc/llvm/ocaml-html "$srcdir"/ocaml.doc
-    fi
-    
     if [[ $CARCH == x86_64 ]]; then
         # Needed for multilib (https://bugs.archlinux.org/task/29951)
         # Header stub is taken from Fedora
@@ -205,17 +194,4 @@ package_llvm-libs-git() {
     install -Dm644 lld/LICENSE.TXT "$pkgdir"/usr/share/licenses/$pkgname/lld-LICENSE
     install -Dm644 lldb/LICENSE.TXT "$pkgdir"/usr/share/licenses/$pkgname/lldb-LICENSE
     install -Dm644 polly/LICENSE.TXT "$pkgdir"/usr/share/licenses/$pkgname/polly-LICENSE
-}
-
-package_llvm-ocaml-git() {
-    pkgdesc="OCaml bindings for LLVM"
-    depends=("llvm-git=$pkgver-$pkgrel" "ocaml" 'ocaml-ctypes')
-    conflicts=('llvm-ocaml')
-    provides=("llvm-ocaml")
-    
-    install -d "$pkgdir"/{usr/lib,usr/share/doc/$pkgname}
-    cp -a "$srcdir"/ocaml.lib "$pkgdir"/usr/lib/ocaml
-    cp -a "$srcdir"/ocaml.doc "$pkgdir"/usr/share/doc/$pkgname/html
-
-    install -Dm644 "$srcdir"/llvm-project/llvm/LICENSE.TXT  "$pkgdir"/usr/share/licenses/$pkgname/LICENSE
 }
