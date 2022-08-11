@@ -2,7 +2,7 @@
 _build_zfs=y
 _gen3=y
 
-pkgsuffix=cachyos
+pkgsuffix=zen
 pkgbase=linux-$pkgsuffix
 pkgver=5.19.1.zen1
 pkgrel=1.1
@@ -26,13 +26,6 @@ source=(
 if [ -n "$_build_zfs" ]; then
     source+=("git+https://github.com/openzfs/zfs.git#commit=db5fd16f0b7fd5bd5e19350829c46d526fed6d71")
 fi
-
-validpgpkeys=(
-  'ABAF11C65A2970B130ABE3C479BE3E4300411886'  # Linus Torvalds
-  '647F28654894E3BD457199BE38DBBDC86092693E'  # Greg Kroah-Hartman
-  'A2FF3A36AAA56654109064AB19802F8B0D70FC30'  # Jan Alexander Steffens (heftig)
-  'C5ADB4F3FEBBCE27A3E54D7D9AE4078033F8024D'  # Steven Barrett <steven@liquorix.net>
-)
 sha256sums=('SKIP'
             '28b4a6f7655079ff4a9cfe48763fae4c1e26be6956273d832062ceccddf23997'
             'SKIP')
