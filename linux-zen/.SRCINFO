@@ -1,8 +1,8 @@
-pkgbase = linux-cachyos
+pkgbase = linux-zen
 	pkgdesc = Linux ZEN
-	pkgver = 5.19.1.zen1
-	pkgrel = 1
-	url = https://github.com/zen-kernel/zen-kernel/commits/v5.19.1-zen1
+	pkgver = 5.19.1
+	pkgrel = 3
+	url = https://github.com/zen-kernel/zen-kernel/commits/v5.19-1
 	arch = x86_64
 	license = GPL2
 	makedepends = bc
@@ -20,18 +20,14 @@ pkgbase = linux-cachyos
 	makedepends = texlive-latexextra
 	makedepends = git
 	options = !strip
-	source = zen-kernel::git+https://github.com/zen-kernel/zen-kernel?signed#tag=v5.19.1-zen1
+	source = zen-kernel::git+https://github.com/zen-kernel/zen-kernel?signed#tag=v5.19-1
 	source = config
 	source = git+https://github.com/openzfs/zfs.git#commit=db5fd16f0b7fd5bd5e19350829c46d526fed6d71
-	validpgpkeys = ABAF11C65A2970B130ABE3C479BE3E4300411886
-	validpgpkeys = 647F28654894E3BD457199BE38DBBDC86092693E
-	validpgpkeys = A2FF3A36AAA56654109064AB19802F8B0D70FC30
-	validpgpkeys = C5ADB4F3FEBBCE27A3E54D7D9AE4078033F8024D
 	sha256sums = SKIP
 	sha256sums = 28b4a6f7655079ff4a9cfe48763fae4c1e26be6956273d832062ceccddf23997
 	sha256sums = SKIP
 
-pkgname = linux-cachyos
+pkgname = linux-zen
 	pkgdesc = The Linux ZEN kernel and modules
 	depends = coreutils
 	depends = kmod
@@ -45,11 +41,11 @@ pkgname = linux-cachyos
 	provides = UKSMD-BUILTIN
 	replaces = 
 
-pkgname = linux-cachyos-headers
+pkgname = linux-zen-headers
 	pkgdesc = Headers and scripts for building modules for the Linux ZEN kernel
 	depends = pahole
 
-pkgname = linux-cachyos-zfs
+pkgname = linux-zen-zfs
 	pkgdesc = zfs module for the Linux ZEN kernel
 	depends = pahole
-	depends = linux-cachyos=
+	depends = linux-zen=
