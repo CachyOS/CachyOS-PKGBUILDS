@@ -1,75 +1,21 @@
 # Maintainer: Vladislav Nepogodin (vnepogodin) <vnepogodin@cachyos.org>
-# Contributor: Jose Riha <jose1711 gmail com>
-# Contributor: Sebastian J. Bronner <waschtl@sbronner.com>
-# Contributor: Patrick Jackson <PatrickSJackson gmail com>
-# Contributor: Christoph Vigano <mail@cvigano.de>
 
 pkgname=cachyos-st-config
 pkgver=0.8.5
-pkgrel=2
-pkgdesc='A simple virtual terminal emulator for X.'
+pkgrel=3
+pkgdesc='CachyOS ST'
 arch=('i686' 'x86_64' 'armv7h' 'aarch64')
 license=('MIT')
-depends=(libxft harfbuzz ttf-fira-code)
-url=https://st.suckless.org
-source=(https://dl.suckless.org/st/st-$pkgver.tar.gz
-        terminfo.patch
-        config.def.h
-        st-selectioncolors-0.8.4.diff
-        st-boxdraw_v2-0.8.5.diff
-        https://st.suckless.org/patches/ligatures/0.8.4/st-ligatures-boxdraw-20210824-0.8.4.diff
-        https://st.suckless.org/patches/universcroll/st-universcroll-0.8.4.diff)
-sha256sums=('ea6832203ed02ff74182bcb8adaa9ec454c8f989e79232cb859665e2f544ab37'
-            'f9deea445a5c6203a0e8e699f3c3b55e27275f17fb408562c4dd5d649edeea23'
-            'e653e1745f7055473b5e366d66ce619f6138fe83eb059ca221a4e45ebbf19218'
-            '946340d94d838f4d33da1ddbec7f1fc3c6bc864661193f80a61cb72b60526b01'
-            'cc0bff95e289e580721ab79c3342e2cfc5d08089fb8f340815e17fff411682d6'
-            '07156a5e40cd64afee82bba5456d34a3432c3651adbde19cd4765a8bca592af9'
-            '7b7e0185713cc3dc763c744b28aa3810a3704b733241c8330cada44b7721b045')
+depends=(libxft harfbuzz ttf-hack ttf-fira-code ttf-jetbrains-mono)
+makedepends=('git')
+url="https://github.com/cachyos/$pkgname"
+_commit=92664bd9598047d9d41558aea2966e7fac4a0c30
+source=(git+$url.git#commit=${_commit})
+sha256sums=('SKIP')
 provides=('st')
 conflicts=('st')
-_sourcedir=st-$pkgver
+_sourcedir=cachyos-st-config
 _makeopts="--directory=$_sourcedir"
-
-prepare() {
-  patch --directory="$_sourcedir" --strip=0 < ${srcdir}/terminfo.patch
-  cd ${srcdir}/st-${pkgver}
-
-  # This package provides a mechanism to provide a custom config.h. Multiple
-  # configuration states are determined by the presence of two files in
-  # $BUILDDIR:
-  #
-  # config.h  config.def.h  state
-  # ========  ============  =====
-  # absent    absent        Initial state. The user receives a message on how
-  #                         to configure this package.
-  # absent    present       The user was previously made aware of the
-  #                         configuration options and has not made any
-  #                         configuration changes. The package is built using
-  #                         default values.
-  # present                 The user has supplied his or her configuration. The
-  #                         file will be copied to $srcdir and used during
-  #                         build.
-  #
-  # After this test, config.def.h is copied from $srcdir to $BUILDDIR to
-  # provide an up to date template for the user.
-  #if [ -e "$BUILDDIR/config.h" ]
-  #then
-  #  cp "$BUILDDIR/config.h" "$_sourcedir"
-  #elif [ ! -e "$BUILDDIR/config.def.h" ]
-  #then
-  #  msg='This package can be configured in config.h. Copy the config.def.h '
-  #  msg+='that was just placed into the package directory to config.h and '
-  #  msg+='modify it to change the configuration. Or just leave it alone to '
-  #  msg+='continue to use default values.'
-  #  echo "$msg"
-  #fi
-  cp "${srcdir}/config.def.h" ${srcdir}/st-${pkgver}/
-  #patch -Np1 -i ${srcdir}/st-universcroll-0.8.4.diff
-  patch -Np1 -i ${srcdir}/st-boxdraw_v2-0.8.5.diff
-  patch -Np1 -i ${srcdir}/st-ligatures-boxdraw-20210824-0.8.4.diff
-  patch -Np1 -i ${srcdir}/st-selectioncolors-0.8.4.diff
-}
 
 build() {
   make $_makeopts X11INC=/usr/include/X11 X11LIB=/usr/lib/X11
