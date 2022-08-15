@@ -5,7 +5,6 @@ post_install() {
   systemctl enable ananicy-cpp 
   systemctl enable reflector.timer
   systemctl enable uksmd
-  systemctl enable ksmd
 }
 
 post_upgrade() {
@@ -16,5 +15,4 @@ post_upgrade() {
   systemctl is-active ananicy-cpp >/dev/null || systemctl enable ananicy-cpp.service
   systemctl is-active reflector.timer >/dev/null || systemctl enable reflector.timer
   systemctl is-active uksmd >/dev/null || systemctl enable uksmd
-  systemctl is-active ksmd >/dev/null || systemctl enable ksmd
   }
