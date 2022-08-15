@@ -8,7 +8,7 @@ pkgname=cachy-browser
 _pkgname=Cachy
 __pkgname=cachy
 pkgver=103.0.2
-pkgrel=1
+pkgrel=2
 pkgdesc="Community-maintained fork of Firefox, focused on privacy, security and freedom."
 arch=(x86_64 x86_64_v3)
 license=(MPL GPL LGPL)
@@ -230,6 +230,8 @@ END
     patch -Np1 -i ${_patches_dir}/fix-psutil-dev.patch
     msg2 "fix for glibc 2.36"
     patch -Np1 -i ${_patches_dir}/glibc236.patch
+    msg2 "fix for glibc 2.36"
+    patch -Np1 -i ${_patches_dir}/rust163.patch
     rm -f ${srcdir}/cachyos-browser-common/source_files/mozconfig
     cp -r ${srcdir}/cachyos-browser-common/source_files/browser ./
 }
