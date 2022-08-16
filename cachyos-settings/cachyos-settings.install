@@ -1,6 +1,4 @@
 post_install() {
-  systemctl enable fstrim.timer
-  systemctl enable haveged
   systemctl enable irqbalance
   systemctl enable ananicy-cpp 
   systemctl enable reflector.timer
@@ -9,8 +7,6 @@ post_install() {
 
 post_upgrade() {
   msg "Attempting to enable services..."
-  systemctl is-active fstrim.timer >/dev/null || systemctl enable fstrim.timer
-  systemctl is-active haveged >/dev/null || systemctl enable haveged
   systemctl is-active irqbalance >/dev/null || systemctl enable irqbalance
   systemctl is-active ananicy-cpp >/dev/null || systemctl enable ananicy-cpp.service
   systemctl is-active reflector.timer >/dev/null || systemctl enable reflector.timer
