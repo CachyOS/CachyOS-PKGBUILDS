@@ -35,8 +35,9 @@ validpgpkeys=('ECCAC84C1BA08A6CC8E63FBBF22FB1D78A77AEAB')    # Giancarlo Razzoli
 
 prepare() {
   cd $pkgname-$pkgver
+  patch -Np1 < "$srcdir"/0001-cachyos-mkinitcpio.patch
   patch -Np1 < "$srcdir"/0001-Fix-the-warning-about-missing-modules.builtin.modinf.patch
-  patch -Np1 < "$srcdir"/0001-Fix-the-warning-about-missing-modules.builtin.modinf.patch
+
    
 }
 
