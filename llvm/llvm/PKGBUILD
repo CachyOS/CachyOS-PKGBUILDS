@@ -2,17 +2,21 @@
 
 # Based on LordHeavy's LLVM
 pkgbase=llvm
-pkgname=('lldb' 'lld' 'polly' 'compiler-rt' 'clang' 'llvm-ocaml' 'llvm-libs' 'llvm')
+pkgname=('lldb' 'lld' 'polly' 'compiler-rt' 'clang' 'llvm-libs' 'llvm')
 pkgdesc='Low Level Virtual Machine (git version)'
 pkgver=15.0.0
 pkgrel=1
 arch=('x86_64')
 url="https://llvm.org/"
 license=('custom:Apache 2.0 with LLVM Exception')
-makedepends=('git' 'cmake' 'ninja' 'libffi' 'libedit' 'ncurses' 'libxml2'
-             'python-sphinx' 'ocaml' 'ocaml-ctypes' 'ocaml-findlib' 'lua53'
-             'python-recommonmark' 'python-sphinx-automodapi''ocl-icd' 'opencl-headers'
-             'swig' 'python' 'libunwind' 'python2' 'clang' 'llvm' 'lld' 'llvm-libs')
+#makedepends=('git' 'cmake' 'ninja' 'libffi' 'libedit' 'ncurses' 'libxml2'
+#             'python-sphinx' 'ocaml' 'ocaml-ctypes' 'ocaml-findlib' 'lua53'
+#             'python-recommonmark' 'python-sphinx-automodapi' 'ocl-icd' 'opencl-headers'
+#             'swig' 'python' 'libunwind' 'python2' 'clang' 'llvm' 'lld' 'llvm-libs' 'ocaml-stdlib-shims')
+makedepends=('git' 'cmake' 'ninja' 'libffi' 'libedit' 'ncurses' 'libxml2' 'python-sphinx'
+             'python-sphinx-automodapi' 'lldb' 'ocaml' 'ocaml-ctypes' 'ocaml-findlib'
+             'python-sphinx' 'python-recommonmark' 'swig' 'python' 'python-six' 'lua53'
+             'ocl-icd' 'opencl-headers' 'z3' 'jsoncpp' 'ocaml-stdlib-shims' 'clang' 'llvm' 'lld' 'llvm-libs')
 _commit=0334c1ac1b029a4191f16d2fc19360bb15728571
 source=("llvm-project::git+https://github.com/llvm/llvm-project.git#commit=$_commit"
         "llvm-config.h"
@@ -47,48 +51,42 @@ prepare() {
 }
 
 build() {
-    CFLAGS+=" -ffile-prefix-map=$srcdir=${DBGSRCDIR:-/usr/src/debug}"
-    CXXFLAGS+=" -ffile-prefix-map=$srcdir=${DBGSRCDIR:-/usr/src/debug}"
-    CFLAGS+=' -I/usr/include/tensorflow'
-    CXXFLAGS+=' -I/usr/include/tensorflow'
-    CFLAGS+=' -fasynchronous-unwind-tables'
-    CXXFLAGS+=' -fasynchronous-unwind-tables'
-    LDFLAGS+=' -fasynchronous-unwind-tables'
 
-    export CC="clang -v"
-    export CXX="clang++ -v"
+    export CC="clang"
+    export CXX="clang++"
 
     cmake \
         -B _build \
-        -S llvm-project/llvm  -G Ninja \
-        -Wno-dev \
-        -D CMAKE_C_FLAGS="$CFLAGS" \
-        -D CMAKE_CXX_FLAGS="$CXXFLAGS" \
+        -S "$srcdir"/llvm-project/llvm  \
+        -G Ninja \
         -D CMAKE_BUILD_TYPE=Release \
         -D CMAKE_INSTALL_PREFIX=/usr \
-        -D LLVM_APPEND_VC_REV=ON \
-        -D LLVM_HOST_TRIPLE="$CHOST" \
-        -D LLVM_ENABLE_RTTI=ON \
-        -D LLVM_ENABLE_LTO=Thin \
-        -D LLVM_USE_LINKER=lld \
-        -D LLVM_ENABLE_FFI=ON \
+        -D CMAKE_INSTALL_DOCDIR=share/doc \
         -D LLVM_BINUTILS_INCDIR=/usr/include \
-        -D FFI_INCLUDE_DIR="$(pkg-config --variable=includedir libffi)" \
+        -D LLVM_APPEND_VC_REV=ON \
+        -D LLVM_VERSION_SUFFIX="" \
+        -D LLVM_HOST_TRIPLE=$CHOST \
+        -D LLVM_ENABLE_RTTI=ON \
+        -D LLVM_ENABLE_FFI=ON \
+        -D FFI_INCLUDE_DIR:PATH="$(pkg-config --variable=includedir libffi)" \
         -D LLVM_BUILD_LLVM_DYLIB=ON \
         -D LLVM_LINK_LLVM_DYLIB=ON \
         -D LLVM_INSTALL_UTILS=ON \
         -D LLVM_BUILD_DOCS=ON \
-        -D LLVM_EXPERIMENTAL_TARGETS_TO_BUILD=AVR \
+        -D LLVM_ENABLE_DOXYGEN=OFF \
         -D LLVM_ENABLE_SPHINX=ON \
-        -D SPHINX_OUTPUT_HTML=OFF \
+        -D LLVM_ENABLE_BINDINGS=OFF \
+        -D SPHINX_OUTPUT_HTML:BOOL=OFF \
         -D SPHINX_WARNINGS_AS_ERRORS=OFF \
         -D POLLY_ENABLE_GPGPU_CODEGEN=ON \
-        -D LLVM_VERSION_SUFFIX="" \
-        -D LLDB_ENABLE_PYTHON=ON \
+        -D LLVM_INCLUDE_BENCHMARKS=OFF \
         -D LLDB_USE_SYSTEM_SIX=1 \
-        -D LLVM_ENABLE_PROJECTS="lldb;polly;compiler-rt;lld;clang-tools-extra;clang"
+        -D LLVM_ENABLE_PROJECTS="lldb;polly;compiler-rt;lld;clang-tools-extra;clang" \
+        -D LLVM_LIT_ARGS="-sv --ignore-fail" \
+        -D LLVM_USE_LINKER=mold \
+        -Wno-dev
 
-    ninja -C _build all ocaml_doc
+    ninja -C _build
     DESTDIR="$srcdir/fakeinstall" ninja -C _build install
 }
 
@@ -232,18 +230,6 @@ package_llvm-libs() {
     _fakeinstall fakeinstall/usr/lib/LLVMgold.so
     install -d "$pkgdir/usr/lib/bfd-plugins"
     ln -s ../LLVMgold.so "$pkgdir/usr/lib/bfd-plugins/LLVMgold.so"
-
-    install -Dm644 "$srcdir"/llvm-project/llvm/LICENSE.TXT "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
-}
-
-package_llvm-ocaml() {
-    _ocamlver="$(ocamlc --version)"
-
-    pkgdesc="OCaml bindings for LLVM (git version)"
-    depends=("llvm=$pkgver-$pkgrel" "ocaml=$_ocamlver" 'ocaml-ctypes')
-    provides=("llvm-ocaml=$pkgver")
-
-    _fakeinstall fakeinstall/usr/lib/ocaml
 
     install -Dm644 "$srcdir"/llvm-project/llvm/LICENSE.TXT "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
 }
