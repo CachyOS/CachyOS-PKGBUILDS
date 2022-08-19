@@ -26,10 +26,12 @@ update_configs() {
    local_configs=$(ls ${local_config_dir})
    db_configs="$(ls ${db_config_dir}/graphic_drivers) $(ls ${db_config_dir}/network_drivers)"
    for db_config in ${db_configs} ; do
-      if [ -e "${db_config_dir}/graphic_drivers/${db_config}/MHWDCONFIG" ] ; then
+      if [ -e "${db_config_dir}/graphic_drivers/${db_config}/MHWDCONFIG" ]; then
          . "${db_config_dir}/graphic_drivers/${db_config}/MHWDCONFIG"
-      else
+      elif [ -e "${db_config_dir}/network_drivers/${db_config}/MHWDCONFIG" ]; then
          . "${db_config_dir}/network_drivers/${db_config}/MHWDCONFIG"
+      else
+         continue
       fi
       db_config_ver=${VERSION}
       if [ -e "${local_config_dir}/${NAME}/MHWDCONFIG" ] ; then
