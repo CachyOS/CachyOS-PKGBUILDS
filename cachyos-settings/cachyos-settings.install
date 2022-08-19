@@ -1,4 +1,5 @@
 post_install() {
+  msg2 "Attempting to enable services..."
   systemctl enable irqbalance
   systemctl enable ananicy-cpp 
   systemctl enable reflector.timer
@@ -6,7 +7,7 @@ post_install() {
 }
 
 post_upgrade() {
-  msg "Attempting to enable services..."
+  msg2 "Attempting to enable services..."
   systemctl is-active irqbalance >/dev/null || systemctl enable irqbalance
   systemctl is-active ananicy-cpp >/dev/null || systemctl enable ananicy-cpp.service
   systemctl is-active reflector.timer >/dev/null || systemctl enable reflector.timer
