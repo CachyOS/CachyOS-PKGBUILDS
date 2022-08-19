@@ -7,8 +7,8 @@
 
 pkgname=binutils
 pkgver=2.39
-_commit=b51c2fec1da205ea3e7354cbb3e253018d64873c
-pkgrel=3
+_commit=f89058434f13382c85b8729464192bc7763d88a4
+pkgrel=4
 pkgdesc='A set of programs to assemble and manipulate binary and object files'
 arch=(x86_64)
 url='https://www.gnu.org/software/binutils/'
@@ -20,7 +20,7 @@ checkdepends=(dejagnu debuginfod bc)
 optdepends=('debuginfod: for debuginfod server/client functionality')
 conflicts=(binutils-multilib)
 replaces=(binutils-multilib)
-options=(staticlibs !distcc !ccache !debug)
+options=(staticlibs !distcc !ccache debug)
 source=(git+https://sourceware.org/git/binutils-gdb.git#commit=${_commit}
         gold-warn-unsupported.patch)
 sha256sums=('SKIP'
@@ -51,6 +51,7 @@ build() {
     --with-lib-path=/usr/lib:/usr/local/lib \
     --with-bugurl=https://bugs.archlinux.org/ \
     --enable-cet \
+    --enable-default-execstack=no \
     --enable-deterministic-archives \
     --enable-gold \
     --enable-install-libiberty \
