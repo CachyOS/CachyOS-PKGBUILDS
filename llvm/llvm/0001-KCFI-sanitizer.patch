@@ -1,0 +1,3089 @@
+From 98f61cefa7f59fb40c1fd9a76f1268661b90cd1f Mon Sep 17 00:00:00 2001
+From: Sami Tolvanen <samitolvanen@google.com>
+Date: Tue, 15 Feb 2022 14:32:08 -0800
+Subject: [PATCH] KCFI sanitizer
+
+The KCFI sanitizer, enabled with `-fsanitize=kcfi`, implements a
+forward-edge control flow integrity scheme for indirect calls. It
+uses a !kcfi_type metadata node to attach a type identifier for each
+function and injects verification code before indirect calls.
+
+Unlike the current CFI schemes implemented in LLVM, KCFI does not
+require LTO, does not alter function references to point to a jump
+table, and never breaks function address equality. KCFI is intended
+to be used in low-level code, such as operating system kernels,
+where the existing schemes can cause undue complications because
+of the aforementioned properties. However, unlike the existing
+schemes, KCFI is limited to validating only indirect calls and is
+not compatible with executable-only memory.
+
+KCFI does not provide runtime support, but always traps when a
+type mismatch is encountered. Users of the scheme are expected
+to handle the trap. With `-fsanitize=kcfi`, Clang emits a `kcfi`
+operand bundle to indirect calls, and LLVM lowers this to a
+known architecture-specific sequence of instructions for each
+callsite to make runtime patching easier for users who require this
+functionality.
+
+A KCFI type identifier is a 32-bit constant produced by taking the
+lower half of xxHash64 from a C++ mangled typename. If a program
+contains indirect calls to assembly functions, they must be
+manually annotated with the expected type identifiers to prevent
+errors. To make this easier, Clang generates a weak SHN_ABS
+`__kcfi_typeid_<function>` symbol for each address-taken function
+declaration, which can be used to annotate functions in assembly
+as long as at least one C translation unit linked into the program
+takes the function address. For example on AArch64, we might have
+the following code:
+
+```
+.c:
+  int f(void);
+  int (*p)(void) = f;
+  p();
+
+.s:
+  .4byte __kcfi_typeid_f
+  .global f
+  f:
+    ...
+```
+
+Note that X86 uses a different preamble format for compatibility
+with Linux kernel tooling. See the comments in
+`X86AsmPrinter::emitKCFITypeId` for details.
+
+As users of KCFI may need to locate trap locations for binary
+validation and error handling, LLVM can additionally emit the
+locations of traps to a `.kcfi_traps` section.
+
+Similarly to other sanitizers, KCFI checking can be disabled for a
+function with a `no_sanitize("kcfi")` function attribute.
+
+Differential Revision: https://reviews.llvm.org/D119296
+
+# Conflicts:
+#	llvm/lib/CodeGen/MachineInstr.cpp
+---
+ clang/docs/ControlFlowIntegrity.rst           |  13 ++
+ clang/docs/UsersManual.rst                    |   2 +
+ clang/include/clang/Basic/Features.def        |   1 +
+ clang/include/clang/Basic/Sanitizers.def      |   3 +
+ clang/lib/CodeGen/CGCall.cpp                  |   4 +
+ clang/lib/CodeGen/CodeGenFunction.cpp         |   8 ++
+ clang/lib/CodeGen/CodeGenFunction.h           |   3 +
+ clang/lib/CodeGen/CodeGenModule.cpp           |  75 +++++++++++
+ clang/lib/CodeGen/CodeGenModule.h             |   9 ++
+ clang/lib/Driver/SanitizerArgs.cpp            |  15 ++-
+ clang/lib/Driver/ToolChain.cpp                |   3 +
+ clang/test/CodeGen/kcfi.c                     |  58 ++++++++
+ clang/test/Driver/fsanitize.c                 |  12 ++
+ llvm/docs/LangRef.rst                         |  40 ++++++
+ llvm/include/llvm/CodeGen/AsmPrinter.h        |   3 +
+ .../llvm/CodeGen/GlobalISel/CallLowering.h    |   3 +
+ llvm/include/llvm/CodeGen/MachineFunction.h   |   8 +-
+ llvm/include/llvm/CodeGen/MachineInstr.h      |  58 ++++++--
+ llvm/include/llvm/CodeGen/SelectionDAGNodes.h |   5 +
+ llvm/include/llvm/CodeGen/TargetLowering.h    |   9 ++
+ llvm/include/llvm/IR/FixedMetadataKinds.def   |   1 +
+ llvm/include/llvm/IR/InstrTypes.h             |   3 +-
+ llvm/include/llvm/IR/LLVMContext.h            |   1 +
+ llvm/include/llvm/MC/MCObjectFileInfo.h       |   3 +
+ llvm/lib/CodeGen/AsmPrinter/AsmPrinter.cpp    |  27 ++++
+ llvm/lib/CodeGen/GlobalISel/CallLowering.cpp  |   6 +
+ llvm/lib/CodeGen/MIRParser/MILexer.cpp        |   1 +
+ llvm/lib/CodeGen/MIRParser/MILexer.h          |   1 +
+ llvm/lib/CodeGen/MIRParser/MIParser.cpp       |  17 +++
+ llvm/lib/CodeGen/MIRPrinter.cpp               |   6 +
+ llvm/lib/CodeGen/MachineFunction.cpp          |   5 +-
+ llvm/lib/CodeGen/MachineInstr.cpp             |  44 ++++--
+ .../lib/CodeGen/SelectionDAG/InstrEmitter.cpp |   3 +
+ .../SelectionDAG/SelectionDAGBuilder.cpp      |  16 ++-
+ llvm/lib/IR/Instructions.cpp                  |   3 +-
+ llvm/lib/IR/LLVMContext.cpp                   |   5 +
+ llvm/lib/IR/Verifier.cpp                      |  33 ++++-
+ llvm/lib/MC/MCObjectFileInfo.cpp              |  19 +++
+ llvm/lib/Target/AArch64/AArch64.h             |   2 +
+ llvm/lib/Target/AArch64/AArch64AsmPrinter.cpp | 106 +++++++++++++++
+ .../AArch64/AArch64ExpandPseudoInsts.cpp      |   1 +
+ llvm/lib/Target/AArch64/AArch64FastISel.cpp   |   5 +
+ .../Target/AArch64/AArch64ISelLowering.cpp    |   9 ++
+ llvm/lib/Target/AArch64/AArch64ISelLowering.h |   2 +
+ llvm/lib/Target/AArch64/AArch64InstrInfo.td   |   5 +
+ llvm/lib/Target/AArch64/AArch64KCFI.cpp       | 115 ++++++++++++++++
+ .../Target/AArch64/AArch64TargetMachine.cpp   |   3 +
+ llvm/lib/Target/AArch64/CMakeLists.txt        |   1 +
+ .../AArch64/GISel/AArch64CallLowering.cpp     |   5 +
+ llvm/lib/Target/X86/CMakeLists.txt            |   1 +
+ llvm/lib/Target/X86/X86.h                     |   4 +
+ llvm/lib/Target/X86/X86AsmPrinter.cpp         |  81 +++++++++++
+ llvm/lib/Target/X86/X86AsmPrinter.h           |   6 +
+ llvm/lib/Target/X86/X86ExpandPseudo.cpp       |   1 +
+ llvm/lib/Target/X86/X86FastISel.cpp           |   4 +
+ llvm/lib/Target/X86/X86ISelLowering.cpp       |   8 ++
+ llvm/lib/Target/X86/X86ISelLowering.h         |   2 +
+ llvm/lib/Target/X86/X86InstrCompiler.td       |   9 ++
+ llvm/lib/Target/X86/X86KCFI.cpp               | 126 ++++++++++++++++++
+ llvm/lib/Target/X86/X86MCInstLower.cpp        |  49 +++++++
+ llvm/lib/Target/X86/X86TargetMachine.cpp      |  29 ++--
+ .../InstCombine/InstCombineCalls.cpp          |  25 ++++
+ .../Scalar/TailRecursionElimination.cpp       |  10 +-
+ llvm/lib/Transforms/Utils/InlineFunction.cpp  |   2 +
+ .../Bitcode/operand-bundles-bc-analyzer.ll    |   1 +
+ llvm/test/CodeGen/AArch64/O0-pipeline.ll      |   1 +
+ llvm/test/CodeGen/AArch64/O3-pipeline.ll      |   1 +
+ llvm/test/CodeGen/AArch64/kcfi-bti.ll         |  92 +++++++++++++
+ .../AArch64/kcfi-patchable-function-prefix.ll |  47 +++++++
+ llvm/test/CodeGen/AArch64/kcfi.ll             |  79 +++++++++++
+ llvm/test/CodeGen/MIR/X86/instr-cfi-type.mir  |  42 ++++++
+ llvm/test/CodeGen/X86/O0-pipeline.ll          |   2 +
+ .../X86/kcfi-patchable-function-prefix.ll     |  52 ++++++++
+ llvm/test/CodeGen/X86/kcfi.ll                 | 117 ++++++++++++++++
+ llvm/test/CodeGen/X86/opt-pipeline.ll         |   2 +
+ .../InstCombine/kcfi-operand-bundles.ll       |  25 ++++
+ .../Transforms/TailCallElim/kcfi-bundle.ll    |  10 ++
+ llvm/test/Verifier/kcfi-operand-bundles.ll    |  16 +++
+ .../Verifier/metadata-function-kcfi-type.ll   |  39 ++++++
+ .../llvm/lib/Target/AArch64/BUILD.gn          |   1 +
+ .../gn/secondary/llvm/lib/Target/X86/BUILD.gn |   1 +
+ 81 files changed, 1612 insertions(+), 53 deletions(-)
+ create mode 100644 clang/test/CodeGen/kcfi.c
+ create mode 100644 llvm/lib/Target/AArch64/AArch64KCFI.cpp
+ create mode 100644 llvm/lib/Target/X86/X86KCFI.cpp
+ create mode 100644 llvm/test/CodeGen/AArch64/kcfi-bti.ll
+ create mode 100644 llvm/test/CodeGen/AArch64/kcfi-patchable-function-prefix.ll
+ create mode 100644 llvm/test/CodeGen/AArch64/kcfi.ll
+ create mode 100644 llvm/test/CodeGen/MIR/X86/instr-cfi-type.mir
+ create mode 100644 llvm/test/CodeGen/X86/kcfi-patchable-function-prefix.ll
+ create mode 100644 llvm/test/CodeGen/X86/kcfi.ll
+ create mode 100644 llvm/test/Transforms/InstCombine/kcfi-operand-bundles.ll
+ create mode 100644 llvm/test/Transforms/TailCallElim/kcfi-bundle.ll
+ create mode 100644 llvm/test/Verifier/kcfi-operand-bundles.ll
+ create mode 100644 llvm/test/Verifier/metadata-function-kcfi-type.ll
+
+diff --git a/clang/docs/ControlFlowIntegrity.rst b/clang/docs/ControlFlowIntegrity.rst
+index eaf870456b95..4c3223c359c8 100644
+--- a/clang/docs/ControlFlowIntegrity.rst
++++ b/clang/docs/ControlFlowIntegrity.rst
+@@ -306,6 +306,19 @@ the identity of function pointers is maintained, and calls across shared
+ library boundaries are no different from calls within a single program or
+ shared library.
+ 
++.. _kcfi:
++
++``-fsanitize=kcfi``
++-------------------
++
++This is an alternative indirect call control-flow integrity scheme designed
++for low-level system software, such as operating system kernels. Unlike
++``-fsanitize=cfi-icall``, it doesn't require ``-flto``, won't result in
++function pointers being replaced with jump table references, and never breaks
++cross-DSO function address equality. These properties make KCFI easier to
++adopt in low-level software. KCFI is limited to indirect call checking only,
++and isn't compatible with executable-only memory.
++
+ Member Function Pointer Call Checking
+ =====================================
+ 
+diff --git a/clang/docs/UsersManual.rst b/clang/docs/UsersManual.rst
+index 1d11b00a1a78..c5bc4b39864f 100644
+--- a/clang/docs/UsersManual.rst
++++ b/clang/docs/UsersManual.rst
+@@ -1709,6 +1709,8 @@ are listed below.
+       flow analysis.
+    -  ``-fsanitize=cfi``: :doc:`control flow integrity <ControlFlowIntegrity>`
+       checks. Requires ``-flto``.
++   -  ``-fsanitize=kcfi``: kernel indirect call forward-edge control flow
++      integrity.
+    -  ``-fsanitize=safe-stack``: :doc:`safe stack <SafeStack>`
+       protection against stack-based memory corruption errors.
+ 
+diff --git a/clang/include/clang/Basic/Features.def b/clang/include/clang/Basic/Features.def
+index 7151e923ae9c..0581c61dcba3 100644
+--- a/clang/include/clang/Basic/Features.def
++++ b/clang/include/clang/Basic/Features.def
+@@ -228,6 +228,7 @@ FEATURE(is_trivially_assignable, LangOpts.CPlusPlus)
+ FEATURE(is_trivially_constructible, LangOpts.CPlusPlus)
+ FEATURE(is_trivially_copyable, LangOpts.CPlusPlus)
+ FEATURE(is_union, LangOpts.CPlusPlus)
++FEATURE(kcfi, LangOpts.Sanitize.has(SanitizerKind::KCFI))
+ FEATURE(modules, LangOpts.Modules)
+ FEATURE(safe_stack, LangOpts.Sanitize.has(SanitizerKind::SafeStack))
+ FEATURE(shadow_call_stack,
+diff --git a/clang/include/clang/Basic/Sanitizers.def b/clang/include/clang/Basic/Sanitizers.def
+index 8e7b6cd0a7e2..c2137e3f61f6 100644
+--- a/clang/include/clang/Basic/Sanitizers.def
++++ b/clang/include/clang/Basic/Sanitizers.def
+@@ -127,6 +127,9 @@ SANITIZER_GROUP("cfi", CFI,
+                 CFIDerivedCast | CFIICall | CFIMFCall | CFIUnrelatedCast |
+                     CFINVCall | CFIVCall)
+ 
++// Kernel Control Flow Integrity
++SANITIZER("kcfi", KCFI)
++
+ // Safe Stack
+ SANITIZER("safe-stack", SafeStack)
+ 
+diff --git a/clang/lib/CodeGen/CGCall.cpp b/clang/lib/CodeGen/CGCall.cpp
+index dfa78bf59c65..17c9f9b62a8c 100644
+--- a/clang/lib/CodeGen/CGCall.cpp
++++ b/clang/lib/CodeGen/CGCall.cpp
+@@ -5324,6 +5324,10 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
+   SmallVector<llvm::OperandBundleDef, 1> BundleList =
+       getBundlesForFunclet(CalleePtr);
+ 
++  if (SanOpts.has(SanitizerKind::KCFI) &&
++      !isa_and_nonnull<FunctionDecl>(TargetDecl))
++    EmitKCFIOperandBundle(ConcreteCallee, BundleList);
++
+   if (const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(CurFuncDecl))
+     if (FD->hasAttr<StrictFPAttr>())
+       // All calls within a strictfp function are marked strictfp
+diff --git a/clang/lib/CodeGen/CodeGenFunction.cpp b/clang/lib/CodeGen/CodeGenFunction.cpp
+index 5012bd822bd3..33b3c6f79bc0 100644
+--- a/clang/lib/CodeGen/CodeGenFunction.cpp
++++ b/clang/lib/CodeGen/CodeGenFunction.cpp
+@@ -2594,6 +2594,14 @@ void CodeGenFunction::EmitSanitizerStatReport(llvm::SanitizerStatKind SSK) {
+   CGM.getSanStats().create(IRB, SSK);
+ }
+ 
++void CodeGenFunction::EmitKCFIOperandBundle(
++    const CGCallee &Callee, SmallVectorImpl<llvm::OperandBundleDef> &Bundles) {
++  const FunctionProtoType *FP =
++      Callee.getAbstractInfo().getCalleeFunctionProtoType();
++  if (FP)
++    Bundles.emplace_back("kcfi", CGM.CreateKCFITypeId(FP->desugar()));
++}
++
+ llvm::Value *
+ CodeGenFunction::FormResolverCondition(const MultiVersionResolverOption &RO) {
+   llvm::Value *Condition = nullptr;
+diff --git a/clang/lib/CodeGen/CodeGenFunction.h b/clang/lib/CodeGen/CodeGenFunction.h
+index 672acd844525..d81e813a55bb 100644
+--- a/clang/lib/CodeGen/CodeGenFunction.h
++++ b/clang/lib/CodeGen/CodeGenFunction.h
+@@ -4605,6 +4605,9 @@ public:
+   /// passing to a runtime sanitizer handler.
+   llvm::Constant *EmitCheckSourceLocation(SourceLocation Loc);
+ 
++  void EmitKCFIOperandBundle(const CGCallee &Callee,
++                             SmallVectorImpl<llvm::OperandBundleDef> &Bundles);
++
+   /// Create a basic block that will either trap or call a handler function in
+   /// the UBSan runtime with the provided arguments, and create a conditional
+   /// branch to it.
+diff --git a/clang/lib/CodeGen/CodeGenModule.cpp b/clang/lib/CodeGen/CodeGenModule.cpp
+index d87692face2a..80fdd851f960 100644
+--- a/clang/lib/CodeGen/CodeGenModule.cpp
++++ b/clang/lib/CodeGen/CodeGenModule.cpp
+@@ -47,6 +47,7 @@
+ #include "clang/CodeGen/BackendUtil.h"
+ #include "clang/CodeGen/ConstantInitBuilder.h"
+ #include "clang/Frontend/FrontendDiagnostic.h"
++#include "llvm/ADT/StringExtras.h"
+ #include "llvm/ADT/StringSwitch.h"
+ #include "llvm/ADT/Triple.h"
+ #include "llvm/Analysis/TargetLibraryInfo.h"
+@@ -66,6 +67,7 @@
+ #include "llvm/Support/MD5.h"
+ #include "llvm/Support/TimeProfiler.h"
+ #include "llvm/Support/X86TargetParser.h"
++#include "llvm/Support/xxhash.h"
+ 
+ using namespace clang;
+ using namespace CodeGen;
+@@ -573,6 +575,8 @@ void CodeGenModule::Release() {
+     CodeGenFunction(*this).EmitCfiCheckFail();
+     CodeGenFunction(*this).EmitCfiCheckStub();
+   }
++  if (LangOpts.Sanitize.has(SanitizerKind::KCFI))
++    finalizeKCFITypes();
+   emitAtAvailableLinkGuard();
+   if (Context.getTargetInfo().getTriple().isWasm())
+     EmitMainVoidAlias();
+@@ -755,6 +759,9 @@ void CodeGenModule::Release() {
+                               CodeGenOpts.SanitizeCfiCanonicalJumpTables);
+   }
+ 
++  if (LangOpts.Sanitize.has(SanitizerKind::KCFI))
++    getModule().addModuleFlag(llvm::Module::Override, "kcfi", 1);
++
+   if (CodeGenOpts.CFProtectionReturn &&
+       Target.checkCFProtectionReturnSupported(getDiags())) {
+     // Indicate that we want to instrument return control flow protection.
+@@ -1666,6 +1673,20 @@ llvm::ConstantInt *CodeGenModule::CreateCrossDsoCfiTypeId(llvm::Metadata *MD) {
+   return llvm::ConstantInt::get(Int64Ty, llvm::MD5Hash(MDS->getString()));
+ }
+ 
++llvm::ConstantInt *CodeGenModule::CreateKCFITypeId(QualType T) {
++  if (auto *FnType = T->getAs<FunctionProtoType>())
++    T = getContext().getFunctionType(
++        FnType->getReturnType(), FnType->getParamTypes(),
++        FnType->getExtProtoInfo().withExceptionSpec(EST_None));
++
++  std::string OutName;
++  llvm::raw_string_ostream Out(OutName);
++  getCXXABI().getMangleContext().mangleTypeName(T, Out);
++
++  return llvm::ConstantInt::get(Int32Ty,
++                                static_cast<uint32_t>(llvm::xxHash64(OutName)));
++}
++
+ void CodeGenModule::SetLLVMFunctionAttributes(GlobalDecl GD,
+                                               const CGFunctionInfo &Info,
+                                               llvm::Function *F, bool IsThunk) {
+@@ -2280,6 +2301,57 @@ void CodeGenModule::CreateFunctionTypeMetadataForIcall(const FunctionDecl *FD,
+       F->addTypeMetadata(0, llvm::ConstantAsMetadata::get(CrossDsoTypeId));
+ }
+ 
++void CodeGenModule::setKCFIType(const FunctionDecl *FD, llvm::Function *F) {
++  if (isa<CXXMethodDecl>(FD) && !cast<CXXMethodDecl>(FD)->isStatic())
++    return;
++
++  llvm::LLVMContext &Ctx = F->getContext();
++  llvm::MDBuilder MDB(Ctx);
++  F->setMetadata(llvm::LLVMContext::MD_kcfi_type,
++                 llvm::MDNode::get(
++                     Ctx, MDB.createConstant(CreateKCFITypeId(FD->getType()))));
++}
++
++static bool allowKCFIIdentifier(StringRef Name) {
++  // KCFI type identifier constants are only necessary for external assembly
++  // functions, which means it's safe to skip unusual names. Subset of
++  // MCAsmInfo::isAcceptableChar() and MCAsmInfoXCOFF::isAcceptableChar().
++  return llvm::all_of(Name, [](const char &C) {
++    return llvm::isAlnum(C) || C == '_' || C == '.';
++  });
++}
++
++void CodeGenModule::finalizeKCFITypes() {
++  llvm::Module &M = getModule();
++  for (auto &F : M.functions()) {
++    // Remove KCFI type metadata from non-address-taken local functions.
++    bool AddressTaken = F.hasAddressTaken();
++    if (!AddressTaken && F.hasLocalLinkage())
++      F.eraseMetadata(llvm::LLVMContext::MD_kcfi_type);
++
++    // Generate a constant with the expected KCFI type identifier for all
++    // address-taken function declarations to support annotating indirectly
++    // called assembly functions.
++    if (!AddressTaken || !F.isDeclaration())
++      continue;
++
++    const llvm::ConstantInt *Type;
++    if (const llvm::MDNode *MD = F.getMetadata(llvm::LLVMContext::MD_kcfi_type))
++      Type = llvm::mdconst::extract<llvm::ConstantInt>(MD->getOperand(0));
++    else
++      continue;
++
++    StringRef Name = F.getName();
++    if (!allowKCFIIdentifier(Name))
++      continue;
++
++    std::string Asm = (".weak __kcfi_typeid_" + Name + "\n.set __kcfi_typeid_" +
++                       Name + ", " + Twine(Type->getZExtValue()) + "\n")
++                          .str();
++    M.appendModuleInlineAsm(Asm);
++  }
++}
++
+ void CodeGenModule::SetFunctionAttributes(GlobalDecl GD, llvm::Function *F,
+                                           bool IsIncompleteFunction,
+                                           bool IsThunk) {
+@@ -2362,6 +2434,9 @@ void CodeGenModule::SetFunctionAttributes(GlobalDecl GD, llvm::Function *F,
+       !CodeGenOpts.SanitizeCfiCanonicalJumpTables)
+     CreateFunctionTypeMetadataForIcall(FD, F);
+ 
++  if (LangOpts.Sanitize.has(SanitizerKind::KCFI))
++    setKCFIType(FD, F);
++
+   if (getLangOpts().OpenMP && FD->hasAttr<OMPDeclareSimdDeclAttr>())
+     getOpenMPRuntime().emitDeclareSimdFunction(FD, F);
+ 
+diff --git a/clang/lib/CodeGen/CodeGenModule.h b/clang/lib/CodeGen/CodeGenModule.h
+index 5fbcc5ad1f5f..ac6761879a84 100644
+--- a/clang/lib/CodeGen/CodeGenModule.h
++++ b/clang/lib/CodeGen/CodeGenModule.h
+@@ -1436,6 +1436,9 @@ public:
+   /// Generate a cross-DSO type identifier for MD.
+   llvm::ConstantInt *CreateCrossDsoCfiTypeId(llvm::Metadata *MD);
+ 
++  /// Generate a KCFI type identifier for T.
++  llvm::ConstantInt *CreateKCFITypeId(QualType T);
++
+   /// Create a metadata identifier for the given type. This may either be an
+   /// MDString (for external identifiers) or a distinct unnamed MDNode (for
+   /// internal identifiers).
+@@ -1454,6 +1457,12 @@ public:
+   void CreateFunctionTypeMetadataForIcall(const FunctionDecl *FD,
+                                           llvm::Function *F);
+ 
++  /// Set type metadata to the given function.
++  void setKCFIType(const FunctionDecl *FD, llvm::Function *F);
++
++  /// Emit KCFI type identifier constants and remove unused identifiers.
++  void finalizeKCFITypes();
++
+   /// Whether this function's return type has no side effects, and thus may
+   /// be trivially discarded if it is unused.
+   bool MayDropFunctionReturn(const ASTContext &Context, QualType ReturnType);
+diff --git a/clang/lib/Driver/SanitizerArgs.cpp b/clang/lib/Driver/SanitizerArgs.cpp
+index 68fe90c7a69d..b6ebc8ad1842 100644
+--- a/clang/lib/Driver/SanitizerArgs.cpp
++++ b/clang/lib/Driver/SanitizerArgs.cpp
+@@ -37,7 +37,8 @@ static const SanitizerMask NotAllowedWithTrap = SanitizerKind::Vptr;
+ static const SanitizerMask NotAllowedWithMinimalRuntime =
+     SanitizerKind::Function | SanitizerKind::Vptr;
+ static const SanitizerMask RequiresPIE =
+-    SanitizerKind::DataFlow | SanitizerKind::HWAddress | SanitizerKind::Scudo;
++    SanitizerKind::DataFlow | SanitizerKind::HWAddress | SanitizerKind::Scudo |
++    SanitizerKind::KCFI;
+ static const SanitizerMask NeedsUnwindTables =
+     SanitizerKind::Address | SanitizerKind::HWAddress | SanitizerKind::Thread |
+     SanitizerKind::Memory | SanitizerKind::DataFlow;
+@@ -59,8 +60,9 @@ static const SanitizerMask RecoverableByDefault =
+     SanitizerKind::FloatDivideByZero | SanitizerKind::ObjCCast;
+ static const SanitizerMask Unrecoverable =
+     SanitizerKind::Unreachable | SanitizerKind::Return;
+-static const SanitizerMask AlwaysRecoverable =
+-    SanitizerKind::KernelAddress | SanitizerKind::KernelHWAddress;
++static const SanitizerMask AlwaysRecoverable = SanitizerKind::KernelAddress |
++                                               SanitizerKind::KernelHWAddress |
++                                               SanitizerKind::KCFI;
+ static const SanitizerMask NeedsLTO = SanitizerKind::CFI;
+ static const SanitizerMask TrappingSupported =
+     (SanitizerKind::Undefined & ~SanitizerKind::Vptr) | SanitizerKind::Integer |
+@@ -712,6 +714,13 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
+                      options::OPT_fno_sanitize_cfi_canonical_jump_tables, true);
+   }
+ 
++  if (AllAddedKinds & SanitizerKind::KCFI && DiagnoseErrors) {
++    if (AllAddedKinds & SanitizerKind::CFI)
++      D.Diag(diag::err_drv_argument_not_allowed_with)
++          << "-fsanitize=kcfi"
++          << lastArgumentForMask(D, Args, SanitizerKind::CFI);
++  }
++
+   Stats = Args.hasFlag(options::OPT_fsanitize_stats,
+                        options::OPT_fno_sanitize_stats, false);
+ 
+diff --git a/clang/lib/Driver/ToolChain.cpp b/clang/lib/Driver/ToolChain.cpp
+index 7a4319ea680f..6e43694a9212 100644
+--- a/clang/lib/Driver/ToolChain.cpp
++++ b/clang/lib/Driver/ToolChain.cpp
+@@ -1083,6 +1083,9 @@ SanitizerMask ToolChain::getSupportedSanitizers() const {
+       getTriple().getArch() == llvm::Triple::arm || getTriple().isWasm() ||
+       getTriple().isAArch64() || getTriple().isRISCV())
+     Res |= SanitizerKind::CFIICall;
++  if (getTriple().getArch() == llvm::Triple::x86_64 ||
++      getTriple().isAArch64(64))
++    Res |= SanitizerKind::KCFI;
+   if (getTriple().getArch() == llvm::Triple::x86_64 ||
+       getTriple().isAArch64(64) || getTriple().isRISCV())
+     Res |= SanitizerKind::ShadowCallStack;
+diff --git a/clang/test/CodeGen/kcfi.c b/clang/test/CodeGen/kcfi.c
+new file mode 100644
+index 000000000000..b0368d59fc74
+--- /dev/null
++++ b/clang/test/CodeGen/kcfi.c
+@@ -0,0 +1,58 @@
++// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm -fsanitize=kcfi -o - %s | FileCheck %s
++// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm -fsanitize=kcfi -x c++ -o - %s | FileCheck %s
++#if !__has_feature(kcfi)
++#error Missing kcfi?
++#endif
++
++/// Must emit __kcfi_typeid symbols for address-taken function declarations
++// CHECK: module asm ".weak __kcfi_typeid_[[F4:[a-zA-Z0-9_]+]]"
++// CHECK: module asm ".set __kcfi_typeid_[[F4]], [[#%d,HASH:]]"
++/// Must not __kcfi_typeid symbols for non-address-taken declarations
++// CHECK-NOT: module asm ".weak __kcfi_typeid_{{f6|_Z2f6v}}"
++typedef int (*fn_t)(void);
++
++// CHECK: define dso_local{{.*}} i32 @{{f1|_Z2f1v}}(){{.*}} !kcfi_type ![[#TYPE:]]
++int f1(void) { return 0; }
++
++// CHECK: define dso_local{{.*}} i32 @{{f2|_Z2f2v}}(){{.*}} !kcfi_type ![[#TYPE2:]]
++unsigned int f2(void) { return 2; }
++
++// CHECK-LABEL: define dso_local{{.*}} i32 @{{__call|_Z6__callPFivE}}(ptr{{.*}} %f)
++int __call(fn_t f) __attribute__((__no_sanitize__("kcfi"))) {
++  // CHECK-NOT: call{{.*}} i32 %{{.}}(){{.*}} [ "kcfi"
++  return f();
++}
++
++// CHECK: define dso_local{{.*}} i32 @{{call|_Z4callPFivE}}(ptr{{.*}} %f){{.*}}
++int call(fn_t f) {
++  // CHECK: call{{.*}} i32 %{{.}}(){{.*}} [ "kcfi"(i32 [[#HASH]]) ]
++  return f();
++}
++
++// CHECK-DAG: define internal{{.*}} i32 @{{f3|_ZL2f3v}}(){{.*}} !kcfi_type ![[#TYPE]]
++static int f3(void) { return 1; }
++
++// CHECK-DAG: declare !kcfi_type ![[#TYPE]]{{.*}} i32 @[[F4]]()
++extern int f4(void);
++
++/// Must not emit !kcfi_type for non-address-taken local functions
++// CHECK: define internal{{.*}} i32 @{{f5|_ZL2f5v}}()
++// CHECK-NOT: !kcfi_type
++// CHECK-SAME: {
++static int f5(void) { return 2; }
++
++// CHECK-DAG: declare !kcfi_type ![[#TYPE]]{{.*}} i32 @{{f6|_Z2f6v}}()
++extern int f6(void);
++
++int test(void) {
++  return call(f1) +
++         __call((fn_t)f2) +
++         call(f3) +
++         call(f4) +
++         f5() +
++         f6();
++}
++
++// CHECK-DAG: ![[#]] = !{i32 4, !"kcfi", i32 1}
++// CHECK-DAG: ![[#TYPE]] = !{i32 [[#HASH]]}
++// CHECK-DAG: ![[#TYPE2]] = !{i32 [[#%d,HASH2:]]}
+diff --git a/clang/test/Driver/fsanitize.c b/clang/test/Driver/fsanitize.c
+index d7fbeaa8c6f1..b2119a1800d3 100644
+--- a/clang/test/Driver/fsanitize.c
++++ b/clang/test/Driver/fsanitize.c
+@@ -649,6 +649,18 @@
+ // RUN: %clang -target x86_64-linux-gnu -fsanitize=cfi -fsanitize-stats -flto -c %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI-STATS
+ // CHECK-CFI-STATS: -fsanitize-stats
+ 
++// RUN: %clang -target x86_64-linux-gnu -fsanitize=kcfi -fsanitize=cfi -flto -fvisibility=hidden %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-KCFI-NOCFI
++// CHECK-KCFI-NOCFI: error: invalid argument '-fsanitize=kcfi' not allowed with '-fsanitize=cfi'
++
++// RUN: %clang -target x86_64-linux-gnu -fsanitize=kcfi -fsanitize-trap=kcfi %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-KCFI-NOTRAP
++// CHECK-KCFI-NOTRAP: error: unsupported argument 'kcfi' to option '-fsanitize-trap='
++
++// RUN: %clang -target x86_64-linux-gnu -fsanitize=kcfi %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-KCFI
++// CHECK-KCFI: "-fsanitize=kcfi"
++
++// RUN: %clang -target x86_64-linux-gnu -fsanitize=kcfi -fno-sanitize-recover=kcfi %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-KCFI-RECOVER
++// CHECK-KCFI-RECOVER: error: unsupported argument 'kcfi' to option '-fno-sanitize-recover='
++
+ // RUN: %clang_cl -fsanitize=address -c -MDd -### -- %s 2>&1 | FileCheck %s -check-prefix=CHECK-ASAN-DEBUGRTL
+ // RUN: %clang_cl -fsanitize=address -c -MTd -### -- %s 2>&1 | FileCheck %s -check-prefix=CHECK-ASAN-DEBUGRTL
+ // RUN: %clang_cl -fsanitize=address -c -LDd -### -- %s 2>&1 | FileCheck %s -check-prefix=CHECK-ASAN-DEBUGRTL
+diff --git a/llvm/docs/LangRef.rst b/llvm/docs/LangRef.rst
+index bc1f63f272f3..f1dc835d50ca 100644
+--- a/llvm/docs/LangRef.rst
++++ b/llvm/docs/LangRef.rst
+@@ -2645,6 +2645,23 @@ Pointer Authentication operand bundles are characterized by the
+ ``"ptrauth"`` operand bundle tag.  They are described in the
+ `Pointer Authentication <PointerAuth.html#operand-bundle>`__ document.
+ 
++.. _ob_kcfi:
++
++KCFI Operand Bundles
++^^^^^^^^^^^^^^^^^^^^
++
++A ``"kcfi"`` operand bundle on an indirect call indicates that the call will
++be preceded by a runtime type check, which validates that the call target is
++prefixed with a :ref:`type identifier<md_kcfi_type>` that matches the operand
++bundle attribute. For example:
++
++.. code-block:: llvm
++
++      call void %0() ["kcfi"(i32 1234)]
++
++Clang emits KCFI operand bundles and the necessary metadata with
++``-fsanitize=kcfi``.
++
+ .. _moduleasm:
+ 
+ Module-Level Inline Assembly
+@@ -7207,6 +7224,29 @@ Example:
+     }
+     !0 = !{i32 846595819, ptr @__llvm_rtti_proxy}
+ 
++.. _md_kcfi_type:
++
++'``kcfi_type``' Metadata
++^^^^^^^^^^^^^^^^^^^^^^^^
++
++The ``kcfi_type`` metadata can be used to attach a type identifier to
++functions that can be called indirectly. The type data is emitted before the
++function entry in the assembly. Indirect calls with the :ref:`kcfi operand
++bundle<ob_kcfi>` will emit a check that compares the type identifier to the
++metadata.
++
++Example:
++
++.. code-block:: text
++
++    define dso_local i32 @f() !kcfi_type !0 {
++      ret i32 0
++    }
++    !0 = !{i32 12345678}
++
++Clang emits ``kcfi_type`` metadata nodes for address-taken functions with
++``-fsanitize=kcfi``.
++
+ Module Flags Metadata
+ =====================
+ 
+diff --git a/llvm/include/llvm/CodeGen/AsmPrinter.h b/llvm/include/llvm/CodeGen/AsmPrinter.h
+index 5e900e9162d8..d5b844b706b2 100644
+--- a/llvm/include/llvm/CodeGen/AsmPrinter.h
++++ b/llvm/include/llvm/CodeGen/AsmPrinter.h
+@@ -401,6 +401,9 @@ public:
+ 
+   void emitBBAddrMapSection(const MachineFunction &MF);
+ 
++  void emitKCFITrapEntry(const MachineFunction &MF, const MCSymbol *Symbol);
++  virtual void emitKCFITypeId(const MachineFunction &MF);
++
+   void emitPseudoProbe(const MachineInstr &MI);
+ 
+   void emitRemarksSection(remarks::RemarkStreamer &RS);
+diff --git a/llvm/include/llvm/CodeGen/GlobalISel/CallLowering.h b/llvm/include/llvm/CodeGen/GlobalISel/CallLowering.h
+index 9bf1c134618c..997bd966cd22 100644
+--- a/llvm/include/llvm/CodeGen/GlobalISel/CallLowering.h
++++ b/llvm/include/llvm/CodeGen/GlobalISel/CallLowering.h
+@@ -144,6 +144,9 @@ public:
+ 
+     /// The stack index for sret demotion.
+     int DemoteStackIndex;
++
++    /// Expected type identifier for indirect calls with a CFI check.
++    const ConstantInt *CFIType = nullptr;
+   };
+ 
+   /// Argument handling is mostly uniform between the four places that
+diff --git a/llvm/include/llvm/CodeGen/MachineFunction.h b/llvm/include/llvm/CodeGen/MachineFunction.h
+index fc1188186ac4..d5cdd06e3020 100644
+--- a/llvm/include/llvm/CodeGen/MachineFunction.h
++++ b/llvm/include/llvm/CodeGen/MachineFunction.h
+@@ -1028,9 +1028,11 @@ public:
+   ///
+   /// This is allocated on the function's allocator and so lives the life of
+   /// the function.
+-  MachineInstr::ExtraInfo *createMIExtraInfo(
+-      ArrayRef<MachineMemOperand *> MMOs, MCSymbol *PreInstrSymbol = nullptr,
+-      MCSymbol *PostInstrSymbol = nullptr, MDNode *HeapAllocMarker = nullptr);
++  MachineInstr::ExtraInfo *
++  createMIExtraInfo(ArrayRef<MachineMemOperand *> MMOs,
++                    MCSymbol *PreInstrSymbol = nullptr,
++                    MCSymbol *PostInstrSymbol = nullptr,
++                    MDNode *HeapAllocMarker = nullptr, uint32_t CFIType = 0);
+ 
+   /// Allocate a string and populate it with the given external symbol name.
+   const char *createExternalSymbolName(StringRef Name);
+diff --git a/llvm/include/llvm/CodeGen/MachineInstr.h b/llvm/include/llvm/CodeGen/MachineInstr.h
+index 5f483a8d0312..7ad893ebfa80 100644
+--- a/llvm/include/llvm/CodeGen/MachineInstr.h
++++ b/llvm/include/llvm/CodeGen/MachineInstr.h
+@@ -16,6 +16,7 @@
+ #define LLVM_CODEGEN_MACHINEINSTR_H
+ 
+ #include "llvm/ADT/DenseMapInfo.h"
++#include "llvm/ADT/PointerEmbeddedInt.h"
+ #include "llvm/ADT/PointerSumType.h"
+ #include "llvm/ADT/SmallSet.h"
+ #include "llvm/ADT/ilist.h"
+@@ -144,24 +145,26 @@ private:
+   ///
+   /// This has to be defined eagerly due to the implementation constraints of
+   /// `PointerSumType` where it is used.
+-  class ExtraInfo final
+-      : TrailingObjects<ExtraInfo, MachineMemOperand *, MCSymbol *, MDNode *> {
++  class ExtraInfo final : TrailingObjects<ExtraInfo, MachineMemOperand *,
++                                          MCSymbol *, MDNode *, uint32_t> {
+   public:
+     static ExtraInfo *create(BumpPtrAllocator &Allocator,
+                              ArrayRef<MachineMemOperand *> MMOs,
+                              MCSymbol *PreInstrSymbol = nullptr,
+                              MCSymbol *PostInstrSymbol = nullptr,
+-                             MDNode *HeapAllocMarker = nullptr) {
++                             MDNode *HeapAllocMarker = nullptr,
++                             uint32_t CFIType = 0) {
+       bool HasPreInstrSymbol = PreInstrSymbol != nullptr;
+       bool HasPostInstrSymbol = PostInstrSymbol != nullptr;
+       bool HasHeapAllocMarker = HeapAllocMarker != nullptr;
++      bool HasCFIType = CFIType != 0;
+       auto *Result = new (Allocator.Allocate(
+-          totalSizeToAlloc<MachineMemOperand *, MCSymbol *, MDNode *>(
++          totalSizeToAlloc<MachineMemOperand *, MCSymbol *, MDNode *, uint32_t>(
+               MMOs.size(), HasPreInstrSymbol + HasPostInstrSymbol,
+-              HasHeapAllocMarker),
++              HasHeapAllocMarker, HasCFIType),
+           alignof(ExtraInfo)))
+           ExtraInfo(MMOs.size(), HasPreInstrSymbol, HasPostInstrSymbol,
+-                    HasHeapAllocMarker);
++                    HasHeapAllocMarker, HasCFIType);
+ 
+       // Copy the actual data into the trailing objects.
+       std::copy(MMOs.begin(), MMOs.end(),
+@@ -174,6 +177,8 @@ private:
+             PostInstrSymbol;
+       if (HasHeapAllocMarker)
+         Result->getTrailingObjects<MDNode *>()[0] = HeapAllocMarker;
++      if (HasCFIType)
++        Result->getTrailingObjects<uint32_t>()[0] = CFIType;
+ 
+       return Result;
+     }
+@@ -196,6 +201,10 @@ private:
+       return HasHeapAllocMarker ? getTrailingObjects<MDNode *>()[0] : nullptr;
+     }
+ 
++    uint32_t getCFIType() const {
++      return HasCFIType ? getTrailingObjects<uint32_t>()[0] : 0;
++    }
++
+   private:
+     friend TrailingObjects;
+ 
+@@ -208,6 +217,7 @@ private:
+     const bool HasPreInstrSymbol;
+     const bool HasPostInstrSymbol;
+     const bool HasHeapAllocMarker;
++    const bool HasCFIType;
+ 
+     // Implement the `TrailingObjects` internal API.
+     size_t numTrailingObjects(OverloadToken<MachineMemOperand *>) const {
+@@ -219,14 +229,17 @@ private:
+     size_t numTrailingObjects(OverloadToken<MDNode *>) const {
+       return HasHeapAllocMarker;
+     }
++    size_t numTrailingObjects(OverloadToken<uint32_t>) const {
++      return HasCFIType;
++    }
+ 
+     // Just a boring constructor to allow us to initialize the sizes. Always use
+     // the `create` routine above.
+     ExtraInfo(int NumMMOs, bool HasPreInstrSymbol, bool HasPostInstrSymbol,
+-              bool HasHeapAllocMarker)
++              bool HasHeapAllocMarker, bool HasCFIType)
+         : NumMMOs(NumMMOs), HasPreInstrSymbol(HasPreInstrSymbol),
+           HasPostInstrSymbol(HasPostInstrSymbol),
+-          HasHeapAllocMarker(HasHeapAllocMarker) {}
++          HasHeapAllocMarker(HasHeapAllocMarker), HasCFIType(HasCFIType) {}
+   };
+ 
+   /// Enumeration of the kinds of inline extra info available. It is important
+@@ -236,6 +249,7 @@ private:
+     EIIK_MMO = 0,
+     EIIK_PreInstrSymbol,
+     EIIK_PostInstrSymbol,
++    EIIK_CFIType,
+     EIIK_OutOfLine
+   };
+ 
+@@ -244,11 +258,12 @@ private:
+   // We work to optimize this common case by storing it inline here rather than
+   // requiring a separate allocation, but we fall back to an allocation when
+   // multiple pointers are needed.
+-  PointerSumType<ExtraInfoInlineKinds,
+-                 PointerSumTypeMember<EIIK_MMO, MachineMemOperand *>,
+-                 PointerSumTypeMember<EIIK_PreInstrSymbol, MCSymbol *>,
+-                 PointerSumTypeMember<EIIK_PostInstrSymbol, MCSymbol *>,
+-                 PointerSumTypeMember<EIIK_OutOfLine, ExtraInfo *>>
++  PointerSumType<
++      ExtraInfoInlineKinds, PointerSumTypeMember<EIIK_MMO, MachineMemOperand *>,
++      PointerSumTypeMember<EIIK_PreInstrSymbol, MCSymbol *>,
++      PointerSumTypeMember<EIIK_PostInstrSymbol, MCSymbol *>,
++      PointerSumTypeMember<EIIK_CFIType, PointerEmbeddedInt<uint32_t, 32>>,
++      PointerSumTypeMember<EIIK_OutOfLine, ExtraInfo *>>
+       Info;
+ 
+   DebugLoc DbgLoc; // Source line information.
+@@ -757,6 +772,18 @@ public:
+     return nullptr;
+   }
+ 
++  /// Helper to extract a CFI type hash if one has been added.
++  uint32_t getCFIType() const {
++    if (!Info)
++      return 0;
++    if (uint32_t Type = Info.get<EIIK_CFIType>())
++      return Type;
++    if (ExtraInfo *EI = Info.get<EIIK_OutOfLine>())
++      return EI->getCFIType();
++
++    return 0;
++  }
++
+   /// API for querying MachineInstr properties. They are the same as MCInstrDesc
+   /// queries but they are bundle aware.
+ 
+@@ -1786,6 +1813,9 @@ public:
+   /// instruction is removed or duplicated.
+   void setHeapAllocMarker(MachineFunction &MF, MDNode *MD);
+ 
++  /// Set the CFI type for the instruction.
++  void setCFIType(MachineFunction &MF, uint32_t Type);
++
+   /// Return the MIFlags which represent both MachineInstrs. This
+   /// should be used when merging two MachineInstrs into one. This routine does
+   /// not modify the MIFlags of this MachineInstr.
+@@ -1864,7 +1894,7 @@ private:
+   /// based on the number of pointers.
+   void setExtraInfo(MachineFunction &MF, ArrayRef<MachineMemOperand *> MMOs,
+                     MCSymbol *PreInstrSymbol, MCSymbol *PostInstrSymbol,
+-                    MDNode *HeapAllocMarker);
++                    MDNode *HeapAllocMarker, uint32_t CFIType);
+ };
+ 
+ /// Special DenseMapInfo traits to compare MachineInstr* by *value* of the
+diff --git a/llvm/include/llvm/CodeGen/SelectionDAGNodes.h b/llvm/include/llvm/CodeGen/SelectionDAGNodes.h
+index 389fbce72ad0..6c09dd17800b 100644
+--- a/llvm/include/llvm/CodeGen/SelectionDAGNodes.h
++++ b/llvm/include/llvm/CodeGen/SelectionDAGNodes.h
+@@ -615,6 +615,8 @@ private:
+ 
+   SDNodeFlags Flags;
+ 
++  uint32_t CFIType = 0;
++
+ public:
+   /// Unique and persistent id per SDNode in the DAG. Used for debug printing.
+   /// We do not place that under `#if LLVM_ENABLE_ABI_BREAKING_CHECKS`
+@@ -964,6 +966,9 @@ public:
+   /// If Flags is not in a defined state then this has no effect.
+   void intersectFlagsWith(const SDNodeFlags Flags);
+ 
++  void setCFIType(uint32_t Type) { CFIType = Type; }
++  uint32_t getCFIType() const { return CFIType; }
++
+   /// Return the number of values defined/returned by this operator.
+   unsigned getNumValues() const { return NumValues; }
+ 
+diff --git a/llvm/include/llvm/CodeGen/TargetLowering.h b/llvm/include/llvm/CodeGen/TargetLowering.h
+index 1bb2a8e50c07..a8ece1eee6a7 100644
+--- a/llvm/include/llvm/CodeGen/TargetLowering.h
++++ b/llvm/include/llvm/CodeGen/TargetLowering.h
+@@ -3930,6 +3930,9 @@ public:
+     return false;
+   }
+ 
++  /// Return true if the target supports kcfi operand bundles.
++  virtual bool supportKCFIBundles() const { return false; }
++
+   /// Perform necessary initialization to handle a subset of CSRs explicitly
+   /// via copies. This function is called at the beginning of instruction
+   /// selection.
+@@ -4049,6 +4052,7 @@ public:
+     SmallVector<SDValue, 32> OutVals;
+     SmallVector<ISD::InputArg, 32> Ins;
+     SmallVector<SDValue, 4> InVals;
++    const ConstantInt *CFIType = nullptr;
+ 
+     CallLoweringInfo(SelectionDAG &DAG)
+         : RetSExt(false), RetZExt(false), IsVarArg(false), IsInReg(false),
+@@ -4171,6 +4175,11 @@ public:
+       return *this;
+     }
+ 
++    CallLoweringInfo &setCFIType(const ConstantInt *Type) {
++      CFIType = Type;
++      return *this;
++    }
++
+     ArgListTy &getArgs() {
+       return Args;
+     }
+diff --git a/llvm/include/llvm/IR/FixedMetadataKinds.def b/llvm/include/llvm/IR/FixedMetadataKinds.def
+index c7cb59b13050..09810662cfea 100644
+--- a/llvm/include/llvm/IR/FixedMetadataKinds.def
++++ b/llvm/include/llvm/IR/FixedMetadataKinds.def
+@@ -47,3 +47,4 @@ LLVM_FIXED_MD_KIND(MD_func_sanitize, "func_sanitize", 32)
+ LLVM_FIXED_MD_KIND(MD_exclude, "exclude", 33)
+ LLVM_FIXED_MD_KIND(MD_memprof, "memprof", 34)
+ LLVM_FIXED_MD_KIND(MD_callsite, "callsite", 35)
++LLVM_FIXED_MD_KIND(MD_kcfi_type, "kcfi_type", 36)
+diff --git a/llvm/include/llvm/IR/InstrTypes.h b/llvm/include/llvm/IR/InstrTypes.h
+index eb6f89d740c6..9a7d43b106d3 100644
+--- a/llvm/include/llvm/IR/InstrTypes.h
++++ b/llvm/include/llvm/IR/InstrTypes.h
+@@ -2079,7 +2079,8 @@ public:
+     for (auto &BOI : bundle_op_infos()) {
+       if (BOI.Tag->second == LLVMContext::OB_deopt ||
+           BOI.Tag->second == LLVMContext::OB_funclet ||
+-          BOI.Tag->second == LLVMContext::OB_ptrauth)
++          BOI.Tag->second == LLVMContext::OB_ptrauth ||
++          BOI.Tag->second == LLVMContext::OB_kcfi)
+         continue;
+ 
+       // This instruction has an operand bundle that is not known to us.
+diff --git a/llvm/include/llvm/IR/LLVMContext.h b/llvm/include/llvm/IR/LLVMContext.h
+index 91712df153a0..08867d9428af 100644
+--- a/llvm/include/llvm/IR/LLVMContext.h
++++ b/llvm/include/llvm/IR/LLVMContext.h
+@@ -95,6 +95,7 @@ public:
+     OB_gc_live = 5,                // "gc-live"
+     OB_clang_arc_attachedcall = 6, // "clang.arc.attachedcall"
+     OB_ptrauth = 7,                // "ptrauth"
++    OB_kcfi = 8,                   // "kcfi"
+   };
+ 
+   /// getMDKindID - Return a unique non-zero ID for the specified metadata kind.
+diff --git a/llvm/include/llvm/MC/MCObjectFileInfo.h b/llvm/include/llvm/MC/MCObjectFileInfo.h
+index ebc9b95d6d4e..c1c7dd30a648 100644
+--- a/llvm/include/llvm/MC/MCObjectFileInfo.h
++++ b/llvm/include/llvm/MC/MCObjectFileInfo.h
+@@ -16,6 +16,7 @@
+ #include "llvm/ADT/Optional.h"
+ #include "llvm/ADT/Triple.h"
+ #include "llvm/BinaryFormat/Swift.h"
++#include "llvm/MC/MCSection.h"
+ #include "llvm/Support/VersionTuple.h"
+ 
+ #include <array>
+@@ -359,6 +360,8 @@ public:
+ 
+   MCSection *getBBAddrMapSection(const MCSection &TextSec) const;
+ 
++  MCSection *getKCFITrapSection(const MCSection &TextSec) const;
++
+   MCSection *getPseudoProbeSection(const MCSection *TextSec) const;
+ 
+   MCSection *getPseudoProbeDescSection(StringRef FuncName) const;
+diff --git a/llvm/lib/CodeGen/AsmPrinter/AsmPrinter.cpp b/llvm/lib/CodeGen/AsmPrinter/AsmPrinter.cpp
+index 32a10ad41d1f..6793eb07f90d 100644
+--- a/llvm/lib/CodeGen/AsmPrinter/AsmPrinter.cpp
++++ b/llvm/lib/CodeGen/AsmPrinter/AsmPrinter.cpp
+@@ -941,6 +941,9 @@ void AsmPrinter::emitFunctionHeader() {
+     }
+   }
+ 
++  // Emit KCFI type information before patchable-function-prefix nops.
++  emitKCFITypeId(*MF);
++
+   // Emit M NOPs for -fpatchable-function-entry=N,M where M>0. We arbitrarily
+   // place prefix data before NOPs.
+   unsigned PatchableFunctionPrefix = 0;
+@@ -1352,6 +1355,30 @@ void AsmPrinter::emitBBAddrMapSection(const MachineFunction &MF) {
+   OutStreamer->popSection();
+ }
+ 
++void AsmPrinter::emitKCFITrapEntry(const MachineFunction &MF,
++                                   const MCSymbol *Symbol) {
++  MCSection *Section =
++      getObjFileLowering().getKCFITrapSection(*MF.getSection());
++  if (!Section)
++    return;
++
++  OutStreamer->pushSection();
++  OutStreamer->switchSection(Section);
++
++  MCSymbol *Loc = OutContext.createLinkerPrivateTempSymbol();
++  OutStreamer->emitLabel(Loc);
++  OutStreamer->emitAbsoluteSymbolDiff(Symbol, Loc, 4);
++
++  OutStreamer->popSection();
++}
++
++void AsmPrinter::emitKCFITypeId(const MachineFunction &MF) {
++  const Function &F = MF.getFunction();
++  if (const MDNode *MD = F.getMetadata(LLVMContext::MD_kcfi_type))
++    emitGlobalConstant(F.getParent()->getDataLayout(),
++                       mdconst::extract<ConstantInt>(MD->getOperand(0)));
++}
++
+ void AsmPrinter::emitPseudoProbe(const MachineInstr &MI) {
+   if (PP) {
+     auto GUID = MI.getOperand(0).getImm();
+diff --git a/llvm/lib/CodeGen/GlobalISel/CallLowering.cpp b/llvm/lib/CodeGen/GlobalISel/CallLowering.cpp
+index 6c36c6445c65..41ffa6473323 100644
+--- a/llvm/lib/CodeGen/GlobalISel/CallLowering.cpp
++++ b/llvm/lib/CodeGen/GlobalISel/CallLowering.cpp
+@@ -155,6 +155,12 @@ bool CallLowering::lowerCall(MachineIRBuilder &MIRBuilder, const CallBase &CB,
+     }
+   }
+ 
++  auto Bundle = CB.getOperandBundle(LLVMContext::OB_kcfi);
++  if (Bundle && CB.isIndirectCall()) {
++    Info.CFIType = cast<ConstantInt>(Bundle->Inputs[0]);
++    assert(Info.CFIType->getType()->isIntegerTy(32) && "Invalid CFI type");
++  }
++
+   Info.CB = &CB;
+   Info.KnownCallees = CB.getMetadata(LLVMContext::MD_callees);
+   Info.CallConv = CallConv;
+diff --git a/llvm/lib/CodeGen/MIRParser/MILexer.cpp b/llvm/lib/CodeGen/MIRParser/MILexer.cpp
+index b0daa20913f5..75c463d75b15 100644
+--- a/llvm/lib/CodeGen/MIRParser/MILexer.cpp
++++ b/llvm/lib/CodeGen/MIRParser/MILexer.cpp
+@@ -271,6 +271,7 @@ static MIToken::TokenKind getIdentifierKind(StringRef Identifier) {
+       .Case("pre-instr-symbol", MIToken::kw_pre_instr_symbol)
+       .Case("post-instr-symbol", MIToken::kw_post_instr_symbol)
+       .Case("heap-alloc-marker", MIToken::kw_heap_alloc_marker)
++      .Case("cfi-type", MIToken::kw_cfi_type)
+       .Case("bbsections", MIToken::kw_bbsections)
+       .Case("unknown-size", MIToken::kw_unknown_size)
+       .Case("unknown-address", MIToken::kw_unknown_address)
+diff --git a/llvm/lib/CodeGen/MIRParser/MILexer.h b/llvm/lib/CodeGen/MIRParser/MILexer.h
+index 70d17f819ce3..2ac8bda5a1a4 100644
+--- a/llvm/lib/CodeGen/MIRParser/MILexer.h
++++ b/llvm/lib/CodeGen/MIRParser/MILexer.h
+@@ -126,6 +126,7 @@ struct MIToken {
+     kw_pre_instr_symbol,
+     kw_post_instr_symbol,
+     kw_heap_alloc_marker,
++    kw_cfi_type,
+     kw_bbsections,
+     kw_unknown_size,
+     kw_unknown_address,
+diff --git a/llvm/lib/CodeGen/MIRParser/MIParser.cpp b/llvm/lib/CodeGen/MIRParser/MIParser.cpp
+index e3d6b59c5077..87a70fa89b67 100644
+--- a/llvm/lib/CodeGen/MIRParser/MIParser.cpp
++++ b/llvm/lib/CodeGen/MIRParser/MIParser.cpp
+@@ -1007,6 +1007,7 @@ bool MIParser::parse(MachineInstr *&MI) {
+   while (!Token.isNewlineOrEOF() && Token.isNot(MIToken::kw_pre_instr_symbol) &&
+          Token.isNot(MIToken::kw_post_instr_symbol) &&
+          Token.isNot(MIToken::kw_heap_alloc_marker) &&
++         Token.isNot(MIToken::kw_cfi_type) &&
+          Token.isNot(MIToken::kw_debug_location) &&
+          Token.isNot(MIToken::kw_debug_instr_number) &&
+          Token.isNot(MIToken::coloncolon) && Token.isNot(MIToken::lbrace)) {
+@@ -1037,6 +1038,20 @@ bool MIParser::parse(MachineInstr *&MI) {
+     if (parseHeapAllocMarker(HeapAllocMarker))
+       return true;
+ 
++  unsigned CFIType = 0;
++  if (Token.is(MIToken::kw_cfi_type)) {
++    lex();
++    if (Token.isNot(MIToken::IntegerLiteral))
++      return error("expected an integer literal after 'cfi-type'");
++    // getUnsigned is sufficient for 32-bit integers.
++    if (getUnsigned(CFIType))
++      return true;
++    lex();
++    // Lex past trailing comma if present.
++    if (Token.is(MIToken::comma))
++      lex();
++  }
++
+   unsigned InstrNum = 0;
+   if (Token.is(MIToken::kw_debug_instr_number)) {
+     lex();
+@@ -1116,6 +1131,8 @@ bool MIParser::parse(MachineInstr *&MI) {
+     MI->setPostInstrSymbol(MF, PostInstrSymbol);
+   if (HeapAllocMarker)
+     MI->setHeapAllocMarker(MF, HeapAllocMarker);
++  if (CFIType)
++    MI->setCFIType(MF, CFIType);
+   if (!MemOperands.empty())
+     MI->setMemRefs(MF, MemOperands);
+   if (InstrNum)
+diff --git a/llvm/lib/CodeGen/MIRPrinter.cpp b/llvm/lib/CodeGen/MIRPrinter.cpp
+index 25823b1567f7..7cec2832a7f7 100644
+--- a/llvm/lib/CodeGen/MIRPrinter.cpp
++++ b/llvm/lib/CodeGen/MIRPrinter.cpp
+@@ -819,6 +819,12 @@ void MIPrinter::print(const MachineInstr &MI) {
+     HeapAllocMarker->printAsOperand(OS, MST);
+     NeedComma = true;
+   }
++  if (uint32_t CFIType = MI.getCFIType()) {
++    if (NeedComma)
++      OS << ',';
++    OS << " cfi-type " << CFIType;
++    NeedComma = true;
++  }
+ 
+   if (auto Num = MI.peekDebugInstrNum()) {
+     if (NeedComma)
+diff --git a/llvm/lib/CodeGen/MachineFunction.cpp b/llvm/lib/CodeGen/MachineFunction.cpp
+index 6b481a374382..4e952ee20484 100644
+--- a/llvm/lib/CodeGen/MachineFunction.cpp
++++ b/llvm/lib/CodeGen/MachineFunction.cpp
+@@ -530,9 +530,10 @@ MachineFunction::getMachineMemOperand(const MachineMemOperand *MMO,
+ 
+ MachineInstr::ExtraInfo *MachineFunction::createMIExtraInfo(
+     ArrayRef<MachineMemOperand *> MMOs, MCSymbol *PreInstrSymbol,
+-    MCSymbol *PostInstrSymbol, MDNode *HeapAllocMarker) {
++    MCSymbol *PostInstrSymbol, MDNode *HeapAllocMarker, uint32_t CFIType) {
+   return MachineInstr::ExtraInfo::create(Allocator, MMOs, PreInstrSymbol,
+-                                         PostInstrSymbol, HeapAllocMarker);
++                                         PostInstrSymbol, HeapAllocMarker,
++                                         CFIType);
+ }
+ 
+ const char *MachineFunction::createExternalSymbolName(StringRef Name) {
+diff --git a/llvm/lib/CodeGen/MachineInstr.cpp b/llvm/lib/CodeGen/MachineInstr.cpp
+index e92dec5bea48..1e48ba92da1b 100644
+--- a/llvm/lib/CodeGen/MachineInstr.cpp
++++ b/llvm/lib/CodeGen/MachineInstr.cpp
+@@ -301,12 +301,13 @@ void MachineInstr::setExtraInfo(MachineFunction &MF,
+                                 ArrayRef<MachineMemOperand *> MMOs,
+                                 MCSymbol *PreInstrSymbol,
+                                 MCSymbol *PostInstrSymbol,
+-                                MDNode *HeapAllocMarker) {
++                                MDNode *HeapAllocMarker, uint32_t CFIType) {
+   bool HasPreInstrSymbol = PreInstrSymbol != nullptr;
+   bool HasPostInstrSymbol = PostInstrSymbol != nullptr;
+   bool HasHeapAllocMarker = HeapAllocMarker != nullptr;
+-  int NumPointers =
+-      MMOs.size() + HasPreInstrSymbol + HasPostInstrSymbol + HasHeapAllocMarker;
++  bool HasCFIType = CFIType != 0;
++  int NumPointers = MMOs.size() + HasPreInstrSymbol + HasPostInstrSymbol +
++                    HasHeapAllocMarker + HasCFIType;
+ 
+   // Drop all extra info if there is none.
+   if (NumPointers <= 0) {
+@@ -320,7 +321,7 @@ void MachineInstr::setExtraInfo(MachineFunction &MF,
+   // FIXME: Maybe we should make the symbols in the extra info mutable?
+   else if (NumPointers > 1 || HasHeapAllocMarker) {
+     Info.set<EIIK_OutOfLine>(MF.createMIExtraInfo(
+-        MMOs, PreInstrSymbol, PostInstrSymbol, HeapAllocMarker));
++        MMOs, PreInstrSymbol, PostInstrSymbol, HeapAllocMarker, CFIType));
+     return;
+   }
+ 
+@@ -329,6 +330,8 @@ void MachineInstr::setExtraInfo(MachineFunction &MF,
+     Info.set<EIIK_PreInstrSymbol>(PreInstrSymbol);
+   else if (HasPostInstrSymbol)
+     Info.set<EIIK_PostInstrSymbol>(PostInstrSymbol);
++  else if (HasCFIType)
++    Info.set<EIIK_CFIType>(CFIType);
+   else
+     Info.set<EIIK_MMO>(MMOs[0]);
+ }
+@@ -338,7 +341,7 @@ void MachineInstr::dropMemRefs(MachineFunction &MF) {
+     return;
+ 
+   setExtraInfo(MF, {}, getPreInstrSymbol(), getPostInstrSymbol(),
+-               getHeapAllocMarker());
++               getHeapAllocMarker(), getCFIType());
+ }
+ 
+ void MachineInstr::setMemRefs(MachineFunction &MF,
+@@ -349,7 +352,7 @@ void MachineInstr::setMemRefs(MachineFunction &MF,
+   }
+ 
+   setExtraInfo(MF, MMOs, getPreInstrSymbol(), getPostInstrSymbol(),
+-               getHeapAllocMarker());
++               getHeapAllocMarker(), getCFIType());
+ }
+ 
+ void MachineInstr::addMemOperand(MachineFunction &MF,
+@@ -457,7 +460,7 @@ void MachineInstr::setPreInstrSymbol(MachineFunction &MF, MCSymbol *Symbol) {
+   }
+ 
+   setExtraInfo(MF, memoperands(), Symbol, getPostInstrSymbol(),
+-               getHeapAllocMarker());
++               getHeapAllocMarker(), getCFIType());
+ }
+ 
+ void MachineInstr::setPostInstrSymbol(MachineFunction &MF, MCSymbol *Symbol) {
+@@ -472,7 +475,7 @@ void MachineInstr::setPostInstrSymbol(MachineFunction &MF, MCSymbol *Symbol) {
+   }
+ 
+   setExtraInfo(MF, memoperands(), getPreInstrSymbol(), Symbol,
+-               getHeapAllocMarker());
++               getHeapAllocMarker(), getCFIType());
+ }
+ 
+ void MachineInstr::setHeapAllocMarker(MachineFunction &MF, MDNode *Marker) {
+@@ -481,7 +484,16 @@ void MachineInstr::setHeapAllocMarker(MachineFunction &MF, MDNode *Marker) {
+     return;
+ 
+   setExtraInfo(MF, memoperands(), getPreInstrSymbol(), getPostInstrSymbol(),
+-               Marker);
++               Marker, getCFIType());
++}
++
++void MachineInstr::setCFIType(MachineFunction &MF, uint32_t Type) {
++  // Do nothing if old and new types are the same.
++  if (Type == getCFIType())
++    return;
++
++  setExtraInfo(MF, memoperands(), getPreInstrSymbol(), getPostInstrSymbol(),
++               getHeapAllocMarker(), Type);
+ }
+ 
+ void MachineInstr::cloneInstrSymbols(MachineFunction &MF,
+@@ -630,6 +642,15 @@ bool MachineInstr::isIdenticalTo(const MachineInstr &Other,
+     if (getDebugLoc() && Other.getDebugLoc() &&
+         getDebugLoc() != Other.getDebugLoc())
+       return false;
++  // If pre- or post-instruction symbols do not match then the two instructions
++  // are not identical.
++  if (getPreInstrSymbol() != Other.getPreInstrSymbol() ||
++      getPostInstrSymbol() != Other.getPostInstrSymbol())
++    return false;
++  // Call instructions with different CFI types are not identical.
++  if (isCall() && getCFIType() != Other.getCFIType())
++    return false;
++
+   return true;
+ }
+ 
+@@ -1748,6 +1769,11 @@ void MachineInstr::print(raw_ostream &OS, ModuleSlotTracker &MST,
+     OS << " heap-alloc-marker ";
+     HeapAllocMarker->printAsOperand(OS, MST);
+   }
++  if (uint32_t CFIType = getCFIType()) {
++    if (!FirstOp)
++      OS << ',';
++    OS << " cfi-type " << CFIType;
++  }
+ 
+   if (DebugInstrNum) {
+     if (!FirstOp)
+diff --git a/llvm/lib/CodeGen/SelectionDAG/InstrEmitter.cpp b/llvm/lib/CodeGen/SelectionDAG/InstrEmitter.cpp
+index 3d3b504c6abd..99a63236d602 100644
+--- a/llvm/lib/CodeGen/SelectionDAG/InstrEmitter.cpp
++++ b/llvm/lib/CodeGen/SelectionDAG/InstrEmitter.cpp
+@@ -1063,6 +1063,9 @@ EmitMachineNode(SDNode *Node, bool IsClone, bool IsCloned,
+   // part of the function.
+   MIB.setMemRefs(cast<MachineSDNode>(Node)->memoperands());
+ 
++  // Set the CFI type.
++  MIB->setCFIType(*MF, Node->getCFIType());
++
+   // Insert the instruction into position in the block. This needs to
+   // happen before any custom inserter hook is called so that the
+   // hook knows where in the block to insert the replacement code.
+diff --git a/llvm/lib/CodeGen/SelectionDAG/SelectionDAGBuilder.cpp b/llvm/lib/CodeGen/SelectionDAG/SelectionDAGBuilder.cpp
+index 35650b9bd00e..4c12eae412e4 100644
+--- a/llvm/lib/CodeGen/SelectionDAG/SelectionDAGBuilder.cpp
++++ b/llvm/lib/CodeGen/SelectionDAG/SelectionDAGBuilder.cpp
+@@ -7820,6 +7820,17 @@ void SelectionDAGBuilder::LowerCallTo(const CallBase &CB, SDValue Callee,
+   if (TLI.supportSwiftError() && SwiftErrorVal)
+     isTailCall = false;
+ 
++  ConstantInt *CFIType = nullptr;
++  if (CB.isIndirectCall()) {
++    if (auto Bundle = CB.getOperandBundle(LLVMContext::OB_kcfi)) {
++      if (!TLI.supportKCFIBundles())
++        report_fatal_error(
++            "Target doesn't support calls with kcfi operand bundles.");
++      CFIType = cast<ConstantInt>(Bundle->Inputs[0]);
++      assert(CFIType->getType()->isIntegerTy(32) && "Invalid CFI type");
++    }
++  }
++
+   TargetLowering::CallLoweringInfo CLI(DAG);
+   CLI.setDebugLoc(getCurSDLoc())
+       .setChain(getRoot())
+@@ -7827,7 +7838,8 @@ void SelectionDAGBuilder::LowerCallTo(const CallBase &CB, SDValue Callee,
+       .setTailCall(isTailCall)
+       .setConvergent(CB.isConvergent())
+       .setIsPreallocated(
+-          CB.countOperandBundlesOfType(LLVMContext::OB_preallocated) != 0);
++          CB.countOperandBundlesOfType(LLVMContext::OB_preallocated) != 0)
++      .setCFIType(CFIType);
+   std::pair<SDValue, SDValue> Result = lowerInvokable(CLI, EHPadBB);
+ 
+   if (Result.first.getNode()) {
+@@ -8371,7 +8383,7 @@ void SelectionDAGBuilder::visitCall(const CallInst &I) {
+   assert(!I.hasOperandBundlesOtherThan(
+              {LLVMContext::OB_deopt, LLVMContext::OB_funclet,
+               LLVMContext::OB_cfguardtarget, LLVMContext::OB_preallocated,
+-              LLVMContext::OB_clang_arc_attachedcall}) &&
++              LLVMContext::OB_clang_arc_attachedcall, LLVMContext::OB_kcfi}) &&
+          "Cannot lower calls with arbitrary operand bundles!");
+ 
+   SDValue Callee = getValue(I.getCalledOperand());
+diff --git a/llvm/lib/IR/Instructions.cpp b/llvm/lib/IR/Instructions.cpp
+index f5039eb5126c..1e679b2acf21 100644
+--- a/llvm/lib/IR/Instructions.cpp
++++ b/llvm/lib/IR/Instructions.cpp
+@@ -505,7 +505,8 @@ bool CallBase::hasReadingOperandBundles() const {
+   // Implementation note: this is a conservative implementation of operand
+   // bundle semantics, where *any* non-assume operand bundle (other than
+   // ptrauth) forces a callsite to be at least readonly.
+-  return hasOperandBundlesOtherThan(LLVMContext::OB_ptrauth) &&
++  return hasOperandBundlesOtherThan(
++             {LLVMContext::OB_ptrauth, LLVMContext::OB_kcfi}) &&
+          getIntrinsicID() != Intrinsic::assume;
+ }
+ 
+diff --git a/llvm/lib/IR/LLVMContext.cpp b/llvm/lib/IR/LLVMContext.cpp
+index 4a1d5d3dcdf6..034332973ad7 100644
+--- a/llvm/lib/IR/LLVMContext.cpp
++++ b/llvm/lib/IR/LLVMContext.cpp
+@@ -87,6 +87,11 @@ LLVMContext::LLVMContext() : pImpl(new LLVMContextImpl(*this)) {
+          "ptrauth operand bundle id drifted!");
+   (void)PtrauthEntry;
+ 
++  auto *KCFIEntry = pImpl->getOrInsertBundleTag("kcfi");
++  assert(KCFIEntry->second == LLVMContext::OB_kcfi &&
++         "kcfi operand bundle id drifted!");
++  (void)KCFIEntry;
++
+   SyncScope::ID SingleThreadSSID =
+       pImpl->getOrInsertSyncScopeID("singlethread");
+   assert(SingleThreadSSID == SyncScope::SingleThread &&
+diff --git a/llvm/lib/IR/Verifier.cpp b/llvm/lib/IR/Verifier.cpp
+index e3ea256af16d..1e8afc9397e2 100644
+--- a/llvm/lib/IR/Verifier.cpp
++++ b/llvm/lib/IR/Verifier.cpp
+@@ -2151,6 +2151,20 @@ void Verifier::verifyFunctionMetadata(
+             MD);
+       Check(isa<ConstantAsMetadata>(MD->getOperand(1)),
+             "expected integer argument to function_entry_count", MD);
++    } else if (Pair.first == LLVMContext::MD_kcfi_type) {
++      MDNode *MD = Pair.second;
++      Check(MD->getNumOperands() == 1,
++            "!kcfi_type must have exactly one operand", MD);
++      Check(MD->getOperand(0) != nullptr, "!kcfi_type operand must not be null",
++            MD);
++      Check(isa<ConstantAsMetadata>(MD->getOperand(0)),
++            "expected a constant operand for !kcfi_type", MD);
++      Constant *C = cast<ConstantAsMetadata>(MD->getOperand(0))->getValue();
++      Check(isa<ConstantInt>(C),
++            "expected a constant integer operand for !kcfi_type", MD);
++      IntegerType *Type = cast<ConstantInt>(C)->getType();
++      Check(Type->getBitWidth() == 32,
++            "expected a 32-bit integer constant operand for !kcfi_type", MD);
+     }
+   }
+ }
+@@ -2617,7 +2631,8 @@ void Verifier::visitFunction(const Function &F) {
+             "blockaddress may not be used with the entry block!", Entry);
+     }
+ 
+-    unsigned NumDebugAttachments = 0, NumProfAttachments = 0;
++    unsigned NumDebugAttachments = 0, NumProfAttachments = 0,
++             NumKCFIAttachments = 0;
+     // Visit metadata attachments.
+     for (const auto &I : MDs) {
+       // Verify that the attachment is legal.
+@@ -2648,6 +2663,12 @@ void Verifier::visitFunction(const Function &F) {
+         Check(NumProfAttachments == 1,
+               "function must have a single !prof attachment", &F, I.second);
+         break;
++      case LLVMContext::MD_kcfi_type:
++        ++NumKCFIAttachments;
++        Check(NumKCFIAttachments == 1,
++              "function must have a single !kcfi_type attachment", &F,
++              I.second);
++        break;
+       }
+ 
+       // Verify the metadata itself.
+@@ -3349,7 +3370,7 @@ void Verifier::visitCallBase(CallBase &Call) {
+   bool FoundDeoptBundle = false, FoundFuncletBundle = false,
+        FoundGCTransitionBundle = false, FoundCFGuardTargetBundle = false,
+        FoundPreallocatedBundle = false, FoundGCLiveBundle = false,
+-       FoundPtrauthBundle = false,
++       FoundPtrauthBundle = false, FoundKCFIBundle = false,
+        FoundAttachedCallBundle = false;
+   for (unsigned i = 0, e = Call.getNumOperandBundles(); i < e; ++i) {
+     OperandBundleUse BU = Call.getOperandBundleAt(i);
+@@ -3385,6 +3406,14 @@ void Verifier::visitCallBase(CallBase &Call) {
+             "Ptrauth bundle key operand must be an i32 constant", Call);
+       Check(BU.Inputs[1]->getType()->isIntegerTy(64),
+             "Ptrauth bundle discriminator operand must be an i64", Call);
++    } else if (Tag == LLVMContext::OB_kcfi) {
++      Check(!FoundKCFIBundle, "Multiple kcfi operand bundles", Call);
++      FoundKCFIBundle = true;
++      Check(BU.Inputs.size() == 1, "Expected exactly one kcfi bundle operand",
++            Call);
++      Check(isa<ConstantInt>(BU.Inputs[0]) &&
++                BU.Inputs[0]->getType()->isIntegerTy(32),
++            "Kcfi bundle operand must be an i32 constant", Call);
+     } else if (Tag == LLVMContext::OB_preallocated) {
+       Check(!FoundPreallocatedBundle, "Multiple preallocated operand bundles",
+             Call);
+diff --git a/llvm/lib/MC/MCObjectFileInfo.cpp b/llvm/lib/MC/MCObjectFileInfo.cpp
+index d6fe952c0c1d..68d51f12c32a 100644
+--- a/llvm/lib/MC/MCObjectFileInfo.cpp
++++ b/llvm/lib/MC/MCObjectFileInfo.cpp
+@@ -1139,6 +1139,25 @@ MCObjectFileInfo::getBBAddrMapSection(const MCSection &TextSec) const {
+                             cast<MCSymbolELF>(TextSec.getBeginSymbol()));
+ }
+ 
++MCSection *
++MCObjectFileInfo::getKCFITrapSection(const MCSection &TextSec) const {
++  if (Ctx->getObjectFileType() != MCContext::IsELF)
++    return nullptr;
++
++  const MCSectionELF &ElfSec = static_cast<const MCSectionELF &>(TextSec);
++  unsigned Flags = ELF::SHF_LINK_ORDER | ELF::SHF_ALLOC;
++  StringRef GroupName;
++  if (const MCSymbol *Group = ElfSec.getGroup()) {
++    GroupName = Group->getName();
++    Flags |= ELF::SHF_GROUP;
++  }
++
++  return Ctx->getELFSection(".kcfi_traps", ELF::SHT_PROGBITS, Flags, 0,
++                            GroupName,
++                            /*IsComdat=*/true, ElfSec.getUniqueID(),
++                            cast<MCSymbolELF>(TextSec.getBeginSymbol()));
++}
++
+ MCSection *
+ MCObjectFileInfo::getPseudoProbeSection(const MCSection *TextSec) const {
+   if (Ctx->getObjectFileType() == MCContext::IsELF) {
+diff --git a/llvm/lib/Target/AArch64/AArch64.h b/llvm/lib/Target/AArch64/AArch64.h
+index a6065d4ed9ec..476da087a70a 100644
+--- a/llvm/lib/Target/AArch64/AArch64.h
++++ b/llvm/lib/Target/AArch64/AArch64.h
+@@ -42,6 +42,7 @@ FunctionPass *createAArch64ExpandPseudoPass();
+ FunctionPass *createAArch64SLSHardeningPass();
+ FunctionPass *createAArch64IndirectThunks();
+ FunctionPass *createAArch64SpeculationHardeningPass();
++FunctionPass *createAArch64KCFIPass();
+ FunctionPass *createAArch64LoadStoreOptimizationPass();
+ ModulePass *createAArch64LowerHomogeneousPrologEpilogPass();
+ FunctionPass *createAArch64SIMDInstrOptPass();
+@@ -83,6 +84,7 @@ void initializeAArch64DeadRegisterDefinitionsPass(PassRegistry&);
+ void initializeAArch64ExpandPseudoPass(PassRegistry&);
+ void initializeAArch64SLSHardeningPass(PassRegistry&);
+ void initializeAArch64SpeculationHardeningPass(PassRegistry&);
++void initializeAArch64KCFIPass(PassRegistry &);
+ void initializeAArch64LoadStoreOptPass(PassRegistry&);
+ void initializeAArch64LowerHomogeneousPrologEpilogPass(PassRegistry &);
+ void initializeAArch64MIPeepholeOptPass(PassRegistry &);
+diff --git a/llvm/lib/Target/AArch64/AArch64AsmPrinter.cpp b/llvm/lib/Target/AArch64/AArch64AsmPrinter.cpp
+index c568f73471e1..d02699944460 100644
+--- a/llvm/lib/Target/AArch64/AArch64AsmPrinter.cpp
++++ b/llvm/lib/Target/AArch64/AArch64AsmPrinter.cpp
+@@ -111,6 +111,7 @@ public:
+ 
+   typedef std::tuple<unsigned, bool, uint32_t> HwasanMemaccessTuple;
+   std::map<HwasanMemaccessTuple, MCSymbol *> HwasanMemaccessSymbols;
++  void LowerKCFI_CHECK(const MachineInstr &MI);
+   void LowerHWASAN_CHECK_MEMACCESS(const MachineInstr &MI);
+   void emitHwasanMemaccessSymbols(Module &M);
+ 
+@@ -317,6 +318,107 @@ void AArch64AsmPrinter::emitSled(const MachineInstr &MI, SledKind Kind) {
+   recordSled(CurSled, MI, Kind, 2);
+ }
+ 
++void AArch64AsmPrinter::LowerKCFI_CHECK(const MachineInstr &MI) {
++  Register AddrReg = MI.getOperand(0).getReg();
++  assert(std::next(MI.getIterator())->isCall() &&
++         "KCFI_CHECK not followed by a call instruction");
++  assert(std::next(MI.getIterator())->getOperand(0).getReg() == AddrReg &&
++         "KCFI_CHECK call target doesn't match call operand");
++
++  // Default to using the intra-procedure-call temporary registers for
++  // comparing the hashes.
++  unsigned ScratchRegs[] = {AArch64::W16, AArch64::W17};
++  if (AddrReg == AArch64::XZR) {
++    // Checking XZR makes no sense. Instead of emitting a load, zero
++    // ScratchRegs[0] and use it for the ESR AddrIndex below.
++    AddrReg = getXRegFromWReg(ScratchRegs[0]);
++    EmitToStreamer(*OutStreamer, MCInstBuilder(AArch64::ORRXrs)
++                                     .addReg(AddrReg)
++                                     .addReg(AArch64::XZR)
++                                     .addReg(AArch64::XZR)
++                                     .addImm(0));
++  } else {
++    // If one of the scratch registers is used for the call target (e.g.
++    // with AArch64::TCRETURNriBTI), we can clobber another caller-saved
++    // temporary register instead (in this case, AArch64::W9) as the check
++    // is immediately followed by the call instruction.
++    for (auto &Reg : ScratchRegs) {
++      if (Reg == getWRegFromXReg(AddrReg)) {
++        Reg = AArch64::W9;
++        break;
++      }
++    }
++    assert(ScratchRegs[0] != AddrReg && ScratchRegs[1] != AddrReg &&
++           "Invalid scratch registers for KCFI_CHECK");
++
++    // Adjust the offset for patchable-function-prefix. This assumes that
++    // patchable-function-prefix is the same for all functions.
++    int64_t PrefixNops = 0;
++    (void)MI.getMF()
++        ->getFunction()
++        .getFnAttribute("patchable-function-prefix")
++        .getValueAsString()
++        .getAsInteger(10, PrefixNops);
++
++    // Load the target function type hash.
++    EmitToStreamer(*OutStreamer, MCInstBuilder(AArch64::LDURWi)
++                                     .addReg(ScratchRegs[0])
++                                     .addReg(AddrReg)
++                                     .addImm(-(PrefixNops * 4 + 4)));
++  }
++
++  // Load the expected type hash.
++  const int64_t Type = MI.getOperand(1).getImm();
++  EmitToStreamer(*OutStreamer, MCInstBuilder(AArch64::MOVKWi)
++                                   .addReg(ScratchRegs[1])
++                                   .addReg(ScratchRegs[1])
++                                   .addImm(Type & 0xFFFF)
++                                   .addImm(0));
++  EmitToStreamer(*OutStreamer, MCInstBuilder(AArch64::MOVKWi)
++                                   .addReg(ScratchRegs[1])
++                                   .addReg(ScratchRegs[1])
++                                   .addImm((Type >> 16) & 0xFFFF)
++                                   .addImm(16));
++
++  // Compare the hashes and trap if there's a mismatch.
++  EmitToStreamer(*OutStreamer, MCInstBuilder(AArch64::SUBSWrs)
++                                   .addReg(AArch64::WZR)
++                                   .addReg(ScratchRegs[0])
++                                   .addReg(ScratchRegs[1])
++                                   .addImm(0));
++
++  MCSymbol *Pass = OutContext.createTempSymbol();
++  EmitToStreamer(*OutStreamer,
++                 MCInstBuilder(AArch64::Bcc)
++                     .addImm(AArch64CC::EQ)
++                     .addExpr(MCSymbolRefExpr::create(Pass, OutContext)));
++
++  // The base ESR is 0x8000 and the register information is encoded in bits
++  // 0-9 as follows:
++  // - 0-4: n, where the register Xn contains the target address
++  // - 5-9: m, where the register Wm contains the expected type hash
++  // Where n, m are in [0, 30].
++  unsigned TypeIndex = ScratchRegs[1] - AArch64::W0;
++  unsigned AddrIndex;
++  switch (AddrReg) {
++  default:
++    AddrIndex = AddrReg - AArch64::X0;
++    break;
++  case AArch64::FP:
++    AddrIndex = 29;
++    break;
++  case AArch64::LR:
++    AddrIndex = 30;
++    break;
++  }
++
++  assert(AddrIndex < 31 && TypeIndex < 31);
++
++  unsigned ESR = 0x8000 | ((TypeIndex & 31) << 5) | (AddrIndex & 31);
++  EmitToStreamer(*OutStreamer, MCInstBuilder(AArch64::BRK).addImm(ESR));
++  OutStreamer->emitLabel(Pass);
++}
++
+ void AArch64AsmPrinter::LowerHWASAN_CHECK_MEMACCESS(const MachineInstr &MI) {
+   Register Reg = MI.getOperand(0).getReg();
+   bool IsShort =
+@@ -1446,6 +1548,10 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
+     LowerPATCHABLE_TAIL_CALL(*MI);
+     return;
+ 
++  case AArch64::KCFI_CHECK:
++    LowerKCFI_CHECK(*MI);
++    return;
++
+   case AArch64::HWASAN_CHECK_MEMACCESS:
+   case AArch64::HWASAN_CHECK_MEMACCESS_SHORTGRANULES:
+     LowerHWASAN_CHECK_MEMACCESS(*MI);
+diff --git a/llvm/lib/Target/AArch64/AArch64ExpandPseudoInsts.cpp b/llvm/lib/Target/AArch64/AArch64ExpandPseudoInsts.cpp
+index 910f8cdede75..8f56a65c4d2f 100644
+--- a/llvm/lib/Target/AArch64/AArch64ExpandPseudoInsts.cpp
++++ b/llvm/lib/Target/AArch64/AArch64ExpandPseudoInsts.cpp
+@@ -776,6 +776,7 @@ bool AArch64ExpandPseudo::expandCALL_BTI(MachineBasicBlock &MBB,
+   MachineInstr *Call =
+       BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(Opc)).getInstr();
+   Call->addOperand(CallTarget);
++  Call->setCFIType(*MBB.getParent(), MI.getCFIType());
+ 
+   MachineInstr *BTI =
+       BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(AArch64::HINT))
+diff --git a/llvm/lib/Target/AArch64/AArch64FastISel.cpp b/llvm/lib/Target/AArch64/AArch64FastISel.cpp
+index 49fffa01a974..29ed32802a4a 100644
+--- a/llvm/lib/Target/AArch64/AArch64FastISel.cpp
++++ b/llvm/lib/Target/AArch64/AArch64FastISel.cpp
+@@ -3134,6 +3134,11 @@ bool AArch64FastISel::fastLowerCall(CallLoweringInfo &CLI) {
+       MF->getInfo<AArch64FunctionInfo>()->branchTargetEnforcement())
+     return false;
+ 
++  // Allow SelectionDAG isel to handle indirect calls with KCFI checks.
++  if (CLI.CB && CLI.CB->isIndirectCall() &&
++      CLI.CB->getOperandBundle(LLVMContext::OB_kcfi))
++    return false;
++
+   // Allow SelectionDAG isel to handle tail calls.
+   if (IsTailCall)
+     return false;
+diff --git a/llvm/lib/Target/AArch64/AArch64ISelLowering.cpp b/llvm/lib/Target/AArch64/AArch64ISelLowering.cpp
+index c28216048d7c..f66eb2e2cbd3 100644
+--- a/llvm/lib/Target/AArch64/AArch64ISelLowering.cpp
++++ b/llvm/lib/Target/AArch64/AArch64ISelLowering.cpp
+@@ -6500,6 +6500,7 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
+ 
+   AArch64FunctionInfo *FuncInfo = MF.getInfo<AArch64FunctionInfo>();
+   bool TailCallOpt = MF.getTarget().Options.GuaranteedTailCallOpt;
++  bool IsCFICall = CLI.CB && CLI.CB->isIndirectCall() && CLI.CFIType;
+   bool IsSibCall = false;
+   bool GuardWithBTI = false;
+ 
+@@ -6923,6 +6924,10 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
+   if (IsTailCall) {
+     MF.getFrameInfo().setHasTailCall();
+     SDValue Ret = DAG.getNode(AArch64ISD::TC_RETURN, DL, NodeTys, Ops);
++
++    if (IsCFICall)
++      Ret.getNode()->setCFIType(CLI.CFIType->getZExtValue());
++
+     DAG.addCallSiteInfo(Ret.getNode(), std::move(CSInfo));
+     return Ret;
+   }
+@@ -6946,6 +6951,10 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
+ 
+   // Returns a chain and a flag for retval copy to use.
+   Chain = DAG.getNode(CallOpc, DL, NodeTys, Ops);
++
++  if (IsCFICall)
++    Chain.getNode()->setCFIType(CLI.CFIType->getZExtValue());
++
+   DAG.addNoMergeSiteInfo(Chain.getNode(), CLI.NoMerge);
+   InFlag = Chain.getValue(1);
+   DAG.addCallSiteInfo(Chain.getNode(), std::move(CSInfo));
+diff --git a/llvm/lib/Target/AArch64/AArch64ISelLowering.h b/llvm/lib/Target/AArch64/AArch64ISelLowering.h
+index 1ba2e2f315ec..44e343b6590f 100644
+--- a/llvm/lib/Target/AArch64/AArch64ISelLowering.h
++++ b/llvm/lib/Target/AArch64/AArch64ISelLowering.h
+@@ -819,6 +819,8 @@ public:
+     return true;
+   }
+ 
++  bool supportKCFIBundles() const override { return true; }
++
+   /// Enable aggressive FMA fusion on targets that want it.
+   bool enableAggressiveFMAFusion(EVT VT) const override;
+ 
+diff --git a/llvm/lib/Target/AArch64/AArch64InstrInfo.td b/llvm/lib/Target/AArch64/AArch64InstrInfo.td
+index 926e7305bab9..ba53e6fec474 100644
+--- a/llvm/lib/Target/AArch64/AArch64InstrInfo.td
++++ b/llvm/lib/Target/AArch64/AArch64InstrInfo.td
+@@ -1446,6 +1446,11 @@ def : Pat<(AArch64mrs imm:$id),
+ def MOVbaseTLS : Pseudo<(outs GPR64:$dst), (ins),
+                        [(set GPR64:$dst, AArch64threadpointer)]>, Sched<[WriteSys]>;
+ 
++let Defs = [ X9, X16, X17, NZCV ] in {
++def KCFI_CHECK : Pseudo<
++  (outs), (ins GPR64:$ptr, i32imm:$type), []>, Sched<[]>;
++}
++
+ let Uses = [ X9 ], Defs = [ X16, X17, LR, NZCV ] in {
+ def HWASAN_CHECK_MEMACCESS : Pseudo<
+   (outs), (ins GPR64noip:$ptr, i32imm:$accessinfo),
+diff --git a/llvm/lib/Target/AArch64/AArch64KCFI.cpp b/llvm/lib/Target/AArch64/AArch64KCFI.cpp
+new file mode 100644
+index 000000000000..271001cb71a6
+--- /dev/null
++++ b/llvm/lib/Target/AArch64/AArch64KCFI.cpp
+@@ -0,0 +1,115 @@
++//===---- AArch64KCFI.cpp - Implements KCFI -------------------------------===//
++//
++// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
++// See https://llvm.org/LICENSE.txt for license information.
++// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
++//
++//===----------------------------------------------------------------------===//
++//
++// This file implements KCFI indirect call checking.
++//
++//===----------------------------------------------------------------------===//
++
++#include "AArch64.h"
++#include "AArch64InstrInfo.h"
++#include "AArch64Subtarget.h"
++#include "AArch64TargetMachine.h"
++#include "llvm/ADT/Statistic.h"
++#include "llvm/CodeGen/MachineFunctionPass.h"
++#include "llvm/CodeGen/MachineInstrBuilder.h"
++#include "llvm/CodeGen/MachineInstrBundle.h"
++#include "llvm/CodeGen/MachineModuleInfo.h"
++
++using namespace llvm;
++
++#define DEBUG_TYPE "aarch64-kcfi"
++#define AARCH64_KCFI_PASS_NAME "Insert KCFI indirect call checks"
++
++STATISTIC(NumKCFIChecksAdded, "Number of indirect call checks added");
++
++namespace {
++class AArch64KCFI : public MachineFunctionPass {
++public:
++  static char ID;
++
++  AArch64KCFI() : MachineFunctionPass(ID) {}
++
++  StringRef getPassName() const override { return AARCH64_KCFI_PASS_NAME; }
++  bool runOnMachineFunction(MachineFunction &MF) override;
++
++private:
++  /// Machine instruction info used throughout the class.
++  const AArch64InstrInfo *TII = nullptr;
++
++  /// Emits a KCFI check before an indirect call.
++  /// \returns true if the check was added and false otherwise.
++  bool emitCheck(MachineBasicBlock &MBB,
++                 MachineBasicBlock::instr_iterator I) const;
++};
++
++char AArch64KCFI::ID = 0;
++} // end anonymous namespace
++
++INITIALIZE_PASS(AArch64KCFI, DEBUG_TYPE, AARCH64_KCFI_PASS_NAME, false, false)
++
++FunctionPass *llvm::createAArch64KCFIPass() { return new AArch64KCFI(); }
++
++bool AArch64KCFI::emitCheck(MachineBasicBlock &MBB,
++                            MachineBasicBlock::instr_iterator MBBI) const {
++  assert(TII && "Target instruction info was not initialized");
++
++  // If the call instruction is bundled, we can only emit a check safely if
++  // it's the first instruction in the bundle.
++  if (MBBI->isBundled() && !std::prev(MBBI)->isBundle())
++    report_fatal_error("Cannot emit a KCFI check for a bundled call");
++
++  switch (MBBI->getOpcode()) {
++  case AArch64::BLR:
++  case AArch64::BLRNoIP:
++  case AArch64::TCRETURNri:
++  case AArch64::TCRETURNriBTI:
++    break;
++  default:
++    llvm_unreachable("Unexpected CFI call opcode");
++  }
++
++  MachineOperand &Target = MBBI->getOperand(0);
++  assert(Target.isReg() && "Invalid target operand for an indirect call");
++  Target.setIsRenamable(false);
++
++  MachineInstr *Check =
++      BuildMI(MBB, MBBI, MBBI->getDebugLoc(), TII->get(AArch64::KCFI_CHECK))
++          .addReg(Target.getReg())
++          .addImm(MBBI->getCFIType())
++          .getInstr();
++  MBBI->setCFIType(*MBB.getParent(), 0);
++
++  // If not already bundled, bundle the check and the call to prevent
++  // further changes.
++  if (!MBBI->isBundled())
++    finalizeBundle(MBB, Check->getIterator(), std::next(MBBI->getIterator()));
++
++  ++NumKCFIChecksAdded;
++  return true;
++}
++
++bool AArch64KCFI::runOnMachineFunction(MachineFunction &MF) {
++  const Module *M = MF.getMMI().getModule();
++  if (!M->getModuleFlag("kcfi"))
++    return false;
++
++  const auto &SubTarget = MF.getSubtarget<AArch64Subtarget>();
++  TII = SubTarget.getInstrInfo();
++
++  bool Changed = false;
++  for (MachineBasicBlock &MBB : MF) {
++    for (MachineBasicBlock::instr_iterator MII = MBB.instr_begin(),
++                                           MIE = MBB.instr_end();
++         MII != MIE; ++MII) {
++      if (MII->isCall() && MII->getCFIType())
++        Changed |= emitCheck(MBB, MII);
++    }
++  }
++
++  return Changed;
++}
+diff --git a/llvm/lib/Target/AArch64/AArch64TargetMachine.cpp b/llvm/lib/Target/AArch64/AArch64TargetMachine.cpp
+index 47e4c6589c26..c48643aaaca0 100644
+--- a/llvm/lib/Target/AArch64/AArch64TargetMachine.cpp
++++ b/llvm/lib/Target/AArch64/AArch64TargetMachine.cpp
+@@ -209,6 +209,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAArch64Target() {
+   initializeAArch64ConditionOptimizerPass(*PR);
+   initializeAArch64DeadRegisterDefinitionsPass(*PR);
+   initializeAArch64ExpandPseudoPass(*PR);
++  initializeAArch64KCFIPass(*PR);
+   initializeAArch64LoadStoreOptPass(*PR);
+   initializeAArch64MIPeepholeOptPass(*PR);
+   initializeAArch64SIMDInstrOptPass(*PR);
+@@ -754,6 +755,8 @@ void AArch64PassConfig::addPreSched2() {
+     if (EnableLoadStoreOpt)
+       addPass(createAArch64LoadStoreOptimizationPass());
+   }
++  // Emit KCFI checks for indirect calls.
++  addPass(createAArch64KCFIPass());
+ 
+   // The AArch64SpeculationHardeningPass destroys dominator tree and natural
+   // loop info, which is needed for the FalkorHWPFFixPass and also later on.
+diff --git a/llvm/lib/Target/AArch64/CMakeLists.txt b/llvm/lib/Target/AArch64/CMakeLists.txt
+index ca7d53dce2bb..898bf1aa57fc 100644
+--- a/llvm/lib/Target/AArch64/CMakeLists.txt
++++ b/llvm/lib/Target/AArch64/CMakeLists.txt
+@@ -62,6 +62,7 @@ add_llvm_target(AArch64CodeGen
+   AArch64ISelDAGToDAG.cpp
+   AArch64ISelLowering.cpp
+   AArch64InstrInfo.cpp
++  AArch64KCFI.cpp
+   AArch64LoadStoreOptimizer.cpp
+   AArch64LowerHomogeneousPrologEpilog.cpp
+   AArch64MachineFunctionInfo.cpp
+diff --git a/llvm/lib/Target/AArch64/GISel/AArch64CallLowering.cpp b/llvm/lib/Target/AArch64/GISel/AArch64CallLowering.cpp
+index aaef363e9b8d..a45221273dc4 100644
+--- a/llvm/lib/Target/AArch64/GISel/AArch64CallLowering.cpp
++++ b/llvm/lib/Target/AArch64/GISel/AArch64CallLowering.cpp
+@@ -979,6 +979,9 @@ bool AArch64CallLowering::lowerTailCall(
+     TRI->UpdateCustomCallPreservedMask(MF, &Mask);
+   MIB.addRegMask(Mask);
+ 
++  if (Info.CFIType)
++    MIB->setCFIType(MF, Info.CFIType->getZExtValue());
++
+   if (TRI->isAnyArgRegReserved(MF))
+     TRI->emitReservedArgRegCallError(MF);
+ 
+@@ -1176,6 +1179,8 @@ bool AArch64CallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
+     Function *ARCFn = *objcarc::getAttachedARCFunction(Info.CB);
+     MIB.addGlobalAddress(ARCFn);
+     ++CalleeOpNo;
++  } else if (Info.CFIType) {
++    MIB->setCFIType(MF, Info.CFIType->getZExtValue());
+   }
+ 
+   MIB.add(Info.Callee);
+diff --git a/llvm/lib/Target/X86/CMakeLists.txt b/llvm/lib/Target/X86/CMakeLists.txt
+index 33a6f1b0820d..ada4897d7a56 100644
+--- a/llvm/lib/Target/X86/CMakeLists.txt
++++ b/llvm/lib/Target/X86/CMakeLists.txt
+@@ -64,6 +64,7 @@ set(sources
+   X86InstrFoldTables.cpp
+   X86InstrInfo.cpp
+   X86EvexToVex.cpp
++  X86KCFI.cpp
+   X86LegalizerInfo.cpp
+   X86LoadValueInjectionLoadHardening.cpp
+   X86LoadValueInjectionRetHardening.cpp
+diff --git a/llvm/lib/Target/X86/X86.h b/llvm/lib/Target/X86/X86.h
+index 0ac916527495..5d048f2ffa09 100644
+--- a/llvm/lib/Target/X86/X86.h
++++ b/llvm/lib/Target/X86/X86.h
+@@ -51,6 +51,9 @@ FunctionPass *createX86IssueVZeroUpperPass();
+ /// destinations as part of CET IBT mechanism.
+ FunctionPass *createX86IndirectBranchTrackingPass();
+ 
++/// This pass inserts KCFI checks before indirect calls.
++FunctionPass *createX86KCFIPass();
++
+ /// Return a pass that pads short functions with NOOPs.
+ /// This will prevent a stall when returning on the Atom.
+ FunctionPass *createX86PadShortFunctions();
+@@ -174,6 +177,7 @@ void initializeX86ExecutionDomainFixPass(PassRegistry &);
+ void initializeX86ExpandPseudoPass(PassRegistry &);
+ void initializeX86FixupSetCCPassPass(PassRegistry &);
+ void initializeX86FlagsCopyLoweringPassPass(PassRegistry &);
++void initializeX86KCFIPass(PassRegistry &);
+ void initializeX86LoadValueInjectionLoadHardeningPassPass(PassRegistry &);
+ void initializeX86LoadValueInjectionRetHardeningPassPass(PassRegistry &);
+ void initializeX86OptimizeLEAPassPass(PassRegistry &);
+diff --git a/llvm/lib/Target/X86/X86AsmPrinter.cpp b/llvm/lib/Target/X86/X86AsmPrinter.cpp
+index c205395aa084..782588f87366 100644
+--- a/llvm/lib/Target/X86/X86AsmPrinter.cpp
++++ b/llvm/lib/Target/X86/X86AsmPrinter.cpp
+@@ -33,6 +33,7 @@
+ #include "llvm/MC/MCCodeEmitter.h"
+ #include "llvm/MC/MCContext.h"
+ #include "llvm/MC/MCExpr.h"
++#include "llvm/MC/MCInstBuilder.h"
+ #include "llvm/MC/MCSectionCOFF.h"
+ #include "llvm/MC/MCSectionELF.h"
+ #include "llvm/MC/MCSectionMachO.h"
+@@ -108,6 +109,86 @@ void X86AsmPrinter::emitFunctionBodyEnd() {
+   }
+ }
+ 
++uint32_t X86AsmPrinter::MaskKCFIType(uint32_t Value) {
++  // If the type hash matches an invalid pattern, mask the value.
++  const uint32_t InvalidValues[] = {
++      0xFA1E0FF3, /* ENDBR64 */
++      0xFB1E0FF3, /* ENDBR32 */
++  };
++  for (uint32_t N : InvalidValues) {
++    // LowerKCFI_CHECK emits -Value for indirect call checks, so we must also
++    // mask that. Note that -(Value + 1) == ~Value.
++    if (N == Value || -N == Value)
++      return Value + 1;
++  }
++  return Value;
++}
++
++void X86AsmPrinter::EmitKCFITypePadding(const MachineFunction &MF,
++                                        bool HasType) {
++  // Keep the function entry aligned, taking patchable-function-prefix into
++  // account if set.
++  int64_t PrefixBytes = 0;
++  (void)MF.getFunction()
++      .getFnAttribute("patchable-function-prefix")
++      .getValueAsString()
++      .getAsInteger(10, PrefixBytes);
++
++  // Also take the type identifier into account if we're emitting
++  // one. Otherwise, just pad with nops. The X86::MOV32ri instruction emitted
++  // in X86AsmPrinter::emitKCFITypeId is 5 bytes long.
++  if (HasType)
++    PrefixBytes += 5;
++
++  emitNops(offsetToAlignment(PrefixBytes, MF.getAlignment()));
++}
++
++/// emitKCFITypeId - Emit the KCFI type information in architecture specific
++/// format.
++void X86AsmPrinter::emitKCFITypeId(const MachineFunction &MF) {
++  const Function &F = MF.getFunction();
++  if (!F.getParent()->getModuleFlag("kcfi"))
++    return;
++
++  ConstantInt *Type = nullptr;
++  if (const MDNode *MD = F.getMetadata(LLVMContext::MD_kcfi_type))
++    Type = mdconst::extract<ConstantInt>(MD->getOperand(0));
++
++  // If we don't have a type to emit, just emit padding if needed to maintain
++  // the same alignment for all functions.
++  if (!Type) {
++    EmitKCFITypePadding(MF, /*HasType=*/false);
++    return;
++  }
++
++  // Emit a function symbol for the type data to avoid unreachable instruction
++  // warnings from binary validation tools, and use the same linkage as the
++  // parent function. Note that using local linkage would result in duplicate
++  // symbols for weak parent functions.
++  MCSymbol *FnSym = OutContext.getOrCreateSymbol("__cfi_" + MF.getName());
++  emitLinkage(&MF.getFunction(), FnSym);
++  if (MAI->hasDotTypeDotSizeDirective())
++    OutStreamer->emitSymbolAttribute(FnSym, MCSA_ELF_TypeFunction);
++  OutStreamer->emitLabel(FnSym);
++
++  // Embed the type hash in the X86::MOV32ri instruction to avoid special
++  // casing object file parsers.
++  EmitKCFITypePadding(MF);
++  EmitAndCountInstruction(MCInstBuilder(X86::MOV32ri)
++                              .addReg(X86::EAX)
++                              .addImm(MaskKCFIType(Type->getZExtValue())));
++
++  if (MAI->hasDotTypeDotSizeDirective()) {
++    MCSymbol *EndSym = OutContext.createTempSymbol("cfi_func_end");
++    OutStreamer->emitLabel(EndSym);
++
++    const MCExpr *SizeExp = MCBinaryExpr::createSub(
++        MCSymbolRefExpr::create(EndSym, OutContext),
++        MCSymbolRefExpr::create(FnSym, OutContext), OutContext);
++    OutStreamer->emitELFSize(FnSym, SizeExp);
++  }
++}
++
+ /// PrintSymbolOperand - Print a raw symbol reference operand.  This handles
+ /// jump tables, constant pools, global address and external symbols, all of
+ /// which print to a label with various suffixes for relocation types etc.
+diff --git a/llvm/lib/Target/X86/X86AsmPrinter.h b/llvm/lib/Target/X86/X86AsmPrinter.h
+index d53c26b729ef..c14ef995a67a 100644
+--- a/llvm/lib/Target/X86/X86AsmPrinter.h
++++ b/llvm/lib/Target/X86/X86AsmPrinter.h
+@@ -98,6 +98,11 @@ class LLVM_LIBRARY_VISIBILITY X86AsmPrinter : public AsmPrinter {
+ 
+   void LowerFENTRY_CALL(const MachineInstr &MI, X86MCInstLower &MCIL);
+ 
++  // KCFI specific lowering for X86.
++  uint32_t MaskKCFIType(uint32_t Value);
++  void EmitKCFITypePadding(const MachineFunction &MF, bool HasType = true);
++  void LowerKCFI_CHECK(const MachineInstr &MI);
++
+   // Address sanitizer specific lowering for X86.
+   void LowerASAN_CHECK_MEMACCESS(const MachineInstr &MI);
+ 
+@@ -148,6 +153,7 @@ public:
+   bool runOnMachineFunction(MachineFunction &MF) override;
+   void emitFunctionBodyStart() override;
+   void emitFunctionBodyEnd() override;
++  void emitKCFITypeId(const MachineFunction &MF) override;
+ 
+   bool shouldEmitWeakSwiftAsyncExtendedFramePointerFlags() const override {
+     return ShouldEmitWeakSwiftAsyncExtendedFramePointerFlags;
+diff --git a/llvm/lib/Target/X86/X86ExpandPseudo.cpp b/llvm/lib/Target/X86/X86ExpandPseudo.cpp
+index aebeec5a6d27..1dd7f285ab74 100644
+--- a/llvm/lib/Target/X86/X86ExpandPseudo.cpp
++++ b/llvm/lib/Target/X86/X86ExpandPseudo.cpp
+@@ -356,6 +356,7 @@ bool X86ExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
+ 
+     MachineInstr &NewMI = *std::prev(MBBI);
+     NewMI.copyImplicitOps(*MBBI->getParent()->getParent(), *MBBI);
++    NewMI.setCFIType(*MBB.getParent(), MI.getCFIType());
+ 
+     // Update the call site info.
+     if (MBBI->isCandidateForCallSiteEntry())
+diff --git a/llvm/lib/Target/X86/X86FastISel.cpp b/llvm/lib/Target/X86/X86FastISel.cpp
+index f2c362eeaa48..be74fb0357fa 100644
+--- a/llvm/lib/Target/X86/X86FastISel.cpp
++++ b/llvm/lib/Target/X86/X86FastISel.cpp
+@@ -3182,6 +3182,10 @@ bool X86FastISel::fastLowerCall(CallLoweringInfo &CLI) {
+   if ((CB && CB->hasFnAttr("no_callee_saved_registers")))
+     return false;
+ 
++  // Indirect calls with CFI checks need special handling.
++  if (CB && CB->isIndirectCall() && CB->getOperandBundle(LLVMContext::OB_kcfi))
++    return false;
++
+   // Functions using thunks for indirect calls need to use SDISel.
+   if (Subtarget->useIndirectThunkCalls())
+     return false;
+diff --git a/llvm/lib/Target/X86/X86ISelLowering.cpp b/llvm/lib/Target/X86/X86ISelLowering.cpp
+index 372371252b4f..2c5b58c55fcf 100644
+--- a/llvm/lib/Target/X86/X86ISelLowering.cpp
++++ b/llvm/lib/Target/X86/X86ISelLowering.cpp
+@@ -4348,6 +4348,7 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
+                   CB->hasFnAttr("no_caller_saved_registers"));
+   bool HasNoCfCheck = (CB && CB->doesNoCfCheck());
+   bool IsIndirectCall = (CB && isa<CallInst>(CB) && CB->isIndirectCall());
++  bool IsCFICall = IsIndirectCall && CLI.CFIType;
+   const Module *M = MF.getMMI().getModule();
+   Metadata *IsCFProtectionSupported = M->getModuleFlag("cf-protection-branch");
+ 
+@@ -4839,6 +4840,10 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
+     // function making a tail call to a function returning int.
+     MF.getFrameInfo().setHasTailCall();
+     SDValue Ret = DAG.getNode(X86ISD::TC_RETURN, dl, NodeTys, Ops);
++
++    if (IsCFICall)
++      Ret.getNode()->setCFIType(CLI.CFIType->getZExtValue());
++
+     DAG.addCallSiteInfo(Ret.getNode(), std::move(CSInfo));
+     return Ret;
+   }
+@@ -4864,6 +4869,9 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
+     Chain = DAG.getNode(X86ISD::CALL, dl, NodeTys, Ops);
+   }
+ 
++  if (IsCFICall)
++    Chain.getNode()->setCFIType(CLI.CFIType->getZExtValue());
++
+   InFlag = Chain.getValue(1);
+   DAG.addNoMergeSiteInfo(Chain.getNode(), CLI.NoMerge);
+   DAG.addCallSiteInfo(Chain.getNode(), std::move(CSInfo));
+diff --git a/llvm/lib/Target/X86/X86ISelLowering.h b/llvm/lib/Target/X86/X86ISelLowering.h
+index 18fb2dbe8d71..55495ee33dae 100644
+--- a/llvm/lib/Target/X86/X86ISelLowering.h
++++ b/llvm/lib/Target/X86/X86ISelLowering.h
+@@ -1460,6 +1460,8 @@ namespace llvm {
+ 
+     bool supportSwiftError() const override;
+ 
++    bool supportKCFIBundles() const override { return true; }
++
+     bool hasStackProbeSymbol(MachineFunction &MF) const override;
+     bool hasInlineStackProbe(MachineFunction &MF) const override;
+     StringRef getStackProbeSymbolName(MachineFunction &MF) const override;
+diff --git a/llvm/lib/Target/X86/X86InstrCompiler.td b/llvm/lib/Target/X86/X86InstrCompiler.td
+index 6124755ca539..ab3abe8faca7 100644
+--- a/llvm/lib/Target/X86/X86InstrCompiler.td
++++ b/llvm/lib/Target/X86/X86InstrCompiler.td
+@@ -256,6 +256,15 @@ let isPseudo = 1, SchedRW = [WriteSystem] in {
+                             "#SEH_Epilogue", []>;
+ }
+ 
++//===----------------------------------------------------------------------===//
++// Pseudo instructions used by KCFI.
++//===----------------------------------------------------------------------===//
++let
++  Defs = [R10, EFLAGS] in {
++def KCFI_CHECK : PseudoI<
++  (outs), (ins GR64:$ptr, i32imm:$type), []>, Sched<[]>;
++}
++
+ //===----------------------------------------------------------------------===//
+ // Pseudo instructions used by address sanitizer.
+ //===----------------------------------------------------------------------===//
+diff --git a/llvm/lib/Target/X86/X86KCFI.cpp b/llvm/lib/Target/X86/X86KCFI.cpp
+new file mode 100644
+index 000000000000..b4bced17048a
+--- /dev/null
++++ b/llvm/lib/Target/X86/X86KCFI.cpp
+@@ -0,0 +1,126 @@
++//===---- X86KCFI.cpp - Implements KCFI -----------------------------------===//
++//
++// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
++// See https://llvm.org/LICENSE.txt for license information.
++// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
++//
++//===----------------------------------------------------------------------===//
++//
++// This file implements KCFI indirect call checking.
++//
++//===----------------------------------------------------------------------===//
++
++#include "X86.h"
++#include "X86InstrInfo.h"
++#include "X86Subtarget.h"
++#include "X86TargetMachine.h"
++#include "llvm/ADT/Statistic.h"
++#include "llvm/CodeGen/MachineFunctionPass.h"
++#include "llvm/CodeGen/MachineInstrBuilder.h"
++#include "llvm/CodeGen/MachineInstrBundle.h"
++#include "llvm/CodeGen/MachineModuleInfo.h"
++
++using namespace llvm;
++
++#define DEBUG_TYPE "x86-kcfi"
++#define X86_KCFI_PASS_NAME "Insert KCFI indirect call checks"
++
++STATISTIC(NumKCFIChecksAdded, "Number of indirect call checks added");
++
++namespace {
++class X86KCFI : public MachineFunctionPass {
++public:
++  static char ID;
++
++  X86KCFI() : MachineFunctionPass(ID) {}
++
++  StringRef getPassName() const override { return X86_KCFI_PASS_NAME; }
++  bool runOnMachineFunction(MachineFunction &MF) override;
++
++private:
++  /// Machine instruction info used throughout the class.
++  const X86InstrInfo *TII = nullptr;
++
++  /// Emits a KCFI check before an indirect call.
++  /// \returns true if the check was added and false otherwise.
++  bool emitCheck(MachineBasicBlock &MBB,
++                 MachineBasicBlock::instr_iterator I) const;
++};
++
++char X86KCFI::ID = 0;
++} // end anonymous namespace
++
++INITIALIZE_PASS(X86KCFI, DEBUG_TYPE, X86_KCFI_PASS_NAME, false, false)
++
++FunctionPass *llvm::createX86KCFIPass() { return new X86KCFI(); }
++
++bool X86KCFI::emitCheck(MachineBasicBlock &MBB,
++                        MachineBasicBlock::instr_iterator MBBI) const {
++  assert(TII && "Target instruction info was not initialized");
++
++  // If the call instruction is bundled, we can only emit a check safely if
++  // it's the first instruction in the bundle.
++  if (MBBI->isBundled() && !std::prev(MBBI)->isBundle())
++    report_fatal_error("Cannot emit a KCFI check for a bundled call");
++
++  MachineInstr *Check =
++      BuildMI(MBB, MBBI, MBBI->getDebugLoc(), TII->get(X86::KCFI_CHECK))
++          .getInstr();
++  MachineOperand &Target = MBBI->getOperand(0);
++  switch (MBBI->getOpcode()) {
++  case X86::CALL64r:
++  case X86::CALL64r_NT:
++  case X86::TAILJMPr64:
++  case X86::TAILJMPr64_REX:
++    assert(Target.isReg() && "Unexpected target operand for an indirect call");
++    // KCFI_CHECK uses r10 as a temporary register.
++    assert(Target.getReg() != X86::R10 &&
++           "Unsupported target register for a KCFI call");
++    Check->addOperand(MachineOperand::CreateReg(Target.getReg(), false));
++    Target.setIsRenamable(false);
++    break;
++  case X86::CALL64pcrel32:
++  case X86::TAILJMPd64:
++    assert(Target.isSymbol() && "Unexpected target operand for a direct call");
++    // X86TargetLowering::EmitLoweredIndirectThunk always uses r11 for
++    // 64-bit indirect thunk calls.
++    assert(StringRef(Target.getSymbolName()).endswith("_r11") &&
++           "Unexpected register for an indirect thunk call");
++    Check->addOperand(MachineOperand::CreateReg(X86::R11, false));
++    break;
++  default:
++    llvm_unreachable("Unexpected CFI call opcode");
++  }
++
++  Check->addOperand(MachineOperand::CreateImm(MBBI->getCFIType()));
++  MBBI->setCFIType(*MBB.getParent(), 0);
++
++  // If not already bundled, bundle the check and the call to prevent
++  // further changes.
++  if (!MBBI->isBundled())
++    finalizeBundle(MBB, Check->getIterator(), std::next(MBBI->getIterator()));
++
++  ++NumKCFIChecksAdded;
++  return true;
++}
++
++bool X86KCFI::runOnMachineFunction(MachineFunction &MF) {
++  const Module *M = MF.getMMI().getModule();
++  if (!M->getModuleFlag("kcfi"))
++    return false;
++
++  const auto &SubTarget = MF.getSubtarget<X86Subtarget>();
++  TII = SubTarget.getInstrInfo();
++
++  bool Changed = false;
++  for (MachineBasicBlock &MBB : MF) {
++    for (MachineBasicBlock::instr_iterator MII = MBB.instr_begin(),
++                                           MIE = MBB.instr_end();
++         MII != MIE; ++MII) {
++      if (MII->isCall() && MII->getCFIType())
++        Changed |= emitCheck(MBB, MII);
++    }
++  }
++
++  return Changed;
++}
+diff --git a/llvm/lib/Target/X86/X86MCInstLower.cpp b/llvm/lib/Target/X86/X86MCInstLower.cpp
+index 3fbdb18a0793..56562f2c3698 100644
+--- a/llvm/lib/Target/X86/X86MCInstLower.cpp
++++ b/llvm/lib/Target/X86/X86MCInstLower.cpp
+@@ -1336,6 +1336,52 @@ void X86AsmPrinter::LowerFENTRY_CALL(const MachineInstr &MI,
+           .addExpr(Op));
+ }
+ 
++void X86AsmPrinter::LowerKCFI_CHECK(const MachineInstr &MI) {
++  assert(std::next(MI.getIterator())->isCall() &&
++         "KCFI_CHECK not followed by a call instruction");
++
++  // Adjust the offset for patchable-function-prefix. X86InstrInfo::getNop()
++  // returns a 1-byte X86::NOOP, which means the offset is the same in
++  // bytes.  This assumes that patchable-function-prefix is the same for all
++  // functions.
++  const MachineFunction &MF = *MI.getMF();
++  int64_t PrefixNops = 0;
++  (void)MF.getFunction()
++      .getFnAttribute("patchable-function-prefix")
++      .getValueAsString()
++      .getAsInteger(10, PrefixNops);
++
++  // KCFI allows indirect calls to any location that's preceded by a valid
++  // type identifier. To avoid encoding the full constant into an instruction,
++  // and thus emitting potential call target gadgets at each indirect call
++  // site, load a negated constant to a register and compare that to the
++  // expected value at the call target.
++  const uint32_t Type = MI.getOperand(1).getImm();
++  EmitAndCountInstruction(MCInstBuilder(X86::MOV32ri)
++                              .addReg(X86::R10D)
++                              .addImm(-MaskKCFIType(Type)));
++  EmitAndCountInstruction(MCInstBuilder(X86::ADD32rm)
++                              .addReg(X86::NoRegister)
++                              .addReg(X86::R10D)
++                              .addReg(MI.getOperand(0).getReg())
++                              .addImm(1)
++                              .addReg(X86::NoRegister)
++                              .addImm(-(PrefixNops + 4))
++                              .addReg(X86::NoRegister));
++
++  MCSymbol *Pass = OutContext.createTempSymbol();
++  EmitAndCountInstruction(
++      MCInstBuilder(X86::JCC_1)
++          .addExpr(MCSymbolRefExpr::create(Pass, OutContext))
++          .addImm(X86::COND_E));
++
++  MCSymbol *Trap = OutContext.createTempSymbol();
++  OutStreamer->emitLabel(Trap);
++  EmitAndCountInstruction(MCInstBuilder(X86::TRAP));
++  emitKCFITrapEntry(MF, Trap);
++  OutStreamer->emitLabel(Pass);
++}
++
+ void X86AsmPrinter::LowerASAN_CHECK_MEMACCESS(const MachineInstr &MI) {
+   // FIXME: Make this work on non-ELF.
+   if (!TM.getTargetTriple().isOSBinFormatELF()) {
+@@ -2622,6 +2668,9 @@ void X86AsmPrinter::emitInstruction(const MachineInstr *MI) {
+     EmitAndCountInstruction(MCInstBuilder(getRetOpcode(*Subtarget)));
+     return;
+ 
++  case X86::KCFI_CHECK:
++    return LowerKCFI_CHECK(*MI);
++
+   case X86::ASAN_CHECK_MEMACCESS:
+     return LowerASAN_CHECK_MEMACCESS(*MI);
+ 
+diff --git a/llvm/lib/Target/X86/X86TargetMachine.cpp b/llvm/lib/Target/X86/X86TargetMachine.cpp
+index 1de2a1725954..47bad07e122b 100644
+--- a/llvm/lib/Target/X86/X86TargetMachine.cpp
++++ b/llvm/lib/Target/X86/X86TargetMachine.cpp
+@@ -86,6 +86,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeX86Target() {
+   initializeX86TileConfigPass(PR);
+   initializeX86FastPreTileConfigPass(PR);
+   initializeX86FastTileConfigPass(PR);
++  initializeX86KCFIPass(PR);
+   initializeX86LowerTileCopyPass(PR);
+   initializeX86ExpandPseudoPass(PR);
+   initializeX86ExecutionDomainFixPass(PR);
+@@ -542,7 +543,10 @@ void X86PassConfig::addPostRegAlloc() {
+     addPass(createX86LoadValueInjectionLoadHardeningPass());
+ }
+ 
+-void X86PassConfig::addPreSched2() { addPass(createX86ExpandPseudoPass()); }
++void X86PassConfig::addPreSched2() {
++  addPass(createX86ExpandPseudoPass());
++  addPass(createX86KCFIPass());
++}
+ 
+ void X86PassConfig::addPreEmitPass() {
+   if (getOptLevel() != CodeGenOpt::None) {
+@@ -606,17 +610,18 @@ void X86PassConfig::addPreEmitPass2() {
+   // Insert pseudo probe annotation for callsite profiling
+   addPass(createPseudoProbeInserter());
+ 
+-  // On Darwin platforms, BLR_RVMARKER pseudo instructions are lowered to
+-  // bundles.
+-  if (TT.isOSDarwin())
+-    addPass(createUnpackMachineBundles([](const MachineFunction &MF) {
+-      // Only run bundle expansion if there are relevant ObjC runtime functions
+-      // present in the module.
+-      const Function &F = MF.getFunction();
+-      const Module *M = F.getParent();
+-      return M->getFunction("objc_retainAutoreleasedReturnValue") ||
+-             M->getFunction("objc_unsafeClaimAutoreleasedReturnValue");
+-    }));
++  // KCFI indirect call checks are lowered to a bundle, and on Darwin platforms,
++  // also CALL_RVMARKER.
++  addPass(createUnpackMachineBundles([&TT](const MachineFunction &MF) {
++    // Only run bundle expansion if the module uses kcfi, or there are relevant
++    // ObjC runtime functions present in the module.
++    const Function &F = MF.getFunction();
++    const Module *M = F.getParent();
++    return M->getModuleFlag("kcfi") ||
++           (TT.isOSDarwin() &&
++            (M->getFunction("objc_retainAutoreleasedReturnValue") ||
++             M->getFunction("objc_unsafeClaimAutoreleasedReturnValue")));
++  }));
+ }
+ 
+ bool X86PassConfig::addPostFastRegAllocRewrite() {
+diff --git a/llvm/lib/Transforms/InstCombine/InstCombineCalls.cpp b/llvm/lib/Transforms/InstCombine/InstCombineCalls.cpp
+index bc01d2ef7fe2..e7995334e4ab 100644
+--- a/llvm/lib/Transforms/InstCombine/InstCombineCalls.cpp
++++ b/llvm/lib/Transforms/InstCombine/InstCombineCalls.cpp
+@@ -3078,6 +3078,31 @@ Instruction *InstCombinerImpl::visitCallBase(CallBase &Call) {
+             Call, Builder.CreateBitOrPointerCast(ReturnedArg, CallTy));
+     }
+ 
++  // Drop unnecessary kcfi operand bundles from calls that were converted
++  // into direct calls.
++  auto Bundle = Call.getOperandBundle(LLVMContext::OB_kcfi);
++  if (Bundle && !Call.isIndirectCall()) {
++    DEBUG_WITH_TYPE(DEBUG_TYPE "-kcfi", {
++      if (CalleeF) {
++        ConstantInt *FunctionType = nullptr;
++        ConstantInt *ExpectedType = cast<ConstantInt>(Bundle->Inputs[0]);
++
++        if (MDNode *MD = CalleeF->getMetadata(LLVMContext::MD_kcfi_type))
++          FunctionType = mdconst::extract<ConstantInt>(MD->getOperand(0));
++
++        if (FunctionType &&
++            FunctionType->getZExtValue() != ExpectedType->getZExtValue())
++          dbgs() << Call.getModule()->getName() << ":"
++                 << Call.getDebugLoc().getLine()
++                 << ": warning: kcfi: " << Call.getCaller()->getName()
++                 << ": call to " << CalleeF->getName()
++                 << " using a mismatching function pointer type\n";
++      }
++    });
++
++    return CallBase::removeOperandBundle(&Call, LLVMContext::OB_kcfi);
++  }
++
+   if (isRemovableAlloc(&Call, &TLI))
+     return visitAllocSite(Call);
+ 
+diff --git a/llvm/lib/Transforms/Scalar/TailRecursionElimination.cpp b/llvm/lib/Transforms/Scalar/TailRecursionElimination.cpp
+index 27c04177e894..ad90c961267c 100644
+--- a/llvm/lib/Transforms/Scalar/TailRecursionElimination.cpp
++++ b/llvm/lib/Transforms/Scalar/TailRecursionElimination.cpp
+@@ -243,10 +243,12 @@ static bool markTails(Function &F, OptimizationRemarkEmitter *ORE) {
+           isa<PseudoProbeInst>(&I))
+         continue;
+ 
+-      // Special-case operand bundles "clang.arc.attachedcall" and "ptrauth".
+-      bool IsNoTail =
+-          CI->isNoTailCall() || CI->hasOperandBundlesOtherThan(
+-            {LLVMContext::OB_clang_arc_attachedcall, LLVMContext::OB_ptrauth});
++      // Special-case operand bundles "clang.arc.attachedcall", "ptrauth", and
++      // "kcfi".
++      bool IsNoTail = CI->isNoTailCall() ||
++                      CI->hasOperandBundlesOtherThan(
++                          {LLVMContext::OB_clang_arc_attachedcall,
++                           LLVMContext::OB_ptrauth, LLVMContext::OB_kcfi});
+ 
+       if (!IsNoTail && CI->doesNotAccessMemory()) {
+         // A call to a readnone function whose arguments are all things computed
+diff --git a/llvm/lib/Transforms/Utils/InlineFunction.cpp b/llvm/lib/Transforms/Utils/InlineFunction.cpp
+index 878f9477a29d..c9b5a1b10293 100644
+--- a/llvm/lib/Transforms/Utils/InlineFunction.cpp
++++ b/llvm/lib/Transforms/Utils/InlineFunction.cpp
+@@ -1814,6 +1814,8 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
+         continue;
+       if (Tag == LLVMContext::OB_clang_arc_attachedcall)
+         continue;
++      if (Tag == LLVMContext::OB_kcfi)
++        continue;
+ 
+       return InlineResult::failure("unsupported operand bundle");
+     }
+diff --git a/llvm/test/Bitcode/operand-bundles-bc-analyzer.ll b/llvm/test/Bitcode/operand-bundles-bc-analyzer.ll
+index 1504f5b525db..0ee9ee1ebe8a 100644
+--- a/llvm/test/Bitcode/operand-bundles-bc-analyzer.ll
++++ b/llvm/test/Bitcode/operand-bundles-bc-analyzer.ll
+@@ -11,6 +11,7 @@
+ ; CHECK-NEXT:    <OPERAND_BUNDLE_TAG
+ ; CHECK-NEXT:    <OPERAND_BUNDLE_TAG
+ ; CHECK-NEXT:    <OPERAND_BUNDLE_TAG
++; CHECK-NEXT:    <OPERAND_BUNDLE_TAG
+ ; CHECK-NEXT:  </OPERAND_BUNDLE_TAGS_BLOCK
+ 
+ ; CHECK:   <FUNCTION_BLOCK
+diff --git a/llvm/test/CodeGen/AArch64/O0-pipeline.ll b/llvm/test/CodeGen/AArch64/O0-pipeline.ll
+index 74a28778dbf0..a3e0943c7014 100644
+--- a/llvm/test/CodeGen/AArch64/O0-pipeline.ll
++++ b/llvm/test/CodeGen/AArch64/O0-pipeline.ll
+@@ -54,6 +54,7 @@
+ ; CHECK-NEXT:       Prologue/Epilogue Insertion & Frame Finalization
+ ; CHECK-NEXT:       Post-RA pseudo instruction expansion pass
+ ; CHECK-NEXT:       AArch64 pseudo instruction expansion pass
++; CHECK-NEXT:       Insert KCFI indirect call checks
+ ; CHECK-NEXT:       AArch64 speculation hardening pass
+ ; CHECK-NEXT:       AArch64 Indirect Thunks
+ ; CHECK-NEXT:       AArch64 sls hardening pass
+diff --git a/llvm/test/CodeGen/AArch64/O3-pipeline.ll b/llvm/test/CodeGen/AArch64/O3-pipeline.ll
+index 713c70fbf8bf..a50596922ebb 100644
+--- a/llvm/test/CodeGen/AArch64/O3-pipeline.ll
++++ b/llvm/test/CodeGen/AArch64/O3-pipeline.ll
+@@ -196,6 +196,7 @@
+ ; CHECK-NEXT:       Post-RA pseudo instruction expansion pass
+ ; CHECK-NEXT:       AArch64 pseudo instruction expansion pass
+ ; CHECK-NEXT:       AArch64 load / store optimization pass
++; CHECK-NEXT:       Insert KCFI indirect call checks
+ ; CHECK-NEXT:       AArch64 speculation hardening pass
+ ; CHECK-NEXT:       AArch64 Indirect Thunks
+ ; CHECK-NEXT:       AArch64 sls hardening pass
+diff --git a/llvm/test/CodeGen/AArch64/kcfi-bti.ll b/llvm/test/CodeGen/AArch64/kcfi-bti.ll
+new file mode 100644
+index 000000000000..62e2fdcebee3
+--- /dev/null
++++ b/llvm/test/CodeGen/AArch64/kcfi-bti.ll
+@@ -0,0 +1,92 @@
++; RUN: llc -mtriple=aarch64-- -verify-machineinstrs < %s | FileCheck %s --check-prefix=ASM
++; RUN: llc -mtriple=aarch64-- -verify-machineinstrs -stop-after=finalize-isel < %s | FileCheck %s --check-prefixes=MIR,ISEL
++; RUN: llc -mtriple=aarch64-- -verify-machineinstrs -stop-after=aarch64-kcfi < %s | FileCheck %s --check-prefixes=MIR,KCFI
++
++; ASM:       .word 12345678
++define void @f1(ptr noundef %x) !kcfi_type !2 {
++; ASM-LABEL: f1:
++; ASM:       // %bb.0:
++; ASM:         ldur w16, [x0, #-4]
++; ASM-NEXT:    movk w17, #24910
++; ASM-NEXT:    movk w17, #188, lsl #16
++; ASM-NEXT:    cmp w16, w17
++; ASM-NEXT:    b.eq .Ltmp0
++; ASM-NEXT:    brk #0x8220
++; ASM-NEXT:  .Ltmp0:
++; ASM-NEXT:    blr x0
++
++; MIR-LABEL: name: f1
++; MIR: body:
++
++; ISEL: BLR %0, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp, cfi-type 12345678
++
++; KCFI:       BUNDLE{{.*}} {
++; KCFI-NEXT:    KCFI_CHECK $x0, 12345678, implicit-def $x9, implicit-def $x16, implicit-def $x17, implicit-def $nzcv
++; KCFI-NEXT:    BLR killed $x0, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp
++; KCFI-NEXT:  }
++
++  call void %x() [ "kcfi"(i32 12345678) ]
++  ret void
++}
++
++; ASM:       .word 12345678
++define void @f2(ptr noundef %x) !kcfi_type !2 {
++; ASM-LABEL: f2:
++; ASM:       // %bb.0:
++; ASM:         ldur w16, [x0, #-4]
++; ASM-NEXT:    movk w17, #24910
++; ASM-NEXT:    movk w17, #188, lsl #16
++; ASM-NEXT:    cmp w16, w17
++; ASM-NEXT:    b.eq .Ltmp1
++; ASM-NEXT:    brk #0x8220
++; ASM-NEXT:  .Ltmp1:
++; ASM-NEXT:    blr x0
++
++; MIR-LABEL: name: f2
++; MIR: body:
++
++; ISEL: BLR_BTI %0, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp, cfi-type 12345678
++
++; KCFI:       BUNDLE{{.*}} {
++; KCFI-NEXT:    KCFI_CHECK $x0, 12345678, implicit-def $x9, implicit-def $x16, implicit-def $x17, implicit-def $nzcv
++; KCFI-NEXT:    BLR killed $x0, implicit-def $lr, implicit $sp
++; KCFI-NEXT:    HINT 36
++; KCFI-NEXT:  }
++
++  call void %x() #0 [ "kcfi"(i32 12345678) ]
++  ret void
++}
++
++; ASM-NOT: .word:
++define void @f3(ptr noundef %x) {
++; ASM-LABEL: f3:
++; ASM:       // %bb.0:
++; ASM:         ldur w9, [x16, #-4]
++; ASM-NEXT:    movk w17, #24910
++; ASM-NEXT:    movk w17, #188, lsl #16
++; ASM-NEXT:    cmp w9, w17
++; ASM-NEXT:    b.eq .Ltmp2
++; ASM-NEXT:    brk #0x8230
++; ASM-NEXT:  .Ltmp2:
++; ASM-NEXT:    br x16
++
++; MIR-LABEL: name: f3
++; MIR: body:
++
++; ISEL: TCRETURNriBTI %1, 0, csr_aarch64_aapcs, implicit $sp, cfi-type 12345678
++
++; KCFI:       BUNDLE{{.*}} {
++; KCFI-NEXT:    KCFI_CHECK $x16, 12345678, implicit-def $x9, implicit-def $x16, implicit-def $x17, implicit-def $nzcv
++; KCFI-NEXT:    TCRETURNriBTI internal killed $x16, 0, csr_aarch64_aapcs, implicit $sp
++; KCFI-NEXT:  }
++
++  tail call void %x() [ "kcfi"(i32 12345678) ]
++  ret void
++}
++
++attributes #0 = { returns_twice }
++
++!llvm.module.flags = !{!0, !1}
++!0 = !{i32 8, !"branch-target-enforcement", i32 1}
++!1 = !{i32 4, !"kcfi", i32 1}
++!2 = !{i32 12345678}
+diff --git a/llvm/test/CodeGen/AArch64/kcfi-patchable-function-prefix.ll b/llvm/test/CodeGen/AArch64/kcfi-patchable-function-prefix.ll
+new file mode 100644
+index 000000000000..fe9036e8d890
+--- /dev/null
++++ b/llvm/test/CodeGen/AArch64/kcfi-patchable-function-prefix.ll
+@@ -0,0 +1,47 @@
++; RUN: llc -mtriple=aarch64-- -verify-machineinstrs < %s | FileCheck %s
++
++; CHECK:          .p2align 2
++; CHECK-NOT:        nop
++; CHECK:          .word   12345678
++; CHECK-LABEL:    f1:
++define void @f1(ptr noundef %x) !kcfi_type !1 {
++; CHECK:            ldur    w16, [x0, #-4]
++  call void %x() [ "kcfi"(i32 12345678) ]
++  ret void
++}
++
++; CHECK:          .p2align 2
++; CHECK-NOT       .word
++; CHECK-NOT:        nop
++; CHECK-LABEL:    f2:
++define void @f2(ptr noundef %x) {
++; CHECK:            ldur    w16, [x0, #-4]
++  call void %x() [ "kcfi"(i32 12345678) ]
++  ret void
++}
++
++; CHECK:          .p2align 2
++; CHECK:          .word   12345678
++; CHECK-COUNT-11:   nop
++; CHECK-LABEL:    f3:
++define void @f3(ptr noundef %x) #0 !kcfi_type !1 {
++; CHECK:            ldur    w16, [x0, #-48]
++  call void %x() [ "kcfi"(i32 12345678) ]
++  ret void
++}
++
++; CHECK:          .p2align 2
++; CHECK-NOT:      .word
++; CHECK-COUNT-11:   nop
++; CHECK-LABEL:    f4:
++define void @f4(ptr noundef %x) #0 {
++; CHECK:            ldur    w16, [x0, #-48]
++  call void %x() [ "kcfi"(i32 12345678) ]
++  ret void
++}
++
++attributes #0 = { "patchable-function-prefix"="11" }
++
++!llvm.module.flags = !{!0}
++!0 = !{i32 4, !"kcfi", i32 1}
++!1 = !{i32 12345678}
+diff --git a/llvm/test/CodeGen/AArch64/kcfi.ll b/llvm/test/CodeGen/AArch64/kcfi.ll
+new file mode 100644
+index 000000000000..088c93645cc0
+--- /dev/null
++++ b/llvm/test/CodeGen/AArch64/kcfi.ll
+@@ -0,0 +1,79 @@
++; RUN: llc -mtriple=aarch64-- -verify-machineinstrs < %s | FileCheck %s --check-prefix=ASM
++; RUN: llc -mtriple=aarch64-- -verify-machineinstrs -global-isel < %s | FileCheck %s --check-prefix=ASM
++
++; RUN: llc -mtriple=aarch64-- -verify-machineinstrs -stop-after=finalize-isel < %s | FileCheck %s --check-prefixes=MIR,ISEL
++; RUN: llc -mtriple=aarch64-- -verify-machineinstrs -stop-after=finalize-isel -global-isel < %s | FileCheck %s --check-prefixes=MIR,ISEL
++
++; RUN: llc -mtriple=aarch64-- -verify-machineinstrs -mattr=harden-sls-blr -stop-after=finalize-isel < %s | FileCheck %s --check-prefixes=MIR,ISEL-SLS
++; RUN: llc -mtriple=aarch64-- -verify-machineinstrs -mattr=harden-sls-blr -stop-after=finalize-isel -global-isel < %s | FileCheck %s --check-prefixes=MIR,ISEL-SLS
++
++; RUN: llc -mtriple=aarch64-- -verify-machineinstrs -stop-after=aarch64-kcfi < %s | FileCheck %s --check-prefixes=MIR,KCFI
++; RUN: llc -mtriple=aarch64-- -verify-machineinstrs -mattr=harden-sls-blr -stop-after=aarch64-kcfi < %s | FileCheck %s --check-prefixes=MIR,KCFI-SLS
++
++; ASM:       .word 12345678
++define void @f1(ptr noundef %x) !kcfi_type !1 {
++; ASM-LABEL: f1:
++; ASM:       // %bb.0:
++; ASM:         ldur w16, [x0, #-4]
++; ASM-NEXT:    movk w17, #24910
++; ASM-NEXT:    movk w17, #188, lsl #16
++; ASM-NEXT:    cmp w16, w17
++; ASM-NEXT:    b.eq .Ltmp0
++; ASM-NEXT:    brk #0x8220
++; ASM-NEXT:  .Ltmp0:
++; ASM-NEXT:    blr x0
++
++; MIR-LABEL: name: f1
++; MIR: body:
++
++; ISEL:     BLR %0, csr_aarch64_aapcs,{{.*}} cfi-type 12345678
++; ISEL-SLS: BLRNoIP %0, csr_aarch64_aapcs,{{.*}} cfi-type 12345678
++
++; KCFI:       BUNDLE{{.*}} {
++; KCFI-NEXT:    KCFI_CHECK $x0, 12345678, implicit-def $x9, implicit-def $x16, implicit-def $x17, implicit-def $nzcv
++; KCFI-NEXT:    BLR killed $x0, csr_aarch64_aapcs,{{.*}}
++; KCFI-NEXT:  }
++
++; KCFI-SLS:       BUNDLE{{.*}} {
++; KCFI-SLS-NEXT:    KCFI_CHECK $x0, 12345678, implicit-def $x9, implicit-def $x16, implicit-def $x17, implicit-def $nzcv
++; KCFI-SLS-NEXT:    BLRNoIP killed $x0, csr_aarch64_aapcs,{{.*}}
++; KCFI-SLS-NEXT:  }
++
++  call void %x() [ "kcfi"(i32 12345678) ]
++  ret void
++}
++
++; ASM-NOT: .word:
++define void @f2(ptr noundef %x) #0 {
++; ASM-LABEL: f2:
++; ASM:       // %bb.0:
++; ASM-NEXT:    nop
++; ASM-NEXT:    nop
++; ASM:         ldur w16, [x0, #-4]
++; ASM-NEXT:    movk w17, #24910
++; ASM-NEXT:    movk w17, #188, lsl #16
++; ASM-NEXT:    cmp w16, w17
++; ASM-NEXT:    b.eq .Ltmp1
++; ASM-NEXT:    brk #0x8220
++; ASM-NEXT:  .Ltmp1:
++; ASM-NEXT:    br x0
++
++; MIR-LABEL: name: f2
++; MIR: body:
++
++; ISEL:     TCRETURNri %0, 0, csr_aarch64_aapcs, implicit $sp, cfi-type 12345678
++
++; KCFI:       BUNDLE{{.*}} {
++; KCFI-NEXT:    KCFI_CHECK $x0, 12345678, implicit-def $x9, implicit-def $x16, implicit-def $x17, implicit-def $nzcv
++; KCFI-NEXT:    TCRETURNri killed $x0, 0, csr_aarch64_aapcs, implicit $sp
++; KCFI-NEXT:  }
++
++  tail call void %x() [ "kcfi"(i32 12345678) ]
++  ret void
++}
++
++attributes #0 = { "patchable-function-entry"="2" }
++
++!llvm.module.flags = !{!0}
++!0 = !{i32 4, !"kcfi", i32 1}
++!1 = !{i32 12345678}
+diff --git a/llvm/test/CodeGen/MIR/X86/instr-cfi-type.mir b/llvm/test/CodeGen/MIR/X86/instr-cfi-type.mir
+new file mode 100644
+index 000000000000..136e491a2e3b
+--- /dev/null
++++ b/llvm/test/CodeGen/MIR/X86/instr-cfi-type.mir
+@@ -0,0 +1,42 @@
++# RUN: llc -march=x86-64 -run-pass none -o - %s | FileCheck %s
++# This test ensures that the MIR parser parses cfi-type correctly.
++
++--- |
++  define void @test(ptr noundef %x) {
++    call void %x() [ "kcfi"(i32 12345678) ]
++    ret void
++  }
++  
++  !llvm.module.flags = !{!0}
++  
++  !0 = !{i32 4, !"kcfi", i32 1}
++
++...
++---
++name:            test
++# CHECK-LABEL: name: test
++alignment:       16
++tracksRegLiveness: true
++tracksDebugUserValues: true
++liveins:
++  - { reg: '$rdi' }
++frameInfo:
++  stackSize:       8
++  offsetAdjustment: -8
++  maxAlignment:    1
++  adjustsStack:    true
++  hasCalls:        true
++  maxCallFrameSize: 0
++machineFunctionInfo: {}
++body:             |
++  bb.0 (%ir-block.0):
++    liveins: $rdi
++  
++    frame-setup PUSH64r undef $rax, implicit-def $rsp, implicit $rsp
++    frame-setup CFI_INSTRUCTION def_cfa_offset 16
++    CALL64r killed renamable $rdi, csr_64, implicit $rsp, implicit $ssp, implicit-def $rsp, implicit-def $ssp, cfi-type 12345678
++    $rax = frame-destroy POP64r implicit-def $rsp, implicit $rsp
++    frame-destroy CFI_INSTRUCTION def_cfa_offset 8
++    RET64
++
++...
+diff --git a/llvm/test/CodeGen/X86/O0-pipeline.ll b/llvm/test/CodeGen/X86/O0-pipeline.ll
+index cf0e0d401df2..1c80d677f78f 100644
+--- a/llvm/test/CodeGen/X86/O0-pipeline.ll
++++ b/llvm/test/CodeGen/X86/O0-pipeline.ll
+@@ -56,6 +56,7 @@
+ ; CHECK-NEXT:       Prologue/Epilogue Insertion & Frame Finalization
+ ; CHECK-NEXT:       Post-RA pseudo instruction expansion pass
+ ; CHECK-NEXT:       X86 pseudo instruction expansion pass
++; CHECK-NEXT:       Insert KCFI indirect call checks
+ ; CHECK-NEXT:       Analyze Machine Code For Garbage Collection
+ ; CHECK-NEXT:       Insert fentry calls
+ ; CHECK-NEXT:       Insert XRay ops
+@@ -75,6 +76,7 @@
+ ; CHECK-NEXT:       Check CFA info and insert CFI instructions if needed
+ ; CHECK-NEXT:       X86 Load Value Injection (LVI) Ret-Hardening
+ ; CHECK-NEXT:       Pseudo Probe Inserter
++; CHECK-NEXT:       Unpack machine instruction bundles
+ ; CHECK-NEXT:       Lazy Machine Block Frequency Analysis
+ ; CHECK-NEXT:       Machine Optimization Remark Emitter
+ ; CHECK-NEXT:       X86 Assembly Printer
+diff --git a/llvm/test/CodeGen/X86/kcfi-patchable-function-prefix.ll b/llvm/test/CodeGen/X86/kcfi-patchable-function-prefix.ll
+new file mode 100644
+index 000000000000..e5d541f8ed9d
+--- /dev/null
++++ b/llvm/test/CodeGen/X86/kcfi-patchable-function-prefix.ll
+@@ -0,0 +1,52 @@
++; RUN: llc -mtriple=x86_64-unknown-linux-gnu -verify-machineinstrs < %s | FileCheck %s
++
++; CHECK:          .p2align 4, 0x90
++; CHECK-LABEL:    __cfi_f1:
++; CHECK-COUNT-11:   nop
++; CHECK-NEXT:       movl $12345678, %eax
++; CHECK-LABEL:    .Lcfi_func_end0:
++; CHECK-NEXT:     .size   __cfi_f1, .Lcfi_func_end0-__cfi_f1
++; CHECK-LABEL:    f1:
++define void @f1(ptr noundef %x) !kcfi_type !1 {
++; CHECK:            addl -4(%r{{..}}), %r10d
++  call void %x() [ "kcfi"(i32 12345678) ]
++  ret void
++}
++
++; CHECK:          .p2align 4, 0x90
++; CHECK-NOT:      __cfi_f2:
++; CHECK-NOT:        nop
++; CHECK-LABEL:    f2:
++define void @f2(ptr noundef %x) {
++; CHECK:            addl -4(%r{{..}}), %r10d
++  call void %x() [ "kcfi"(i32 12345678) ]
++  ret void
++}
++
++; CHECK:          .p2align 4, 0x90
++; CHECK-LABEL:    __cfi_f3:
++; CHECK-NOT:        nop
++; CHECK-NEXT:       movl $12345678, %eax
++; CHECK-COUNT-11:   nop
++; CHECK-LABEL:    f3:
++define void @f3(ptr noundef %x) #0 !kcfi_type !1 {
++; CHECK:            addl -15(%r{{..}}), %r10d
++  call void %x() [ "kcfi"(i32 12345678) ]
++  ret void
++}
++
++; CHECK:          .p2align 4, 0x90
++; CHECK-NOT:      __cfi_f4:
++; CHECK-COUNT-16:   nop
++; CHECK-LABEL:    f4:
++define void @f4(ptr noundef %x) #0 {
++; CHECK:            addl -15(%r{{..}}), %r10d
++  call void %x() [ "kcfi"(i32 12345678) ]
++  ret void
++}
++
++attributes #0 = { "patchable-function-prefix"="11" }
++
++!llvm.module.flags = !{!0}
++!0 = !{i32 4, !"kcfi", i32 1}
++!1 = !{i32 12345678}
+diff --git a/llvm/test/CodeGen/X86/kcfi.ll b/llvm/test/CodeGen/X86/kcfi.ll
+new file mode 100644
+index 000000000000..362df82a5b20
+--- /dev/null
++++ b/llvm/test/CodeGen/X86/kcfi.ll
+@@ -0,0 +1,117 @@
++; RUN: llc -mtriple=x86_64-unknown-linux-gnu -verify-machineinstrs < %s | FileCheck %s --check-prefix=ASM
++; RUN: llc -mtriple=x86_64-unknown-linux-gnu -verify-machineinstrs -stop-after=finalize-isel < %s | FileCheck %s --check-prefixes=MIR,ISEL
++; RUN: llc -mtriple=x86_64-unknown-linux-gnu -verify-machineinstrs -stop-after=x86-kcfi < %s | FileCheck %s --check-prefixes=MIR,KCFI
++
++; ASM:       .p2align 4, 0x90
++; ASM:       .type __cfi_f1,@function
++; ASM-LABEL: __cfi_f1:
++; ASM-NEXT:    nop
++; ASM-NEXT:    nop
++; ASM-NEXT:    nop
++; ASM-NEXT:    nop
++; ASM-NEXT:    nop
++; ASM-NEXT:    nop
++; ASM-NEXT:    nop
++; ASM-NEXT:    nop
++; ASM-NEXT:    nop
++; ASM-NEXT:    nop
++; ASM-NEXT:    nop
++; ASM-NEXT:    movl $12345678, %eax
++; ASM-LABEL: .Lcfi_func_end0:
++; ASM-NEXT:  .size   __cfi_f1, .Lcfi_func_end0-__cfi_f1
++define void @f1(ptr noundef %x) !kcfi_type !1 {
++; ASM-LABEL: f1:
++; ASM:       # %bb.0:
++; ASM:         movl $4282621618, %r10d # imm = 0xFF439EB2
++; ASM-NEXT:    addl -4(%rdi), %r10d
++; ASM-NEXT:    je .Ltmp0
++; ASM-NEXT:  .Ltmp1:
++; ASM-NEXT:    ud2
++; ASM-NEXT:    .section .kcfi_traps,"ao",@progbits,.text
++; ASM-NEXT:  .Ltmp2:
++; ASM-NEXT:    .long .Ltmp1-.Ltmp2
++; ASM-NEXT:    .text
++; ASM-NEXT:  .Ltmp0:
++; ASM-NEXT:    callq *%rdi
++
++; MIR-LABEL: name: f1
++; MIR: body:
++; ISEL: CALL64r %0, csr_64, implicit $rsp, implicit $ssp, implicit-def $rsp, implicit-def $ssp, cfi-type 12345678
++; KCFI:       BUNDLE implicit-def $r10, implicit-def $r10d, implicit-def $r10w, implicit-def $r10b, implicit-def $r10bh, implicit-def $r10wh, implicit-def $eflags, implicit-def $rsp, implicit-def $esp, implicit-def $sp, implicit-def $spl, implicit-def $sph, implicit-def $hsp, implicit-def $ssp, implicit killed $rdi, implicit $rsp, implicit $ssp {
++; KCFI-NEXT:    KCFI_CHECK $rdi, 12345678, implicit-def $r10, implicit-def $eflags
++; KCFI-NEXT:    CALL64r killed $rdi, csr_64, implicit $rsp, implicit $ssp, implicit-def $rsp, implicit-def $ssp
++; KCFI-NEXT:  }
++  call void %x() [ "kcfi"(i32 12345678) ]
++  ret void
++}
++
++; ASM-NOT: __cfi_f2:
++define void @f2(ptr noundef %x) {
++; ASM-LABEL: f2:
++
++; MIR-LABEL: name: f2
++; MIR: body:
++; ISEL: TCRETURNri64 %0, 0, csr_64, implicit $rsp, implicit $ssp, cfi-type 12345678
++; KCFI:       BUNDLE implicit-def $r10, implicit-def $r10d, implicit-def $r10w, implicit-def $r10b, implicit-def $r10bh, implicit-def $r10wh, implicit-def $eflags, implicit killed $rdi, implicit $rsp, implicit $ssp {
++; KCFI-NEXT:    KCFI_CHECK $rdi, 12345678, implicit-def $r10, implicit-def $eflags
++; KCFI-NEXT:    TAILJMPr64 killed $rdi, csr_64, implicit $rsp, implicit $ssp, implicit $rsp, implicit $ssp
++; KCFI-NEXT:  }
++  tail call void %x() [ "kcfi"(i32 12345678) ]
++  ret void
++}
++
++; ASM-NOT: __cfi_f3:
++define void @f3(ptr noundef %x) #0 {
++; ASM-LABEL: f3:
++; MIR-LABEL: name: f3
++; MIR: body:
++; ISEL: CALL64pcrel32 &__llvm_retpoline_r11, csr_64, implicit $rsp, implicit $ssp, implicit-def $rsp, implicit-def $ssp, implicit killed $r11, cfi-type 12345678
++; KCFI:       BUNDLE implicit-def $r10, implicit-def $r10d, implicit-def $r10w, implicit-def $r10b, implicit-def $r10bh, implicit-def $r10wh, implicit-def $eflags, implicit-def $rsp, implicit-def $esp, implicit-def $sp, implicit-def $spl, implicit-def $sph, implicit-def $hsp, implicit-def $ssp, implicit killed $r11, implicit $rsp, implicit $ssp {
++; KCFI-NEXT:    KCFI_CHECK $r11, 12345678, implicit-def $r10, implicit-def $eflags
++; KCFI-NEXT:    CALL64pcrel32 &__llvm_retpoline_r11, csr_64, implicit $rsp, implicit $ssp, implicit-def $rsp, implicit-def $ssp, implicit killed $r11
++; KCFI-NEXT:  }
++  call void %x() [ "kcfi"(i32 12345678) ]
++  ret void
++}
++
++; ASM-NOT: __cfi_f4:
++define void @f4(ptr noundef %x) #0 {
++; ASM-LABEL: f4:
++; MIR-LABEL: name: f4
++; MIR: body:
++; ISEL: TCRETURNdi64 &__llvm_retpoline_r11, 0, csr_64, implicit $rsp, implicit $ssp, implicit killed $r11, cfi-type 12345678
++; KCFI:       BUNDLE implicit-def $r10, implicit-def $r10d, implicit-def $r10w, implicit-def $r10b, implicit-def $r10bh, implicit-def $r10wh, implicit-def $eflags, implicit killed $r11, implicit $rsp, implicit $ssp {
++; KCFI-NEXT:    KCFI_CHECK $r11, 12345678, implicit-def $r10, implicit-def $eflags
++; KCFI-NEXT:    TAILJMPd64 &__llvm_retpoline_r11, csr_64, implicit $rsp, implicit $ssp, implicit $rsp, implicit $ssp, implicit killed $r11
++; KCFI-NEXT:  }
++  tail call void %x() [ "kcfi"(i32 12345678) ]
++  ret void
++}
++
++;; Ensure we emit Value + 1 for unwanted values (e.g. endbr64 == 4196274163).
++; ASM-LABEL: __cfi_f5:
++; ASM: movl $4196274164, %eax # imm = 0xFA1E0FF4
++define void @f5(ptr noundef %x) !kcfi_type !2 {
++; ASM-LABEL: f5:
++; ASM: movl $98693132, %r10d # imm = 0x5E1F00C
++  tail call void %x() [ "kcfi"(i32 4196274163) ]
++  ret void
++}
++
++;; Ensure we emit Value + 1 for unwanted values (e.g. -endbr64 == 98693133).
++; ASM-LABEL: __cfi_f6:
++; ASM: movl $98693134, %eax # imm = 0x5E1F00E
++define void @f6(ptr noundef %x) !kcfi_type !3 {
++; ASM-LABEL: f6:
++; ASM: movl $4196274162, %r10d # imm = 0xFA1E0FF2
++  tail call void %x() [ "kcfi"(i32 98693133) ]
++  ret void
++}
++
++attributes #0 = { "target-features"="+retpoline-indirect-branches,+retpoline-indirect-calls" }
++
++!llvm.module.flags = !{!0}
++!0 = !{i32 4, !"kcfi", i32 1}
++!1 = !{i32 12345678}
++!2 = !{i32 4196274163}
++!3 = !{i32 98693133}
+diff --git a/llvm/test/CodeGen/X86/opt-pipeline.ll b/llvm/test/CodeGen/X86/opt-pipeline.ll
+index 6f2cfaaa3f8e..3f9acba27810 100644
+--- a/llvm/test/CodeGen/X86/opt-pipeline.ll
++++ b/llvm/test/CodeGen/X86/opt-pipeline.ll
+@@ -173,6 +173,7 @@
+ ; CHECK-NEXT:       Machine Copy Propagation Pass
+ ; CHECK-NEXT:       Post-RA pseudo instruction expansion pass
+ ; CHECK-NEXT:       X86 pseudo instruction expansion pass
++; CHECK-NEXT:       Insert KCFI indirect call checks
+ ; CHECK-NEXT:       MachineDominator Tree Construction
+ ; CHECK-NEXT:       Machine Natural Loop Construction
+ ; CHECK-NEXT:       Post RA top-down list latency scheduler
+@@ -208,6 +209,7 @@
+ ; CHECK-NEXT:       Check CFA info and insert CFI instructions if needed
+ ; CHECK-NEXT:       X86 Load Value Injection (LVI) Ret-Hardening
+ ; CHECK-NEXT:       Pseudo Probe Inserter
++; CHECK-NEXT:       Unpack machine instruction bundles
+ ; CHECK-NEXT:       Lazy Machine Block Frequency Analysis
+ ; CHECK-NEXT:       Machine Optimization Remark Emitter
+ ; CHECK-NEXT:       X86 Assembly Printer
+diff --git a/llvm/test/Transforms/InstCombine/kcfi-operand-bundles.ll b/llvm/test/Transforms/InstCombine/kcfi-operand-bundles.ll
+new file mode 100644
+index 000000000000..78831d66750f
+--- /dev/null
++++ b/llvm/test/Transforms/InstCombine/kcfi-operand-bundles.ll
+@@ -0,0 +1,25 @@
++; RUN: opt < %s -passes=instcombine -S | FileCheck %s
++
++define void @f1() #0 prefix i32 10 {
++  ret void
++}
++
++declare void @f2() #0 prefix i32 11
++
++; CHECK-LABEL: define void @g(ptr noundef %x) #0
++define void @g(ptr noundef %x) #0 {
++  ; CHECK: call void %x() [ "kcfi"(i32 10) ]
++  call void %x() [ "kcfi"(i32 10) ]
++
++  ; COM: Must drop the kcfi operand bundle from direct calls.
++  ; CHECK: call void @f1()
++  ; CHECK-NOT: [ "kcfi"(i32 10) ]
++  call void @f1() [ "kcfi"(i32 10) ]
++
++  ; CHECK: call void @f2()
++  ; CHECK-NOT: [ "kcfi"(i32 10) ]
++  call void @f2() [ "kcfi"(i32 10) ]
++  ret void
++}
++
++attributes #0 = { "kcfi-target" }
+diff --git a/llvm/test/Transforms/TailCallElim/kcfi-bundle.ll b/llvm/test/Transforms/TailCallElim/kcfi-bundle.ll
+new file mode 100644
+index 000000000000..f43b9fae0ab6
+--- /dev/null
++++ b/llvm/test/Transforms/TailCallElim/kcfi-bundle.ll
+@@ -0,0 +1,10 @@
++; RUN: opt < %s -tailcallelim -verify-dom-info -S | FileCheck %s
++; Check that the "kcfi" operand bundle doesn't prevent tail calls.
++
++define i64 @f_1(i64 %x, i64(i64)* %f_0) {
++; CHECK-LABEL: @f_1(
++entry:
++; CHECK: tail call i64 %f_0(i64 %x) [ "kcfi"(i32 42) ]
++  %tmp = call i64 %f_0(i64 %x) [ "kcfi"(i32 42) ]
++  ret i64 0
++}
+diff --git a/llvm/test/Verifier/kcfi-operand-bundles.ll b/llvm/test/Verifier/kcfi-operand-bundles.ll
+new file mode 100644
+index 000000000000..90933be4f3ce
+--- /dev/null
++++ b/llvm/test/Verifier/kcfi-operand-bundles.ll
+@@ -0,0 +1,16 @@
++; RUN: not opt -verify < %s 2>&1 | FileCheck %s
++
++define void @test_kcfi_bundle(i64 %arg0, i32 %arg1, void()* %arg2) {
++; CHECK: Multiple kcfi operand bundles
++; CHECK-NEXT: call void %arg2() [ "kcfi"(i32 42), "kcfi"(i32 42) ]
++  call void %arg2() [ "kcfi"(i32 42), "kcfi"(i32 42) ]
++
++; CHECK: Kcfi bundle operand must be an i32 constant
++; CHECK-NEXT: call void %arg2() [ "kcfi"(i64 42) ]
++  call void %arg2() [ "kcfi"(i64 42) ]
++
++; CHECK-NOT: call
++  call void %arg2() [ "kcfi"(i32 42) ] ; OK
++  call void %arg2() [ "kcfi"(i32 42) ] ; OK
++  ret void
++}
+diff --git a/llvm/test/Verifier/metadata-function-kcfi-type.ll b/llvm/test/Verifier/metadata-function-kcfi-type.ll
+new file mode 100644
+index 000000000000..93bac98e1193
+--- /dev/null
++++ b/llvm/test/Verifier/metadata-function-kcfi-type.ll
+@@ -0,0 +1,39 @@
++; RUN: not llvm-as %s -disable-output 2>&1 | FileCheck %s
++
++define void @a() {
++  unreachable
++}
++
++define void @b() !kcfi_type !0 {
++  unreachable
++}
++
++; CHECK: function must have a single !kcfi_type attachment
++define void @f0() !kcfi_type !0 !kcfi_type !0 {
++  unreachable
++}
++!0 = !{i32 10}
++
++; CHECK: !kcfi_type must have exactly one operand
++define void @f1() !kcfi_type !1 {
++  unreachable
++}
++!1 = !{!"string", i32 0}
++
++; CHECK: expected a constant operand for !kcfi_type
++define void @f2() !kcfi_type !2 {
++  unreachable
++}
++!2 = !{!"string"}
++
++; CHECK: expected a constant integer operand for !kcfi_type
++define void @f3() !kcfi_type !3 {
++  unreachable
++}
++!3 = !{ptr @f3}
++
++; CHECK: expected a 32-bit integer constant operand for !kcfi_type
++define void @f4() !kcfi_type !4 {
++  unreachable
++}
++!4 = !{i64 10}
+diff --git a/llvm/utils/gn/secondary/llvm/lib/Target/AArch64/BUILD.gn b/llvm/utils/gn/secondary/llvm/lib/Target/AArch64/BUILD.gn
+index 76b564822c76..868029f2c39e 100644
+--- a/llvm/utils/gn/secondary/llvm/lib/Target/AArch64/BUILD.gn
++++ b/llvm/utils/gn/secondary/llvm/lib/Target/AArch64/BUILD.gn
+@@ -126,6 +126,7 @@ static_library("LLVMAArch64CodeGen") {
+     "AArch64ISelDAGToDAG.cpp",
+     "AArch64ISelLowering.cpp",
+     "AArch64InstrInfo.cpp",
++    "AArch64KCFI.cpp",
+     "AArch64LoadStoreOptimizer.cpp",
+     "AArch64LowerHomogeneousPrologEpilog.cpp",
+     "AArch64MCInstLower.cpp",
+diff --git a/llvm/utils/gn/secondary/llvm/lib/Target/X86/BUILD.gn b/llvm/utils/gn/secondary/llvm/lib/Target/X86/BUILD.gn
+index 28d1b499b303..af9716313433 100644
+--- a/llvm/utils/gn/secondary/llvm/lib/Target/X86/BUILD.gn
++++ b/llvm/utils/gn/secondary/llvm/lib/Target/X86/BUILD.gn
+@@ -109,6 +109,7 @@ static_library("LLVMX86CodeGen") {
+     "X86InstrInfo.cpp",
+     "X86InstructionSelector.cpp",
+     "X86InterleavedAccess.cpp",
++    "X86KCFI.cpp",
+     "X86LegalizerInfo.cpp",
+     "X86LoadValueInjectionLoadHardening.cpp",
+     "X86LoadValueInjectionRetHardening.cpp",
+-- 
+2.37.2
+
