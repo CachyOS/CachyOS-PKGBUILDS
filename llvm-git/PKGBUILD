@@ -88,6 +88,7 @@ build() {
         -D LLVM_INSTALL_UTILS=ON \
         -D LLVM_BUILD_DOCS=ON \
         -D LLVM_USE_LINKER=lld \
+		-D LLVM_ENABLE_BINDINGS=OFF \
         -D LLVM_ENABLE_DOXYGEN=OFF \
         -D LLVM_ENABLE_SPHINX=ON \
         -D SPHINX_OUTPUT_HTML:BOOL=OFF \
@@ -99,7 +100,6 @@ build() {
         -Wno-dev
 
     ninja -C _build $NINJAFLAGS
-    ninja -C _build $NINJAFLAGS ocaml_doc
 }
 
 check() {
@@ -202,17 +202,4 @@ package_llvm-libs-git() {
     install -Dm644 lld/LICENSE.TXT "$pkgdir"/usr/share/licenses/$pkgname/lld-LICENSE
     install -Dm644 lldb/LICENSE.TXT "$pkgdir"/usr/share/licenses/$pkgname/lldb-LICENSE
     install -Dm644 polly/LICENSE.TXT "$pkgdir"/usr/share/licenses/$pkgname/polly-LICENSE
-}
-
-package_llvm-ocaml-git() {
-    pkgdesc="OCaml bindings for LLVM"
-    depends=("llvm-git=$pkgver-$pkgrel" "ocaml" 'ocaml-ctypes')
-    conflicts=('llvm-ocaml')
-    provides=("llvm-ocaml")
-    
-    install -d "$pkgdir"/{usr/lib,usr/share/doc/$pkgname}
-    cp -a "$srcdir"/ocaml.lib "$pkgdir"/usr/lib/ocaml
-    cp -a "$srcdir"/ocaml.doc "$pkgdir"/usr/share/doc/$pkgname/html
-
-    install -Dm644 "$srcdir"/llvm-project/llvm/LICENSE.TXT  "$pkgdir"/usr/share/licenses/$pkgname/LICENSE
 }
