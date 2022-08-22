@@ -7,8 +7,8 @@
 pkgname=cachy-browser
 _pkgname=Cachy
 __pkgname=cachy
-pkgver=103.0.2
-pkgrel=2
+pkgver=104.0
+pkgrel=1
 pkgdesc="Community-maintained fork of Firefox, focused on privacy, security and freedom."
 arch=(x86_64 x86_64_v3)
 license=(MPL GPL LGPL)
@@ -45,7 +45,7 @@ source=(https://archive.mozilla.org/pub/firefox/releases/$pkgver/source/firefox-
     $pkgname.desktop
     "git+https://github.com/cachyos/cachyos-browser-settings.git"
 "git+https://github.com/cachyos/cachyos-browser-common.git")
-sha256sums=('766183e8e39c17a84305a85da3237919ffaeb018c6c9d97a7324aea51bd453aa'
+sha256sums=('1a294a651dc6260f9a72a3ab9f10e7792a4ab41a9cfa8527ad3dd9979cdc98ce'
             'SKIP'
             'c0786df2fd28409da59d0999083914a65e2097cda055c9c6c2a65825f156e29f'
             'SKIP'
@@ -118,7 +118,7 @@ ac_add_options --disable-gpsd
 ac_add_options --disable-synth-speechd
 ac_add_options --disable-debug-symbols
 ac_add_options --disable-debug-js-modules
-ac_add_options --disable-trace-logging
+#ac_add_options --disable-trace-logging
 ac_add_options --disable-rust-tests
 ac_add_options --disable-necko-wifi
 ac_add_options --disable-webspeech
@@ -223,15 +223,13 @@ END
     msg2 "Fix build with zstandard 1.8.0"
     patch -Np1 -i ${_patches_dir}/zstandard-0.18.0.patch
 
-  	msg2  "stop some undesired requests (https://gitlab.com/librewolf-community/browser/common/-/issues/10)"
-  	patch -Np1 -i ${_patches_dir}/sed-patches/stop-undesired-requests.patch # fails with 100
+#  	msg2  " some undesired requests (https://gitlab.com/librewolf-community/browser/common/-/issues/10)"
+#  	patch -Np1 -i ${_patches_dir}/sed-patches/stop-undesired-requests.patch # fails with 104
   	
   	msg2 "Debian patch to enable global menubar"
     patch -Np1 -i ${_patches_dir}/fix-psutil-dev.patch
     msg2 "fix for glibc 2.36"
     patch -Np1 -i ${_patches_dir}/glibc236.patch
-    msg2 "fix for glibc 2.36"
-    patch -Np1 -i ${_patches_dir}/rust163.patch
     rm -f ${srcdir}/cachyos-browser-common/source_files/mozconfig
     cp -r ${srcdir}/cachyos-browser-common/source_files/browser ./
 }
@@ -243,7 +241,7 @@ build() {
     export MOZ_NOSPAM=1
     export MOZBUILD_STATE_PATH="$srcdir/mozbuild"
     #export MOZ_ENABLE_FULL_SYMBOLS=1
-    export MACH_BUILD_PYTHON_NATIVE_PACKAGE_SOURCE=pip
+    export MACH_BUILD_PYTHON_NATIVE_PACKAGE_SOURCE=system
     export PIP_NETWORK_INSTALL_RESTRICTED_VIRTUALENVS=mach # let us hope this is a working _new_ workaround for the pip env issues?
 
     # LTO needs more open files
