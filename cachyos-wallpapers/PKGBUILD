@@ -2,7 +2,7 @@
 
 pkgname=cachyos-wallpapers
 pkgdesc='Wallpapers for CachyOS'
-pkgver=r4.c42ac4e
+pkgver=r1.927e0e3
 pkgrel=1
 arch=('any')
 url="https://github.com/cachyos/$pkgname"
@@ -12,11 +12,11 @@ source=("git+$url.git")
 sha512sums=('SKIP')
 
 pkgver() {
-   cd "$pkgname"
+   cd $srcdir/$pkgname
    printf "r%s.%s" "$(git rev-list --count HEAD)" "$(git rev-parse --short HEAD)"
 }
 
 package() {
-   cd "$pkgname"
-   install -Dm644 wallpapers/* -t "$pkgdir/usr/share/wallpapers/$pkgname/"
+    install -d $pkgdir/usr
+    cp -rf $srcdir/$pkgname/usr $pkgdir
 }
