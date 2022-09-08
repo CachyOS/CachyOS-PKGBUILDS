@@ -23,6 +23,7 @@ source=(calamares::git+https://github.com/calamares/calamares.git
 		settings_online.conf
         settings_offline.conf
         luks2.patch
+        https://github.com/calamares/calamares/commit/79db04dc2eb00b354044f73c054a94fe2b9f9aae.patch
         ${pkgname}-config::git+https://github.com/cachyos/calamares-config.git#branch=grub-3.3)
 sha256sums=('SKIP'
             '2bb91134b71d705de3103f70a1e45db72c43d0220b7a2e0178a012c3929c76a6'
@@ -54,9 +55,10 @@ prepare() {
     # remove default branding
     rm -r src/branding/default
 
-	# Force LTO
-#    patch -Np1 -i ${srcdir}/0001-Force-LTO.patch
+	# Support luks2 encrypted installations
 	patch -Np1 -i ${srcdir}/luks2.patch
+	# https://github.com/calamares/calamares/issues/2008#issuecomment-1172947659
+	patch -Rp1 -i ${srcdir}/79db04dc2eb00b354044f73c054a94fe2b9f9aae.patch
 }
 
 
