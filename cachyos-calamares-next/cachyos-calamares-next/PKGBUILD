@@ -3,7 +3,7 @@
 
 pkgname=cachyos-calamares-next
 pkgver=3.3.0
-pkgrel=5
+pkgrel=0.1
 pkgdesc='Distribution-independent installer framework'
 arch=('i686' 'x86_64' 'x86_64_v3')
 license=(GPL)
@@ -13,15 +13,16 @@ conflicts=('calamares')
 provides=('calamares')
 makedepends=('git' 'cmake' 'extra-cmake-modules' 'kpmcore' 'boost' 'python-jsonschema' 'python-pyaml' 'python-unidecode' 'ninja')
 depends=( 'qt5-svg' 'qt5-webengine' 'yaml-cpp' 'networkmanager' 'upower' 'kcoreaddons' 'kconfig' 'ki18n' 'kservice' \
-'kwidgetsaddons' 'kpmcore' 'squashfs-tools' 'rsync' 'cryptsetup' 'qt5-xmlpatterns' 'doxygen' 'dmidecode' \
-'gptfdisk' 'hwinfo' 'kparts' 'polkit-qt5' 'python' 'solid' 'qt5-tools' 'boost-libs' 'libpwquality' 'ckbcomp' 'mkinitcpio-openswap')
+          'kwidgetsaddons' 'kpmcore' 'squashfs-tools' 'rsync' 'cryptsetup' 'qt5-xmlpatterns' 'doxygen' 'dmidecode' 'qt5-quickcontrols2' 'qt5-quickcontrols' \
+          'gptfdisk' 'hwinfo' 'kparts' 'polkit-qt5' 'python' 'solid' 'qt5-tools' 'boost-libs' 'libpwquality' 'ckbcomp' 'mkinitcpio-openswap')
 backup=('usr/share/calamares/modules/bootloader.conf'
         'usr/share/calamares/modules/displaymanager.conf'
         'usr/share/calamares/modules/initcpio.conf'
         'usr/share/calamares/modules/unpackfs.conf')
-source=(calamares::git+https://github.com/calamares/calamares.git}
+source=(calamares::git+https://github.com/calamares/calamares.git
 		settings_online.conf
         settings_offline.conf
+        luks2.patch
         ${pkgname}-config::git+https://github.com/cachyos/calamares-config.git#branch=grub-3.3)
 sha256sums=('SKIP'
             '2bb91134b71d705de3103f70a1e45db72c43d0220b7a2e0178a012c3929c76a6'
@@ -31,36 +32,41 @@ sha256sums=('SKIP'
             'SKIP')
 
 prepare() {
-  cd ${srcdir}/calamares
-  sed -i -e 's/"Install configuration files" OFF/"Install configuration files" ON/' CMakeLists.txt
+    cd ${srcdir}/calamares
+    sed -i -e 's/"Install configuration files" OFF/"Install configuration files" ON/' CMakeLists.txt
 
-  rm -r "src/modules/"{fstab,mount,packages}
+    rm -r "src/modules/"{fstab,mount,packages}
 
-  cp -rf "${srcdir}/${pkgname}-config/usr/lib/calamares/modules"/{fstab,mount,packages} src/modules/
+    cp -rf "${srcdir}/${pkgname}-config/usr/lib/calamares/modules"/{fstab,mount,packages} src/modules/
 
-  # patches here
+    # patches here
 
-  # change version
-  #_ver="$(cat CMakeLists.txt | grep -m3 -e "  VERSION" | grep -o "[[:digit:]]*" | xargs | sed s'/ /./g')"
-  _ver="$pkgver"
-  printf 'Version: %s-%s\n' "${_ver}" "${pkgrel}"
-  sed -i -e "s|\${CALAMARES_VERSION_MAJOR}.\${CALAMARES_VERSION_MINOR}.\${CALAMARES_VERSION_PATCH}|${_ver}-${pkgrel}|g" CMakeLists.txt
-  sed -i -e "s|CALAMARES_VERSION_RC 1|CALAMARES_VERSION_RC 0|g" CMakeLists.txt
+    # change version
+    #_ver="$(cat CMakeLists.txt | grep -m3 -e "  VERSION" | grep -o "[[:digit:]]*" | xargs | sed s'/ /./g')"
+    _ver="$pkgver"
+    printf 'Version: %s-%s\n' "${_ver}" "${pkgrel}"
+    sed -i -e "s|\${CALAMARES_VERSION_MAJOR}.\${CALAMARES_VERSION_MINOR}.\${CALAMARES_VERSION_PATCH}|${_ver}-${pkgrel}|g" CMakeLists.txt
+    sed -i -e "s|CALAMARES_VERSION_RC 1|CALAMARES_VERSION_RC 0|g" CMakeLists.txt
 
-  # change branding
-  sed -i -e "s/default/cachyos/g" src/branding/CMakeLists.txt
+    # change branding
+    sed -i -e "s/default/cachyos/g" src/branding/CMakeLists.txt
 
-  # remove default branding
-  rm -r src/branding/default
+    # remove default branding
+    rm -r src/branding/default
+
+	# Force LTO
+#    patch -Np1 -i ${srcdir}/0001-Force-LTO.patch
+	patch -Np1 -i ${srcdir}/luks2.patch
 }
 
 
+
 build() {
-  cd ${srcdir}/calamares
+    cd ${srcdir}/calamares
 
-  _cpuCount=$(grep -c -w ^processor /proc/cpuinfo)
+    _cpuCount=$(grep -c -w ^processor /proc/cpuinfo)
 
-  cmake -S . -Bbuild \
+    cmake -S . -Bbuild \
         -GNinja \
         -DCMAKE_BUILD_TYPE=Release \
         -DCMAKE_INSTALL_PREFIX=/usr \
@@ -70,21 +76,21 @@ build() {
         -DBoost_NO_BOOST_CMAKE=ON \
         -DWEBVIEW_FORCE_WEBKIT=OFF \
         -DWITH_APPSTREAM=OFF \
-    -DSKIP_MODULES="dracut dracutlukscfg \
-    dummycpp dummyprocess dummypython dummypythonqt \
-    finishedq keyboardq license localeq notesqml oemid \
-    openrcdmcryptcfg packagechooserq \
-    plymouthcfg plasmalnf services-openrc \
-    summaryq tracking usersq webview welcomeq"
+        -DSKIP_MODULES="dracut dracutlukscfg \
+        dummycpp dummyprocess dummypython dummypythonqt \
+        finishedq keyboardq license localeq notesqml oemid \
+        openrcdmcryptcfg packagechooserq \
+        plymouthcfg plasmalnf services-openrc \
+        summaryq tracking usersq webview welcomeq"
 
-  cmake --build build --parallel $_cpuCount
+    cmake --build build --parallel $_cpuCount
 }
 
 package() {
-  cd ${srcdir}/calamares/build
-  DESTDIR="${pkgdir}" cmake --build . --target install
+    cd ${srcdir}/calamares/build
+    DESTDIR="${pkgdir}" cmake --build . --target install
 
-  #cp ${srcdir}/settings_offline.conf "$pkgdir/etc/calamares/settings.conf"
-  cp ${srcdir}/settings_offline.conf "$pkgdir/usr/share/calamares/settings_offline.conf"
-  cp ${srcdir}/settings_online.conf "$pkgdir/usr/share/calamares/settings_online.conf"
+    #cp ${srcdir}/settings_offline.conf "$pkgdir/etc/calamares/settings.conf"
+    cp ${srcdir}/settings_offline.conf "$pkgdir/usr/share/calamares/settings_offline.conf"
+    cp ${srcdir}/settings_online.conf "$pkgdir/usr/share/calamares/settings_online.conf"
 }

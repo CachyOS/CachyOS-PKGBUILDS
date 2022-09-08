@@ -2,7 +2,7 @@
 
 pkgname=cachyos-calamares-next-config
 _pkgname=cachyos-calamares-config
-pkgver=3
+pkgver=1
 pkgrel=1
 pkgdesc="CachyOS config for the Calamares installer"
 arch=(any)
@@ -14,16 +14,14 @@ sha512sums=('SKIP')
 provides=('$_pkgname=$pkgver')
 conflicts=('$_pkgname')
 
-pkgver() {
-  cd "$srcdir/$_pkgname"
-  printf 'r%s.%s' "$(git rev-list --count HEAD)" "$(git rev-parse --short HEAD)"
-}
-
 package() {
   local _destdir=etc/calamares
 
   install -dm755 $pkgdir/$_destdir
   install -dm755 $pkgdir/usr/lib/calamares/modules/pacstrap
+  install -dm755 $pkgdir/usr/lib/calamares/modules/mhwdcfg
   cp -rf $srcdir/$pkgname/etc $pkgdir
   cp -rf $srcdir/$pkgname/usr/lib/calamares/modules/pacstrap/* $pkgdir/usr/lib/calamares/modules/pacstrap
+  cp -rf $srcdir/$pkgname/usr/lib/calamares/modules/mhwdcfg/* $pkgdir/usr/lib/calamares/modules/mhwdcfg
+
 }
