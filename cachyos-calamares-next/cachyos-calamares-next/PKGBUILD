@@ -26,19 +26,19 @@ source=(calamares::git+https://github.com/calamares/calamares.git
         https://github.com/calamares/calamares/commit/79db04dc2eb00b354044f73c054a94fe2b9f9aae.patch
         ${pkgname}-config::git+https://github.com/cachyos/calamares-config.git#branch=grub-3.3)
 sha256sums=('SKIP'
-            '2bb91134b71d705de3103f70a1e45db72c43d0220b7a2e0178a012c3929c76a6'
+            'ea0f2187b6ac864835293bd05725316df07394dc49117b9d13acffd8eb4fe5ab'
             '3989743e5f4ac697809188de058e2985a9b1940d73c40c606119461c5ec8f904'
-            '1138e096ab21558c9e518c070a7f4dd205e828aa134334bc2499194e57dd00e3'
-            '0b15bd1647faf809f901aa4b7eaf770426a5106de2a7c44afde3a0db375c50f9'
+            '430e745344d8988345327d1b6556e771bde56aefeb5c66e1aac489e3f495ef48'
+            '3457ab03e46dcbb4e5e42c078c3cf0349e1eace31ca4ae6ee6f030810f57c6b8'
             'SKIP')
 
 prepare() {
     cd ${srcdir}/calamares
     sed -i -e 's/"Install configuration files" OFF/"Install configuration files" ON/' CMakeLists.txt
 
-    rm -r "src/modules/"{fstab,mount,packages}
+    rm -r "src/modules/"{fstab,mount,packages,initcpiocfg}
 
-    cp -rf "${srcdir}/${pkgname}-config/usr/lib/calamares/modules"/{fstab,mount,packages} src/modules/
+    cp -rf "${srcdir}/${pkgname}-config/usr/lib/calamares/modules"/{fstab,mount,packages,initcpiocfg} src/modules/
 
     # patches here
 
