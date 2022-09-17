@@ -1,19 +1,17 @@
 # Maintainer: Vladislav Nepogodin <nepogodin.vlad@gmail.com>
 
-pkgname=cachyos-calamares-config
-_pkgname=cachyos-calamares-config
-pkgver=11
+pkgname=cachyos-calamares-systemd-config
+pkgver=7
 pkgrel=1
 pkgdesc="CachyOS config for the Calamares installer"
 arch=(any)
 url="https://github.com/cachyos/calamares-config"
 license=('GPL')
 makedepends=('git')
-source=("${pkgname}::git+$url.git#branch=grub-3.3")
+source=("${pkgname}::git+$url.git#branch=systemd-boot")
 sha512sums=('SKIP')
-provides=("$_pkgname=$pkgver")
-conflicts=("$_pkgname")
-
+provides=("$pkgname=$pkgver")
+conflicts=("$pkgname")
 package() {
   local _destdir=etc/calamares
 
@@ -23,5 +21,4 @@ package() {
   cp -rf $srcdir/$pkgname/etc $pkgdir
   cp -rf $srcdir/$pkgname/usr/lib/calamares/modules/pacstrap/* $pkgdir/usr/lib/calamares/modules/pacstrap
   cp -rf $srcdir/$pkgname/usr/lib/calamares/modules/mhwdcfg/* $pkgdir/usr/lib/calamares/modules/mhwdcfg
-
 }

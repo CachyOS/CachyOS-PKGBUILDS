@@ -2,9 +2,8 @@
 # Contributor: Philip Müller <philm[at]manjaro[dog]org>
 
 pkgname=cachyos-calamares-systemd
-_pkgname=cachyos-calamares-systemd
-pkgver=3.2.60
-pkgrel=7
+pkgver=3.3.0
+pkgrel=1
 pkgdesc='Distribution-independent installer framework'
 arch=('i686' 'x86_64' 'x86_64_v3')
 license=(GPL)
@@ -12,37 +11,35 @@ url="https://github.com/calamares/calamares"
 license=('LGPL')
 conflicts=('calamares')
 provides=('calamares')
-_commit=5fd6d72566fda4cffbdf3f5efa9c233144c6ff43
 makedepends=('git' 'cmake' 'extra-cmake-modules' 'kpmcore' 'boost' 'python-jsonschema' 'python-pyaml' 'python-unidecode' 'ninja')
 depends=( 'qt5-svg' 'qt5-webengine' 'yaml-cpp' 'networkmanager' 'upower' 'kcoreaddons' 'kconfig' 'ki18n' 'kservice' \
-    	  'kwidgetsaddons' 'kpmcore' 'squashfs-tools' 'rsync' 'cryptsetup' 'qt5-xmlpatterns' 'doxygen' 'dmidecode' 'qt5-quickcontrols2' 'qt5-quickcontrols' \
-    	  'gptfdisk' 'hwinfo' 'kparts' 'polkit-qt5' 'python' 'solid' 'qt5-tools' 'boost-libs' 'libpwquality' 'ckbcomp' 'mkinitcpio-openswap')
+          'kwidgetsaddons' 'kpmcore' 'squashfs-tools' 'rsync' 'cryptsetup' 'qt5-xmlpatterns' 'doxygen' 'dmidecode' 'qt5-quickcontrols2' 'qt5-quickcontrols' \
+          'gptfdisk' 'hwinfo' 'kparts' 'polkit-qt5' 'python' 'solid' 'qt5-tools' 'boost-libs' 'libpwquality' 'ckbcomp' 'mkinitcpio-openswap')
 backup=('usr/share/calamares/modules/bootloader.conf'
-    	'usr/share/calamares/modules/displaymanager.conf'
-    	'usr/share/calamares/modules/initcpio.conf'
-		'usr/share/calamares/modules/unpackfs.conf')
-source=(git+https://github.com/calamares/calamares.git#commit=${_commit}
-    	settings_online.conf
-    	settings_offline.conf
-    	0001-Force-LTO.patch
-    	https://github.com/calamares/calamares/commit/79db04dc2eb00b354044f73c054a94fe2b9f9aae.patch
-    	https://gitlab.manjaro.org/codesardine/calamares/-/commit/b140b67c9fddb96701e46d23e9a72ddfbe77e0d0.patch
-"${pkgname}-config::git+https://github.com/cachyos/calamares-config.git#branch=systemd-boot")
+        'usr/share/calamares/modules/displaymanager.conf'
+        'usr/share/calamares/modules/initcpio.conf'
+        'usr/share/calamares/modules/unpackfs.conf')
+source=(calamares::git+https://github.com/cachyos/calamares.git
+		settings_online.conf
+        settings_offline.conf
+#        luks2.patch
+        https://github.com/calamares/calamares/commit/79db04dc2eb00b354044f73c054a94fe2b9f9aae.patch
+        ${pkgname}-config::git+https://github.com/cachyos/calamares-config.git#branch=systemd-boot-3.3)
 sha256sums=('SKIP'
-    '88cb07d9865a9478ccf3a0ae64c1f93e87b150e4626e78ea52fdd224d70869c8'
-    '7fcdab25e6edad5c4e3c90f2a9f4d8ec57c2eb8a9c1d1fe53da033ae78a2fd75'
-    '1138e096ab21558c9e518c070a7f4dd205e828aa134334bc2499194e57dd00e3'
-    '3457ab03e46dcbb4e5e42c078c3cf0349e1eace31ca4ae6ee6f030810f57c6b8'
-    '39c38180b6c7d6088984c300e3fdf125b571525d1d252b59a52388e1780f98e4'
-'SKIP')
+            'ea0f2187b6ac864835293bd05725316df07394dc49117b9d13acffd8eb4fe5ab'
+            '3989743e5f4ac697809188de058e2985a9b1940d73c40c606119461c5ec8f904'
+            '430e745344d8988345327d1b6556e771bde56aefeb5c66e1aac489e3f495ef48'
+            '3457ab03e46dcbb4e5e42c078c3cf0349e1eace31ca4ae6ee6f030810f57c6b8'
+            'SKIP')
+options=('lto')
 
 prepare() {
     cd ${srcdir}/calamares
     sed -i -e 's/"Install configuration files" OFF/"Install configuration files" ON/' CMakeLists.txt
 
-    rm -r "src/modules/"{fstab,mount,packages}
+    rm -r "src/modules/"{fstab,mount,packages,initcpiocfg}
 
-    cp -rf "${srcdir}/${pkgname}-config/usr/lib/calamares/modules"/{fstab,mount,packages} src/modules/
+    cp -rf "${srcdir}/${pkgname}-config/usr/lib/calamares/modules"/{fstab,mount,packages,initcpiocfg} src/modules/
 
     # patches here
 
@@ -58,16 +55,13 @@ prepare() {
 
     # remove default branding
     rm -r src/branding/default
-    
-    # Force LTO
-    patch -Np1 -i ${srcdir}/0001-Force-LTO.patch
 
-    # https://github.com/calamares/calamares/issues/2008#issuecomment-1172947659
-    patch -Rp1 -i ../79db04dc2eb00b354044f73c054a94fe2b9f9aae.patch
-
-    # https://github.com/calamares/calamares/issues/1945
-    patch -Np1 -i ../b140b67c9fddb96701e46d23e9a72ddfbe77e0d0.patch
+	# Support luks2 encrypted installations
+#	patch -Np1 -i ${srcdir}/luks2.patch ## Dont use it for now, since it seems to be not working with systemd-boot. GRUB needs to be patched
+	# https://github.com/calamares/calamares/issues/2008#issuecomment-1172947659
+	patch -Rp1 -i ${srcdir}/79db04dc2eb00b354044f73c054a94fe2b9f9aae.patch
 }
+
 
 
 build() {
@@ -77,7 +71,7 @@ build() {
 
     cmake -S . -Bbuild \
         -GNinja \
-        -DCMAKE_BUILD_TYPE=Debug \
+        -DCMAKE_BUILD_TYPE=Release \
         -DCMAKE_INSTALL_PREFIX=/usr \
         -DCMAKE_INSTALL_LIBDIR=lib \
         -DWITH_PYTHONQT=OFF \

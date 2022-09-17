@@ -1,7 +1,7 @@
 # Maintainer: Vladislav Nepogodin <nepogodin.vlad@gmail.com>
 
-pkgname=cachyos-calamares-refind-config
-pkgver=1
+pkgname=cachyos-calamares-config
+pkgver=10
 pkgrel=1
 pkgdesc="CachyOS config for the Calamares installer"
 arch=(any)
@@ -10,7 +10,7 @@ license=('GPL')
 makedepends=('git')
 provides=("$pkgname=$pkgver")
 conflicts=("$pkgname")
-source=("${pkgname}::git+$url.git#branch=refind")
+source=("${pkgname}::git+$url.git#branch=grub-3.2")
 sha512sums=('SKIP')
 
 package() {
@@ -18,8 +18,9 @@ package() {
 
   install -dm755 $pkgdir/$_destdir
   install -dm755 $pkgdir/usr/lib/calamares/modules/pacstrap
-  install -dm755 $pkgdir/usr/lib/calamares/modules/refind
+  install -dm755 $pkgdir/usr/lib/calamares/modules/mhwdcfg
   cp -rf $srcdir/$pkgname/etc $pkgdir
   cp -rf $srcdir/$pkgname/usr/lib/calamares/modules/pacstrap/* $pkgdir/usr/lib/calamares/modules/pacstrap
-  cp -rf $srcdir/$pkgname/usr/lib/calamares/modules/refind/* $pkgdir/usr/lib/calamares/modules/refind
+  cp -rf $srcdir/$pkgname/usr/lib/calamares/modules/mhwdcfg/* $pkgdir/usr/lib/calamares/modules/mhwdcfg
+
 }
