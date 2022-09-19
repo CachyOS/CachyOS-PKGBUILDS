@@ -3,7 +3,7 @@
 
 pkgname=cachyos-calamares-systemd
 pkgver=3.3.0
-pkgrel=2
+pkgrel=3
 pkgdesc='Distribution-independent installer framework'
 arch=('i686' 'x86_64' 'x86_64_v3')
 license=(GPL)
@@ -26,9 +26,8 @@ source=(calamares::git+https://github.com/calamares/calamares.git
         https://github.com/calamares/calamares/commit/79db04dc2eb00b354044f73c054a94fe2b9f9aae.patch
         ${pkgname}-config::git+https://github.com/cachyos/calamares-config.git#branch=systemd-boot-3.3)
 sha256sums=('SKIP'
-            'ea0f2187b6ac864835293bd05725316df07394dc49117b9d13acffd8eb4fe5ab'
+            '2387b0cf9f219e2a4064050f610d71f29934f70011f941124ae21f241016ead4'
             '3989743e5f4ac697809188de058e2985a9b1940d73c40c606119461c5ec8f904'
-            '430e745344d8988345327d1b6556e771bde56aefeb5c66e1aac489e3f495ef48'
             '3457ab03e46dcbb4e5e42c078c3cf0349e1eace31ca4ae6ee6f030810f57c6b8'
             'SKIP')
 options=('lto')
@@ -37,9 +36,9 @@ prepare() {
     cd ${srcdir}/calamares
     sed -i -e 's/"Install configuration files" OFF/"Install configuration files" ON/' CMakeLists.txt
 
-    rm -r "src/modules/"{fstab,mount,packages,initcpiocfg}
+    rm -r "src/modules/"{mount,packages}
 
-    cp -rf "${srcdir}/${pkgname}-config/usr/lib/calamares/modules"/{fstab,mount,packages,initcpiocfg} src/modules/
+    cp -rf "${srcdir}/${pkgname}-config/usr/lib/calamares/modules"/{mount,packages} src/modules/
 
     # patches here
 
