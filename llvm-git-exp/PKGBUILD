@@ -1,7 +1,7 @@
 
 pkgname=llvm-git
 pkgdesc="LLVM Toolchain with clang, clang-tools-extra, compiler-rt, openmp, polly, lldb, lld"
-pkgver=16.0.0_r432912.a5d981045de7
+pkgver=16.0.0_r436660.525a400c7ca5
 pkgrel=1
 arch=('x86_64')
 url="https://llvm.org/"
@@ -28,8 +28,8 @@ source=(
 )
 
 sha256sums=('SKIP'
-    '597dc5968c695bbdbb0eac9e8eb5117fcd2773bc91edf5ec103ecffffab8bc48'
-'593ed385298623711070dffce9225cb448dfc29f30c9d950887882b19bd124fb')
+            '597dc5968c695bbdbb0eac9e8eb5117fcd2773bc91edf5ec103ecffffab8bc48'
+            '593ed385298623711070dffce9225cb448dfc29f30c9d950887882b19bd124fb')
 
 options=('staticlibs')
 
@@ -125,8 +125,10 @@ build() {
         -DLLVM_ENABLE_RTTI=ON \
         -DLLVM_BUILD_DOCS=OFF \
         -DLLVM_ENABLE_FFI=ON \
-        -DLLVM_ENABLE_PROJECTS="clang;clang-tools-extra;compiler-rt;lld;lldb;mlir;openmp;polly;pstl" \
-        -DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi" \
+        -DLLVM_ENABLE_BINDINGS=OFF \
+        -DLLVM_POLLY_LINK_INTO_TOOLS=ON \
+        -DLLVM_ENABLE_PROJECTS="clang;clang-tools-extra;lld;lldb;mlir;polly;pstl" \
+        -DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi;openmp;compiler-rt" \
         -DCLANG_LINK_CLANG_DYLIB=ON \
         -DLLDB_USE_SYSTEM_SIX=1 \
         -DLIBOMP_INSTALL_ALIASES=OFF \
