@@ -4,13 +4,14 @@
 
 pkgname=mkinitcpio
 pkgver=31
-pkgrel=5
+pkgrel=6
 pkgdesc="Modular initramfs image creation utility"
 arch=('any')
 url='https://github.com/archlinux/mkinitcpio'
 license=('GPL')
 depends=('awk' 'mkinitcpio-busybox>=1.19.4-2' 'kmod' 'util-linux>=2.23' 'libarchive' 'coreutils'
          'bash' 'binutils' 'diffutils' 'findutils' 'grep' 'filesystem>=2011.10-1' 'zstd' 'systemd')
+makedepends=('asciidoc')
 optdepends=('gzip: Use gzip compression for the initramfs image'
             'xz: Use lzma or xz compression for the initramfs image'
             'bzip2: Use bzip2 compression for the initramfs image'
@@ -21,16 +22,19 @@ provides=('initramfs')
 backup=('etc/mkinitcpio.conf')
 source=("https://sources.archlinux.org/other/$pkgname/$pkgname-$pkgver.tar.gz"{,.sig}
        0001-cachyos-mkinitcpio.patch
-       0001-Fix-the-warning-about-missing-modules.builtin.modinf.patch)
+       0001-Fix-the-warning-about-missing-modules.builtin.modinf.patch
+       0001-fsck.xfs-needs-xfs_repair-for-actual-work-only-with-.patch)
 install=mkinitcpio.install
 sha512sums=('4ef87c2e4f579b292c38f9c487e78b3b99f6db77909cab322e860e5ca70aca3747fcfc272e2e15c9a3605c924ab178057b8b23151f98debc5d96e65f3c0c49d5'
             'SKIP'
             '96f3aa0de05f1bd7ce995d6ec9b558614d14450c8368ca520dc2ebd998b7ca62437055939825c20b8382593544c389ada8a477b6535df8cf8180af60c2a2b9a5'
-            '11d8133d83bbc1f0203ad38be10e029761497664c09dd87f3613841c6de48517846de1e016942e018aeb724a05b201a0926c5c58c794caff3774e3b07602de10')
+            '11d8133d83bbc1f0203ad38be10e029761497664c09dd87f3613841c6de48517846de1e016942e018aeb724a05b201a0926c5c58c794caff3774e3b07602de10'
+            '85dd3d823421899745c8011468929b0de3bebe0f07f77147fb47fdc3745e3d8f26c000e543b016d43c0e3b61b15f802dc271716658e4a4a1229ea626f10b93ea')
 b2sums=('0113e288906e3b5fa485c29c00e7df60d85addd96718c45531031a686f18c739fa18303b6cac374d35b85edb7b663e221c8dc9158dff08c75858a4ed4dd154bf'
         'SKIP'
         'a9b217fa90bd331604c6cf6b4c5ca75cc411f0a904fb738200170651e0992f59465cc423fd5b8bb498bf7e916156bc8ed506842bb168992cc8aecd83c0f1c379'
-        'eaf64338d226b721e2d27941fe28fcd65118ffca0111fa8e85d71f9c8358b3e98dc68c66b6358933e9eea93c1c18f5fadd4be3d3cad93a352b0a5aa426f5d152')
+        'eaf64338d226b721e2d27941fe28fcd65118ffca0111fa8e85d71f9c8358b3e98dc68c66b6358933e9eea93c1c18f5fadd4be3d3cad93a352b0a5aa426f5d152'
+        'a580ad42cee2c79990e9fd70540d57267cadc4917530b8303dc675279069940c6c9eee70d401f30ad29bfb9a7bf9ce3ba443f2e13424cdc20604bc7431b62e63')
 validpgpkeys=('ECCAC84C1BA08A6CC8E63FBBF22FB1D78A77AEAB')    # Giancarlo Razzolini
 
 prepare() {
