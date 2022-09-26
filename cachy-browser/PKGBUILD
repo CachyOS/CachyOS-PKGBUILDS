@@ -8,7 +8,7 @@ pkgname=cachy-browser
 _pkgname=Cachy
 __pkgname=cachy
 pkgver=105.0.1
-pkgrel=1
+pkgrel=2
 pkgdesc="Community-maintained fork of Firefox, focused on privacy, security and freedom."
 arch=(x86_64 x86_64_v3)
 license=(MPL GPL LGPL)
@@ -62,7 +62,7 @@ ac_add_options --enable-release
 ac_add_options --enable-hardening
 ac_add_options --enable-optimize
 ac_add_options --enable-rust-simd
-ac_add_options --enable-linker=lld
+ac_add_options --enable-linker=mold
 ac_add_options --disable-elf-hack
 ac_add_options --disable-bootstrap
 ac_add_options --with-wasi-sysroot=/usr/share/wasi-sysroot
@@ -195,7 +195,7 @@ END
     patch -Np1 -i ${_patches_dir}/librewolf-ui/website-appearance-ui-rfp.patch
 
     msg2 "lw-logo-devtools.patch"
-    patch -Np1 -i ${_patches_dir}/librewolf-ui/lw-logo-devtools.patch
+    patch -Np1 -i ${_patches_dir}/librewolf-ui/lw-logo-devtools-cachy.patch
 
     patch -Np1 -i ${_patches_dir}/librewolf-ui/handlers.patch
     
@@ -203,7 +203,7 @@ END
     patch -Np1 -i ${_patches_dir}/librewolf/dbus_name.patch
 
     msg2 "customized pref panel"
-    patch -Np1 -i ${_patches_dir}/librewolf/librewolf-pref-pane.patch
+    patch -Np1 -i ${_patches_dir}/librewolf/cachy-pref-pane.patch
 
     msg2 "fix telemetry removal, see https://gitlab.com/librewolf-community/browser/linux/-/merge_requests/17, for example"
     patch -Np1 -i ${_patches_dir}/librewolf/disable-data-reporting-at-compile-time.patch
@@ -211,6 +211,10 @@ END
     msg2 "Hide passwordmgr"
     patch -Np1 -i ${_patches_dir}/librewolf/hide-passwordmgr.patch
 
+	msg2 "KDE MENU"
+	patch -Np1 -i ${_patches_dir}/librewolf/unity-menubar.patch
+	patch -Np1 -i ${_patches_dir}/librewolf/mozilla-kde_after_unity.patch
+	patch -Np1 -i ${_patches_dir}/kde/mozilla-nongnome-proxies.patch
     msg2 "Use mold as linker"
     patch -Np1 -i ${_patches_dir}/add-mold-linker.patch
 #  	msg2  " some undesired requests (https://gitlab.com/librewolf-community/browser/common/-/issues/10)"
