@@ -1,0 +1,158 @@
+From f42c8c539723c95e0c4cb1ac7aef8ec78e7f5871 Mon Sep 17 00:00:00 2001
+From: Vladislav Nepogodin <nepogodin.vlad@gmail.com>
+Date: Thu, 29 Sep 2022 00:25:38 +0400
+Subject: [PATCH] add support for x86_64_v3 autodetection
+
+---
+ src/pacman/conf.c | 128 ++++++++++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 128 insertions(+)
+
+diff --git a/src/pacman/conf.c b/src/pacman/conf.c
+index f9edf75b..2750772f 100644
+--- a/src/pacman/conf.c
++++ b/src/pacman/conf.c
+@@ -396,6 +396,132 @@ cleanup:
+ }
+ 
+ 
++
++static uint64_t xgetbv(void) {
++#if defined(_MSC_VER)
++  return _xgetbv(0);
++#else
++  uint32_t eax = 0, edx = 0;
++  __asm__ __volatile__("xgetbv\n" : "=a"(eax), "=d"(edx) : "c"(0));
++  return ((uint64_t)edx << 32) | eax;
++#endif
++}
++
++static void cpuid(uint32_t out[4], uint32_t id) {
++#if defined(_MSC_VER)
++  __cpuid((int *)out, id);
++#elif defined(__i386__) || defined(_M_IX86)
++  __asm__ __volatile__("movl %%ebx, %1\n"
++                       "cpuid\n"
++                       "xchgl %1, %%ebx\n"
++                       : "=a"(out[0]), "=r"(out[1]), "=c"(out[2]), "=d"(out[3])
++                       : "a"(id));
++#else
++  __asm__ __volatile__("cpuid\n"
++                       : "=a"(out[0]), "=b"(out[1]), "=c"(out[2]), "=d"(out[3])
++                       : "a"(id));
++#endif
++}
++
++static void cpuidex(uint32_t out[4], uint32_t id, uint32_t sid) {
++#if defined(_MSC_VER)
++  __cpuidex((int *)out, id, sid);
++#elif defined(__i386__) || defined(_M_IX86)
++  __asm__ __volatile__("movl %%ebx, %1\n"
++                       "cpuid\n"
++                       "xchgl %1, %%ebx\n"
++                       : "=a"(out[0]), "=r"(out[1]), "=c"(out[2]), "=d"(out[3])
++                       : "a"(id), "c"(sid));
++#else
++  __asm__ __volatile__("cpuid\n"
++                       : "=a"(out[0]), "=b"(out[1]), "=c"(out[2]), "=d"(out[3])
++                       : "a"(id), "c"(sid));
++#endif
++}
++
++enum cpu_feature {
++  SSE2 = 1 << 0,
++  SSSE3 = 1 << 1,
++  SSE41 = 1 << 2,
++  AVX = 1 << 3,
++  AVX2 = 1 << 4,
++  AVX512F = 1 << 5,
++  AVX512VL = 1 << 6,
++  /* ... */
++  UNDEFINED = 1 << 30
++};
++
++enum cpu_feature g_cpu_features = UNDEFINED;
++static int g_v3_was_applied = 0;
++
++enum cpu_feature get_cpu_features(void) {
++  if (g_cpu_features != UNDEFINED) {
++    return g_cpu_features;
++  }
++#if defined(__x86_64__) || defined(_M_X64) || defined(__i386__) || defined(_M_IX86)
++  uint32_t regs[4] = {0};
++  uint32_t *eax = &regs[0], *ebx = &regs[1], *ecx = &regs[2], *edx = &regs[3];
++  (void)edx;
++  enum cpu_feature features = 0;
++  cpuid(regs, 0);
++  const int max_id = *eax;
++  cpuid(regs, 1);
++#if defined(__amd64__) || defined(_M_X64)
++  features |= SSE2;
++#else
++  if (*edx & (1UL << 26))
++    features |= SSE2;
++#endif
++  if (*ecx & (1UL << 0))
++    features |= SSSE3;
++  if (*ecx & (1UL << 19))
++    features |= SSE41;
++
++  if (*ecx & (1UL << 27)) { // OSXSAVE
++    const uint64_t mask = xgetbv();
++    if ((mask & 6) == 6) { // SSE and AVX states
++      if (*ecx & (1UL << 28))
++        features |= AVX;
++      if (max_id >= 7) {
++        cpuidex(regs, 7, 0);
++        if (*ebx & (1UL << 5))
++          features |= AVX2;
++        if ((mask & 224) == 224) { // Opmask, ZMM_Hi256, Hi16_Zmm
++          if (*ebx & (1UL << 31))
++            features |= AVX512VL;
++          if (*ebx & (1UL << 16))
++            features |= AVX512F;
++        }
++      }
++    }
++  }
++  g_cpu_features = features;
++  return features;
++#else
++  /* How to detect NEON? */
++  return 0;
++#endif
++}
++
++int config_add_v3_architecture()
++{
++    if (g_v3_was_applied == 1) {
++        return -1;
++    }
++
++    g_v3_was_applied = 1;
++    const enum cpu_feature features = get_cpu_features();
++    if (!((features & SSE41) && (features & AVX) && (features & AVX2))) {
++        return -1;
++    }
++	
++    pm_printf(ALPM_LOG_DEBUG, "config: arch: cpu supports x86_64_v3\n");
++
++    char* arch = strdup("x86_64_v3");
++    config->architectures = alpm_list_add(config->architectures, arch);
++    return 0;
++}
++
+ int config_add_architecture(char *arch)
+ {
+ 	if(strcmp(arch, "auto") == 0) {
+@@ -409,6 +535,8 @@ int config_add_architecture(char *arch)
+ 
+ 	pm_printf(ALPM_LOG_DEBUG, "config: arch: %s\n", arch);
+ 	config->architectures = alpm_list_add(config->architectures, arch);
++   config_add_v3_architecture();
++
+ 	return 0;
+ }
+ 
+-- 
+2.37.3
+

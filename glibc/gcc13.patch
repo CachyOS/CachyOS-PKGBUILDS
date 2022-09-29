@@ -1,0 +1,389 @@
+From 3e5760fcb48528d48deeb60cb885a97bb731160c Mon Sep 17 00:00:00 2001
+From: Joseph Myers <joseph@codesourcery.com>
+Date: Wed, 28 Sep 2022 20:09:34 +0000
+Subject: [PATCH] Update _FloatN header support for C++ in GCC 13
+
+GCC 13 adds support for _FloatN and _FloatNx types in C++, so breaking
+the installed glibc headers that assume such support is not present.
+GCC mostly works around this with fixincludes, but that doesn't help
+for building glibc and its tests (glibc doesn't itself contain C++
+code, but there's C++ code built for tests).  Update glibc's
+bits/floatn-common.h and bits/floatn.h headers to handle the GCC 13
+support directly.
+
+In general the changes match those made by fixincludes, though I think
+the ones in sysdeps/powerpc/bits/floatn.h, where the header tests
+__LDBL_MANT_DIG__ == 113 or uses #elif, wouldn't match the existing
+fixincludes patterns.
+
+Some places involving special C++ handling in relation to _FloatN
+support are not changed.  There's no need to change the
+__HAVE_FLOATN_NOT_TYPEDEF definition (also in a form that wouldn't be
+matched by the fixincludes fixes) because it's only used in relation
+to macro definitions using features not supported for C++
+(__builtin_types_compatible_p and _Generic).  And there's no need to
+change the inline function overloads for issignaling, iszero and
+iscanonical in C++ because cases where types have the same format but
+are no longer compatible types are handled automatically by the C++
+overload resolution rules.
+
+This patch also does not change the overload handling for iseqsig, and
+there I think changes *are* needed, beyond those in this patch or made
+by fixincludes.  The way that overload is defined, via a template
+parameter to a structure type, requires overloads whenever the types
+are incompatible, even if they have the same format.  So I think we
+need to add overloads with GCC 13 for every supported _FloatN and
+_FloatNx type, rather than just having one for _Float128 when it has a
+different ABI to long double as at present (but for older GCC, such
+overloads must not be defined for types that end up defined as
+typedefs for another type).
+
+Tested with build-many-glibcs.py: compilers build for
+aarch64-linux-gnu ia64-linux-gnu mips64-linux-gnu powerpc-linux-gnu
+powerpc64le-linux-gnu x86_64-linux-gnu; glibcs build for
+aarch64-linux-gnu ia64-linux-gnu i686-linux-gnu mips-linux-gnu
+mips64-linux-gnu-n32 powerpc-linux-gnu powerpc64le-linux-gnu
+x86_64-linux-gnu.
+---
+ bits/floatn-common.h                   | 40 +++++++++++++-------------
+ sysdeps/ia64/bits/floatn.h             |  6 ++--
+ sysdeps/ieee754/ldbl-128/bits/floatn.h |  6 ++--
+ sysdeps/mips/ieee754/bits/floatn.h     |  6 ++--
+ sysdeps/powerpc/bits/floatn.h          |  6 ++--
+ sysdeps/x86/bits/floatn.h              |  6 ++--
+ 6 files changed, 35 insertions(+), 35 deletions(-)
+
+diff --git a/bits/floatn-common.h b/bits/floatn-common.h
+index 92982d64601..67519dbb741 100644
+--- a/bits/floatn-common.h
++++ b/bits/floatn-common.h
+@@ -78,7 +78,7 @@
+    or _FloatNx types, if __HAVE_<type> is 1.  The corresponding
+    literal suffixes exist since GCC 7, for C only.  */
+ # if __HAVE_FLOAT16
+-#  if !__GNUC_PREREQ (7, 0) || defined __cplusplus
++#  if !__GNUC_PREREQ (7, 0) || (defined __cplusplus && !__GNUC_PREREQ (13, 0))
+ /* No corresponding suffix available for this type.  */
+ #   define __f16(x) ((_Float16) x##f)
+ #  else
+@@ -87,7 +87,7 @@
+ # endif
+ 
+ # if __HAVE_FLOAT32
+-#  if !__GNUC_PREREQ (7, 0) || defined __cplusplus
++#  if !__GNUC_PREREQ (7, 0) || (defined __cplusplus && !__GNUC_PREREQ (13, 0))
+ #   define __f32(x) x##f
+ #  else
+ #   define __f32(x) x##f32
+@@ -95,7 +95,7 @@
+ # endif
+ 
+ # if __HAVE_FLOAT64
+-#  if !__GNUC_PREREQ (7, 0) || defined __cplusplus
++#  if !__GNUC_PREREQ (7, 0) || (defined __cplusplus && !__GNUC_PREREQ (13, 0))
+ #   ifdef __NO_LONG_DOUBLE_MATH
+ #    define __f64(x) x##l
+ #   else
+@@ -107,7 +107,7 @@
+ # endif
+ 
+ # if __HAVE_FLOAT32X
+-#  if !__GNUC_PREREQ (7, 0) || defined __cplusplus
++#  if !__GNUC_PREREQ (7, 0) || (defined __cplusplus && !__GNUC_PREREQ (13, 0))
+ #   define __f32x(x) x
+ #  else
+ #   define __f32x(x) x##f32x
+@@ -115,7 +115,7 @@
+ # endif
+ 
+ # if __HAVE_FLOAT64X
+-#  if !__GNUC_PREREQ (7, 0) || defined __cplusplus
++#  if !__GNUC_PREREQ (7, 0) || (defined __cplusplus && !__GNUC_PREREQ (13, 0))
+ #   if __HAVE_FLOAT64X_LONG_DOUBLE
+ #    define __f64x(x) x##l
+ #   else
+@@ -127,7 +127,7 @@
+ # endif
+ 
+ # if __HAVE_FLOAT128X
+-#  if !__GNUC_PREREQ (7, 0) || defined __cplusplus
++#  if !__GNUC_PREREQ (7, 0) || (defined __cplusplus && !__GNUC_PREREQ (13, 0))
+ #   error "_Float128X supported but no constant suffix"
+ #  else
+ #   define __f128x(x) x##f128x
+@@ -136,7 +136,7 @@
+ 
+ /* Defined to a complex type if __HAVE_<type> is 1.  */
+ # if __HAVE_FLOAT16
+-#  if !__GNUC_PREREQ (7, 0) || defined __cplusplus
++#  if !__GNUC_PREREQ (7, 0) || (defined __cplusplus && !__GNUC_PREREQ (13, 0))
+ typedef _Complex float __cfloat16 __attribute__ ((__mode__ (__HC__)));
+ #   define __CFLOAT16 __cfloat16
+ #  else
+@@ -145,7 +145,7 @@ typedef _Complex float __cfloat16 __attribute__ ((__mode__ (__HC__)));
+ # endif
+ 
+ # if __HAVE_FLOAT32
+-#  if !__GNUC_PREREQ (7, 0) || defined __cplusplus
++#  if !__GNUC_PREREQ (7, 0) || (defined __cplusplus && !__GNUC_PREREQ (13, 0))
+ #   define __CFLOAT32 _Complex float
+ #  else
+ #   define __CFLOAT32 _Complex _Float32
+@@ -153,7 +153,7 @@ typedef _Complex float __cfloat16 __attribute__ ((__mode__ (__HC__)));
+ # endif
+ 
+ # if __HAVE_FLOAT64
+-#  if !__GNUC_PREREQ (7, 0) || defined __cplusplus
++#  if !__GNUC_PREREQ (7, 0) || (defined __cplusplus && !__GNUC_PREREQ (13, 0))
+ #   ifdef __NO_LONG_DOUBLE_MATH
+ #    define __CFLOAT64 _Complex long double
+ #   else
+@@ -165,7 +165,7 @@ typedef _Complex float __cfloat16 __attribute__ ((__mode__ (__HC__)));
+ # endif
+ 
+ # if __HAVE_FLOAT32X
+-#  if !__GNUC_PREREQ (7, 0) || defined __cplusplus
++#  if !__GNUC_PREREQ (7, 0) || (defined __cplusplus && !__GNUC_PREREQ (13, 0))
+ #   define __CFLOAT32X _Complex double
+ #  else
+ #   define __CFLOAT32X _Complex _Float32x
+@@ -173,7 +173,7 @@ typedef _Complex float __cfloat16 __attribute__ ((__mode__ (__HC__)));
+ # endif
+ 
+ # if __HAVE_FLOAT64X
+-#  if !__GNUC_PREREQ (7, 0) || defined __cplusplus
++#  if !__GNUC_PREREQ (7, 0) || (defined __cplusplus && !__GNUC_PREREQ (13, 0))
+ #   if __HAVE_FLOAT64X_LONG_DOUBLE
+ #    define __CFLOAT64X _Complex long double
+ #   else
+@@ -185,7 +185,7 @@ typedef _Complex float __cfloat16 __attribute__ ((__mode__ (__HC__)));
+ # endif
+ 
+ # if __HAVE_FLOAT128X
+-#  if !__GNUC_PREREQ (7, 0) || defined __cplusplus
++#  if !__GNUC_PREREQ (7, 0) || (defined __cplusplus && !__GNUC_PREREQ (13, 0))
+ #   error "_Float128X supported but no complex type"
+ #  else
+ #   define __CFLOAT128X _Complex _Float128x
+@@ -195,7 +195,7 @@ typedef _Complex float __cfloat16 __attribute__ ((__mode__ (__HC__)));
+ /* The remaining of this file provides support for older compilers.  */
+ # if __HAVE_FLOAT16
+ 
+-#  if !__GNUC_PREREQ (7, 0) || defined __cplusplus
++#  if !__GNUC_PREREQ (7, 0) || (defined __cplusplus && !__GNUC_PREREQ (13, 0))
+ typedef float _Float16 __attribute__ ((__mode__ (__HF__)));
+ #  endif
+ 
+@@ -210,7 +210,7 @@ typedef float _Float16 __attribute__ ((__mode__ (__HF__)));
+ 
+ # if __HAVE_FLOAT32
+ 
+-#  if !__GNUC_PREREQ (7, 0) || defined __cplusplus
++#  if !__GNUC_PREREQ (7, 0) || (defined __cplusplus && !__GNUC_PREREQ (13, 0))
+ typedef float _Float32;
+ #  endif
+ 
+@@ -234,7 +234,7 @@ typedef float _Float32;
+ 
+ #  ifdef __NO_LONG_DOUBLE_MATH
+ 
+-#   if !__GNUC_PREREQ (7, 0) || defined __cplusplus
++#   if !__GNUC_PREREQ (7, 0) || (defined __cplusplus && !__GNUC_PREREQ (13, 0))
+ typedef long double _Float64;
+ #   endif
+ 
+@@ -247,7 +247,7 @@ typedef long double _Float64;
+ 
+ #  else
+ 
+-#   if !__GNUC_PREREQ (7, 0) || defined __cplusplus
++#   if !__GNUC_PREREQ (7, 0) || (defined __cplusplus && !__GNUC_PREREQ (13, 0))
+ typedef double _Float64;
+ #   endif
+ 
+@@ -264,7 +264,7 @@ typedef double _Float64;
+ 
+ # if __HAVE_FLOAT32X
+ 
+-#  if !__GNUC_PREREQ (7, 0) || defined __cplusplus
++#  if !__GNUC_PREREQ (7, 0) || (defined __cplusplus && !__GNUC_PREREQ (13, 0))
+ typedef double _Float32x;
+ #  endif
+ 
+@@ -281,7 +281,7 @@ typedef double _Float32x;
+ 
+ #  if __HAVE_FLOAT64X_LONG_DOUBLE
+ 
+-#   if !__GNUC_PREREQ (7, 0) || defined __cplusplus
++#   if !__GNUC_PREREQ (7, 0) || (defined __cplusplus && !__GNUC_PREREQ (13, 0))
+ typedef long double _Float64x;
+ #   endif
+ 
+@@ -294,7 +294,7 @@ typedef long double _Float64x;
+ 
+ #  else
+ 
+-#   if !__GNUC_PREREQ (7, 0) || defined __cplusplus
++#   if !__GNUC_PREREQ (7, 0) || (defined __cplusplus && !__GNUC_PREREQ (13, 0))
+ typedef _Float128 _Float64x;
+ #   endif
+ 
+@@ -311,7 +311,7 @@ typedef _Float128 _Float64x;
+ 
+ # if __HAVE_FLOAT128X
+ 
+-#  if !__GNUC_PREREQ (7, 0) || defined __cplusplus
++#  if !__GNUC_PREREQ (7, 0) || (defined __cplusplus && !__GNUC_PREREQ (13, 0))
+ #   error "_Float128x supported but no type"
+ #  endif
+ 
+diff --git a/sysdeps/ia64/bits/floatn.h b/sysdeps/ia64/bits/floatn.h
+index 5507038bc78..75f7547045a 100644
+--- a/sysdeps/ia64/bits/floatn.h
++++ b/sysdeps/ia64/bits/floatn.h
+@@ -56,7 +56,7 @@
+ /* Defined to concatenate the literal suffix to be used with _Float128
+    types, if __HAVE_FLOAT128 is 1. */
+ # if __HAVE_FLOAT128
+-#  if !__GNUC_PREREQ (7, 0) || defined __cplusplus
++#  if !__GNUC_PREREQ (7, 0) || (defined __cplusplus && !__GNUC_PREREQ (13, 0))
+ /* The literal suffix f128 exists only since GCC 7.0.  */
+ #   define __f128(x) x##q
+ #  else
+@@ -66,7 +66,7 @@
+ 
+ /* Defined to a complex binary128 type if __HAVE_FLOAT128 is 1.  */
+ # if __HAVE_FLOAT128
+-#  if !__GNUC_PREREQ (7, 0) || defined __cplusplus
++#  if !__GNUC_PREREQ (7, 0) || (defined __cplusplus && !__GNUC_PREREQ (13, 0))
+ /* Add a typedef for older GCC compilers which don't natively support
+    _Complex _Float128.  */
+ typedef _Complex float __cfloat128 __attribute__ ((__mode__ (__TC__)));
+@@ -80,7 +80,7 @@ typedef _Complex float __cfloat128 __attribute__ ((__mode__ (__TC__)));
+ # if __HAVE_FLOAT128
+ 
+ /* The type _Float128 exists only since GCC 7.0.  */
+-#  if !__GNUC_PREREQ (7, 0) || defined __cplusplus
++#  if !__GNUC_PREREQ (7, 0) || (defined __cplusplus && !__GNUC_PREREQ (13, 0))
+ typedef __float128 _Float128;
+ #  endif
+ 
+diff --git a/sysdeps/ieee754/ldbl-128/bits/floatn.h b/sysdeps/ieee754/ldbl-128/bits/floatn.h
+index 9ae7b303737..6ef60a3c9b6 100644
+--- a/sysdeps/ieee754/ldbl-128/bits/floatn.h
++++ b/sysdeps/ieee754/ldbl-128/bits/floatn.h
+@@ -55,7 +55,7 @@
+ /* Defined to concatenate the literal suffix to be used with _Float128
+    types, if __HAVE_FLOAT128 is 1. */
+ # if __HAVE_FLOAT128
+-#  if !__GNUC_PREREQ (7, 0) || defined __cplusplus
++#  if !__GNUC_PREREQ (7, 0) || (defined __cplusplus && !__GNUC_PREREQ (13, 0))
+ /* The literal suffix f128 exists only since GCC 7.0.  */
+ #   define __f128(x) x##l
+ #  else
+@@ -65,7 +65,7 @@
+ 
+ /* Defined to a complex binary128 type if __HAVE_FLOAT128 is 1.  */
+ # if __HAVE_FLOAT128
+-#  if !__GNUC_PREREQ (7, 0) || defined __cplusplus
++#  if !__GNUC_PREREQ (7, 0) || (defined __cplusplus && !__GNUC_PREREQ (13, 0))
+ #   define __CFLOAT128 _Complex long double
+ #  else
+ #   define __CFLOAT128 _Complex _Float128
+@@ -76,7 +76,7 @@
+ # if __HAVE_FLOAT128
+ 
+ /* The type _Float128 exists only since GCC 7.0.  */
+-#  if !__GNUC_PREREQ (7, 0) || defined __cplusplus
++#  if !__GNUC_PREREQ (7, 0) || (defined __cplusplus && !__GNUC_PREREQ (13, 0))
+ typedef long double _Float128;
+ #  endif
+ 
+diff --git a/sysdeps/mips/ieee754/bits/floatn.h b/sysdeps/mips/ieee754/bits/floatn.h
+index 1d51db04c76..f0321eb010d 100644
+--- a/sysdeps/mips/ieee754/bits/floatn.h
++++ b/sysdeps/mips/ieee754/bits/floatn.h
+@@ -55,7 +55,7 @@
+ /* Defined to concatenate the literal suffix to be used with _Float128
+    types, if __HAVE_FLOAT128 is 1. */
+ # if __HAVE_FLOAT128
+-#  if !__GNUC_PREREQ (7, 0) || defined __cplusplus
++#  if !__GNUC_PREREQ (7, 0) || (defined __cplusplus && !__GNUC_PREREQ (13, 0))
+ /* The literal suffix f128 exists only since GCC 7.0.  */
+ #   define __f128(x) x##l
+ #  else
+@@ -65,7 +65,7 @@
+ 
+ /* Defined to a complex binary128 type if __HAVE_FLOAT128 is 1.  */
+ # if __HAVE_FLOAT128
+-#  if !__GNUC_PREREQ (7, 0) || defined __cplusplus
++#  if !__GNUC_PREREQ (7, 0) || (defined __cplusplus && !__GNUC_PREREQ (13, 0))
+ #   define __CFLOAT128 _Complex long double
+ #  else
+ #   define __CFLOAT128 _Complex _Float128
+@@ -76,7 +76,7 @@
+ # if __HAVE_FLOAT128
+ 
+ /* The type _Float128 exists only since GCC 7.0.  */
+-#  if !__GNUC_PREREQ (7, 0) || defined __cplusplus
++#  if !__GNUC_PREREQ (7, 0) || (defined __cplusplus && !__GNUC_PREREQ (13, 0))
+ typedef long double _Float128;
+ #  endif
+ 
+diff --git a/sysdeps/powerpc/bits/floatn.h b/sysdeps/powerpc/bits/floatn.h
+index 23db8be5a31..3c756dfc9d6 100644
+--- a/sysdeps/powerpc/bits/floatn.h
++++ b/sysdeps/powerpc/bits/floatn.h
+@@ -57,7 +57,7 @@
+ /* Defined to concatenate the literal suffix to be used with _Float128
+    types, if __HAVE_FLOAT128 is 1. */
+ # if __HAVE_FLOAT128
+-#  if !__GNUC_PREREQ (7, 0) || defined __cplusplus
++#  if !__GNUC_PREREQ (7, 0) || (defined __cplusplus && !__GNUC_PREREQ (13, 0))
+ /* The literal suffix (f128) exist for powerpc only since GCC 7.0.  */
+ #   if __LDBL_MANT_DIG__ == 113
+ #    define __f128(x) x##l
+@@ -71,10 +71,10 @@
+ 
+ /* Defined to a complex binary128 type if __HAVE_FLOAT128 is 1.  */
+ # if __HAVE_FLOAT128
+-#  if __LDBL_MANT_DIG__ == 113 && defined __cplusplus
++#  if __LDBL_MANT_DIG__ == 113 && defined __cplusplus && !__GNUC_PREREQ (13, 0)
+ typedef long double _Float128;
+ #   define __CFLOAT128 _Complex long double
+-#  elif !__GNUC_PREREQ (7, 0) || defined __cplusplus
++#  elif !__GNUC_PREREQ (7, 0) || (defined __cplusplus && !__GNUC_PREREQ (13, 0))
+ /* The type _Float128 exist for powerpc only since GCC 7.0.  */
+ typedef __float128 _Float128;
+ /* Add a typedef for older GCC and C++ compilers which don't natively support
+diff --git a/sysdeps/x86/bits/floatn.h b/sysdeps/x86/bits/floatn.h
+index 34a6fdc8642..4ff39457b5d 100644
+--- a/sysdeps/x86/bits/floatn.h
++++ b/sysdeps/x86/bits/floatn.h
+@@ -58,7 +58,7 @@
+ /* Defined to concatenate the literal suffix to be used with _Float128
+    types, if __HAVE_FLOAT128 is 1. */
+ # if __HAVE_FLOAT128
+-#  if !__GNUC_PREREQ (7, 0) || defined __cplusplus
++#  if !__GNUC_PREREQ (7, 0) || (defined __cplusplus && !__GNUC_PREREQ (13, 0))
+ /* The literal suffix f128 exists only since GCC 7.0.  */
+ #   define __f128(x) x##q
+ #  else
+@@ -68,7 +68,7 @@
+ 
+ /* Defined to a complex binary128 type if __HAVE_FLOAT128 is 1.  */
+ # if __HAVE_FLOAT128
+-#  if !__GNUC_PREREQ (7, 0) || defined __cplusplus
++#  if !__GNUC_PREREQ (7, 0) || (defined __cplusplus && !__GNUC_PREREQ (13, 0))
+ /* Add a typedef for older GCC compilers which don't natively support
+    _Complex _Float128.  */
+ typedef _Complex float __cfloat128 __attribute__ ((__mode__ (__TC__)));
+@@ -82,7 +82,7 @@ typedef _Complex float __cfloat128 __attribute__ ((__mode__ (__TC__)));
+ # if __HAVE_FLOAT128
+ 
+ /* The type _Float128 exists only since GCC 7.0.  */
+-#  if !__GNUC_PREREQ (7, 0) || defined __cplusplus
++#  if !__GNUC_PREREQ (7, 0) || (defined __cplusplus && !__GNUC_PREREQ (13, 0))
+ typedef __float128 _Float128;
+ #  endif
+ 
