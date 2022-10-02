@@ -5,7 +5,7 @@
 
 pkgname=zstd
 pkgver=1.5.3
-pkgrel=4
+pkgrel=6
 pkgdesc='Zstandard - Fast real-time compression algorithm'
 url='https://facebook.github.io/zstd/'
 arch=(x86_64)
@@ -14,32 +14,42 @@ depends=(glibc gcc-libs zlib xz lz4)
 makedepends=(gtest)
 provides=(libzstd.so)
 options=(!debug lto)
-source=(git+https://github.com/facebook/zstd.git#commit=5d2fb4288f8230cc32c12f235b716fd25ecc89e1)
+source=(git+https://github.com/facebook/zstd.git#commit=096dccbc2d89a560db0b9892c53ea0c77eff20a1)
 sha256sums=('SKIP')
+
+prepare() {
+  cd ${pkgname}
+  # avoid error on tests without static libs, we use LD_LIBRARY_PATH
+  sed '/build static library to build tests/d' -i build/cmake/CMakeLists.txt
+  sed 's/libzstd_static/libzstd_shared/g' -i build/cmake/tests/CMakeLists.txt
+}
 
 build() {
   cd ${pkgname}
-  	export CC='clang'
-  	export CXX='clang++'
-  	export CFLAGS+=' -fno-semantic-interposition'
-   	export CXXFLAGS+=' -fno-semantic-interposition'
-	export LDFLAGS+=' -fuse-ld=lld'
-  # Set PREFIX, as libzstd.pc is otherwise generated with -L/usr/local
-  make PREFIX=/usr
-  make -C contrib/pzstd
+  export CFLAGS+=' -ffat-lto-objects'
+  export CXXFLAGS+=' -ffat-lto-objects'
+
+  cmake -S build/cmake -B build -G Ninja \
+    -DCMAKE_BUILD_TYPE=None \
+    -DCMAKE_INSTALL_PREFIX=/usr \
+    -DCMAKE_INSTALL_LIBDIR=lib \
+    -DZSTD_BUILD_CONTRIB=ON \
+    -DZSTD_BUILD_STATIC=OFF \
+    -DZSTD_BUILD_TESTS=ON \
+    -DZSTD_PROGRAMS_LINK_SHARED=ON
+  cmake --build build
 }
 
 check() {
   cd ${pkgname}
-  make check
-  make -C contrib/pzstd test
+  export LD_LIBRARY_PATH="$(pwd)/build/lib"
+  ctest -VV --test-dir build
 }
 
 package() {
   cd ${pkgname}
-  make PREFIX=/usr DESTDIR="${pkgdir}" install
+  DESTDIR="${pkgdir}" cmake --install build
   ln -sf /usr/bin/zstd "${pkgdir}/usr/bin/zstdmt"
-  install -Dm 755 contrib/pzstd/pzstd -t "${pkgdir}/usr/bin"
   install -Dm 644 LICENSE -t "${pkgdir}/usr/share/licenses/${pkgname}"
 }
 
