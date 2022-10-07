@@ -3,7 +3,7 @@
 
 pkgname=pacman
 pkgver=6.0.2
-pkgrel=2
+pkgrel=3
 pkgdesc="A library-based package manager with dependency support"
 arch=('x86_64')
 url="https://www.archlinux.org/pacman/"
@@ -23,16 +23,19 @@ validpgpkeys=('6645B0A8C7005E78DB1D7864F99FFE0FEAE999BD'  # Allan McRae <allan@a
 source=(https://sources.archlinux.org/other/pacman/$pkgname-$pkgver.tar.xz{,.sig}
         pacman.conf
         makepkg.conf
-        x8664v3.patch)
+        x8664v3.patch
+        fix-source-path.patch)
 sha256sums=('7d8e3e8c5121aec0965df71f59bedf46052c6cf14f96365c4411ec3de0a4c1a5'
             'SKIP'
             '606e55f06c297d2b508bc4438890b229a1abaa68b0374a2d7f94c8e7be6792d7'
             '95154d1c82c8f8bc07458401836b6c37155a77c6ed75f54d6ae0d6e9ebb32aff'
-            '82e4f144c4cbc41f969f5dd32a7e4a6c86ef83f8f745abf673572ddd8c2ce41f')
+            '82e4f144c4cbc41f969f5dd32a7e4a6c86ef83f8f745abf673572ddd8c2ce41f'
+            'fec94ba412510bb91386b9b433ddbe76e30027d50a44d9298965311b8dc82937')
 
 prepare() {
   cd "$pkgname-$pkgver"
   patch -Np1 < ../x8664v3.patch
+  patch -Np1 < ..fix-source-path.patch
 }
 build() {
   cd "$pkgname-$pkgver"
