@@ -1,0 +1,57 @@
+From e1246baddd14ec6f4b6270b59bea0e1b639472a7 Mon Sep 17 00:00:00 2001
+From: Allan McRae <allan@archlinux.org>
+Date: Sun, 6 Mar 2022 19:48:04 +1000
+Subject: [PATCH] Ensure WKD key lookup returns the correct key
+
+Looking up a key using WKD just ensures you have a key with the
+same email address, it does not ensure that a key with the correct
+fingerprint has been downloaded.
+
+Check a key with the relevant fingerprint is available after a
+WKD import.
+---
+ lib/libalpm/signing.c | 12 +++++++++---
+ 1 file changed, 9 insertions(+), 3 deletions(-)
+
+diff --git a/lib/libalpm/signing.c b/lib/libalpm/signing.c
+index 8df2868c..0e022624 100644
+--- a/lib/libalpm/signing.c
++++ b/lib/libalpm/signing.c
+@@ -253,9 +253,10 @@ error:
+  * This requires GPGME to call the gpg binary.
+  * @param handle the context handle
+  * @param email the email address of the key to import
++ * @param fpr the fingerprint key ID to look up (or NULL)
+  * @return 0 on success, -1 on error
+  */
+-static int key_import_wkd(alpm_handle_t *handle, const char *email)
++static int key_import_wkd(alpm_handle_t *handle, const char *email, const char *fpr)
+ {
+ 	gpgme_error_t gpg_err;
+ 	gpgme_ctx_t ctx = {0};
+@@ -274,7 +275,12 @@ static int key_import_wkd(alpm_handle_t *handle, const char *email)
+ 	_alpm_log(handle, ALPM_LOG_DEBUG, _("looking up key %s using WKD\n"), email);
+ 	gpg_err = gpgme_get_key(ctx, email, &key, 0);
+ 	if(gpg_err_code(gpg_err) == GPG_ERR_NO_ERROR) {
+-		ret = 0;
++		/* check if correct key was imported via WKD */
++		if(fpr && _alpm_key_in_keychain(handle, fpr)) {
++			ret = 0;
++		} else {
++			_alpm_log(handle, ALPM_LOG_DEBUG, "key lookup failed: WKD imported wrong fingerprint\n");
++		}
+ 	}
+ 	gpgme_key_unref(key);
+ 
+@@ -516,7 +522,7 @@ int _alpm_key_import(alpm_handle_t *handle, const char *uid, const char *fpr)
+ 	if(question.import) {
+ 		/* Try to import the key from a WKD first */
+ 		if(email_from_uid(uid, &email) == 0) {
+-			ret = key_import_wkd(handle, email);
++			ret = key_import_wkd(handle, email, fpr);
+ 			free(email);
+ 		}
+ 
+-- 
+GitLab
+
