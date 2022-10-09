@@ -1,20 +1,69 @@
-From f42c8c539723c95e0c4cb1ac7aef8ec78e7f5871 Mon Sep 17 00:00:00 2001
+From 6e96139f8ac71ef8fc3aafba6f89fa224e630d80 Mon Sep 17 00:00:00 2001
 From: Vladislav Nepogodin <nepogodin.vlad@gmail.com>
-Date: Thu, 29 Sep 2022 00:25:38 +0400
+Date: Sun, 9 Oct 2022 22:36:56 +0400
 Subject: [PATCH] add support for x86_64_v3 autodetection
 
 ---
- src/pacman/conf.c | 128 ++++++++++++++++++++++++++++++++++++++++++++++
- 1 file changed, 128 insertions(+)
+ lib/libalpm/alpm.h             |   7 ++
+ lib/libalpm/cpu_capabilities.c | 156 +++++++++++++++++++++++++++++++++
+ lib/libalpm/meson.build        |   1 +
+ src/pacman/conf.c              |  20 +++--
+ 4 files changed, 177 insertions(+), 7 deletions(-)
+ create mode 100644 lib/libalpm/cpu_capabilities.c
 
-diff --git a/src/pacman/conf.c b/src/pacman/conf.c
-index f9edf75b..2750772f 100644
---- a/src/pacman/conf.c
-+++ b/src/pacman/conf.c
-@@ -396,6 +396,132 @@ cleanup:
- }
+diff --git a/lib/libalpm/alpm.h b/lib/libalpm/alpm.h
+index 3304ae77..9f543d91 100644
+--- a/lib/libalpm/alpm.h
++++ b/lib/libalpm/alpm.h
+@@ -2079,6 +2079,13 @@ int alpm_option_remove_assumeinstalled(alpm_handle_t *handle, const alpm_depend_
+  * @{
+  */
  
- 
++
++/** Returns the allowed physical architectures.
++ * @param handle the context handle
++ * @return the list of physical architectures (caller is responsible for alpm_list_free)
++ */
++alpm_list_t *alpm_option_get_physical_architectures(alpm_handle_t *handle);
++
+ /** Returns the allowed package architecture.
+  * @param handle the context handle
+  * @return the configured package architectures
+diff --git a/lib/libalpm/cpu_capabilities.c b/lib/libalpm/cpu_capabilities.c
+new file mode 100644
+index 00000000..95e1251e
+--- /dev/null
++++ b/lib/libalpm/cpu_capabilities.c
+@@ -0,0 +1,156 @@
++/*
++ *  cpu_capabilities.c
++ *
++ *  Copyright (c) 2022 by Vladislav Nepogodin <vnepogodin@cachyos.org>
++ *
++ *  This program is free software; you can redistribute it and/or modify
++ *  it under the terms of the GNU General Public License as published by
++ *  the Free Software Foundation; either version 2 of the License, or
++ *  (at your option) any later version.
++ *
++ *  This program is distributed in the hope that it will be useful,
++ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
++ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ *  GNU General Public License for more details.
++ *
++ *  You should have received a copy of the GNU General Public License
++ *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
++ */
++
++#include <stdlib.h>
++#include <string.h>
++#include <sys/types.h>
++#include <sys/utsname.h> /* uname */
++
++/* libalpm */
++#include "alpm_list.h"
++#include "log.h"
++#include "util.h"
++
 +
 +static uint64_t xgetbv(void) {
 +#if defined(_MSC_VER)
@@ -71,7 +120,6 @@ index f9edf75b..2750772f 100644
 +};
 +
 +enum cpu_feature g_cpu_features = UNDEFINED;
-+static int g_v3_was_applied = 0;
 +
 +enum cpu_feature get_cpu_features(void) {
 +  if (g_cpu_features != UNDEFINED) {
@@ -122,37 +170,77 @@ index f9edf75b..2750772f 100644
 +#endif
 +}
 +
-+int config_add_v3_architecture()
++alpm_list_t SYMEXPORT *alpm_option_get_physical_architectures(alpm_handle_t *handle)
 +{
-+    if (g_v3_was_applied == 1) {
-+        return -1;
++    alpm_list_t *supported_architectures = NULL;
++
++    {
++        struct utsname un;
++        uname(&un);
++
++        supported_architectures = alpm_list_add(supported_architectures, strdup(un.machine));
 +    }
 +
-+    g_v3_was_applied = 1;
 +    const enum cpu_feature features = get_cpu_features();
-+    if (!((features & SSE41) && (features & AVX) && (features & AVX2))) {
-+        return -1;
++
++    /* Check for x86_64_v3 */
++    if ((features & SSE41) && (features & AVX) && (features & AVX2)) {
++        _alpm_log(handle, ALPM_LOG_DEBUG, "cpu supports x86_64_v3\n");
++        supported_architectures = alpm_list_add(supported_architectures, strdup("x86_64_v3"));
 +    }
-+	
-+    pm_printf(ALPM_LOG_DEBUG, "config: arch: cpu supports x86_64_v3\n");
 +
-+    char* arch = strdup("x86_64_v3");
-+    config->architectures = alpm_list_add(config->architectures, arch);
-+    return 0;
++    return supported_architectures;
 +}
-+
+diff --git a/lib/libalpm/meson.build b/lib/libalpm/meson.build
+index 607e91a3..34c8a4d2 100644
+--- a/lib/libalpm/meson.build
++++ b/lib/libalpm/meson.build
+@@ -8,6 +8,7 @@ libalpm_sources = files('''
+   be_package.c
+   be_sync.c
+   conflict.h conflict.c
++  cpu_capabilities.c
+   db.h db.c
+   deps.h deps.c
+   diskspace.h diskspace.c
+diff --git a/src/pacman/conf.c b/src/pacman/conf.c
+index f9edf75b..5401acb0 100644
+--- a/src/pacman/conf.c
++++ b/src/pacman/conf.c
+@@ -28,7 +28,6 @@
+ #include <string.h> /* strdup */
+ #include <sys/stat.h>
+ #include <sys/types.h>
+-#include <sys/utsname.h> /* uname */
+ #include <sys/wait.h>
+ #include <unistd.h>
+ #include <signal.h>
+@@ -399,12 +398,19 @@ cleanup:
  int config_add_architecture(char *arch)
  {
  	if(strcmp(arch, "auto") == 0) {
-@@ -409,6 +535,8 @@ int config_add_architecture(char *arch)
+-		struct utsname un;
+-		char *newarch;
+-		uname(&un);
+-		newarch = strdup(un.machine);
+-		free(arch);
+-		arch = newarch;
++        free(arch);
++
++        alpm_list_t *physical_arches;
++        physical_arches = alpm_option_get_physical_architectures(config->handle);
++
++	    alpm_list_t *i;
++    	for(i = physical_arches; i; i = alpm_list_next(i)) {
++		    char *physical_arch = i->data;
++	        pm_printf(ALPM_LOG_DEBUG, "config: arch: %s\n", physical_arch);
++	        config->architectures = alpm_list_add(config->architectures, physical_arch);
++        }
++	    alpm_list_free(physical_arches);
++        return 0;
+ 	}
  
  	pm_printf(ALPM_LOG_DEBUG, "config: arch: %s\n", arch);
- 	config->architectures = alpm_list_add(config->architectures, arch);
-+   config_add_v3_architecture();
-+
- 	return 0;
- }
- 
 -- 
-2.37.3
+2.38.0
 
