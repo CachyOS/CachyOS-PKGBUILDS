@@ -2,7 +2,7 @@
 # Contributor: Balwinder S "bsd" Dheeman (bdheeman AT gmail.com)
 
 pkgname=dkms
-pkgver=3.0.6
+pkgver=3.0.7
 pkgrel=3
 pkgdesc='Dynamic Kernel Modules System'
 arch=('any')
@@ -22,14 +22,12 @@ source=("git+https://github.com/dell/dkms.git#tag=v$pkgver"
         'hook.install'
         'hook.remove'
         'hook.upgrade'
-        'hook.sh'
-        'https://github.com/dell/dkms/commit/25077200289dfdc37c0e86ec4c86e4932137088e.patch')
+        'hook.sh')
 sha256sums=('SKIP'
             'acdc5b45cc018cea04ee1aec56fd8fc3a2de62cf7bc41acf53b3790872120998'
             '326515cc7d00f93760beb844434ca7442caf7a9424614aa95a8f6d1ab79e15df'
             '4f8dff7716e73a8bba885638f12e3cdc9e87daec1896f75e700b981527e43870'
-            'c1b4a4e2e4e0e0e59ee0887403e79d60b209f3878dbbec6612573f13b90cce01'
-            'b6985f5c7d84427baf7644418320f7dd25d99a9ff2e3b8343e027031f1845af8')
+            'c1b4a4e2e4e0e0e59ee0887403e79d60b209f3878dbbec6612573f13b90cce01')
 
 prepare() {
   cd dkms
