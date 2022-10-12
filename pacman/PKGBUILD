@@ -3,15 +3,15 @@
 
 pkgname=pacman
 pkgver=6.0.2
-_pkgver=6.0.1
-pkgrel=5
+_pkgver=6.0.2
+pkgrel=6
 pkgdesc="A library-based package manager with dependency support"
 arch=('x86_64')
 url="https://www.archlinux.org/pacman/"
 license=('GPL')
 groups=('base-devel')
 depends=('bash' 'glibc' 'libarchive' 'curl' 'gpgme' 'pacman-mirrorlist'
-         'gettext' 'gawk' 'coreutils' 'gnupg' 'grep')
+         'gettext' 'gawk' 'coreutils' 'gnupg' 'grep' 'debugedit')
 makedepends=('meson' 'asciidoc' 'doxygen')
 checkdepends=('python' 'fakechroot')
 optdepends=('perl-locale-gettext: translation support in makepkg-template')
@@ -31,8 +31,10 @@ source=(https://sources.archlinux.org/other/pacman/$pkgname-$_pkgver.tar.xz{,.si
         libmakepkg-add-extra-buildflags-only-when-buildflags.patch
         make-link-time-optimization-flags-configurable.patch
         x8664v3.patch
-        fix-source-path.patch)
-sha256sums=('0db61456e56aa49e260e891c0b025be210319e62b15521f29d3e93b00d3bf731'
+        fix-source-path.patch
+        pacman-fix.patch)
+#        thinlto.patch)
+sha256sums=('7d8e3e8c5121aec0965df71f59bedf46052c6cf14f96365c4411ec3de0a4c1a5'
             'SKIP'
             '606e55f06c297d2b508bc4438890b229a1abaa68b0374a2d7f94c8e7be6792d7'
             '95154d1c82c8f8bc07458401836b6c37155a77c6ed75f54d6ae0d6e9ebb32aff'
@@ -43,18 +45,21 @@ sha256sums=('0db61456e56aa49e260e891c0b025be210319e62b15521f29d3e93b00d3bf731'
             '7d0aee976c9c71fcf7c96ef1d99aa76efe47d8c1f4451842d6d159ec7deb4278'
             '5b43e26a76be3ed10a69d4bfb2be48db8cce359baf46583411c7f124737ebe6a'
             'a088200e67223d7cbb2b8558bbd20f909207b95132475c15e1c72d8a8fbd3a79'
-            'fec94ba412510bb91386b9b433ddbe76e30027d50a44d9298965311b8dc82937')
+            'fec94ba412510bb91386b9b433ddbe76e30027d50a44d9298965311b8dc82937'
+            '1e62ee2639120c5b2da3a56b0174107c8d5844b8250068f1f9c2dad99e425aa5')
 
 prepare() {
   cd "$pkgname-$_pkgver"
-  patch -Np1 -i ../add-flto-to-LDFLAGS-for-clang.patch
-  patch -Np1 -i ../makepkg-use-ffile-prefix-map-instead-of-fdebug-prefi.patch
-  patch -Np1 -i ../libmakepkg-add-extra-buildflags-only-when-buildflags.patch
-  patch -Np1 -i ../make-link-time-optimization-flags-configurable.patch
-  patch -Np1 -i ../fix-wkd-lookup.patch
-  patch -Np1 -i ../patch-updatedb.patch  
+#  patch -Np1 -i ../add-flto-to-LDFLAGS-for-clang.patch
+#  patch -Np1 -i ../makepkg-use-ffile-prefix-map-instead-of-fdebug-prefi.patch
+#  patch -Np1 -i ../libmakepkg-add-extra-buildflags-only-when-buildflags.patch
+#  patch -Np1 -i ../make-link-time-optimization-flags-configurable.patch
+#  patch -Np1 -i ../fix-wkd-lookup.patch
+#  patch -Np1 -i ../patch-updatedb.patch  
+#   patch -Np1 < ..fix-source-path.patch
+  patch -Np1 < ../pacman-fix.patch
   patch -Np1 < ../x8664v3.patch
-#  patch -Np1 < ..fix-source-path.patch
+#  patch -Np1 < ../thinlto.patch
 }
 build() {
   cd "$pkgname-$_pkgver"

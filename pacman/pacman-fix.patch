@@ -1,0 +1,54 @@
+From 7d768d0d3fae56c78c2a82832f1eb2995054c97e Mon Sep 17 00:00:00 2001
+From: Peter Jung <admin@ptr1337.dev>
+Date: Tue, 11 Oct 2022 19:07:54 +0200
+Subject: [PATCH] pacman-fix
+
+---
+ scripts/libmakepkg/tidy/strip.sh.in | 10 +++++-----
+ 1 file changed, 5 insertions(+), 5 deletions(-)
+
+diff --git a/scripts/libmakepkg/tidy/strip.sh.in b/scripts/libmakepkg/tidy/strip.sh.in
+index e7aecd38..49f963f6 100644
+--- a/scripts/libmakepkg/tidy/strip.sh.in
++++ b/scripts/libmakepkg/tidy/strip.sh.in
+@@ -47,7 +47,7 @@ source_files() {
+ 
+ 	LANG=C debugedit --no-recompute-build-id \
+ 		--base-dir "${srcdir}" \
+-		--dest-dir "${dbgsrcdir}/${pkgbase}" \
++		--dest-dir "${dbgsrcdir}" \
+ 		--list-file /dev/stdout "$1" \
+ 		| sort -zu | tr '\0' '\n'
+ }
+@@ -72,8 +72,8 @@ strip_file() {
+ 		while IFS= read -r t; do
+ 			file="${srcdir}/${t}"
+ 			dest="${dbgsrc}/${t}"
+-			if [[ -f "$file" ]] && ! [[ -f $dest ]]; then
+-				mkdir -p "${dest%/*}"
++			mkdir -p "${dest%/*}"
++			if [[ -f "$file" ]]; then
+ 				cp -- "$file" "$dest"
+ 			fi
+ 		done < <(source_files "$binary")
+@@ -141,7 +141,7 @@ tidy_strip() {
+ 		if check_option "debug" "y"; then
+ 
+ 			dbgdir="$pkgdirbase/$pkgbase-@DEBUGSUFFIX@/usr/lib/debug"
+-			dbgsrcdir="${DBGSRCDIR:-/usr/src/debug}"
++			dbgsrcdir="${DBGSRCDIR:-/usr/src/debug}/${pkgbase}"
+ 			dbgsrc="$pkgdirbase/$pkgbase-@DEBUGSUFFIX@$dbgsrcdir"
+ 			mkdir -p "$dbgdir" "$dbgsrc"
+ 		fi
+@@ -160,7 +160,7 @@ tidy_strip() {
+ 					if ar t "$binary" &>/dev/null; then # Libraries (.a)
+ 						strip_flags="$STRIP_STATIC"
+ 						STRIPLTO=1
+-					elif [[ $binary = *'.ko' ]]; then # Kernel module
++					elif [[ $binary = *'.ko' || $binary = *'.o' ]]; then # Kernel module or object file
+ 						strip_flags="$STRIP_SHARED"
+ 					else
+ 						continue
+-- 
+2.38.0
+
