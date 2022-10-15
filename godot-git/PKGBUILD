@@ -1,0 +1,74 @@
+# Maintainer: Peter Jung ptr1337 <admin@ptr1337.dev>
+# Contributor: Alexander F. Rødseth <xyproto@archlinux.org>
+# Contributor: loqs
+# Contributor: Jorge Araya Navarro <jorgejavieran@yahoo.com.mx>
+# Contributor: Cristian Porras <porrascristian@gmail.com>
+# Contributor: Matthew Bentley <matthew@mtbentley.us>
+
+pkgname=godot-git
+_pkgname=godot
+pkgver=4.0.r47960.dc4b616596
+pkgrel=1
+pkgdesc='Advanced cross-platform 2D and 3D game engine'
+url='https://godotengine.org'
+license=(MIT)
+arch=(x86_64)
+makedepends=(gcc scons yasm alsa-lib pulseaudio mold git)
+depends=(embree freetype2 libglvnd libtheora libvorbis libvpx libwebp
+         libwslay libxcursor libxi libxinerama libxrandr mbedtls miniupnpc opusfile)
+optdepends=(pipewire-alsa pipewire-pulse)
+source=("git+https://github.com/godotengine/$_pkgname.git")
+b2sums=('SKIP')
+
+pkgver() {
+    cd "${srcdir}/${_pkgname}"
+    _major=$(cat version.py|grep "major" | sed 's/major = //')
+    _minor=$(cat version.py|grep "minor" | sed 's/minor = //')
+    _revision=$(printf "r%s.%s" "$(git rev-list --count HEAD)" "$(git rev-parse --short HEAD)")
+    echo "${_major}.${_minor}.${_revision}"
+}
+
+build() {
+  # Not unbundled (yet):
+  #  bullet (FS#72924, https://github.com/godotengine/godot/issues/55599)
+  #  certs (FS#72762)
+  #  enet (contains no upstreamed IPv6 support)
+  #  libsquish, recast, xatlas
+  #  AUR: libwebm, squish
+  local to_unbundle="embree freetype libogg libpng libtheora libvorbis libvpx libwebp mbedtls miniupnpc opus pcre2 wslay zlib zstd"
+  local system_libs=""
+  for _lib in $to_unbundle; do
+    system_libs+="builtin_"$_lib"=no "
+    rm -rf thirdparty/$_lib
+  done
+
+  cd $_pkgname
+  export BUILD_NAME=arch_linux
+  scons -j16 \
+    bits=64 \
+    colored=yes \
+    platform=x11 \
+    pulseaudio=yes \
+    system_certs_path=/etc/ssl/certs/ca-certificates.crt \
+    target=editor \
+    tools=yes \
+    use_llvm=no \
+    linker=mold \
+    use_lto=yes \
+    CFLAGS="$CFLAGS -fPIC -Wl,-z,relro,-z,now -w" \
+    CXXFLAGS="$CXXFLAGS -fPIC -Wl,-z,relro,-z,now -w" \
+    LINKFLAGS="$LDFLAGS" \
+    $system_libs
+}
+
+package() {
+  cd $_pkgname
+  install -Dm644 misc/dist/linux/org.godotengine.Godot.desktop \
+    "$pkgdir/usr/share/applications/godot.desktop"
+  install -Dm644 icon.svg "$pkgdir/usr/share/pixmaps/godot.svg"
+  install -Dm755 bin/godot.linuxbsd.editor.x86_64 "$pkgdir/usr/bin/$_pkgname"
+  install -Dm644 LICENSE.txt "$pkgdir/usr/share/licenses/godot/LICENSE"
+  install -Dm644 misc/dist/linux/godot.6 "$pkgdir/usr/share/man/man6/godot.6"
+  install -Dm644 misc/dist/linux/org.godotengine.Godot.xml \
+    "$pkgdir/usr/share/mime/packages/org.godotengine.Godot.xml"
+}
