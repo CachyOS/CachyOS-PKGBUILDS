@@ -3,7 +3,7 @@
 
 pkgname=cachyos-calamares
 pkgver=3.3.0
-pkgrel=5
+pkgrel=6
 pkgdesc='Distribution-independent installer framework'
 arch=('i686' 'x86_64' 'x86_64_v3')
 license=(GPL)
@@ -22,7 +22,6 @@ backup=('usr/share/calamares/modules/bootloader.conf'
 source=(calamares::git+https://github.com/cachyos/calamares.git
 		settings_online.conf
         settings_offline.conf
-#        luks2.patch
         https://github.com/calamares/calamares/commit/79db04dc2eb00b354044f73c054a94fe2b9f9aae.patch
         ${pkgname}-config::git+https://github.com/cachyos/calamares-config.git#branch=grub-3.3)
 sha256sums=('SKIP'
@@ -55,8 +54,6 @@ prepare() {
     # remove default branding
     rm -r src/branding/default
 
-	# Support luks2 encrypted installations
-#	patch -Np1 -i ${srcdir}/luks2.patch ## Dont use it for now, since it seems to be not working with systemd-boot. GRUB needs to be patched
 	# https://github.com/calamares/calamares/issues/2008#issuecomment-1172947659
 	patch -Rp1 -i ${srcdir}/79db04dc2eb00b354044f73c054a94fe2b9f9aae.patch
 }
