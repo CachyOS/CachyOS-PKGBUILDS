@@ -23,6 +23,7 @@ source=(git+https://sourceware.org/git/glibc.git#commit=${_commit}
         sdt.h sdt-config.h
         reenable_DT_HASH.patch
         gcc13.patch
+        gcc13-2.patch
 )
 validpgpkeys=(7273542B39962DF7B299931416792B4EA25340F8 # Carlos O'Donell
               BC7C7372637EC10C57D7AA6579C43DFBF1CF2187) # Siddhesh Poyarekar
@@ -46,6 +47,7 @@ prepare() {
   # reconsider 2023-01
   patch -Np1 -i "${srcdir}"/reenable_DT_HASH.patch
   patch -Np1 -i "${srcdir}"/gcc13.patch
+  patch -Np1 -i "${srcdir}"/gcc13-2.patch
 }
 
 build() {
