@@ -1,0 +1,27 @@
+From 8fae457154f6581b1193e2b5af35e06b9d9e45c3 Mon Sep 17 00:00:00 2001
+From: Peter Jung <admin@ptr1337.dev>
+Date: Fri, 21 Oct 2022 23:15:12 +0200
+Subject: [PATCH] Revert "pacman-key: Don't check gpg's trustdb after each key
+ revocation"
+
+This reverts commit 958475a7cfb400512908e3848cce73bebf243b21.
+---
+ scripts/pacman-key.sh.in | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/scripts/pacman-key.sh.in b/scripts/pacman-key.sh.in
+index 913f2c39..f7f1dd61 100644
+--- a/scripts/pacman-key.sh.in
++++ b/scripts/pacman-key.sh.in
+@@ -374,7 +374,7 @@ populate_keyring() {
+ 			if (( VERBOSE )); then
+ 				msg2 "$(gettext "Disabling key %s...")" "${key_id}"
+ 			fi
+-			printf 'disable\nquit\n' | LANG=C "${GPG_PACMAN[@]}" --command-fd 0 --no-auto-check-trustdb --quiet --batch --edit-key "${key_id}" 2>/dev/null
++			printf 'disable\nquit\n' | LANG=C "${GPG_PACMAN[@]}" --command-fd 0 --quiet --batch --edit-key "${key_id}" 2>/dev/null
+ 			key_count=$((key_count+1))
+ 		done
+ 		if (( key_count )); then
+-- 
+2.38.1.119.g9c32cfb49c
+
