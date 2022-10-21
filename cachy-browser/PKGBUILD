@@ -39,7 +39,8 @@ install=cachy-browser.install
 source=(https://archive.mozilla.org/pub/firefox/releases/$pkgver/source/firefox-$pkgver.source.tar.xz{,.asc}
         $pkgname.desktop
         "git+https://github.com/cachyos/cachyos-browser-settings.git"
-        "git+https://github.com/cachyos/cachyos-browser-common.git")
+        "git+https://github.com/cachyos/cachyos-browser-common.git"
+        "match.patch")
 sha256sums=('bdf8184f9aadce4fd9613ec63525a96891e2e9dbbef9e4f72193038450a7fd35'
             'SKIP'
             'c0786df2fd28409da59d0999083914a65e2097cda055c9c6c2a65825f156e29f'
@@ -215,7 +216,7 @@ END
     patch -Np1 -i ${_patches_dir}/librewolf/unity-menubar.patch
     patch -Np1 -i ${_patches_dir}/librewolf/mozilla-kde_after_unity.patch
     patch -Np1 -i ${_patches_dir}/kde/mozilla-nongnome-proxies.patch
-
+	patch -Np1 < ../match.patch
     #msg2  " some undesired requests (https://gitlab.com/librewolf-community/browser/common/-/issues/10)"
     #patch -Np1 -i ${_patches_dir}/sed-patches/stop-undesired-requests.patch # broken with 105, wait for a upstream fix
 
@@ -230,7 +231,7 @@ build() {
     export MOZ_NOSPAM=1
     export MOZBUILD_STATE_PATH="$srcdir/mozbuild"
     #export MOZ_ENABLE_FULL_SYMBOLS=1
-    export MACH_BUILD_PYTHON_NATIVE_PACKAGE_SOURCE=pip
+    export MACH_BUILD_PYTHON_NATIVE_PACKAGE_SOURCE=system
     export PIP_NETWORK_INSTALL_RESTRICTED_VIRTUALENVS=mach # let us hope this is a working _new_ workaround for the pip env issues?
 
     # LTO needs more open files
