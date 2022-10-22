@@ -1,0 +1,207 @@
+From dc7c400be988410da6ffc10e02a0a7fdd82a4026 Mon Sep 17 00:00:00 2001
+From: Vladislav Nepogodin <nepogodin.vlad@gmail.com>
+Date: Sat, 22 Oct 2022 11:03:39 +0400
+Subject: [PATCH] add information about origin db
+
+---
+ lib/libalpm/add.c      |  4 ++++
+ lib/libalpm/alpm.h     |  5 +++++
+ lib/libalpm/be_local.c | 13 +++++++++++++
+ lib/libalpm/package.c  | 11 +++++++++++
+ lib/libalpm/package.h  |  2 ++
+ lib/libalpm/sync.c     |  1 +
+ src/pacman/package.c   |  6 ++++++
+ 7 files changed, 42 insertions(+)
+
+diff --git a/lib/libalpm/add.c b/lib/libalpm/add.c
+index 774087fa..21dc91b4 100644
+--- a/lib/libalpm/add.c
++++ b/lib/libalpm/add.c
+@@ -69,6 +69,10 @@ int SYMEXPORT alpm_add_pkg(alpm_handle_t *handle, alpm_pkg_t *pkg)
+ 	pkgver = pkg->version;
+ 
+ 	_alpm_log(handle, ALPM_LOG_DEBUG, "adding package '%s'\n", pkgname);
++	const char* pkg_db_name = alpm_db_get_name(alpm_pkg_get_db(pkg));
++	if((pkg_db_name != NULL) && (pkg->installed_db == NULL)) {
++		pkg->installed_db = strdup(pkg_db_name);
++	}
+ 
+ 	if((dup = alpm_pkg_find(trans->add, pkgname))) {
+ 		if(dup == pkg) {
+diff --git a/lib/libalpm/alpm.h b/lib/libalpm/alpm.h
+index 3304ae77..5cf66790 100644
+--- a/lib/libalpm/alpm.h
++++ b/lib/libalpm/alpm.h
+@@ -2436,6 +2436,11 @@ const char *alpm_pkg_get_version(alpm_pkg_t *pkg);
+  */
+ alpm_pkgfrom_t alpm_pkg_get_origin(alpm_pkg_t *pkg);
+ 
++/** Returns the installed db of the package.
++ * @return an alpm_pkgfrom_t constant, -1 on error
++ */
++const char* alpm_pkg_get_installed_db(alpm_pkg_t *pkg);
++
+ /** Returns the package description.
+  * @param pkg a pointer to package
+  * @return a reference to an internal string
+diff --git a/lib/libalpm/be_local.c b/lib/libalpm/be_local.c
+index e117b69d..bb3afa59 100644
+--- a/lib/libalpm/be_local.c
++++ b/lib/libalpm/be_local.c
+@@ -201,6 +201,12 @@ static alpm_list_t *_cache_get_xdata(alpm_pkg_t *pkg)
+ 	return pkg->xdata;
+ }
+ 
++static const char *_cache_get_installed_db(alpm_pkg_t *pkg)
++{
++	LAZY_LOAD(INFRQ_DESC);
++	return pkg->installed_db;
++}
++
+ /**
+  * Open a package changelog for reading. Similar to fopen in functionality,
+  * except that the returned 'file stream' is from the database.
+@@ -343,6 +349,7 @@ static const struct pkg_operations local_pkg_ops = {
+ 	.get_isize = _cache_get_isize,
+ 	.get_reason = _cache_get_reason,
+ 	.get_validation = _cache_get_validation,
++	.get_installed_db = _cache_get_installed_db,
+ 	.has_scriptlet = _cache_has_scriptlet,
+ 	.get_licenses = _cache_get_licenses,
+ 	.get_groups = _cache_get_groups,
+@@ -763,6 +770,8 @@ static int local_db_read(alpm_pkg_t *info, int inforeq)
+ 				READ_AND_STORE_ALL(info->licenses);
+ 			} else if(strcmp(line, "%ARCH%") == 0) {
+ 				READ_AND_STORE(info->arch);
++			} else if(strcmp(line, "%INSTALLED_DB%") == 0) {
++				READ_AND_STORE(info->installed_db);
+ 			} else if(strcmp(line, "%BUILDDATE%") == 0) {
+ 				READ_NEXT();
+ 				info->builddate = _alpm_parsedate(line);
+@@ -999,6 +1008,10 @@ int _alpm_local_db_write(alpm_db_t *db, alpm_pkg_t *info, int inforeq)
+ 			fprintf(fp, "%%ARCH%%\n"
+ 							"%s\n\n", info->arch);
+ 		}
++		if(info->installed_db) {
++			fprintf(fp, "%%INSTALLED_DB%%\n"
++							"%s\n\n", info->installed_db);
++		}
+ 		if(info->builddate) {
+ 			fprintf(fp, "%%BUILDDATE%%\n"
+ 							"%jd\n\n", (intmax_t)info->builddate);
+diff --git a/lib/libalpm/package.c b/lib/libalpm/package.c
+index 8c95dab3..58a92bd0 100644
+--- a/lib/libalpm/package.c
++++ b/lib/libalpm/package.c
+@@ -86,6 +86,7 @@ static off_t _pkg_get_isize(alpm_pkg_t *pkg)             { return pkg->isize; }
+ static alpm_pkgreason_t _pkg_get_reason(alpm_pkg_t *pkg) { return pkg->reason; }
+ static int _pkg_get_validation(alpm_pkg_t *pkg) { return pkg->validation; }
+ static int _pkg_has_scriptlet(alpm_pkg_t *pkg)           { return pkg->scriptlet; }
++static const char *_pkg_get_installed_db(alpm_pkg_t *pkg) { return pkg->installed_db; }
+ 
+ static alpm_list_t *_pkg_get_licenses(alpm_pkg_t *pkg)   { return pkg->licenses; }
+ static alpm_list_t *_pkg_get_groups(alpm_pkg_t *pkg)     { return pkg->groups; }
+@@ -151,6 +152,7 @@ const struct pkg_operations default_pkg_ops = {
+ 	.get_reason      = _pkg_get_reason,
+ 	.get_validation  = _pkg_get_validation,
+ 	.has_scriptlet   = _pkg_has_scriptlet,
++	.get_installed_db = _pkg_get_installed_db,
+ 
+ 	.get_licenses    = _pkg_get_licenses,
+ 	.get_groups      = _pkg_get_groups,
+@@ -220,6 +222,13 @@ alpm_pkgfrom_t SYMEXPORT alpm_pkg_get_origin(alpm_pkg_t *pkg)
+ 	return pkg->origin;
+ }
+ 
++const char SYMEXPORT *alpm_pkg_get_installed_db(alpm_pkg_t *pkg)
++{
++	ASSERT(pkg != NULL, return NULL);
++	pkg->handle->pm_errno = ALPM_ERR_OK;
++	return pkg->ops->get_installed_db(pkg);
++}
++
+ const char SYMEXPORT *alpm_pkg_get_desc(alpm_pkg_t *pkg)
+ {
+ 	ASSERT(pkg != NULL, return NULL);
+@@ -624,6 +633,7 @@ int _alpm_pkg_dup(alpm_pkg_t *pkg, alpm_pkg_t **new_ptr)
+ 	STRDUP(newpkg->name, pkg->name, goto cleanup);
+ 	STRDUP(newpkg->version, pkg->version, goto cleanup);
+ 	STRDUP(newpkg->desc, pkg->desc, goto cleanup);
++	STRDUP(newpkg->installed_db, pkg->installed_db, goto cleanup);
+ 	STRDUP(newpkg->url, pkg->url, goto cleanup);
+ 	newpkg->builddate = pkg->builddate;
+ 	newpkg->installdate = pkg->installdate;
+@@ -721,6 +731,7 @@ void _alpm_pkg_free(alpm_pkg_t *pkg)
+ 	FREE(pkg->name);
+ 	FREE(pkg->version);
+ 	FREE(pkg->desc);
++	FREE(pkg->installed_db);
+ 	FREE(pkg->url);
+ 	FREE(pkg->packager);
+ 	FREE(pkg->md5sum);
+diff --git a/lib/libalpm/package.h b/lib/libalpm/package.h
+index 5ebe6bd1..b8e22451 100644
+--- a/lib/libalpm/package.h
++++ b/lib/libalpm/package.h
+@@ -54,6 +54,7 @@ struct pkg_operations {
+ 	alpm_pkgreason_t (*get_reason) (alpm_pkg_t *);
+ 	int (*get_validation) (alpm_pkg_t *);
+ 	int (*has_scriptlet) (alpm_pkg_t *);
++	const char *(*get_installed_db) (alpm_pkg_t *);
+ 
+ 	alpm_list_t *(*get_licenses) (alpm_pkg_t *);
+ 	alpm_list_t *(*get_groups) (alpm_pkg_t *);
+@@ -100,6 +101,7 @@ struct _alpm_pkg_t {
+ 	char *sha256sum;
+ 	char *base64_sig;
+ 	char *arch;
++	char *installed_db;
+ 
+ 	alpm_time_t builddate;
+ 	alpm_time_t installdate;
+diff --git a/lib/libalpm/sync.c b/lib/libalpm/sync.c
+index 49bde401..502d0e04 100644
+--- a/lib/libalpm/sync.c
++++ b/lib/libalpm/sync.c
+@@ -1088,6 +1088,7 @@ static int load_packages(alpm_handle_t *handle, alpm_list_t **data,
+ 				"replacing pkgcache entry with package file for target %s\n",
+ 				spkg->name);
+ 		alpm_pkg_t *pkgfile =_alpm_pkg_load_internal(handle, filepath, 1);
++		pkgfile->installed_db = strdup(spkg->installed_db);
+ 		if(!pkgfile) {
+ 			_alpm_log(handle, ALPM_LOG_DEBUG, "failed to load pkgfile internal\n");
+ 			error = 1;
+diff --git a/src/pacman/package.c b/src/pacman/package.c
+index 4fcc11f2..361b96a6 100644
+--- a/src/pacman/package.c
++++ b/src/pacman/package.c
+@@ -64,6 +64,7 @@ enum {
+ 	T_PROVIDES,
+ 	T_REPLACES,
+ 	T_REPOSITORY,
++	T_FROM_DB,
+ 	T_REQUIRED_BY,
+ 	T_SHA_256_SUM,
+ 	T_SIGNATURES,
+@@ -118,6 +119,7 @@ static void make_aligned_titles(void)
+ 	buf[T_PROVIDES] = _("Provides");
+ 	buf[T_REPLACES] = _("Replaces");
+ 	buf[T_REPOSITORY] = _("Repository");
++	buf[T_FROM_DB] = _("Installed From");
+ 	buf[T_REQUIRED_BY] = _("Required By");
+ 	buf[T_SHA_256_SUM] = _("SHA-256 Sum");
+ 	buf[T_SIGNATURES] = _("Signatures");
+@@ -262,6 +264,10 @@ void dump_pkg_full(alpm_pkg_t *pkg, int extra)
+ 		string_display(titles[T_REPOSITORY],
+ 				alpm_db_get_name(alpm_pkg_get_db(pkg)), cols);
+ 	}
++	if(from == ALPM_PKG_FROM_LOCALDB) {
++		string_display(titles[T_FROM_DB],
++				alpm_pkg_get_installed_db(pkg), cols);
++	}
+ 	string_display(titles[T_NAME], alpm_pkg_get_name(pkg), cols);
+ 	string_display(titles[T_VERSION], alpm_pkg_get_version(pkg), cols);
+ 	string_display(titles[T_DESCRIPTION], alpm_pkg_get_desc(pkg), cols);
+-- 
+2.38.1
+
