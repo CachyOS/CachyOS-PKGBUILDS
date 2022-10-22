@@ -88,17 +88,15 @@ export MOZ_ADDON_SIGNING=1
 export MOZ_APP_REMOTINGNAME=${pkgname//-/}
 
 # System libraries
-#ac_add_options --with-system-av1
-#ac_add_options --with-system-graphite2
-
-#ac_add_options --with-system-harfbuzz
-#ac_add_options --with-system-icu
-#ac_add_options --with-system-jpeg
-#ac_add_options --with-system-libevent
-#ac_add_options --with-system-libvpx
 ac_add_options --with-system-nspr
 ac_add_options --with-system-nss
-#ac_add_options --with-system-zlib
+ac_add_options --with-system-libvpx
+ac_add_options --with-system-webp
+ac_add_options --with-system-libevent
+ac_add_options --with-system-icu
+ac_add_options --with-system-zlib
+ac_add_options --with-system-jpeg
+
 ac_add_options --enable-optimize=-O3
 # Features
 ac_add_options --enable-pulseaudio
@@ -217,8 +215,8 @@ END
     patch -Np1 -i ${_patches_dir}/librewolf/mozilla-kde_after_unity.patch
     patch -Np1 -i ${_patches_dir}/kde/mozilla-nongnome-proxies.patch
 	patch -Np1 < ../match.patch
-    #msg2  " some undesired requests (https://gitlab.com/librewolf-community/browser/common/-/issues/10)"
-    #patch -Np1 -i ${_patches_dir}/sed-patches/stop-undesired-requests.patch # broken with 105, wait for a upstream fix
+    msg2  " some undesired requests (https://gitlab.com/librewolf-community/browser/common/-/issues/10)"
+    patch -Np1 -i ${_patches_dir}/sed-patches/stop-undesired-requests.patch
 
     rm -f ${srcdir}/cachyos-browser-common/source_files/mozconfig
     cp -r ${srcdir}/cachyos-browser-common/source_files/browser ./
@@ -230,9 +228,8 @@ build() {
 
     export MOZ_NOSPAM=1
     export MOZBUILD_STATE_PATH="$srcdir/mozbuild"
-    #export MOZ_ENABLE_FULL_SYMBOLS=1
     export MACH_BUILD_PYTHON_NATIVE_PACKAGE_SOURCE=system
-    export PIP_NETWORK_INSTALL_RESTRICTED_VIRTUALENVS=mach # let us hope this is a working _new_ workaround for the pip env issues?
+    export PIP_NETWORK_INSTALL_RESTRICTED_VIRTUALENVS=mach
 
     # LTO needs more open files
     ulimit -n 4096
