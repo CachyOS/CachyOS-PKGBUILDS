@@ -1,28 +1,31 @@
-From dc7c400be988410da6ffc10e02a0a7fdd82a4026 Mon Sep 17 00:00:00 2001
+From 025633a1dc1f6566787a49ed260bc1aebfd96771 Mon Sep 17 00:00:00 2001
 From: Vladislav Nepogodin <nepogodin.vlad@gmail.com>
-Date: Sat, 22 Oct 2022 11:03:39 +0400
+Date: Sat, 22 Oct 2022 18:07:53 +0400
 Subject: [PATCH] add information about origin db
 
 ---
- lib/libalpm/add.c      |  4 ++++
+ lib/libalpm/add.c      |  7 +++++++
  lib/libalpm/alpm.h     |  5 +++++
  lib/libalpm/be_local.c | 13 +++++++++++++
  lib/libalpm/package.c  | 11 +++++++++++
  lib/libalpm/package.h  |  2 ++
- lib/libalpm/sync.c     |  1 +
+ lib/libalpm/sync.c     |  7 +++++++
  src/pacman/package.c   |  6 ++++++
- 7 files changed, 42 insertions(+)
+ 7 files changed, 51 insertions(+)
 
 diff --git a/lib/libalpm/add.c b/lib/libalpm/add.c
-index 774087fa..21dc91b4 100644
+index 774087fa..2a70f86a 100644
 --- a/lib/libalpm/add.c
 +++ b/lib/libalpm/add.c
-@@ -69,6 +69,10 @@ int SYMEXPORT alpm_add_pkg(alpm_handle_t *handle, alpm_pkg_t *pkg)
+@@ -69,6 +69,13 @@ int SYMEXPORT alpm_add_pkg(alpm_handle_t *handle, alpm_pkg_t *pkg)
  	pkgver = pkg->version;
  
  	_alpm_log(handle, ALPM_LOG_DEBUG, "adding package '%s'\n", pkgname);
 +	const char* pkg_db_name = alpm_db_get_name(alpm_pkg_get_db(pkg));
-+	if((pkg_db_name != NULL) && (pkg->installed_db == NULL)) {
++	if(pkg_db_name != NULL) {
++		if(pkg->installed_db != NULL) {
++			free(pkg->installed_db);
++		}
 +		pkg->installed_db = strdup(pkg_db_name);
 +	}
  
@@ -160,17 +163,30 @@ index 5ebe6bd1..b8e22451 100644
  	alpm_time_t builddate;
  	alpm_time_t installdate;
 diff --git a/lib/libalpm/sync.c b/lib/libalpm/sync.c
-index 49bde401..502d0e04 100644
+index 49bde401..62c3d001 100644
 --- a/lib/libalpm/sync.c
 +++ b/lib/libalpm/sync.c
-@@ -1088,6 +1088,7 @@ static int load_packages(alpm_handle_t *handle, alpm_list_t **data,
- 				"replacing pkgcache entry with package file for target %s\n",
- 				spkg->name);
- 		alpm_pkg_t *pkgfile =_alpm_pkg_load_internal(handle, filepath, 1);
-+		pkgfile->installed_db = strdup(spkg->installed_db);
- 		if(!pkgfile) {
+@@ -240,6 +240,12 @@ int SYMEXPORT alpm_sync_sysupgrade(alpm_handle_t *handle, int enable_downgrade)
+ 				alpm_pkg_t *spkg = _alpm_db_get_pkgfromcache(sdb, lpkg->name);
+ 				if(spkg) {
+ 					if(check_literal(handle, lpkg, spkg, enable_downgrade)) {
++						const char* sdb_name = alpm_db_get_name(sdb);
++						if (spkg->installed_db != NULL) {
++							free(spkg->installed_db);
++						}
++
++						spkg->installed_db = (sdb_name) ? strdup(sdb_name) : NULL;
+ 						trans->add = alpm_list_add(trans->add, spkg);
+ 					}
+ 					/* jump to next local package */
+@@ -1092,6 +1098,7 @@ static int load_packages(alpm_handle_t *handle, alpm_list_t **data,
  			_alpm_log(handle, ALPM_LOG_DEBUG, "failed to load pkgfile internal\n");
  			error = 1;
+ 		} else {
++			pkgfile->installed_db = (spkg->installed_db) ? strdup(spkg->installed_db) : NULL;
+ 			if(strcmp(spkg->name, pkgfile->name) != 0) {
+ 				_alpm_log(handle, ALPM_LOG_DEBUG,
+ 						"internal package name mismatch, expected: '%s', actual: '%s'\n",
 diff --git a/src/pacman/package.c b/src/pacman/package.c
 index 4fcc11f2..361b96a6 100644
 --- a/src/pacman/package.c
