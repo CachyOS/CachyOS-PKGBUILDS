@@ -6,9 +6,9 @@ echo -e "======================================================"
 echo -e "Full scans:\t\t$(cat /sys/kernel/mm/ksm/full_scans)"
 echo -e "Max page sharing:\t$(cat /sys/kernel/mm/ksm/max_page_sharing)"
 echo -e "Pages to scan:\t\t$(cat /sys/kernel/mm/ksm/pages_to_scan)\n"
-echo -e "Pages shared:\t\t$(awk '{ print($0 / 256) }' /sys/kernel/mm/ksm/pages_shared)"
-echo -e "Pages unshared:\t\t$(awk '{ print($0 / 256) }' /sys/kernel/mm/ksm/pages_unshared)"
-echo -e "Pages sharing:\t\t$(awk '{ print($0 / 256) }' /sys/kernel/mm/ksm/pages_sharing)"
+echo -e "Pages shared:\t\t$(awk '{ print($0 / 256) }' /sys/kernel/mm/ksm/pages_shared)\tMB"
+echo -e "Pages unshared:\t\t$(awk '{ print($0 / 256) }' /sys/kernel/mm/ksm/pages_unshared)\tMB"
+echo -e "Pages sharing:\t\t$(awk '{ print($0 / 256) }' /sys/kernel/mm/ksm/pages_sharing)\tMB"
 else
 echo -e "The kernel you are using does not support UKSMD."
 fi
