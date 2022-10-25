@@ -7,7 +7,7 @@
 pkgname=cachy-browser
 _pkgname=Cachy
 __pkgname=cachy
-pkgver=106.0.1
+pkgver=106.0.2
 pkgrel=1
 pkgdesc="Community-maintained fork of Firefox, focused on privacy, security and freedom."
 arch=(x86_64 x86_64_v3)
@@ -30,9 +30,8 @@ optdepends=('networkmanager: Location detection via available WiFi networks'
 backup=('usr/lib/cachy-browser/cachy.cfg'
         'usr/lib/cachy-browser/distribution/policies.json')
 groups=('cachyos')
-options=(!emptydirs !makeflags !strip !lto !debug ccache)
+options=(!emptydirs !makeflags !strip !lto !debug)
 _arch_svn=https://git.archlinux.org/svntogit/packages.git/plain/trunk
-# _common_tag="v90.0-1"
 _common_tag="v${pkgver}-${pkgrel}"
 _settings_tag='1.4'
 install=cachy-browser.install
@@ -40,12 +39,15 @@ source=(https://archive.mozilla.org/pub/firefox/releases/$pkgver/source/firefox-
         $pkgname.desktop
         "git+https://github.com/cachyos/cachyos-browser-settings.git"
         "git+https://github.com/cachyos/cachyos-browser-common.git"
-        "match.patch")
-sha256sums=('bdf8184f9aadce4fd9613ec63525a96891e2e9dbbef9e4f72193038450a7fd35'
+        "match.patch"
+        "libwebrtc-screen-cast-sync.patch")
+sha256sums=('905738490cd523ef3d17c48aaac65a1dc19294e8932a245d0f7607be38393fe2'
             'SKIP'
             'c0786df2fd28409da59d0999083914a65e2097cda055c9c6c2a65825f156e29f'
             'SKIP'
-            'SKIP')
+            'SKIP'
+            '72d47d1a13179b3b58f1064de0bb3270a65d30b4a8f647a6ebf5008d0c68d678'
+            'ce16a6cc61be2e5e892c5b0b22e9ca3edbd0bd32938908b6d102272ef99dfa6f')
 validpgpkeys=('14F26682D0916CDD81E37B6D61B7B526D98F0353') # Mozilla Software Releases <release@mozilla.com>
 
 prepare() {
@@ -217,7 +219,10 @@ END
 	patch -Np1 < ../match.patch
     msg2  " some undesired requests (https://gitlab.com/librewolf-community/browser/common/-/issues/10)"
     patch -Np1 -i ${_patches_dir}/sed-patches/stop-undesired-requests.patch
-
+    # https://bugs.archlinux.org/task/76231
+    # https://bugzilla.mozilla.org/show_bug.cgi?id=1790496
+    # https://src.fedoraproject.org/rpms/firefox/blob/rawhide/f/libwebrtc-screen-cast-sync.patch
+    patch -Np1 -i ../libwebrtc-screen-cast-sync.patch
     rm -f ${srcdir}/cachyos-browser-common/source_files/mozconfig
     cp -r ${srcdir}/cachyos-browser-common/source_files/browser ./
 }
@@ -238,7 +243,7 @@ build() {
     echo "Building instrumented browser..."
 
     cat >.mozconfig ../mozconfig - <<END
-ac_add_options --enable-profile-generate=cross
+ac_add_options --enable-profile-generate
 END
 
     ./mach build
@@ -262,8 +267,8 @@ END
     echo "Building optimized browser..."
 
     cat >.mozconfig ../mozconfig - <<END
-ac_add_options --enable-lto=cross
-ac_add_options --enable-profile-use=cross
+ac_add_options --enable-lto
+ac_add_options --enable-profile-use
 ac_add_options --with-pgo-profile-path=${PWD@Q}/merged.profdata
 ac_add_options --with-pgo-jarlog=${PWD@Q}/jarlog
 END
