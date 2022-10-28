@@ -22,7 +22,8 @@ optdepends=('libfdk-aac: FDK AAC codec support'
             'obs-vaapi: OBS Studio VAAPI support via GStreamer')
 source=($pkgname-$pkgver.tar.gz::https://github.com/jp9000/obs-studio/archive/$pkgver.tar.gz
         fix_python_binary_loading.patch
-        ignore_unused_submodules.patch)
+        ignore_unused_submodules.patch
+        6207.patch)
 sha256sums=('7ee15aec4749778eb60031513ad3720f35cd9c7735416f654e61b45f850b6f1b'
             'bdfbd062f080bc925588aec1989bb1df34bf779cc2fc08ac27236679cf612abd'
             '60b0ee1f78df632e1a8c13cb0a7a5772b2a4b092c4a2a78f23464a7d239557c3')
@@ -31,6 +32,7 @@ prepare() {
   cd $pkgname-$pkgver
   patch -Np1 < "$srcdir"/fix_python_binary_loading.patch
   patch -Np1 < "$srcdir"/ignore_unused_submodules.patch
+  patch -Np1 < "$srcdir"/6207.patch
 }
 
 build() {
