@@ -1,0 +1,34 @@
+# Maintainer: Bruno Pagani <archange@archlinux.org>
+# Maintainer: Daniel Bermond <dbermond@archlinux.org>
+
+pkgname=vc-intrinsics
+pkgver=0.8.1
+pkgrel=1
+pkgdesc="Set of new intrinsics on top of core LLVM IR instructions that represent SIMD semantics of a program targeting GPU"
+arch=(x86_64)
+url="https://github.com/intel/vc-intrinsics"
+license=(MIT)
+makedepends=(cmake python llvm git)
+# From IGC release notes or latest release
+_commit=c708e3c18ad8467b4082cc61f7cca38f9f57c9c0
+source=(git+${url}.git#commit=$_commit)
+sha256sums=('SKIP')
+
+pkgver() {
+  cd ${pkgname}
+  git describe --tags | sed 's/^v//;s/\([^-]*-g\)/r\1/;s/-/./;s/-/+/'
+}
+
+build() {
+  export CXXFLAGS+=" -ffat-lto-objects"
+  cmake -B build -S ${pkgname} \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DCMAKE_INSTALL_PREFIX=/usr \
+    -DLLVM_DIR=/usr/lib/cmake/llvm \
+    -Wno-dev
+  make -C build
+}
+
+package() {
+  make -C build DESTDIR="${pkgdir}" install
+}
