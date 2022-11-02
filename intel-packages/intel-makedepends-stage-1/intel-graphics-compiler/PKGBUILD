@@ -1,0 +1,42 @@
+# Maintainer: Daniel Bermond <dbermond@archlinux.org>
+# Maintainer: Bruno Pagani <archange@archlinux.org>
+
+pkgname=intel-graphics-compiler
+epoch=1
+pkgver=1.0.12260.1
+pkgrel=1
+pkgdesc="Intel Graphics Compiler for OpenCL"
+arch=(x86_64)
+url="https://github.com/intel/intel-graphics-compiler"
+license=(MIT)
+depends=(llvm-libs intel-opencl-clang ncurses spirv-tools zlib)
+makedepends=(git cmake clang lld llvm python libunwind spirv-headers vc-intrinsics)
+options=(!emptydirs)
+source=(${url}/archive/igc-${pkgver}.tar.gz)
+sha256sums=('5079e8a01fc64c167ca6f96d0087513406664b9e8692d56479f7c69c19253d5d')
+
+build() {
+  cmake -B build -S ${pkgname}-igc-${pkgver} \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DCMAKE_INSTALL_PREFIX=/usr \
+    -DCMAKE_INSTALL_LIBDIR=lib \
+    -DIGC_OPTION__ARCHITECTURE_TARGET='Linux64' \
+    -DIGC_OPTION__CLANG_MODE=Prebuilds \
+    -DIGC_OPTION__LLD_MODE=Prebuilds \
+    -DIGC_OPTION__LLVM_PREFERRED_VERSION='14.0.6' \
+    -DIGC_OPTION__LLVM_MODE=Prebuilds \
+    -DIGC_OPTION__LINK_KHRONOS_SPIRV_TRANSLATOR=ON \
+    -DIGC_OPTION__USE_PREINSTALLED_SPRIV_HEADERS=ON \
+    -DIGC_OPTION__SPIRV_TOOLS_MODE=Prebuilds \
+    -DIGC_OPTION__SPIRV_TRANSLATOR_MODE=Prebuilds \
+    -DIGC_OPTION__VC_INTRINSICS_MODE=Prebuilds \
+    -DINSTALL_GENX_IR=ON \
+    -Wno-dev
+  make -C build
+}
+
+package() {
+  make -C build DESTDIR="${pkgdir}" install
+  install -D -m644 ${pkgname}-igc-${pkgver}/LICENSE.md -t "${pkgdir}"/usr/share/licenses/${pkgname}
+  mv "${pkgdir}"/usr/lib/igc/NOTICES.txt "${pkgdir}"/usr/share/licenses/${pkgname}
+}

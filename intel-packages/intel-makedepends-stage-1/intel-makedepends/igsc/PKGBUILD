@@ -1,0 +1,27 @@
+# Maintainer: Bruno Pagani <archange@archlinux.org>
+# Maintainer: Daniel Bermond <dbermond@archlinux.org>
+
+pkgname=igsc
+pkgver=0.8.4
+pkgrel=1
+pkgdesc="Intel graphics system controller firmware update library"
+arch=(x86_64)
+url='https://github.com/intel/igsc/'
+license=(Apache)
+depends=(intel-metee systemd-libs)
+makedepends=(cmake systemd)
+source=(https://github.com/intel/igsc/archive/V${pkgver}/${pkgname}-${pkgver}.tar.gz)
+sha256sums=('dbb0c41c4481d532be009753701afd7218066f214b72616729295e0336726711')
+
+build() {
+    cmake -B build -S ${pkgname}-${pkgver} \
+        -DCMAKE_BUILD_TYPE:STRING='None' \
+        -DCMAKE_INSTALL_PREFIX:PATH='/usr' \
+        -DENABLE_WERROR:BOOL='OFF' \
+        -Wno-dev
+    make -C build
+}
+
+package() {
+    make -C build DESTDIR="$pkgdir" install
+}
