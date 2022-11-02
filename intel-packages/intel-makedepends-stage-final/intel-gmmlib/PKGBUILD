@@ -1,0 +1,32 @@
+# Maintainer: Bruno Pagani <archange@archlinux.org>
+# Maintainer: Daniel Bermond <dbermond@archlinux.org>
+
+pkgname=intel-gmmlib
+pkgver=22.3.0
+pkgrel=1
+pkgdesc="Intel Graphics Memory Management Library"
+arch=(x86_64)
+url="https://github.com/intel/gmmlib/"
+license=(MIT)
+depends=(gcc-libs)
+makedepends=(cmake ninja)
+provides=(gmmlib)
+conflicts=(gmmlib)
+replaces=(gmmlib)
+options=(!emptydirs debug)
+source=(https://github.com/${pkgname/-//}/archive/${pkgname}-${pkgver}.tar.gz)
+sha256sums=('c1f33e1519edfc527127baeb0436b783430dfd256c643130169a3a71dc86aff9')
+
+build() {
+  cmake -B build -S gmmlib-${pkgname}-${pkgver} -G Ninja \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DCMAKE_INSTALL_PREFIX=/usr \
+    -DRUN_TEST_SUITE=ON \
+    -Wno-dev
+  cmake --build build
+}
+
+package() {
+  DESTDIR="${pkgdir}" cmake --install build
+  install -Dm644 gmmlib-${pkgname}-${pkgver}/LICENSE.md -t "${pkgdir}"/usr/share/licenses/${pkgname}/
+}
