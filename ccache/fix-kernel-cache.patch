@@ -1,0 +1,593 @@
+From c5e1f88e22987365754e26c0f8a4e51cf572018f Mon Sep 17 00:00:00 2001
+From: Joel Rosdahl <joel@rosdahl.net>
+Date: Wed, 2 Nov 2022 19:18:21 +0100
+Subject: [PATCH 1/9] chore: Improve logging of file read failures
+
+---
+ src/Args.cpp                    |  2 ++
+ src/Depfile.cpp                 |  4 +++-
+ src/ccache.cpp                  | 12 ++++++++----
+ src/core/mainoptions.cpp        |  2 +-
+ src/hashutil.cpp                |  1 +
+ src/storage/local/StatsFile.cpp |  2 +-
+ src/util/LockFile.cpp           |  2 +-
+ src/util/file.cpp               |  3 ---
+ 8 files changed, 17 insertions(+), 11 deletions(-)
+
+diff --git a/src/Args.cpp b/src/Args.cpp
+index d4077a35..50cfa672 100644
+--- a/src/Args.cpp
++++ b/src/Args.cpp
+@@ -20,6 +20,7 @@
+ 
+ #include "Util.hpp"
+ 
++#include <Logging.hpp>
+ #include <core/exceptions.hpp>
+ #include <util/file.hpp>
+ #include <util/string.hpp>
+@@ -51,6 +52,7 @@ Args::from_atfile(const std::string& filename, AtFileFormat format)
+ {
+   const auto argtext = util::read_file<std::string>(filename);
+   if (!argtext) {
++    LOG("Failed to read atfile {}: {}", filename, argtext.error());
+     return std::nullopt;
+   }
+ 
+diff --git a/src/Depfile.cpp b/src/Depfile.cpp
+index 2d721a6c..f1ef39a1 100644
+--- a/src/Depfile.cpp
++++ b/src/Depfile.cpp
+@@ -130,7 +130,9 @@ make_paths_relative_in_output_dep(const Context& ctx)
+   const std::string& output_dep = ctx.args_info.output_dep;
+   const auto file_content = util::read_file<std::string>(output_dep);
+   if (!file_content) {
+-    LOG("Cannot open dependency file {}: {}", output_dep, file_content.error());
++    LOG("Failed to read dependency file {}: {}",
++        output_dep,
++        file_content.error());
+     return;
+   }
+   const auto new_content = rewrite_source_paths(ctx, *file_content);
+diff --git a/src/ccache.cpp b/src/ccache.cpp
+index e701e204..392818ff 100644
+--- a/src/ccache.cpp
++++ b/src/ccache.cpp
+@@ -452,7 +452,7 @@ process_preprocessed_file(Context& ctx, Hash& hash, const std::string& path)
+ {
+   auto data = util::read_file<std::string>(path);
+   if (!data) {
+-    LOG("Failed reading {}: {}", path, data.error());
++    LOG("Failed to read {}: {}", path, data.error());
+     return nonstd::make_unexpected(Statistic::internal_error);
+   }
+ 
+@@ -633,7 +633,7 @@ result_key_from_depfile(Context& ctx, Hash& hash)
+   const auto file_content =
+     util::read_file<std::string>(ctx.args_info.output_dep);
+   if (!file_content) {
+-    LOG("Cannot open dependency file {}: {}",
++    LOG("Failed to read dependency file {}: {}",
+         ctx.args_info.output_dep,
+         file_content.error());
+     return std::nullopt;
+@@ -763,7 +763,9 @@ do_execute(Context& ctx, Args& args, const bool capture_stdout = true)
+   if (capture_stdout) {
+     auto stdout_data_result = util::read_file<util::Bytes>(tmp_stdout.path);
+     if (!stdout_data_result) {
+-      // The stdout file was removed - cleanup in progress? Better bail out.
++      LOG("Failed to read {} (cleanup in progress?): {}",
++          tmp_stdout.path,
++          stdout_data_result.error());
+       return nonstd::make_unexpected(Statistic::missing_cache_file);
+     }
+     stdout_data = *stdout_data_result;
+@@ -771,7 +773,9 @@ do_execute(Context& ctx, Args& args, const bool capture_stdout = true)
+ 
+   auto stderr_data_result = util::read_file<util::Bytes>(tmp_stderr.path);
+   if (!stderr_data_result) {
+-    // The stdout file was removed - cleanup in progress? Better bail out.
++    LOG("Failed to read {} (cleanup in progress?): {}",
++        tmp_stderr.path,
++        stderr_data_result.error());
+     return nonstd::make_unexpected(Statistic::missing_cache_file);
+   }
+ 
+diff --git a/src/core/mainoptions.cpp b/src/core/mainoptions.cpp
+index 1f6e651c..2283162f 100644
+--- a/src/core/mainoptions.cpp
++++ b/src/core/mainoptions.cpp
+@@ -175,7 +175,7 @@ read_from_path_or_stdin(const std::string& path)
+     const auto result = util::read_file<std::vector<uint8_t>>(path);
+     if (!result) {
+       return nonstd::make_unexpected(
+-        FMT("Failed to read from {}: {}", path, result.error()));
++        FMT("Failed to read {}: {}", path, result.error()));
+     }
+     return *result;
+   }
+diff --git a/src/hashutil.cpp b/src/hashutil.cpp
+index 990561ff..8d7151d6 100644
+--- a/src/hashutil.cpp
++++ b/src/hashutil.cpp
+@@ -202,6 +202,7 @@ do_hash_file(const Context& ctx,
+ 
+   const auto data = util::read_file<std::string>(path, size_hint);
+   if (!data) {
++    LOG("Failed to read {}: {}", path, data.error());
+     return HASH_SOURCE_CODE_ERROR;
+   }
+ 
+diff --git a/src/storage/local/StatsFile.cpp b/src/storage/local/StatsFile.cpp
+index b00fc82e..4332d80e 100644
+--- a/src/storage/local/StatsFile.cpp
++++ b/src/storage/local/StatsFile.cpp
+@@ -38,7 +38,7 @@ StatsFile::read() const
+ 
+   const auto data = util::read_file<std::string>(m_path);
+   if (!data) {
+-    // Ignore.
++    // A nonexistent stats file is OK.
+     return counters;
+   }
+ 
+diff --git a/src/util/LockFile.cpp b/src/util/LockFile.cpp
+index 0d7e96e8..f90b7626 100644
+--- a/src/util/LockFile.cpp
++++ b/src/util/LockFile.cpp
+@@ -178,7 +178,6 @@ LockFile::do_acquire(const bool blocking)
+     }
+ 
+     int saved_errno = errno;
+-    LOG("Could not acquire {}: {}", m_lock_file, strerror(saved_errno));
+     if (saved_errno == ENOENT) {
+       // Directory doesn't exist?
+       if (Util::create_dir(Util::dir_name(m_lock_file))) {
+@@ -186,6 +185,7 @@ LockFile::do_acquire(const bool blocking)
+         continue;
+       }
+     }
++    LOG("Could not acquire {}: {}", m_lock_file, strerror(saved_errno));
+ 
+     if (saved_errno == EPERM) {
+       // The file system does not support symbolic links. We have no choice but
+diff --git a/src/util/file.cpp b/src/util/file.cpp
+index 5ddc05bb..db0f4e83 100644
+--- a/src/util/file.cpp
++++ b/src/util/file.cpp
+@@ -111,7 +111,6 @@ read_file(const std::string& path, size_t size_hint)
+   if (size_hint == 0) {
+     const auto stat = Stat::stat(path);
+     if (!stat) {
+-      LOG("Failed to stat {}: {}", path, strerror(errno));
+       return nonstd::make_unexpected(strerror(errno));
+     }
+     size_hint = stat.size();
+@@ -129,7 +128,6 @@ read_file(const std::string& path, size_t size_hint)
+   }();
+   Fd fd(open(path.c_str(), open_flags));
+   if (!fd) {
+-    LOG("Failed to open {}: {}", path, strerror(errno));
+     return nonstd::make_unexpected(strerror(errno));
+   }
+ 
+@@ -156,7 +154,6 @@ read_file(const std::string& path, size_t size_hint)
+   }
+ 
+   if (ret == -1) {
+-    LOG("Failed to read {}: {}", path, strerror(errno));
+     return nonstd::make_unexpected(strerror(errno));
+   }
+ 
+-- 
+2.38.1.381.gc03801e19c
+
+From 39586a81024630873a26ba60e0baeb4ab8d5daf9 Mon Sep 17 00:00:00 2001
+From: Joel Rosdahl <joel@rosdahl.net>
+Date: Thu, 3 Nov 2022 20:28:18 +0100
+Subject: [PATCH 2/9] chore: Tweak comments
+
+---
+ doc/NEWS.adoc                      | 2 +-
+ src/storage/local/LocalStorage.cpp | 6 +++---
+ 2 files changed, 4 insertions(+), 4 deletions(-)
+
+diff --git a/doc/NEWS.adoc b/doc/NEWS.adoc
+index 8055c81a..b496b7fe 100644
+--- a/doc/NEWS.adoc
++++ b/doc/NEWS.adoc
+@@ -2948,7 +2948,7 @@ Release date: 2010-11-28
+ 
+ === Other
+ 
+-- Portability fixes for HP-UX 11.00 and other esoteric systems.
++- Portability fixes for HP-UX 11.00 and other less common systems.
+ 
+ 
+ == Ccache 3.1.2
+diff --git a/src/storage/local/LocalStorage.cpp b/src/storage/local/LocalStorage.cpp
+index fdc48dc6..001e2a94 100644
+--- a/src/storage/local/LocalStorage.cpp
++++ b/src/storage/local/LocalStorage.cpp
+@@ -45,9 +45,9 @@ const util::Duration k_tempdir_cleanup_interval(2 * 24 * 60 * 60); // 2 days
+ 
+ // Maximum files per cache directory. This constant is somewhat arbitrarily
+ // chosen to be large enough to avoid unnecessary cache levels but small enough
+-// not to make esoteric file systems (with bad performance for large
+-// directories) too slow. It could be made configurable, but hopefully there
+-// will be no need to do that.
++// not to make it too slow for legacy file systems with bad performance for
++// large directories. It could be made configurable, but hopefully there will be
++// no need to do that.
+ const uint64_t k_max_cache_files_per_directory = 2000;
+ 
+ // Minimum number of cache levels ($CCACHE_DIR/1/2/stored_file).
+-- 
+2.38.1.381.gc03801e19c
+
+From a862e32a61e7f3f9d7ad946cf050f6a06b75a4a1 Mon Sep 17 00:00:00 2001
+From: Joel Rosdahl <joel@rosdahl.net>
+Date: Thu, 3 Nov 2022 20:45:21 +0100
+Subject: [PATCH 3/9] fix: Hash variables that affect Clang version on macOS
+
+Fixes #1205.
+---
+ src/ccache.cpp | 10 ++++++++--
+ 1 file changed, 8 insertions(+), 2 deletions(-)
+
+diff --git a/src/ccache.cpp b/src/ccache.cpp
+index 392818ff..9bc5c5f2 100644
+--- a/src/ccache.cpp
++++ b/src/ccache.cpp
+@@ -1376,11 +1376,17 @@ hash_common_info(const Context& ctx,
+ 
+   // Hash variables that may affect the compilation.
+   const char* always_hash_env_vars[] = {
+-    // From <https://gcc.gnu.org/onlinedocs/gcc/Environment-Variables.html>:
++    // From <https://gcc.gnu.org/onlinedocs/gcc/Environment-Variables.html>
++    // (note: SOURCE_DATE_EPOCH is handled in hash_source_code_string()):
+     "COMPILER_PATH",
+     "GCC_COMPARE_DEBUG",
+     "GCC_EXEC_PREFIX",
+-    // Note: SOURCE_DATE_EPOCH is handled in hash_source_code_string().
++#ifdef __APPLE__
++    // On macOS, /usr/bin/clang is a compiler wrapper that switches compiler
++    // based on at least these variables:
++    "DEVELOPER_DIR",
++    "MACOSX_DEPLOYMENT_TARGET",
++#endif
+   };
+   for (const char* name : always_hash_env_vars) {
+     const char* value = getenv(name);
+-- 
+2.38.1.381.gc03801e19c
+
+From 072cf36daaebad30dfa66c63991efb8b9e629033 Mon Sep 17 00:00:00 2001
+From: Joel Rosdahl <joel@rosdahl.net>
+Date: Thu, 3 Nov 2022 20:48:05 +0100
+Subject: [PATCH 4/9] fix: Avoid redundant slash in HTTP storage URLs with
+ subdirs
+
+---
+ src/storage/remote/HttpStorage.cpp | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/storage/remote/HttpStorage.cpp b/src/storage/remote/HttpStorage.cpp
+index fce8270f..284e1d72 100644
+--- a/src/storage/remote/HttpStorage.cpp
++++ b/src/storage/remote/HttpStorage.cpp
+@@ -262,7 +262,7 @@ HttpStorageBackend::get_entry_path(const Digest& key) const
+     const auto key_str = key.to_string();
+     const uint8_t digits = 2;
+     ASSERT(key_str.length() > digits);
+-    return FMT("{}/{:.{}}/{}", m_url_path, key_str, digits, &key_str[digits]);
++    return FMT("{}{:.{}}/{}", m_url_path, key_str, digits, &key_str[digits]);
+   }
+   }
+ 
+-- 
+2.38.1.381.gc03801e19c
+
+From 91112ead917c96b533685701de64d025bd00769d Mon Sep 17 00:00:00 2001
+From: Joel Rosdahl <joel@rosdahl.net>
+Date: Thu, 3 Nov 2022 20:56:32 +0100
+Subject: [PATCH 5/9] fix: Fix parsing of sloppiness with trailing delimiter
+
+---
+ src/Config.cpp           | 11 ++++-------
+ unittest/test_Config.cpp |  5 +++--
+ 2 files changed, 7 insertions(+), 9 deletions(-)
+
+diff --git a/src/Config.cpp b/src/Config.cpp
+index 3cec222f..275cdcb2 100644
+--- a/src/Config.cpp
++++ b/src/Config.cpp
+@@ -28,6 +28,7 @@
+ #include <core/types.hpp>
+ #include <core/wincompat.hpp>
+ #include <fmtmacros.hpp>
++#include <util/Tokenizer.hpp>
+ #include <util/expected.hpp>
+ #include <util/file.hpp>
+ #include <util/path.hpp>
+@@ -280,13 +281,9 @@ parse_compiler_type(const std::string& value)
+ core::Sloppiness
+ parse_sloppiness(const std::string& value)
+ {
+-  size_t start = 0;
+-  size_t end = 0;
+   core::Sloppiness result;
+-  while (end != std::string::npos) {
+-    end = value.find_first_of(", ", start);
+-    std::string token =
+-      util::strip_whitespace(value.substr(start, end - start));
++
++  for (const auto token : util::Tokenizer(value, ", ")) {
+     if (token == "clang_index_store") {
+       result.enable(core::Sloppy::clang_index_store);
+     } else if (token == "file_stat_matches") {
+@@ -314,8 +311,8 @@ parse_sloppiness(const std::string& value)
+     } else if (token == "time_macros") {
+       result.enable(core::Sloppy::time_macros);
+     } // else: ignore unknown value for forward compatibility
+-    start = value.find_first_not_of(", ", end);
+   }
++
+   return result;
+ }
+ 
+diff --git a/unittest/test_Config.cpp b/unittest/test_Config.cpp
+index 559cc1b1..70a66dd2 100644
+--- a/unittest/test_Config.cpp
++++ b/unittest/test_Config.cpp
+@@ -135,7 +135,8 @@ TEST_CASE("Config::update_from_file")
+     "run_second_cpp = false\n"
+     "sloppiness =     time_macros   ,include_file_mtime"
+     "  include_file_ctime,file_stat_matches,file_stat_matches_ctime,pch_defines"
+-    " ,  no_system_headers,system_headers,clang_index_store,ivfsoverlay,gcno_cwd\n"
++    " ,  no_system_headers,system_headers,clang_index_store,ivfsoverlay,"
++    " gcno_cwd,\n"
+     "stats = false\n"
+     "temporary_dir = ${USER}_foo\n"
+     "umask = 777"); // Note: no newline.
+@@ -424,7 +425,7 @@ TEST_CASE("Config::visit_items")
+     "run_second_cpp = false\n"
+     "sloppiness = include_file_mtime, include_file_ctime, time_macros,"
+     " file_stat_matches, file_stat_matches_ctime, pch_defines, system_headers,"
+-    " clang_index_store, ivfsoverlay, gcno_cwd\n"
++    " clang_index_store, ivfsoverlay, gcno_cwd \n"
+     "stats = false\n"
+     "stats_log = sl\n"
+     "temporary_dir = td\n"
+-- 
+2.38.1.381.gc03801e19c
+
+From 45847a2b9b91ae8e29c1c9d70c6798c0700a1ed7 Mon Sep 17 00:00:00 2001
+From: Joel Rosdahl <joel@rosdahl.net>
+Date: Thu, 3 Nov 2022 21:06:46 +0100
+Subject: [PATCH 6/9] test: Remove left-over fi statement
+
+---
+ test/suites/profiling_gcc.bash | 1 -
+ 1 file changed, 1 deletion(-)
+
+diff --git a/test/suites/profiling_gcc.bash b/test/suites/profiling_gcc.bash
+index 6552f00e..f83aeaf1 100644
+--- a/test/suites/profiling_gcc.bash
++++ b/test/suites/profiling_gcc.bash
+@@ -163,5 +163,4 @@ SUITE_profiling_gcc() {
+         expect_stat direct_cache_hit 4
+         expect_stat cache_miss 3
+     fi
+-fi
+ }
+-- 
+2.38.1.381.gc03801e19c
+
+From 8ac381c2ac5209554592bbccf4431c749690a1c2 Mon Sep 17 00:00:00 2001
+From: Joel Rosdahl <joel@rosdahl.net>
+Date: Thu, 3 Nov 2022 21:39:37 +0100
+Subject: [PATCH 7/9] test: Silence Clang warnings about unused arguments
+ during compilation
+
+---
+ test/suites/direct.bash | 8 ++++----
+ 1 file changed, 4 insertions(+), 4 deletions(-)
+
+diff --git a/test/suites/direct.bash b/test/suites/direct.bash
+index 0f4d0530..560aac83 100644
+--- a/test/suites/direct.bash
++++ b/test/suites/direct.bash
+@@ -503,12 +503,12 @@ fi
+ 
+     $COMPILER -S test.c
+ 
+-    $CCACHE_COMPILE -c -MD test.s
++    $CCACHE_COMPILE -c -MD test.s 2>/dev/null
+     expect_stat direct_cache_hit 0
+     expect_stat preprocessed_cache_hit 0
+     expect_stat cache_miss 1
+ 
+-    $CCACHE_COMPILE -c -MD test.s
++    $CCACHE_COMPILE -c -MD test.s 2>/dev/null
+     expect_stat direct_cache_hit 1
+     expect_stat preprocessed_cache_hit 0
+     expect_stat cache_miss 1
+@@ -519,13 +519,13 @@ fi
+     $COMPILER -S test.c
+     echo foo >test.d
+ 
+-    $CCACHE_COMPILE -c -MD test.s
++    $CCACHE_COMPILE -c -MD test.s 2>/dev/null
+     expect_stat direct_cache_hit 0
+     expect_stat preprocessed_cache_hit 0
+     expect_stat cache_miss 1
+     rm test.d
+ 
+-    $CCACHE_COMPILE -c -MD test.s
++    $CCACHE_COMPILE -c -MD test.s 2>/dev/null
+     expect_stat direct_cache_hit 1
+     expect_stat preprocessed_cache_hit 0
+     expect_stat cache_miss 1
+-- 
+2.38.1.381.gc03801e19c
+
+From dfe680320c9208d172af1f22ccb065fa7bc5ad6f Mon Sep 17 00:00:00 2001
+From: Joel Rosdahl <joel@rosdahl.net>
+Date: Thu, 3 Nov 2022 21:42:06 +0100
+Subject: [PATCH 8/9] test: Silence progress messages from CCACHE_UMASK test
+
+---
+ test/suites/base.bash | 6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/test/suites/base.bash b/test/suites/base.bash
+index 0ce9ce6e..2d14c958 100644
+--- a/test/suites/base.bash
++++ b/test/suites/base.bash
+@@ -1069,19 +1069,19 @@ if ! $HOST_OS_WINDOWS; then
+     export CCACHE_UMASK=002
+     export CCACHE_TEMPDIR=$CCACHE_DIR/tmp
+ 
+-    $CCACHE -C
++    $CCACHE -C >/dev/null
+     expect_perm "$CCACHE_DIR" drwxrwxr-x
+     expect_perm "$CCACHE_DIR/0" drwxrwxr-x
+     expect_perm "$CCACHE_DIR/0/stats" -rw-rw-r--
+     rm -rf $CCACHE_DIR
+ 
+-    $CCACHE -c
++    $CCACHE -c >/dev/null
+     expect_perm "$CCACHE_DIR" drwxrwxr-x
+     expect_perm "$CCACHE_DIR/0" drwxrwxr-x
+     expect_perm "$CCACHE_DIR/0/stats" -rw-rw-r--
+     rm -rf $CCACHE_DIR
+ 
+-    $CCACHE -z
++    $CCACHE -z >/dev/null
+     expect_perm "$CCACHE_DIR" drwxrwxr-x
+     expect_perm "$CCACHE_DIR/0" drwxrwxr-x
+     expect_perm "$CCACHE_DIR/0/stats" -rw-rw-r--
+-- 
+2.38.1.381.gc03801e19c
+
+From 84c58a57e020174d0d4098a620cba03c3c0284c6 Mon Sep 17 00:00:00 2001
+From: Joel Rosdahl <joel@rosdahl.net>
+Date: Thu, 3 Nov 2022 21:47:59 +0100
+Subject: [PATCH 9/9] feat: Support -Wp,-M[M]D with -o without -MMD/-MQ/-MT for
+ GCC and Clang
+
+Closes #1203.
+---
+ src/argprocessing.cpp   | 39 +++++++++++++++++++++++++++------------
+ test/suites/direct.bash | 30 ++++++++++++++++++++++++------
+ 2 files changed, 51 insertions(+), 18 deletions(-)
+
+diff --git a/src/argprocessing.cpp b/src/argprocessing.cpp
+index e26ca590..0bc37e57 100644
+--- a/src/argprocessing.cpp
++++ b/src/argprocessing.cpp
+@@ -1153,16 +1153,6 @@ process_args(Context& ctx)
+     LOG_RAW("-Wp,-M[M]D in combination with -MF is not supported");
+     return Statistic::unsupported_compiler_option;
+   }
+-  if (state.found_wp_md_or_mmd_opt && !args_info.output_obj.empty()
+-      && !state.found_md_or_mmd_opt && !args_info.dependency_target) {
+-    // GCC and Clang behave differently when "-Wp,-M[M]D,wp.d" is used with "-o"
+-    // but with neither "-MMD" nor "-MT"/"-MQ": GCC uses a dependency target
+-    // based on the source filename but Clang bases it on the output filename.
+-    // We could potentially support by behaving differently depending on the
+-    // compiler type, but let's just bail out for now.
+-    LOG_RAW("-Wp,-M[M]D with -o without -MMD, -MQ or -MT is not supported");
+-    return Statistic::unsupported_compiler_option;
+-  }
+ 
+   // Don't try to second guess the compiler's heuristics for stdout handling.
+   if (args_info.output_obj == "-") {
+@@ -1402,8 +1392,33 @@ process_args(Context& ctx)
+     }
+ 
+     if (!args_info.dependency_target) {
+-      args_info.dependency_target =
+-        Depfile::escape_filename(args_info.orig_output_obj);
++      std::string dep_target = args_info.orig_output_obj;
++
++      // GCC and Clang behave differently when "-Wp,-M[M]D,wp.d" is used with
++      // "-o" but with neither "-MMD" nor "-MT"/"-MQ": GCC uses a dependency
++      // target based on the source filename but Clang bases it on the output
++      // filename.
++      if (state.found_wp_md_or_mmd_opt && !args_info.output_obj.empty()
++          && !state.found_md_or_mmd_opt) {
++        if (config.compiler_type() == CompilerType::clang) {
++          // Clang does the sane thing: the dependency target is the output file
++          // so that the dependency file actually makes sense.
++        } else if (config.compiler_type() == CompilerType::gcc) {
++          // GCC strangely uses the base name of the source file but with a .o
++          // extension.
++          dep_target = Util::change_extension(
++            Util::base_name(args_info.orig_input_file),
++            get_default_object_file_extension(ctx.config));
++        } else {
++          // How other compilers behave is currently unknown, so bail out.
++          LOG_RAW(
++            "-Wp,-M[M]D with -o without -MMD, -MQ or -MT is only supported for"
++            " GCC or Clang");
++          return Statistic::unsupported_compiler_option;
++        }
++      }
++
++      args_info.dependency_target = Depfile::escape_filename(dep_target);
+     }
+   }
+ 
+diff --git a/test/suites/direct.bash b/test/suites/direct.bash
+index 560aac83..8a227d0b 100644
+--- a/test/suites/direct.bash
++++ b/test/suites/direct.bash
+@@ -261,12 +261,6 @@ fi
+         done
+     done
+ 
+-    # -----------------------------------------------------------------
+-    TEST "Unsupported -Wp,-MMD with -o without -MMD/-MT/-MQ"
+-
+-    $CCACHE_COMPILE -c test.c -Wp,-MMD,wp.d -o object.o
+-    expect_stat unsupported_compiler_option 1
+-
+     # -----------------------------------------------------------------
+     TEST "Unsupported -Wp,-MMD with -MF"
+ 
+@@ -417,6 +411,30 @@ fi
+     expect_equal_content different_name.d expected_mmd.d
+     expect_equal_object_files reference_test.o test.o
+ 
++    # -------------------------------------------------------------------------
++    TEST "-Wp,-MMD with -o without -MMD/-MT/-MQ"
++
++    $COMPILER -c -Wp,-MMD,expected.d -o out.o "$(pwd)/test.c"
++
++    $CCACHE_COMPILE -c -Wp,-MMD,other.d -o out.o "$(pwd)/test.c"
++    expect_stat direct_cache_hit 0
++    expect_stat preprocessed_cache_hit 0
++    expect_stat cache_miss 1
++    expect_equal_text_content other.d expected.d
++
++    rm -f other.d
++    $CCACHE_COMPILE -c -Wp,-MMD,other.d -o out.o "$(pwd)/test.c"
++    expect_stat direct_cache_hit 1
++    expect_stat preprocessed_cache_hit 0
++    expect_stat cache_miss 1
++    expect_equal_text_content other.d expected.d
++
++    $CCACHE_COMPILE -c -Wp,-MMD,different_name.d -o out.o "$(pwd)/test.c"
++    expect_stat direct_cache_hit 2
++    expect_stat preprocessed_cache_hit 0
++    expect_stat cache_miss 1
++    expect_equal_text_content different_name.d expected.d
++
+     # -------------------------------------------------------------------------
+     TEST "-Wp,-D"
+ 
+-- 
+2.38.1.381.gc03801e19c
+
