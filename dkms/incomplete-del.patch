@@ -1,0 +1,28 @@
+From 43f2f728ddb3e05a7adaa1e98db42c6d81d63185 Mon Sep 17 00:00:00 2001
+From: Frederik Schwan <frederik.schwan@linux.com>
+Date: Thu, 3 Nov 2022 21:24:25 +0100
+Subject: [PATCH] fix incomplete deletion of install directory
+
+Since 6fab150cb4daf15d556b7e5860d64b834736f903 the install location
+wasn't cleared upon removal due to the test checking for an existing
+directory with a relative path. This fixes the issue by checking for
+the variable to be empty instead of checking for being a directory.
+
+fixes #276
+---
+ dkms.in | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/dkms.in b/dkms.in
+index d8db846..6b1f53b 100644
+--- a/dkms.in
++++ b/dkms.in
+@@ -1460,7 +1460,7 @@ do_uninstall()
+                 dir_to_remove="${dir_to_remove#/}"
+             done
+             # dir_to_remove may be an empty string
+-            if [[ -d "$dir_to_remove" ]]; then
++            if [[ "$dir_to_remove" ]]; then
+                 (if cd "$install_tree/$1"; then rpm -qf "${dir_to_remove}" >/dev/null 2>&1 || rmdir -p --ignore-fail-on-non-empty "${dir_to_remove}"; fi || true)
+             fi
+             echo $" - Original module"
