@@ -1,0 +1,78 @@
+# Maintainer: Vladislav Nepogodin <nepogodin.vlad@gmail.com>
+# Contributor: Philip Müller <philm[at]manjaro[dog]org>
+
+pkgname=cachyos-calamares
+pkgver=3.3.0
+pkgrel=8
+pkgdesc='Distribution-independent installer framework'
+arch=('i686' 'x86_64' 'x86_64_v3')
+license=(GPL)
+url="https://github.com/calamares/calamares"
+license=('LGPL')
+conflicts=('calamares')
+provides=('calamares')
+makedepends=('git' 'cmake' 'extra-cmake-modules' 'kpmcore' 'boost' 'python-jsonschema' 'python-pyaml' 'python-unidecode' 'ninja')
+depends=( 'qt5-svg' 'qt5-webengine' 'yaml-cpp' 'networkmanager' 'upower' 'kcoreaddons' 'kconfig' 'ki18n' 'kservice' \
+          'kwidgetsaddons' 'kpmcore' 'squashfs-tools' 'rsync' 'cryptsetup' 'qt5-xmlpatterns' 'doxygen' 'dmidecode' 'qt5-quickcontrols2' 'qt5-quickcontrols' \
+          'gptfdisk' 'hwinfo' 'kparts' 'polkit-qt5' 'python' 'solid' 'qt5-tools' 'boost-libs' 'libpwquality' 'ckbcomp' 'mkinitcpio-openswap')
+backup=('usr/share/calamares/modules/bootloader.conf'
+        'usr/share/calamares/modules/displaymanager.conf'
+        'usr/share/calamares/modules/initcpio.conf'
+        'usr/share/calamares/modules/unpackfs.conf')
+source=(calamares::git+https://github.com/cachyos/cachyos-calamares.git#branch=cachyos-grub
+        https://github.com/calamares/calamares/commit/79db04dc2eb00b354044f73c054a94fe2b9f9aae.patch)
+sha256sums=('SKIP'
+            '3457ab03e46dcbb4e5e42c078c3cf0349e1eace31ca4ae6ee6f030810f57c6b8')
+options=('lto' '!strip' '!emptydirs')
+
+prepare() {
+    cd ${srcdir}/calamares
+    # patches here
+	# https://github.com/calamares/calamares/issues/2008#issuecomment-1172947659
+	patch -Rp1 -i ${srcdir}/79db04dc2eb00b354044f73c054a94fe2b9f9aae.patch
+
+    # change version
+    _ver="$(cat CMakeLists.txt | grep -m3 -e "  VERSION" | grep -o "[[:digit:]]*" | xargs | sed s'/ /./g')"
+    _ver="$pkgver"
+    printf 'Version: %s-%s\n' "${_ver}" "${pkgrel}"
+    sed -i -e "s|\${CALAMARES_VERSION_MAJOR}.\${CALAMARES_VERSION_MINOR}.\${CALAMARES_VERSION_PATCH}|${_ver}-${pkgrel}|g" CMakeLists.txt
+    sed -i -e "s|CALAMARES_VERSION_RC 1|CALAMARES_VERSION_RC 0|g" CMakeLists.txt
+}
+
+
+
+build() {
+    cd ${srcdir}/calamares
+
+    _cpuCount=$(grep -c -w ^processor /proc/cpuinfo)
+
+    cmake -S . -Bbuild \
+        -GNinja \
+        -DCMAKE_BUILD_TYPE=Release \
+        -DCMAKE_INSTALL_PREFIX=/usr \
+        -DCMAKE_INSTALL_LIBDIR=lib \
+        -DWITH_PYTHONQT=OFF \
+        -DWITH_KF5DBus=OFF \
+        -DBoost_NO_BOOST_CMAKE=ON \
+        -DWEBVIEW_FORCE_WEBKIT=OFF \
+        -DWITH_APPSTREAM=OFF \
+        -DSKIP_MODULES="dracut dracutlukscfg \
+        dummycpp dummyprocess dummypython dummypythonqt \
+        finishedq keyboardq license localeq notesqml oemid \
+        openrcdmcryptcfg packagechooserq \
+        plymouthcfg plasmalnf services-openrc \
+        summaryq tracking usersq webview welcomeq"
+
+    cmake --build build --parallel $_cpuCount
+}
+
+package() {
+    cd ${srcdir}/calamares/build
+    DESTDIR="${pkgdir}" cmake --build . --target install
+
+    #cp ${srcdir}/settings_offline.conf "$pkgdir/etc/calamares/settings.conf"
+    cp ${srcdir}/calamares/settings_offline.conf "$pkgdir/usr/share/calamares/settings_offline.conf"
+    cp ${srcdir}/calamares/settings_online.conf "$pkgdir/usr/share/calamares/settings_online.conf"
+
+    cp -rp ${srcdir}/calamares/src/scripts "$pkgdir/usr/share/calamares/scripts"
+}
