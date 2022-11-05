@@ -1,24 +1,20 @@
+# Maintainer: Peter Jung ptr1337 <admin@ptr1337.dev>
 # Maintainer: Vladislav Nepogodin <nepogodin.vlad@gmail.com>
 # Contributor: Philip Müller <philm[at]manjaro[dog]org>
 
-pkgname=cachyos-calamares
+pkgname=cachyos-calamares-testing
 pkgver=3.3.0
-pkgrel=8
+pkgrel=1
 pkgdesc='Distribution-independent installer framework'
 arch=('i686' 'x86_64' 'x86_64_v3')
-license=(GPL)
-url="https://github.com/calamares/calamares"
-license=('LGPL')
+license=('GPL3')
+url="https://github.com/cachyos/cachyos-calamares"
 conflicts=('calamares')
 provides=('calamares')
 makedepends=('git' 'cmake' 'extra-cmake-modules' 'kpmcore' 'boost' 'python-jsonschema' 'python-pyaml' 'python-unidecode' 'ninja')
 depends=( 'qt5-svg' 'qt5-webengine' 'yaml-cpp' 'networkmanager' 'upower' 'kcoreaddons' 'kconfig' 'ki18n' 'kservice' \
           'kwidgetsaddons' 'kpmcore' 'squashfs-tools' 'rsync' 'cryptsetup' 'qt5-xmlpatterns' 'doxygen' 'dmidecode' 'qt5-quickcontrols2' 'qt5-quickcontrols' \
           'gptfdisk' 'hwinfo' 'kparts' 'polkit-qt5' 'python' 'solid' 'qt5-tools' 'boost-libs' 'libpwquality' 'ckbcomp' 'mkinitcpio-openswap')
-backup=('usr/share/calamares/modules/bootloader.conf'
-        'usr/share/calamares/modules/displaymanager.conf'
-        'usr/share/calamares/modules/initcpio.conf'
-        'usr/share/calamares/modules/unpackfs.conf')
 source=(calamares::git+https://github.com/cachyos/cachyos-calamares.git#branch=cachyos-grub
         https://github.com/calamares/calamares/commit/79db04dc2eb00b354044f73c054a94fe2b9f9aae.patch)
 sha256sums=('SKIP'
@@ -70,9 +66,14 @@ package() {
     cd ${srcdir}/calamares/build
     DESTDIR="${pkgdir}" cmake --build . --target install
 
-    #cp ${srcdir}/settings_offline.conf "$pkgdir/etc/calamares/settings.conf"
     cp ${srcdir}/calamares/settings_offline.conf "$pkgdir/usr/share/calamares/settings_offline.conf"
     cp ${srcdir}/calamares/settings_online.conf "$pkgdir/usr/share/calamares/settings_online.conf"
-
+	cp ${srcdir}/calamares/settings_online.conf "$pkgdir/usr/share/calamares/settings.conf"
+    local _destdir=etc/calamares
+    install -dm755 $pkgdir/$_destdir
+    install -dm755 $pkgdir/$_destdir/modules
+    install -dm755 $pkgdir/$_destdir/images
     cp -rp ${srcdir}/calamares/src/scripts "$pkgdir/usr/share/calamares/scripts"
+    cp -rf ${srcdir}/calamares/src/modules/*/*.conf "$pkgdir/etc/calamares/modules"
+    cp -rf ${srcdir}/calamares/src/images "$pkgdir/etc/calamares"
 }
