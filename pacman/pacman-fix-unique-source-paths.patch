@@ -1,0 +1,47 @@
+From 478af273dfe24ded197ec54ae977ddc3719d74a0 Mon Sep 17 00:00:00 2001
+From: Morten Linderud <morten@linderud.pw>
+Date: Thu, 6 Oct 2022 12:03:14 +0200
+Subject: [PATCH] strip: fix unique source paths
+
+`${pkgbase}` was added to the wrong invocation. This ensures we are
+producing correct debug packages.
+
+Example from the package:
+
+    /usr/src/debug/pacman/pacman-6.0.2/src/pacman/callback.c
+    /usr/src/debug/pacman/pacman-6.0.2/src/pacman/callback.h
+    /usr/src/debug/pacman/pacman-6.0.2/src/pacman/check.c
+    /usr/src/debug/pacman/pacman-6.0.2/src/pacman/check.h
+
+Fixes: 776b7c1e75f2 ("debugflags: Ensure we have unique source paths")
+Signed-off-by: Morten Linderud <morten@linderud.pw>
+Signed-off-by: Allan McRae <allan@archlinux.org>
+---
+ scripts/libmakepkg/tidy/strip.sh.in | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/scripts/libmakepkg/tidy/strip.sh.in b/scripts/libmakepkg/tidy/strip.sh.in
+index 17526a34..4453b638 100644
+--- a/scripts/libmakepkg/tidy/strip.sh.in
++++ b/scripts/libmakepkg/tidy/strip.sh.in
+@@ -47,7 +47,7 @@ source_files() {
+ 
+ 	LANG=C debugedit --no-recompute-build-id \
+ 		--base-dir "${srcdir}" \
+-		--dest-dir "${dbgsrcdir}/${pkgbase}" \
++		--dest-dir "${dbgsrcdir}" \
+ 		--list-file /dev/stdout "$1" \
+ 		| sort -zu | tr '\0' '\n'
+ }
+@@ -141,7 +141,7 @@ tidy_strip() {
+ 		if check_option "debug" "y"; then
+ 
+ 			dbgdir="$pkgdirbase/$pkgbase-@DEBUGSUFFIX@/usr/lib/debug"
+-			dbgsrcdir="${DBGSRCDIR:-/usr/src/debug}"
++			dbgsrcdir="${DBGSRCDIR:-/usr/src/debug}/${pkgbase}"
+ 			dbgsrc="$pkgdirbase/$pkgbase-@DEBUGSUFFIX@$dbgsrcdir"
+ 			mkdir -p "$dbgdir" "$dbgsrc"
+ 		fi
+-- 
+GitLab
+

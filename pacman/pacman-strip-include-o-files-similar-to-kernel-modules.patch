@@ -1,0 +1,32 @@
+From de11824527ec4e2561e161ac40a5714ec943543c Mon Sep 17 00:00:00 2001
+From: Frederik Schwan <freswa@archlinux.org>
+Date: Wed, 5 Oct 2022 17:28:47 +0200
+Subject: [PATCH] strip: Include `.o` files in strip operation
+
+`.o` objects used to be omitted by strip.sh due to a missing match in
+the `Relocatable file` section. This patch fixes the issue by handling
+`.o` objects similar to kernel modules.
+
+fixes FS#74941
+
+Signed-off-by: Allan McRae <allan@archlinux.org>
+---
+ scripts/libmakepkg/tidy/strip.sh.in | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/scripts/libmakepkg/tidy/strip.sh.in b/scripts/libmakepkg/tidy/strip.sh.in
+index 4453b638..a3b6cd3a 100644
+--- a/scripts/libmakepkg/tidy/strip.sh.in
++++ b/scripts/libmakepkg/tidy/strip.sh.in
+@@ -160,7 +160,7 @@ tidy_strip() {
+ 					if ar t "$binary" &>/dev/null; then # Libraries (.a)
+ 						strip_flags="$STRIP_STATIC"
+ 						STRIPLTO=1
+-					elif [[ $binary = *'.ko' ]]; then # Kernel module
++					elif [[ $binary = *'.ko' || $binary = *'.o' ]]; then # Kernel module or object file
+ 						strip_flags="$STRIP_SHARED"
+ 					else
+ 						continue
+-- 
+GitLab
+

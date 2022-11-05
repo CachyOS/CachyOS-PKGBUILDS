@@ -1,0 +1,34 @@
+From efd0c24c07b86be014a4edb5a8ece021b87e3900 Mon Sep 17 00:00:00 2001
+From: Allan McRae <allan@archlinux.org>
+Date: Sat, 8 Oct 2022 21:07:45 +1000
+Subject: [PATCH] Always create directories outputted from debugedit in debug
+ packages
+
+The debugedit call to list all source files may include things like
+build/<...>.  We have been filtering out these <> files, but they can
+point to the build directory which is important to be available for
+relative source paths stored in the .debug files.
+
+Signed-off-by: Allan McRae <allan@archlinux.org>
+---
+ scripts/libmakepkg/tidy/strip.sh.in | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/scripts/libmakepkg/tidy/strip.sh.in b/scripts/libmakepkg/tidy/strip.sh.in
+index 91c66f13..17526a34 100644
+--- a/scripts/libmakepkg/tidy/strip.sh.in
++++ b/scripts/libmakepkg/tidy/strip.sh.in
+@@ -72,8 +72,8 @@ strip_file() {
+ 		while IFS= read -r t; do
+ 			file="${srcdir}/${t}"
+ 			dest="${dbgsrc}/${t}"
+-			if [[ -f "$file" ]] && ! [[ -f $dest ]]; then
+-				mkdir -p "${dest%/*}"
++			mkdir -p "${dest%/*}"
++			[[ -f "$file" ]]; then
+ 				cp -- "$file" "$dest"
+ 			fi
+ 		done < <(source_files "$binary")
+-- 
+GitLab
+

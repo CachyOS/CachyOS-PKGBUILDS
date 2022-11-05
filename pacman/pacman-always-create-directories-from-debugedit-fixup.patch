@@ -1,0 +1,26 @@
+From 86981383a2f4380bda26311831be94cdc743649b Mon Sep 17 00:00:00 2001
+From: Allan McRae <allan@archlinux.org>
+Date: Sun, 9 Oct 2022 13:43:31 +1000
+Subject: [PATCH] Fix missing if
+
+Signed-off-by: Allan McRae <allan@archlinux.org>
+---
+ scripts/libmakepkg/tidy/strip.sh.in | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/scripts/libmakepkg/tidy/strip.sh.in b/scripts/libmakepkg/tidy/strip.sh.in
+index a3b6cd3a..69c9f041 100644
+--- a/scripts/libmakepkg/tidy/strip.sh.in
++++ b/scripts/libmakepkg/tidy/strip.sh.in
+@@ -73,7 +73,7 @@ strip_file() {
+ 			file="${srcdir}/${t}"
+ 			dest="${dbgsrc}/${t}"
+ 			mkdir -p "${dest%/*}"
+-			[[ -f "$file" ]]; then
++			if [[ -f "$file" ]]; then
+ 				cp -- "$file" "$dest"
+ 			fi
+ 		done < <(source_files "$binary")
+-- 
+GitLab
+
