@@ -68,8 +68,7 @@ package() {
     local _destdir=etc/calamares
     install -dm755 $pkgdir/$_destdir
     install -dm755 $pkgdir/$_destdir/modules
-    install -dm755 $pkgdir/$_destdir/images
-    cp -rp ${srcdir}/calamares/src/scripts "$pkgdir/usr/share/calamares/scripts"
     cp -rf ${srcdir}/calamares/src/modules/*/*.conf "$pkgdir/etc/calamares/modules"
+    cp -rf ${srcdir}/calamares/src/scripts "$pkgdir/etc/calamares"
     cp -rf ${srcdir}/calamares/src/images "$pkgdir/etc/calamares"
 }
