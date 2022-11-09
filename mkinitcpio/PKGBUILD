@@ -4,7 +4,7 @@
 
 pkgname=mkinitcpio
 pkgver=32
-pkgrel=7
+pkgrel=8
 pkgdesc="Modular initramfs image creation utility"
 arch=('any')
 url='https://github.com/archlinux/mkinitcpio'
@@ -21,10 +21,11 @@ optdepends=('gzip: Use gzip compression for the initramfs image'
 provides=('initramfs')
 backup=('etc/mkinitcpio.conf')
 source=("https://sources.archlinux.org/other/$pkgname/$pkgname-$pkgver.tar.gz"{,.sig}
-        '0001-mkinitcpio-cachyos.patch'
-        'fix-strip.patch'
-        'add-real-symlink-support.patch'
-        'etc-os-release-for-systemd-mkinitcpio-hook.patch')
+#        '0001-mkinitcpio-cachyos.patch'
+#      'fix-strip.patch'
+#      'add-real-symlink-support.patch'
+#       'etc-os-release-for-systemd-mkinitcpio-hook.patch')
+		0001-master.patch)
 install=mkinitcpio.install
 sha512sums=('c180bef8af774305e8c9779b3405daaa5be33588bf89c6625a28eac1cde424f447782737d85d810fed4971d38b31086a072293d42aad08398c090f9538b56a4e'
             'SKIP'

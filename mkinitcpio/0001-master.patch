@@ -1,0 +1,901 @@
+From e1a5794127f283e1cb2afbea4c4f7c081d9febbe Mon Sep 17 00:00:00 2001
+From: Peter Jung <admin@ptr1337.dev>
+Date: Wed, 9 Nov 2022 14:38:54 +0100
+Subject: [PATCH] master
+
+---
+ Makefile                                 |   3 +-
+ functions                                | 149 ++++++++++++++++++-----
+ install/fsck                             |  37 +++---
+ install/strip                            |   1 +
+ libalpm/hooks/60-mkinitcpio-remove.hook  |   2 +-
+ libalpm/hooks/90-mkinitcpio-install.hook |   2 +-
+ libalpm/scripts/mkinitcpio               |  95 +++++++++++++++
+ libalpm/scripts/mkinitcpio-install       |  44 -------
+ libalpm/scripts/mkinitcpio-remove        |  61 ----------
+ lsinitcpio                               |  48 +-------
+ man/mkinitcpio.8.txt                     |   6 +
+ man/mkinitcpio.conf.5.txt                |   8 +-
+ mkinitcpio                               |  54 ++++++--
+ mkinitcpio.conf                          |  28 +++--
+ shell/bash-completion                    |   2 +-
+ shell/zsh-completion                     |   1 +
+ 16 files changed, 315 insertions(+), 226 deletions(-)
+ create mode 100644 libalpm/scripts/mkinitcpio
+ delete mode 100644 libalpm/scripts/mkinitcpio-install
+ delete mode 100644 libalpm/scripts/mkinitcpio-remove
+
+diff --git a/Makefile b/Makefile
+index 9ef0f6a..e6f3789 100644
+--- a/Makefile
++++ b/Makefile
+@@ -73,9 +73,8 @@ install: all
+ 	install -m644 shell/zsh-completion $(DESTDIR)/usr/share/zsh/site-functions/_mkinitcpio
+ 
+ 	install -m644 libalpm/hooks/90-mkinitcpio-install.hook $(DESTDIR)/usr/share/libalpm/hooks/90-mkinitcpio-install.hook
+-	install -m755 libalpm/scripts/mkinitcpio-install $(DESTDIR)/usr/share/libalpm/scripts/mkinitcpio-install
+ 	install -m644 libalpm/hooks/60-mkinitcpio-remove.hook $(DESTDIR)/usr/share/libalpm/hooks/60-mkinitcpio-remove.hook
+-	install -m755 libalpm/scripts/mkinitcpio-remove $(DESTDIR)/usr/share/libalpm/scripts/mkinitcpio-remove
++	install -m755 libalpm/scripts/mkinitcpio $(DESTDIR)/usr/share/libalpm/scripts/mkinitcpio
+ 
+ doc: $(MANPAGES)
+ man/%: man/%.txt Makefile
+diff --git a/functions b/functions
+index 2148ed8..64d10f4 100644
+--- a/functions
++++ b/functions
+@@ -147,18 +147,79 @@ kver_x86() {
+     printf '%s' "$kver"
+ }
+ 
++detect_compression() {
++    local bytes
++
++    read -rd '' bytes < <(hexdump -n 6 -e '"%c"' "$1")
++    case $bytes in
++        $'\xfd7zXZ')
++            echo 'xz'
++            return
++            ;;
++    esac
++
++    read -rd '' bytes < <(hexdump -n 4 -e '"%c"' "$1")
++    if [[ $bytes = $'\x89LZO' ]]; then
++        echo 'lzop'
++        return
++    fi
++
++    read -rd '' bytes < <(hexdump -n 2 -e '"%x"' "$1")
++    if [[ $bytes = '8b1f' ]]; then
++        echo 'gzip'
++        return
++    fi
++
++    read -rd '' bytes < <(hexdump -n 4 -e '"%x"' "$1")
++    case $bytes in
++        184d2204)
++            error 'Newer lz4 stream format detected! This may not boot!'
++            echo 'lz4'
++            return
++            ;;
++        184c2102)
++            echo 'lz4 -l'
++            return
++            ;;
++        fd2fb528)
++            echo 'zstd'
++            return
++            ;;
++    esac
++
++    read -rd '' bytes < <(hexdump -n 3 -e '"%c"' "$1")
++    if [[ $bytes == 'BZh' ]]; then
++        echo 'bzip2'
++        return
++    fi
++
++    # lzma detection sucks and there's really no good way to
++    # do it without reading large portions of the stream. this
++    # check is good enough for GNU tar, apparently, so it's good
++    # enough for me.
++    read -rd '' bytes < <(hexdump -n 3 -e '"%x"' "$1")
++    if [[ $bytes = '5d' ]]; then
++        echo 'lzma'
++        return
++    fi
++
++    # out of ideas, assuming uncompressed
++}
++
+ kver_generic() {
+-    # For unknown architectures, we can try to grep the uncompressed
++    # For unknown architectures, we can try to grep the uncompressed or gzipped
+     # image for the boot banner.
+-    # This should work at least for ARM when run on /boot/Image. On
+-    # other architectures it may be worth trying rather than bailing,
+-    # and inform the user if none was found.
++    # This should work at least for ARM when run on /boot/Image, or RISC-V on
++    # gzipped /boot/vmlinuz-linuz. On other architectures it may be worth trying
++    # rather than bailing, and inform the user if none was found.
+ 
+     # Loosely grep for `linux_banner`:
+     # https://elixir.bootlin.com/linux/v5.7.2/source/init/version.c#L46
+-    local kver=
++    local kver= reader=cat
++    
++    [[ $(detect_compression "$1") == 'gzip' ]] && reader=zcat
+ 
+-    read _ _ kver _ < <(grep -m1 -aoE 'Linux version .(\.[-[:alnum:]+]+)+' "$1")
++    read _ _ kver _ < <($reader "$1" | grep -m1 -aoE 'Linux version .(\.[-[:alnum:]+]+)+')
+ 
+     printf '%s' "$kver"
+ }
+@@ -574,7 +635,15 @@ add_file() {
+     else
+         quiet "adding file: %s" "$dest"
+     fi
+-    command install -Dm$mode "$src" "$BUILDROOT$dest"
++   #check if $src is a symlink
++    if [[ -L $src ]]; then
++        # add the symlink
++        add_file "$(realpath -- "$src")"
++        # create the symlink
++        add_symlink "$src" "$(realpath -- "$src")"
++    else
++       command install -Dm$mode "$src" "$BUILDROOT$dest"
++    fi
+ }
+ 
+ add_runscript() {
+@@ -634,7 +703,15 @@ add_binary() {
+     mode=$(stat -c %a "$binary")
+ 
+     # always add the binary itself
+-    add_file "$binary" "$dest" "$mode"
++    # check if binary is a symlink
++    if [[ -L $binary ]]; then
++        # add the binary
++        add_file "$(realpath -- "$binary")"
++        # create the symlink
++        add_symlink "$binary" "$(realpath -- "$binary")"
++    else
++        add_file "$binary" "$dest" "$mode"
++    fi
+ 
+     # negate this so that the RETURN trap is not fired on non-binaries
+     ! lddout=$(ldd "$binary" 2>/dev/null) && return 0
+@@ -736,7 +813,7 @@ initialize_buildroot() {
+     # creates a temporary directory for the buildroot and initialize it with a
+     # basic set of necessary directories and symlinks
+ 
+-    local workdir= kernver=$1 arch=$(uname -m) buildroot
++    local workdir= kernver=$1 arch=$(uname -m) buildroot osreleasefile
+ 
+     if ! workdir=$(mktemp -d --tmpdir mkinitcpio.XXXXXX); then
+         error 'Failed to create temporary working directory in %s' "${TMPDIR:-/tmp}"
+@@ -777,8 +854,20 @@ initialize_buildroot() {
+     ln -s /proc/self/mounts "$buildroot/etc/mtab"
+     >"$buildroot/etc/fstab"
+ 
+-    # indicate that this is an initramfs
+-    >"$buildroot/etc/initrd-release"
++    # add os-release and initrd-release for systemd
++    if [[ -e /etc/os-release ]]; then
++        if [[ -L /etc/os-release ]]; then
++            osreleasefile="$(realpath -- /etc/os-release)"
++            install -Dm0644 "$osreleasefile" "${buildroot}${osreleasefile}"
++            cp -adT /etc/os-release "${buildroot}/etc/os-release"
++            cp -adT /etc/os-release "${buildroot}/etc/initrd-release"
++        else
++            install -Dm0644 /etc/os-release "${buildroot}/etc/os-release"
++            ln -sT os-release "${buildroot}/etc/initrd-release"
++        fi
++    else
++        >"$buildroot/etc/initrd-release"
++    fi
+ 
+     # add a blank ld.so.conf to keep ldconfig happy
+     >"$buildroot/etc/ld.so.conf"
+@@ -858,36 +947,30 @@ install_modules() {
+         return 0
+     fi
+ 
+-    cp "$@" "$moduledest/kernel"
+-
+-    # unzip modules prior to recompression
+     for m in "$@"; do
+-        case $m in
+-            *.xz)
+-                xz_comp+=("$moduledest/kernel/${m##*/}")
+-                ;;
+-            *.gz)
+-                gz_comp+=("$moduledest/kernel/${m##*/}")
+-                ;;
+-            *.zst)
+-                zst_comp+=("$moduledest/kernel/${m##*/}")
+-                ;;
+-        esac
++        install -D -m644 "$m" "$BUILDROOT/$m"
++        # unzip modules prior to recompression
++        if [[ "$MODULES_DECOMPRESS" == 'yes' ]]; then
++            case "$m" in
++                *.xz)
++                    xz_comp+=("$BUILDROOT/$m")
++                    ;;
++                *.gz)
++                    gz_comp+=("$BUILDROOT/$m")
++                    ;;
++                *.zst)
++                    zst_comp+=("$BUILDROOT/$m")
++                    ;;
++            esac
++        fi
+     done
++
+     (( ${#xz_comp[*]} )) && xz -d "${xz_comp[@]}"
+     (( ${#gz_comp[*]} )) && gzip -d "${gz_comp[@]}"
+     (( ${#zst_comp[*]} )) && zstd -d --rm -q "${zst_comp[@]}"
+ 
+     msg "Generating module dependencies"
+     install -m644 -t "$moduledest" "$_d_kmoduledir"/modules.{builtin,builtin.modinfo,order}
+-
+-    # we install all modules into kernel/, making the .order file incorrect for
+-    # the module tree. munge it, so that we have an accurate index. This avoids
+-    # some rare and subtle issues with module loading choices when an alias
+-    # resolves to multiple modules, only one of which can claim a device.
+-    awk -F'/' '{ print "kernel/" $NF }' \
+-        "$_d_kmoduledir"/modules.order >"$moduledest/modules.order"
+-
+     depmod -b "$BUILDROOT" "$KERNELVERSION"
+ 
+     # remove all non-binary module.* files (except devname for on-demand module loading)
+diff --git a/install/fsck b/install/fsck
+index 4f5cf93..e394e0d 100644
+--- a/install/fsck
++++ b/install/fsck
+@@ -4,18 +4,26 @@ build() {
+     local fsck= added=0
+ 
+     add_fsck() {
+-        [[ $1 = tmpfs ]] && return
+-
+-        if [[ $1 = ext[234] ]]; then
+-            add_binary fsck.ext4
+-            add_symlink /usr/bin/fsck.ext2 fsck.ext4
+-            add_symlink /usr/bin/fsck.ext3 fsck.ext4
+-        elif [[ $1 = xfs ]]; then
++        case "$1" in
++        ext[234])
++            add_binary e2fsck
++            add_symlink /usr/bin/fsck.ext2 e2fsck
++            add_symlink /usr/bin/fsck.ext3 e2fsck
++            add_symlink /usr/bin/fsck.ext4 e2fsck
++            [[ -e /etc/e2fsck.conf ]] && add_file /etc/e2fsck.conf
++            ;;
++        xfs)
+             add_binary fsck.xfs
+             add_binary xfs_repair
+-        else
+-            add_binary "fsck.$1"
+-        fi
++            ;;
++        *)
++            if compgen -c "fsck.$1" &> /dev/null; then
++                add_binary "fsck.$1"
++            else
++                return 1
++            fi
++            ;;
++        esac
+     }
+ 
+     if (( ! fs_autodetect_failed )) && [[ $rootfstype$usrfstype ]]; then
+@@ -26,9 +34,8 @@ build() {
+             add_fsck $usrfstype && (( ++added ))
+         fi
+     else
+-        for fsck in /usr/bin/fsck.* /usr/bin/xfs_repair; do
+-            [[ -f $fsck ]] || continue
+-            add_binary "$fsck" && (( ++added ))
++        for fsck in $(compgen -c fsck.); do
++            add_fsck "${fsck#fsck.}" && (( ++added ))
+         done
+     fi
+ 
+@@ -38,10 +45,6 @@ build() {
+     fi
+ 
+     add_binary fsck
+-    if [[ -e /etc/e2fsck.conf ]]; then
+-        add_file /etc/e2fsck.conf
+-    fi
+-
+ }
+ 
+ help() {
+diff --git a/install/strip b/install/strip
+index f8eb49d..b71ed54 100644
+--- a/install/strip
++++ b/install/strip
+@@ -18,6 +18,7 @@ build() {
+             *application/x-pie-executable*)
+                 # Binaries
+                 strip --strip-all "$bin"
++                ;;
+             *application/x-object*)
+                 # Kernel objects
+                 strip --strip-debug "$bin"
+diff --git a/libalpm/hooks/60-mkinitcpio-remove.hook b/libalpm/hooks/60-mkinitcpio-remove.hook
+index 9827afc..9600ce1 100644
+--- a/libalpm/hooks/60-mkinitcpio-remove.hook
++++ b/libalpm/hooks/60-mkinitcpio-remove.hook
+@@ -12,5 +12,5 @@ Target = mkinitcpio-git
+ [Action]
+ Description = Removing linux initcpios...
+ When = PreTransaction
+-Exec = /usr/share/libalpm/scripts/mkinitcpio-remove
++Exec = /usr/share/libalpm/scripts/mkinitcpio remove
+ NeedsTargets
+diff --git a/libalpm/hooks/90-mkinitcpio-install.hook b/libalpm/hooks/90-mkinitcpio-install.hook
+index cf480bd..5b02fb8 100644
+--- a/libalpm/hooks/90-mkinitcpio-install.hook
++++ b/libalpm/hooks/90-mkinitcpio-install.hook
+@@ -8,5 +8,5 @@ Target = usr/lib/initcpio/*
+ [Action]
+ Description = Updating linux initcpios...
+ When = PostTransaction
+-Exec = /usr/share/libalpm/scripts/mkinitcpio-install
++Exec = /usr/share/libalpm/scripts/mkinitcpio install
+ NeedsTargets
+diff --git a/libalpm/scripts/mkinitcpio b/libalpm/scripts/mkinitcpio
+new file mode 100644
+index 0000000..0a75ee1
+--- /dev/null
++++ b/libalpm/scripts/mkinitcpio
+@@ -0,0 +1,95 @@
++#!/usr/bin/env bash
++
++set -e
++
++args=()
++package=0
++
++process_preset() {
++    if [[ -n "$pkgbase" && -e "$preset" ]]; then
++        if ! cmp "$preset" > /dev/null 2>&1 <(sed "s|%PKGBASE%|${pkgbase}|g" /usr/share/mkinitcpio/hook.preset); then
++            if [[ ! -e "$preset.pacsave" ]]; then
++                # save the preset as pacsave
++                mv -- "$preset" "$preset.pacsave" && return 0
++            fi
++        else
++            # remove the preset
++            rm -- "$preset" && return 0
++        fi
++    fi
++}
++
++install_kernel() {
++    preset="/etc/mkinitcpio.d/${1}.preset"
++    if [[ ! -e "$preset" ]]; then
++        if [[ -e "$preset.pacsave" ]]; then
++            # move the pacsave to the template
++            mv -- "${preset}.pacsave" "$preset"
++        else
++            # create the preset from the template
++            sed "s|%PKGBASE%|${1}|g" /usr/share/mkinitcpio/hook.preset \
++                | install -Dm644 /dev/stdin "$preset"
++        fi
++    fi
++
++    # always install the kernel
++    install -Dm644 "$line" "/boot/vmlinuz-${1}"
++
++    # compound args for each kernel
++    args+=(-p "$1")
++}
++
++remove_kernel() {
++    # remove the actual kernel and images for the package being removed
++    kernel="/boot/vmlinuz-${1}"
++    preset="/etc/mkinitcpio.d/${1}.preset"
++    initramfs="/boot/initramfs-${1}.img"
++    fallback_initramfs="/boot/initramfs-${1}-fallback.img"
++    # remove the installed kernel
++    rm -f -- "$kernel"
++
++    process_preset "$1" "$preset"
++
++    # remove images
++    rm -f -- "$initramfs" "$fallback_initramfs"
++}
++
++while read -r line; do
++    if [[ "$line" != */vmlinuz ]]; then
++        # triggers when it's a change to usr/lib/initcpio/*
++        package=1
++        continue
++    fi
++
++    if ! read -r pkgbase > /dev/null 2>&1 < "${line%/vmlinuz}/pkgbase"; then
++        # if the kernel has no pkgbase, we skip it
++        continue
++    fi
++
++    case "$1" in
++        install) install_kernel "$pkgbase";;
++        remove) remove_kernel "$pkgbase";;
++    esac
++done
++
++if (( package )) && compgen -G /etc/mkinitcpio.d/"*.preset" > /dev/null; then
++    case "$1" in
++        install)
++            # change to use all presets
++            args=(-P)
++            ;;
++        remove)
++          shopt -s nullglob
++          for preset in /etc/mkinitcpio.d/*.preset; do
++              pkgbase=${preset##*/}
++              pkgbase=${pkgbase%.preset}
++              process_preset "$pkgbase" "$preset"
++          done
++          shopt -u nullglob
++          ;;
++    esac
++fi
++
++if [[ "$1" == "install" ]] && (( ${#args[@]} )); then
++    mkinitcpio "${args[@]}"
++fi
+diff --git a/libalpm/scripts/mkinitcpio-install b/libalpm/scripts/mkinitcpio-install
+deleted file mode 100644
+index d2e5041..0000000
+--- a/libalpm/scripts/mkinitcpio-install
++++ /dev/null
+@@ -1,44 +0,0 @@
+-#!/bin/bash -e
+-
+-args=()
+-all=0
+-
+-while read -r line; do
+-    if [[ $line != */vmlinuz ]]; then
+-        # triggers when it's a change to usr/lib/initcpio/*
+-        all=1
+-        continue
+-    fi
+-
+-    if ! read -r pkgbase > /dev/null 2>&1 < "${line%/vmlinuz}/pkgbase"; then
+-        # if the kernel has no pkgbase, we skip it
+-        continue
+-    fi
+-
+-    preset="/etc/mkinitcpio.d/${pkgbase}.preset"
+-    if [[ ! -e $preset ]]; then
+-        if [[ -e $preset.pacsave ]]; then
+-            # move the pacsave to the template
+-            mv "${preset}.pacsave" "$preset"
+-        else
+-            # create the preset from the template
+-            sed "s|%PKGBASE%|${pkgbase}|g" /usr/share/mkinitcpio/hook.preset \
+-                | install -Dm644 /dev/stdin "$preset"
+-        fi
+-    fi
+-
+-    # always install the kernel
+-    install -Dm644 "${line}" "/boot/vmlinuz-${pkgbase}"
+-
+-    # compound args for each kernel
+-    args+=(-p "${pkgbase}")
+-done
+-
+-if (( all )) && compgen -G /etc/mkinitcpio.d/"*.preset" > /dev/null; then
+-    # change to use all presets
+-    args=(-P)
+-fi
+-
+-if (( ${#args[@]} )); then
+-    mkinitcpio "${args[@]}"
+-fi
+diff --git a/libalpm/scripts/mkinitcpio-remove b/libalpm/scripts/mkinitcpio-remove
+deleted file mode 100644
+index 17b4b31..0000000
+--- a/libalpm/scripts/mkinitcpio-remove
++++ /dev/null
+@@ -1,61 +0,0 @@
+-#!/bin/bash -e
+-
+-package=0
+-
+-process_preset() {
+-    if [[ -n "${pkgbase}" && -e $preset ]]; then
+-        if ! cmp $preset > /dev/null 2>&1 <(sed "s|%PKGBASE%|${pkgbase}|g" /usr/share/mkinitcpio/hook.preset); then
+-            if [[ ! -e $preset.pacsave ]]; then
+-                # save the preset as pacsave
+-                mv $preset $preset.pacsave && return 0
+-            fi
+-        else
+-            # remove the preset
+-            rm $preset && return 0
+-        fi
+-    fi
+-}
+-
+-while read -r line; do
+-    if [[ $line != */vmlinuz ]]; then
+-        # triggers when it's a change to usr/lib/initcpio/*
+-        package=1
+-        continue
+-    fi
+-
+-    if ! read -r pkgbase > /dev/null 2>&1 < "${line%/vmlinuz}/pkgbase"; then
+-        # if the kernel has no pkgbase, we skip it
+-        continue
+-    fi
+-
+-    # remove the actual kernel and images for the package being removed
+-    kernel="/boot/vmlinuz-${pkgbase}"
+-    preset="/etc/mkinitcpio.d/${pkgbase}.preset"
+-    initramfs="/boot/initramfs-${pkgbase}.img"
+-    fallback_initramfs="/boot/initramfs-${pkgbase}-fallback.img"
+-    if [[ -e $kernel ]]; then
+-        # remove the installed kernel
+-        rm $kernel
+-    fi
+-
+-    process_preset "${pkgbase}" $preset
+-
+-    if [[ -e $initramfs ]]; then
+-        # remove the main image
+-        rm $initramfs
+-    fi
+-    if [[ -e $fallback_initramfs ]]; then
+-        # remove the fallback image
+-        rm $fallback_initramfs
+-    fi
+-done
+-
+-if (( package )) && compgen -G /etc/mkinitcpio.d/"*.preset" > /dev/null; then
+-    shopt -s nullglob
+-    for preset in /etc/mkinitcpio.d/*.preset; do
+-        pkgbase=${preset##*/}
+-        pkgbase=${pkgbase%.preset}
+-        process_preset "${pkgbase}" $preset
+-    done
+-    shopt -u nullglob
+-fi
+diff --git a/lsinitcpio b/lsinitcpio
+index 4715783..f5c43ef 100755
+--- a/lsinitcpio
++++ b/lsinitcpio
+@@ -84,54 +84,12 @@ detect_filetype() {
+             echo
+             return
+             ;;
+-        $'\xfd7zXZ')
+-            echo 'xz'
+-            return
+-            ;;
+     esac
+ 
+-    read -rd '' bytes < <(hexdump -n 4 -e '"%c"' "$1")
+-    if [[ $bytes = $'\x89LZO' ]]; then
+-        echo 'lzop'
+-        return
+-    fi
+-
+-    read -rd '' bytes < <(hexdump -n 2 -e '"%x"' "$1")
+-    if [[ $bytes = '8b1f' ]]; then
+-        echo 'gzip'
+-        return
+-    fi
+-
+-    read -rd '' bytes < <(hexdump -n 4 -e '"%x"' "$1")
+-    case $bytes in
+-        184d2204)
+-            error 'Newer lz4 stream format detected! This may not boot!'
+-            echo 'lz4'
+-            return
+-            ;;
+-        184c2102)
+-            echo 'lz4 -l'
+-            return
+-            ;;
+-        fd2fb528)
+-            echo 'zstd'
+-            return
+-            ;;
+-    esac
+-
+-    read -rd '' bytes < <(hexdump -n 3 -e '"%c"' "$1")
+-    if [[ $bytes == 'BZh' ]]; then
+-        echo 'bzip2'
+-        return
+-    fi
++    compression=$(detect_compression "$1")
+ 
+-    # lzma detection sucks and there's really no good way to
+-    # do it without reading large portions of the stream. this
+-    # check is good enough for GNU tar, apparently, so it's good
+-    # enough for me.
+-    read -rd '' bytes < <(hexdump -n 3 -e '"%x"' "$1")
+-    if [[ $bytes = '5d' ]]; then
+-        echo 'lzma'
++    if [[ -n "$compression" ]]; then
++        echo "$compression"
+         return
+     fi
+ 
+diff --git a/man/mkinitcpio.8.txt b/man/mkinitcpio.8.txt
+index 0360a6b..ced9ec6 100644
+--- a/man/mkinitcpio.8.txt
++++ b/man/mkinitcpio.8.txt
+@@ -84,6 +84,12 @@ Options
+ 	/etc/mkinitcpio.d (without the .preset extension) or a full, absolute path to a
+ 	file. This option may be specified multiple times to process multiple presets.
+ 
++*-R, \--remove*::
++	Remove initramfs image(s) generated by the specified preset(s).
++	If used in combination with '-P|--allpresets', removes the images for
++	all presets. This option can only be used with either '-p|--presets' or
++	'-P|--allpresets'.
++
+ *-r, \--moduleroot* 'root'::
+ 	Specifies the root directory to find modules in, defaulting to '/'.
+ 
+diff --git a/man/mkinitcpio.conf.5.txt b/man/mkinitcpio.conf.5.txt
+index 0383360..fdb8d91 100644
+--- a/man/mkinitcpio.conf.5.txt
++++ b/man/mkinitcpio.conf.5.txt
+@@ -69,6 +69,12 @@ despite being "valid".
+ 	program. This option is generally not used. It can be potentially dangerous
+ 	and may cause invalid images to be generated without any sign of an error.
+ 
++*DECOMPRESS_MODULES*::
++
++	Switch (yes/no) to decide wether kernel modules should be compressed or
++	uncompressed during initramfs creation. Enabled by default for faster bootup
++	and smaller initramfs size. Disable it to reduce RAM usage in early userspace.
++
+ See Also
+ --------
+ *mkinitcpio*(8)
+@@ -79,4 +85,4 @@ mkinitcpio is created and maintained by the Arch Linux Developer community.
+ 
+ Copyright
+ ---------
+-Copyright (c) Arch Linux 2006-2021
++Copyright (c) Arch Linux 2006-2022
+diff --git a/mkinitcpio b/mkinitcpio
+index 2781e3a..f6787a7 100755
+--- a/mkinitcpio
++++ b/mkinitcpio
+@@ -24,7 +24,7 @@ _optmoduleroot= _optgenimg=
+ _optcompress= _opttargetdir=
+ _optosrelease=
+ _optuefi= _optmicrocode=() _optcmdline= _optsplash= _optkernelimage= _optuefistub=
+-_optshowautomods=0 _optsavetree=0 _optshowmods=0
++_optshowautomods=0 _optsavetree=0 _optshowmods=0 _optremove=0
+ _optquiet=1 _optcolor=1
+ _optskiphooks=() _optaddhooks=() _hooks=()  _optpreset=()
+ declare -A _runhooks _addedmodules _modpaths _autodetect_cache
+@@ -55,6 +55,8 @@ usage: ${0##*/} [options]
+    -n, --nocolor                Disable colorized output messages
+    -p, --preset <file>          Build specified preset from /etc/mkinitcpio.d
+    -P, --allpresets             Process all preset files in /etc/mkinitcpio.d
++   -R, --remove                 Remove specified preset images
++                                This option can only be used with either '-p|--presets' or '-P|--allpresets'
+    -r, --moduleroot <dir>       Root directory for modules (default: /)
+    -S, --skiphooks <hooks>      Skip specified hooks, comma-separated, during build
+    -s, --save                   Save build directory. (default: no)
+@@ -288,7 +290,7 @@ build_uefi(){
+     msg "Creating UEFI executable: %s" "$out"
+ 
+     if [[ -z "$uefistub" ]]; then
+-        for stub in {/usr,}/lib/{systemd/boot/efi,gummiboot}/linux{x64,ia32}.efi.stub; do
++        for stub in {/usr,}/lib/{systemd/boot/efi,gummiboot}/linux{x64,ia32,aa64}.efi.stub; do
+             if [[ -f "$stub" ]]; then
+                 uefistub="$stub"
+                 msg2 "Using UEFI stub: %s" "$uefistub"
+@@ -376,7 +378,7 @@ build_uefi(){
+ 
+ process_preset() (
+     local preset=$1 preset_cli_options=$2 preset_image= preset_options=
+-    local -a preset_mkopts preset_cmd
++    local -a preset_mkopts preset_cmd preset_remove_cmd
+     if (( MKINITCPIO_PROCESS_PRESET )); then
+         error "You appear to be calling a preset from a preset. This is a configuration error."
+         cleanup 1
+@@ -399,8 +401,13 @@ process_preset() (
+ 
+     ret=0
+     for p in "${PRESETS[@]}"; do
+-        msg "Building image from preset: $preset: '$p'"
++        if (( _optremove )); then
++             msg "Removing image for preset: $preset: '$p'"
++        else
++             msg "Building image from preset: $preset: '$p'"
++        fi
+         preset_cmd=("${preset_mkopts[@]}")
++        preset_remove_cmd=()
+ 
+         preset_kver=${p}_kver
+         if [[ ${!preset_kver:-$ALL_kver} ]]; then
+@@ -421,11 +428,13 @@ process_preset() (
+         preset_efi_image=${p}_efi_image
+         if [[ ${!preset_efi_image} ]]; then
+             preset_cmd+=(-U "${!preset_efi_image}")
++            preset_remove_cmd+=("${!preset_efi_image}")
+         fi
+ 
+         preset_image=${p}_image
+         if [[ ${!preset_image} ]]; then
+             preset_cmd+=(-g "${!preset_image}")
++            preset_remove_cmd+=("${!preset_image}")
+         elif [[ ! ${!preset_efi_image} ]]; then
+             warning "No image or efi_image file specified. Skipping image \`%s'" "$p"
+             continue
+@@ -443,9 +452,25 @@ process_preset() (
+             done
+         fi
+ 
+-        preset_cmd+=($OPTREST)
+-        msg2 "${preset_cmd[*]}"
+-        MKINITCPIO_PROCESS_PRESET=1 "$0" "${preset_cmd[@]}"
++        if (( _optremove )); then
++            if (( ${#preset_remove_cmd[*]} )); then
++                # we won't be calling mkinitcpio recursively, so no need to set MKINITCPIO_PROCESS_PRESET
++                for pr in "${preset_remove_cmd[@]}"; do
++                    if [[ ! -f "${pr}" ]]; then
++                        warning "Image not found: \`%s'" "$pr"
++                    elif [[ ! -w "${pr}" ]]; then
++                        error "Image not writable: \`%s'" "$pr"
++                    else
++                        rm -f -- "${pr}"
++                        msg2 "Removed: \`%s'" "$pr"
++                    fi
++                done
++            fi
++        else
++            preset_cmd+=($OPTREST)
++            msg2 "${preset_cmd[*]}"
++            MKINITCPIO_PROCESS_PRESET=1 "$0" "${preset_cmd[@]}"
++        fi
+         (( $? )) && ret=1
+     done
+ 
+@@ -482,10 +507,10 @@ preload_builtin_modules() {
+ trap 'cleanup 130' INT
+ trap 'cleanup 143' TERM
+ 
+-_opt_short='A:c:D:g:H:hk:nLMPp:r:S:sd:t:U:Vvz:'
++_opt_short='A:c:D:g:H:hk:nLMPp:Rr:S:sd:t:U:Vvz:'
+ _opt_long=('add:' 'addhooks:' 'config:' 'generate:' 'hookdir': 'hookhelp:' 'help'
+           'kernel:' 'listhooks' 'automods' 'moduleroot:' 'nocolor' 'allpresets'
+-          'preset:' 'skiphooks:' 'save' 'generatedir:' 'builddir:' 'version' 'verbose' 'compress:'
++          'preset:' 'remove' 'skiphooks:' 'save' 'generatedir:' 'builddir:' 'version' 'verbose' 'compress:'
+           'uefi:' 'microcode:' 'splash:' 'kernelimage:' 'uefistub:' 'cmdline:' 'osrelease:')
+ 
+ parseopts "$_opt_short" "${_opt_long[@]}" -- "$@" || exit 1
+@@ -539,6 +564,9 @@ while :; do
+             shift
+             _optpreset+=("$1")
+             ;;
++        -R|--remove)
++            _optremove=1
++            ;;
+         -n|--nocolor)
+             _optcolor=0
+             ;;
+@@ -627,6 +655,12 @@ if [[ -t 1 ]] && (( _optcolor )); then
+     try_enable_color
+ fi
+ 
++# if we get presets and remove flag, skip to preset processing
++if (( _optremove && ${#_optpreset[*]} )); then
++    map process_preset "${_optpreset[@]}"
++    exit
++fi
++
+ if [[ -n $_d_flag_hooks && -n $_d_flag_install ]]; then
+     _d_hooks=${_d_flag_hooks%:}
+     _d_install=${_d_flag_install%:}
+@@ -658,6 +692,8 @@ if [[ $KERNELVERSION != 'none' ]]; then
+     [[ -d $_d_kmoduledir ]] || die "'$_d_kmoduledir' is not a valid kernel module directory"
+ fi
+ 
++MODULES_DECOMPRESS=${MODULES_DECOMPRESS:-"yes"}
++
+ _d_workdir=$(initialize_buildroot "$KERNELVERSION" "$_opttargetdir") || cleanup 1
+ BUILDROOT=${_opttargetdir:-$_d_workdir/root}
+ 
+diff --git a/mkinitcpio.conf b/mkinitcpio.conf
+index 3494fab..710e05f 100644
+--- a/mkinitcpio.conf
++++ b/mkinitcpio.conf
+@@ -3,7 +3,7 @@
+ # The following modules are loaded before any boot hooks are
+ # run.  Advanced users may wish to specify all system modules
+ # in this array.  For instance:
+-#     MODULES=(piix ide_disk reiserfs)
++#     MODULES=(usbhid xhci_hcd)
+ MODULES=()
+ 
+ # BINARIES
+@@ -29,27 +29,27 @@ FILES=()
+ # 'filesystems' is _required_ unless you specify your fs modules in MODULES
+ # Examples:
+ ##   This setup specifies all modules in the MODULES setting above.
+-##   No raid, lvm2, or encrypted root is needed.
++##   No RAID, lvm2, or encrypted root is needed.
+ #    HOOKS=(base)
+ #
+ ##   This setup will autodetect all modules for your system and should
+ ##   work as a sane default
+-#    HOOKS=(base udev autodetect block filesystems)
++#    HOOKS=(base udev autodetect modconf block filesystems fsck)
+ #
+ ##   This setup will generate a 'full' image which supports most systems.
+ ##   No autodetection is done.
+-#    HOOKS=(base udev block filesystems)
++#    HOOKS=(base udev modconf block filesystems fsck)
+ #
+-##   This setup assembles a pata mdadm array with an encrypted root FS.
+-##   Note: See 'mkinitcpio -H mdadm' for more information on raid devices.
+-#    HOOKS=(base udev block mdadm encrypt filesystems)
++##   This setup assembles a mdadm array with an encrypted root file system.
++##   Note: See 'mkinitcpio -H mdadm_udev' for more information on RAID devices.
++#    HOOKS=(base udev modconf keyboard keymap consolefont block mdadm_udev encrypt filesystems fsck)
+ #
+-##   This setup loads an lvm2 volume group on a usb device.
+-#    HOOKS=(base udev block lvm2 filesystems)
++##   This setup loads an lvm2 volume group.
++#    HOOKS=(base udev modconf block lvm2 filesystems fsck)
+ #
+ ##   NOTE: If you have /usr on a separate partition, you MUST include the
+-#    usr, fsck and shutdown hooks.
+-HOOKS=(base udev autodetect modconf block filesystems keyboard fsck)
++#    usr and fsck hooks.
++HOOKS=(base udev autodetect modconf kms keyboard keymap consolefont block filesystems fsck)
+ 
+ # COMPRESSION
+ # Use this to compress the initramfs image. By default, zstd compression
+@@ -65,3 +65,9 @@ HOOKS=(base udev autodetect modconf block filesystems keyboard fsck)
+ # COMPRESSION_OPTIONS
+ # Additional options for the compressor
+ #COMPRESSION_OPTIONS=()
++
++# MODULES_DECOMPRESS
++# Decompress kernel modules during initramfs creation.
++# Enable to speedup boot process, disable to save RAM
++# during early userspace. Switch (yes/no).
++#MODULES_DECOMPRESS="yes"
+diff --git a/shell/bash-completion b/shell/bash-completion
+index ddcec51..2db92df 100644
+--- a/shell/bash-completion
++++ b/shell/bash-completion
+@@ -57,7 +57,7 @@ _files_from_dirs() {
+ _mkinitcpio() {
+     local action cur prev opts
+     opts=(-A --addhooks -c --config -D --hookdir -d --generatedir -g --generate -H --hookhelp -h --help -k --kernel
+-          -L --listhooks -M --automods -n --nocolor -P --allpresets -p --preset -r --moduleroot
++          -L --listhooks -M --automods -n --nocolor -P --allpresets -p --preset -R --remove -r --moduleroot
+           -S --skiphooks -s --save -t --builddir -V --version -v --verbose -z --compress
+           -U --cmdline --kernelimage --microcode --osrelease --splash --uefi --uefistub)
+ 
+diff --git a/shell/zsh-completion b/shell/zsh-completion
+index a62ed90..8bcef17 100644
+--- a/shell/zsh-completion
++++ b/shell/zsh-completion
+@@ -52,6 +52,7 @@ case $service in
+             '(-n --nocolor)'{-n,--nocolor}'[Disable colorized output messages]' \
+             '(-P --allpresets)'{-P,--allpresets}'[Process all presets in /etc/mkinitcpio.d]' \
+             '(-p --preset)'{-p,--preset}'[Build specified preset from /etc/mkinitcpio.d]:presets:_files -g "*(\:r)" -W /etc/mkinitcpio.d' \
++            '--remove[Remove specified preset images]' \
+             '(-r --moduleroot)'{-r,--moduleroot}'[Root directory for modules (default: /)]:directory:_files -/' \
+             '(-S --skiphooks)'{-S,--skiphooks}'[Skip specified hooks, comma-separated, during build]:hook(s):_sequence -s , _path_files -W hookdirs' \
+             '(-s --save)'{-s,--save}'[Save build directory (default: no)]' \
+-- 
+2.38.1.385.g3b08839926
+
