@@ -1,0 +1,58 @@
+# Maintainer: Piotr Gorski <lucjan.lucjanov@gmail.com>
+# Maintainer: Giancarlo Razzolini <grazzolini@archlinux.org>
+
+pkgname=dracut
+pkgver=056
+pkgrel=1
+pkgdesc="An event driven initramfs infrastructure"
+arch=('x86_64')
+url="https://dracut.wiki.kernel.org"
+license=('GPL')
+depends=('bash' 'coreutils' 'cpio' 'filesystem' 'findutils' 'grep' 'gzip'
+         'kmod' 'pkgconf' 'procps-ng' 'sed' 'systemd' 'util-linux' 'xz')
+makedepends=('asciidoc' 'bash-completion' 'git')
+optdepends=('binutils: --uefi option support'
+            'elfutils: strip binaries to reduce initramfs size'
+            'multipath-tools: dmraid dracut module support'
+            'pigz: faster gzip compression'
+            'sbsigntools: uefi_secureboot_cert/key configuration option support')
+provides=('initramfs')
+backup=('etc/dracut.conf')
+source=(https://mirrors.edge.kernel.org/pub/linux/utils/boot/dracut/dracut-${pkgver}.tar{.gz,.sign}
+        "dracut-install"
+        "dracut-remove"
+        "90-dracut-install.hook"
+        "60-dracut-remove.hook")
+sha512sums=('3a5b82976bfff9d71ca305b786fd9218849d28e0ef36356b19e558e50fefcca540dc15e6d93a15c7a8ade58d51dc32db8e4b0af924b5a9d85fa56a223501a9b6'
+            'SKIP'
+            '7cc41b1025e46f14068da395a7b6647ad18df15197c1fe38a0b91e03addebcc8f2dfcb42292e9df1b55c8f4dd2892212a720eab258e80ea098037fe49d8e83c1'
+            '57cf5efc3e0a5540cd1d9d617bdc5c122182d2416f9e4cb484a874c32c758fb347477c36f36684660a2a2cc8dd15c3c2a5a56237b3d0ddef3d47ce401786472a'
+            '2a5df7088a1db47ec2225c907cfbecd544fff47e031f5c3c435c30e456b603ce0ecada606d5f69e54714448808b5c359fb3c38a69e5c60be3744371e8a2b5b5c'
+            'b84677cc05865d1571723658f2661cb749acf9039133b95893c2cfddc30070f885e8cd047aaa5dbc04dd3d8f9f6a4aa6573ac916c70edfd1daab4ecc5c582980')
+validpgpkeys=(
+  '7F3D64824AC0B6B8009E50504BC0896FB5693595' # Harald Hoyer <harald@redhat.com>
+)
+
+build() {
+  local prefix=/usr sysconfdir=/etc
+  
+  cd "$srcdir/${pkgname}-${pkgver}"
+
+  ./configure \
+    --sysconfdir=${sysconfdir} \
+    --prefix=${prefix} \
+    --libdir=${prefix}/lib \
+    --systemdsystemunitdir=${prefix}/lib/systemd/system \
+    --bashcompletiondir=$(pkg-config --variable=completionsdir bash-completion)
+  make
+}
+
+package() {
+  cd "$srcdir/${pkgname}-${pkgver}"
+
+  DESTDIR="$pkgdir" make install
+  install -Dm644 "${srcdir}/90-dracut-install.hook" "${pkgdir}/usr/share/libalpm/hooks/90-dracut-install.hook"
+  install -Dm644 "${srcdir}/60-dracut-remove.hook"  "${pkgdir}/usr/share/libalpm/hooks/60-dracut-remove.hook"
+  install -Dm755 "${srcdir}/dracut-install"         "${pkgdir}/usr/share/libalpm/scripts/dracut-install"
+  install -Dm755 "${srcdir}/dracut-remove"          "${pkgdir}/usr/share/libalpm/scripts/dracut-remove"
+} 
