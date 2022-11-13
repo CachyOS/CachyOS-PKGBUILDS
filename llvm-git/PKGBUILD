@@ -172,10 +172,8 @@ package() {
         exit 1
     )
 
-    if [[ "${CARCH:?}" == "x86_64" ]]; then
         mv "${pkgdir:?}/usr/include/llvm/Config/llvm-config"{,-64}.h
         cp "${srcdir:?}/llvm-config.h" "${pkgdir:?}/usr/include/llvm/Config/llvm-config.h"
-    fi
 
     # Symlink LLVMgold.so from /usr/lib/bfd-plugins
     # https://bugs.archlinux.org/task/28479
