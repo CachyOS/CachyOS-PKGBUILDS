@@ -2,8 +2,8 @@
 # Maintainer: Giancarlo Razzolini <grazzolini@archlinux.org>
 
 pkgname=dracut
-pkgver=056
-pkgrel=2
+pkgver=057
+pkgrel=1.1
 pkgdesc="An event driven initramfs infrastructure"
 arch=('x86_64')
 url="https://dracut.wiki.kernel.org"
@@ -18,13 +18,12 @@ optdepends=('binutils: --uefi option support'
             'sbsigntools: uefi_secureboot_cert/key configuration option support')
 provides=('initramfs')
 backup=('etc/dracut.conf')
-source=(https://mirrors.edge.kernel.org/pub/linux/utils/boot/dracut/dracut-${pkgver}.tar{.gz,.sign}
+source=("https://github.com/dracutdevs/$pkgname/archive/$pkgver/$pkgname-$pkgver.tar.gz"
         "dracut-install"
         "dracut-remove"
         "90-dracut-install.hook"
         "60-dracut-remove.hook")
-sha512sums=('3a5b82976bfff9d71ca305b786fd9218849d28e0ef36356b19e558e50fefcca540dc15e6d93a15c7a8ade58d51dc32db8e4b0af924b5a9d85fa56a223501a9b6'
-            'SKIP'
+sha512sums=('8acdc8db2233a9abbaeea218cc5b1be68c4985088995f42624750783f8d40ecbb7fa97ab4f6468f67c079c8418590ace317c143a92d9305640b48c7c0edd4089'
             '7cc41b1025e46f14068da395a7b6647ad18df15197c1fe38a0b91e03addebcc8f2dfcb42292e9df1b55c8f4dd2892212a720eab258e80ea098037fe49d8e83c1'
             '57cf5efc3e0a5540cd1d9d617bdc5c122182d2416f9e4cb484a874c32c758fb347477c36f36684660a2a2cc8dd15c3c2a5a56237b3d0ddef3d47ce401786472a'
             '2a5df7088a1db47ec2225c907cfbecd544fff47e031f5c3c435c30e456b603ce0ecada606d5f69e54714448808b5c359fb3c38a69e5c60be3744371e8a2b5b5c'
