@@ -2,7 +2,7 @@
 
 pkgname=cachyos-hooks
 pkgver="$(date +%Y.%m)"
-pkgrel=4
+pkgrel=5
 pkgdesc='Cachy OS Pacman Hooks'
 groups=('cachyos')
 arch=('any')
@@ -18,6 +18,7 @@ source=(
   $_url/cachyos-reboot-required
   $_url/cachyos-check-reboot-required
   $_url/cachyos-reboot-required.hook
+  $_url/cachyos-nvidia.hook
 )
 
 sha512sums=('e1c475848e7d35db70e1a8f07766579947ad09c655d536d31eed97a309d847b33085cb859c65cb3747f6427e290f938b11c48ac4f20ee539ad5cf226fe434761'
@@ -26,7 +27,8 @@ sha512sums=('e1c475848e7d35db70e1a8f07766579947ad09c655d536d31eed97a309d847b3308
             '645b627e7b433a5a25d277437dc3a191b1ba0873cb0efafc885a93d6e32acb7e8769abf00318d5c8ff850c0b0e3386791a51f81dcf9b5d45a79ea54b5d1fdedb'
             '897a5117fb90b33a8ef55a50650b3fd666d1c1e6353e8221ed2922b45992fe1e7e719403280a646383173748cc2561470c5a510db1ae7403918c53ea6ed71c2b'
             'f417a16ef193954e9d0c9b403c2ffbaa7cf834d36e030c47c59880b57533265307bb5b43738257a4f64e9572ab2b65ae244644125fe08edb360f497180c5ce2b'
-            '9d8431016b91c38bdc5cadf8a9bd499a463489a955081a7a0f86e4b94cc62b90034f114f846f9e9320292341441c85e175f69c2585a51dbee0af7fc7ab84f982')
+            '9d8431016b91c38bdc5cadf8a9bd499a463489a955081a7a0f86e4b94cc62b90034f114f846f9e9320292341441c85e175f69c2585a51dbee0af7fc7ab84f982'
+            'ac375ce010e4b271556ad1012eb7d1c01b7ca28f1cb59c908d8b30da15580c181a20ea7b72f969bae59e59f6660edad334665e36e87646fe85e6184b0c82c790')
 
 package() {
   local hooks=$pkgdir/usr/share/libalpm/hooks
@@ -36,6 +38,7 @@ package() {
   install -Dm644 os-release.hook                  $hooks/os-release.hook
   install -Dm644 ${pkgname}.hook                  $hooks/${pkgname}.hook
   install -Dm644 cachyos-reboot-required.hook     $hooks/cachyos-reboot-required.hook
+  install -Dm644 cachyos-nvidia.hook              $hooks/cachyos-nvidia.hook
 
   install -Dm755 cachyos-reboot-required          $bin/cachyos-reboot-required
   install -Dm755 cachyos-check-reboot-required    $bin/cachyos-check-reboot-required
