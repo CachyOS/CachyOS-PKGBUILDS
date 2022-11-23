@@ -5,13 +5,13 @@
 
 pkgname=zstd
 pkgver=1.5.3
-pkgrel=6
+pkgrel=7
 pkgdesc='Zstandard - Fast real-time compression algorithm'
 url='https://facebook.github.io/zstd/'
 arch=(x86_64)
 license=(BSD GPL2)
 depends=(glibc gcc-libs zlib xz lz4)
-makedepends=(gtest)
+makedepends=(cmake gtest ninja git)
 provides=(libzstd.so)
 options=(!debug lto)
 source=(git+https://github.com/facebook/zstd.git#commit=096dccbc2d89a560db0b9892c53ea0c77eff20a1)
