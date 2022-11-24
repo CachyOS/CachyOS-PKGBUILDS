@@ -1,0 +1,48 @@
+# Maintainer: Levente Polyak <anthraxx[at]archlinux[dot]org>
+# Contributor: Bartłomiej Piotrowski <bpiotrowski@archlinux.org>
+# Contributor: Andrzej Giniewicz <gginiu@gmail.com>
+# Contributor: Johan Förberg <johan@forberg.se>
+
+_pkgname=zstd
+pkgname=lib32-zstd
+pkgver=1.5.3
+pkgrel=1
+pkgdesc='Zstandard - Fast real-time compression algorithm (32-bit)'
+url='https://facebook.github.io/zstd/'
+arch=('x86_64')
+license=('BSD' 'GPL2')
+depends=('zstd' 'lib32-glibc')
+makedepends=('gtest')
+provides=('libzstd.so')
+source=(git+https://github.com/facebook/zstd.git#commit=5d2fb4288f8230cc32c12f235b716fd25ecc89e1)
+sha256sums=('SKIP')
+
+build() {
+  cd ${_pkgname}
+  export CC="gcc -m32"
+  export CXX="g++ -m32"
+  export PKG_CONFIG_PATH="/usr/lib32/pkgconfig"
+  make
+  make zstdmt
+  make -C contrib/pzstd
+}
+
+check() {
+  cd ${_pkgname}
+  make check
+  make -C contrib/pzstd test
+}
+
+package() {
+  cd ${_pkgname}
+  make \
+    PREFIX=/usr \
+    LIBDIR=/usr/lib32 \
+    PKGCONFIGDIR=/usr/lib32/pkgconfig \
+    DESTDIR="${pkgdir}" \
+    install
+  rm -rf "${pkgdir}"/usr/{share,include,bin}
+  install -Dm 644 LICENSE -t "${pkgdir}/usr/share/licenses/${pkgname}"
+}
+
+# vim: ts=2 sw=2 et:
