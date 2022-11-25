@@ -109,7 +109,7 @@ build() {
         export CC_LD=lld
         export CXX_LD=lld
         export HOSTLD=ld.lld
-        _extra_build_flags+=(-DLLVM_USE_LINKER=lld)
+        _extra_build_flags+=(-DLLVM_USE_LINKER=mold)
     fi
 
     cmake -S llvm -B build -G Ninja \
@@ -127,7 +127,7 @@ build() {
         -DLLVM_ENABLE_FFI=ON \
         -DLLVM_ENABLE_BINDINGS=OFF \
         -DLLVM_POLLY_LINK_INTO_TOOLS=ON \
-        -DLLVM_ENABLE_PROJECTS="clang;clang-tools-extra;lld;lldb;mlir;polly;pstl" \
+        -DLLVM_ENABLE_PROJECTS="clang;clang-tools-extra;lld;lldb;mlir;polly;pstl;bolt" \
         -DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi;openmp;compiler-rt" \
         -DCLANG_LINK_CLANG_DYLIB=ON \
         -DLLDB_USE_SYSTEM_SIX=1 \
