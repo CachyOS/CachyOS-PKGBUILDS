@@ -1,31 +1,114 @@
 #!/bin/bash
+# Copyright (C) 2022 CachyOS team
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License along
+# with this program; if not, write to the Free Software Foundation, Inc.,
+# 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
-sudo true;
+set -e
 
-function rateArch() {
-    TMPFILE="$(mktemp)";
+export LC_MESSAGES=C
+export LANG=C
 
-    rate-mirrors --allow-root --concurrency=40 --save=$TMPFILE arch \
-        && sudo rm /etc/pacman.d/mirrorlist || true \
-        && sudo mv $TMPFILE /etc/pacman.d/mirrorlist
+if [ "$EUID" -ne 0 ]; then
+  echo "Please, run script as root"
+  exit 1
+fi
+
+disable_colors(){
+    unset ALL_OFF BOLD BLUE GREEN RED YELLOW
 }
 
-function rateCachyOS() {
-    TMPFILE="$(mktemp)";
-
-    rate-mirrors --allow-root --concurrency=40 --save=$TMPFILE cachyos \
-        && sudo rm /etc/pacman.d/cachyos-mirrorlist || true \
-        && sudo mv $TMPFILE /etc/pacman.d/cachyos-mirrorlist
+enable_colors(){
+    # prefer terminal safe colored and bold text when tput is supported
+    if tput setaf 0 &>/dev/null; then
+        ALL_OFF="$(tput sgr0)"
+        BOLD="$(tput bold)"
+        RED="${BOLD}$(tput setaf 1)"
+        GREEN="${BOLD}$(tput setaf 2)"
+        YELLOW="${BOLD}$(tput setaf 3)"
+        BLUE="${BOLD}$(tput setaf 4)"
+    else
+        ALL_OFF="\e[0m"
+        BOLD="\e[1m"
+        RED="${BOLD}\e[31m"
+        GREEN="${BOLD}\e[32m"
+        YELLOW="${BOLD}\e[33m"
+        BLUE="${BOLD}\e[34m"
+    fi
+    readonly ALL_OFF BOLD BLUE GREEN RED YELLOW
 }
 
-function rateCachyOSV3() {
-    TMPFILE="$(mktemp)";
+if [[ -t 2 ]]; then
+    enable_colors
+else
+    disable_colors
+fi
 
-    rate-mirrors --allow-root --concurrency=40 --save=$TMPFILE cachyos --arch=x86_64_v3 \
-        && sudo rm /etc/pacman.d/cachyos-v3-mirrorlist || true \
-        && sudo mv $TMPFILE /etc/pacman.d/cachyos-v3-mirrorlist
+msg() {
+    local mesg=$1; shift
+    printf "${GREEN}==>${ALL_OFF}${BOLD} ${mesg}${ALL_OFF}\n" "$@" >&2
 }
 
-rateArch
-rateCachyOS
-rateCachyOSV3
+info() {
+    local mesg=$1; shift
+    printf "${YELLOW} -->${ALL_OFF}${BOLD} ${mesg}${ALL_OFF}\n" "$@" >&2
+}
+
+error() {
+    local mesg=$1; shift
+    printf "${RED}==> ERROR:${ALL_OFF}${BOLD} ${mesg}${ALL_OFF}\n" "$@" >&2
+}
+
+cleanup() {
+    exit ${1:-0}
+}
+
+die() {
+    (( $# )) && error "$@"
+    cleanup 255
+}
+
+rate_mirror_ex() {
+    local name=$1
+    local mirrorlist_path=$2
+    local special_arch=$3
+    local _exitcode=-1
+
+    info "name '${name}'; mirrorlist_path '${mirrorlist_path}'; special_arch '${special_arch}'"
+
+    TMPFILE="$(mktemp)"
+
+    _rate_mirrors_flags=("--allow-root" "--save=${TMPFILE}" "${name}")
+    if [[ -n "${special_arch}" ]]; then
+        _rate_mirrors_flags+=("--arch=${special_arch}")
+    fi
+
+    rate-mirrors "${_rate_mirrors_flags[@]}"
+    _exitcode=$?
+    if [[ "${_exitcode}" -eq 0 ]]; then
+        cat "${mirrorlist_path}" > "${mirrorlist_path}-backup"
+        cat "${TMPFILE}" > "${mirrorlist_path}"
+        msg "Done [${name}] ${mirrorlist_path}"
+    else
+        die "rate-mirrors failed [errcode=%d]." "${_exitcode}"
+    fi
+
+    rm "${TMPFILE}"
+}
+
+MIRRORS_DEFAULT_DIR="/etc/pacman.d"
+
+rate_mirror_ex arch "${MIRRORS_DEFAULT_DIR}/mirrorlist"
+rate_mirror_ex cachyos "${MIRRORS_DEFAULT_DIR}/cachyos-mirrorlist"
+rate_mirror_ex cachyos "${MIRRORS_DEFAULT_DIR}/cachyos-v3-mirrorlist" x86_64_v3
