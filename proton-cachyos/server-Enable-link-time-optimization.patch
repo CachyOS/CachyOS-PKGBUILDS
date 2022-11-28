@@ -1,0 +1,24 @@
+From 8f807cf790bd41b989ea3caafd6ed21e6552188b Mon Sep 17 00:00:00 2001
+From: Peter Jung <admin@ptr1337.dev>
+Date: Mon, 28 Nov 2022 18:57:07 +0100
+Subject: [PATCH] server-Enable-link-time-optimization
+
+---
+ server/Makefile.in | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/server/Makefile.in b/server/Makefile.in
+index 6387e11496a..09713387ca3 100644
+--- a/server/Makefile.in
++++ b/server/Makefile.in
+@@ -51,6 +51,6 @@ MANPAGES = \
+ 	wineserver.fr.UTF-8.man.in \
+ 	wineserver.man.in
+ 
+-EXTRALIBS = $(LDEXECFLAGS) $(RT_LIBS) $(INOTIFY_LIBS) $(PROCSTAT_LIBS)
++EXTRALIBS = $(LDEXECFLAGS) $(RT_LIBS) $(INOTIFY_LIBS) $(PROCSTAT_LIBS) -flto=auto -flto-partition=one -fdevirtualize-at-ltrans $(CFLAGS)
+ 
+ unicode_EXTRADEFS = -DNLSDIR="\"${nlsdir}\"" -DBIN_TO_NLSDIR=\"`${MAKEDEP} -R ${bindir} ${nlsdir}`\"
+-- 
+2.39.0.rc0.33.g815c1e8202
+
