@@ -4,8 +4,8 @@
 
 pkgname=uksmd-git
 _pkgname=uksmd
-pkgver=0.0.0.r37.gf10f38e
-pkgrel=6
+pkgver=0.0.0.r38.g15f2662
+pkgrel=1
 epoch=1
 pkgdesc="Userspace KSM helper daemon"
 url="https://codeberg.org/pf-kernel/uksmd"
@@ -15,10 +15,9 @@ depends=('procps-ng' 'libcap-ng')
 makedepends=('meson' 'git')
 conflicts=('uksmd')
 provides=("uksmd=${pkgver}")
-source=('git+https://codeberg.org/pf-kernel/uksmd'
-        'uksmdstats')
-sha256sums=('SKIP'
-            '626a4c154d24debea65727221a927c3c4a44b5328ea24cbbb03ef2bd4ec1c226')
+#source=('git+https://codeberg.org/pf-kernel/uksmd')
+source=('git+https://codeberg.org/sirlucjan/uksmd')
+sha256sums=('SKIP')
 
 pkgver() {
   cd $_pkgname
@@ -50,6 +49,5 @@ package() {
 
   cd $_pkgname
   meson install -C build --destdir "${pkgdir}"
-  install -Dm 755 ${srcdir}/uksmdstats "${pkgdir}"/usr/bin/uksmdstats
   install -Dm 644 "COPYING" "${pkgdir}/usr/share/licenses/${_pkgname}/LICENSE"
 }
