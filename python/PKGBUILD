@@ -1,0 +1,162 @@
+# Maintainer: Angel Velasquez <angvp@archlinux.org>
+# Maintainer: Felix Yan <felixonmars@archlinux.org>
+# Contributor: Stéphane Gaudreault <stephane@archlinux.org>
+# Contributor: Allan McRae <allan@archlinux.org>
+# Contributor: Jason Chu <jason@archlinux.org>
+
+shopt -s extglob
+
+pkgbase=python
+pkgname=(python python-tests)
+pkgver=3.10.8
+pkgrel=4
+_pybasever=${pkgver%.*}
+pkgdesc="Next generation of the python high-level scripting language"
+arch=('x86_64')
+license=('custom')
+url="https://www.python.org/"
+options=('debug')
+depends=('bzip2' 'expat' 'gdbm' 'libffi' 'libnsl' 'libxcrypt' 'openssl' 'zlib')
+makedepends=('tk' 'sqlite' 'bluez-libs' 'mpdecimal' 'llvm' 'gdb' 'xorg-server-xvfb' 'ttf-font')
+source=("https://www.python.org/ftp/python/${pkgver%rc*}/Python-${pkgver}.tar.xz"{,.asc}
+        "0003-AVX2-and-AVX512-support.patch"
+        "0004-Build-avx2-and-avx512-versions-of-the-math-library.patch")
+sha512sums=('40e3e77d79618c81d6fc57c5d119b99c2959dcf932f40aad6b26f2ec39c5e713e6ff298f7597b4fad2ab94680db3732483b5ca0a45e6ae58c14580b3ea44cb0f'
+            'SKIP'
+            '2bfab3aaf5b72cd090aa396fb93575ba8db96abc9a6b9098ca661f3b62b01e6b8828b382495e8eb966f7b2f1a5ec02ef5ca08a2d296a57f656e7ea7cb534fb80'
+            '617cbf2672e4ebb82026207faba3cf92dbde0bd5109ef4458e9106755990e4023d242d8fdc0b754a191179e40a041194e9e8572e22afce276b96e526babcad07')
+validpgpkeys=('0D96DF4D4110E5C43FBFB17F2D347EA6AA65421D'  # Ned Deily (Python release signing key) <nad@python.org>
+              'E3FF2839C048B25C084DEBE9B26995E310250568'  # Łukasz Langa (GPG langa.pl) <lukasz@langa.pl>
+              'A035C8C19219BA821ECEA86B64E628F8D684696D') # Pablo Galindo Salgado <pablogsal@gmail.com>
+
+prepare() {
+  cd Python-${pkgver}
+
+  # FS#23997
+  sed -i -e "s|^#.* /usr/local/bin/python|#!/usr/bin/python|" Lib/cgi.py
+
+  # Ensure that we are using the system copy of various libraries (expat, libffi, and libmpdec),
+  # rather than copies shipped in the tarball
+  rm -r Modules/expat
+  rm -r Modules/_ctypes/{darwin,libffi}*
+  rm -r Modules/_decimal/libmpdec
+}
+
+build() {
+  cd Python-${pkgver}
+
+  # PGO should be done with -O3
+  CFLAGS="${CFLAGS/-O2/-O3} -ffat-lto-objects"
+
+  msg2 "---- clearlinux patches"
+  patch -Np1 -i "${srcdir}/0003-AVX2-and-AVX512-support.patch"
+  patch -Np1 -i "${srcdir}/0004-Build-avx2-and-avx512-versions-of-the-math-library.patch"
+
+  # Disable bundled pip & setuptools
+  ./configure --prefix=/usr \
+              --enable-shared \
+              --with-computed-gotos \
+              --enable-optimizations \
+              --with-lto \
+              --enable-ipv6 \
+              --with-system-expat \
+              --with-dbmliborder=gdbm:ndbm \
+              --with-system-libmpdec \
+              --enable-loadable-sqlite-extensions \
+              --without-ensurepip \
+              --with-tzpath=/usr/share/zoneinfo
+
+  # Obtain next free server number for xvfb-run; this even works in a chroot environment.
+  export servernum=99
+  while ! xvfb-run -a -n "$servernum" /bin/true 2>/dev/null; do servernum=$((servernum+1)); done
+
+  LC_CTYPE=en_US.UTF-8 xvfb-run -s "-screen 0 1920x1080x16 -ac +extension GLX" -a -n "$servernum" make EXTRA_CFLAGS="$CFLAGS"
+}
+
+check() {
+  # test_socket: test.test_socket.RDSTest.testPeek hangs https://bugs.python.org/issue35247
+  # test_tk: tkinter.test.test_tkinter.test_colorchooser.DefaultRootTest hangs
+  # test_pyexpat: our `debug` implementation rewrites source location, which breaks the build-time
+  #               only test test.test_pyexpat.HandlerExceptionTest as it cannot find source file in
+  #               the to-be-installed debug package
+
+  cd Python-${pkgver}
+
+  # Obtain next free server number for xvfb-run; this even works in a chroot environment.
+  export servernum=99
+  while ! xvfb-run -a -n "$servernum" /bin/true 2>/dev/null; do servernum=$((servernum+1)); done
+
+  LD_LIBRARY_PATH="${srcdir}/Python-${pkgver}":${LD_LIBRARY_PATH} \
+  LC_CTYPE=en_US.UTF-8 xvfb-run -s "-screen 0 1920x1080x16 -ac +extension GLX" -a -n "$servernum" \
+    "${srcdir}/Python-${pkgver}/python" -m test.regrtest -v -uall -x test_socket -x test_tk -x test_pyexpat
+}
+
+package_python() {
+  optdepends=('python-setuptools'
+              'python-pip'
+              'sqlite'
+              'mpdecimal: for decimal'
+              'xz: for lzma'
+              'tk: for tkinter')
+  provides=('python3')
+  replaces=('python3')
+
+  cd Python-${pkgver}
+
+  # Hack to avoid building again
+  sed -i 's/^all:.*$/all: build_all/' Makefile
+
+  # PGO should be done with -O3
+  CFLAGS="${CFLAGS/-O2/-O3}"
+
+  make DESTDIR="${pkgdir}" EXTRA_CFLAGS="$CFLAGS" install
+
+  # Why are these not done by default...
+  ln -s python3               "${pkgdir}"/usr/bin/python
+  ln -s python3-config        "${pkgdir}"/usr/bin/python-config
+  ln -s idle3                 "${pkgdir}"/usr/bin/idle
+  ln -s pydoc3                "${pkgdir}"/usr/bin/pydoc
+  ln -s python${_pybasever}.1 "${pkgdir}"/usr/share/man/man1/python.1
+
+  # some useful "stuff" FS#46146
+  install -dm755 "${pkgdir}"/usr/lib/python${_pybasever}/Tools/{i18n,scripts}
+  install -m755 Tools/i18n/{msgfmt,pygettext}.py "${pkgdir}"/usr/lib/python${_pybasever}/Tools/i18n/
+  install -m755 Tools/scripts/{README,*py} "${pkgdir}"/usr/lib/python${_pybasever}/Tools/scripts/
+
+  # License
+  install -Dm644 LICENSE "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE"
+
+  # Split tests
+  cd "$pkgdir"/usr/lib/python*/
+  rm -r {ctypes/test,distutils/tests,idlelib/idle_test,lib2to3/tests,sqlite3/test,tkinter/test,unittest/test}
+  cd test
+  # FS#76193
+  rm -r !(support)
+}
+
+package_python-tests() {
+  pkgdesc="Regression tests packages for Python"
+  depends=('python')
+
+  cd Python-${pkgver}
+
+  make DESTDIR="${pkgdir}" EXTRA_CFLAGS="$CFLAGS" libinstall
+  cd "$pkgdir"/usr/lib/python*/
+  rm -r !(test|ctypes|distutils|idlelib|lib2to3|sqlite3|tkinter|unittest)
+  cd "$pkgdir"/usr/lib/python*/test
+  rm -r support
+  cd "$pkgdir"/usr/lib/python*/ctypes
+  rm -r !(test)
+  cd "$pkgdir"/usr/lib/python*/distutils
+  rm -r !(tests)
+  cd "$pkgdir"/usr/lib/python*/idlelib
+  rm -r !(idle_test)
+  cd "$pkgdir"/usr/lib/python*/lib2to3
+  rm -r !(tests)
+  cd "$pkgdir"/usr/lib/python*/sqlite3
+  rm -r !(test)
+  cd "$pkgdir"/usr/lib/python*/tkinter
+  rm -r !(test)
+  cd "$pkgdir"/usr/lib/python*/unittest
+  rm -r !(test)
+}
