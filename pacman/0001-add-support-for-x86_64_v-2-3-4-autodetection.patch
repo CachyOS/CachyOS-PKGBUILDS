@@ -1,14 +1,20 @@
-From 6e96139f8ac71ef8fc3aafba6f89fa224e630d80 Mon Sep 17 00:00:00 2001
+From 8ed5509e23e9e891f41887024271b922e58aa057 Mon Sep 17 00:00:00 2001
 From: Vladislav Nepogodin <nepogodin.vlad@gmail.com>
-Date: Sun, 9 Oct 2022 22:36:56 +0400
-Subject: [PATCH] add support for x86_64_v3 autodetection
+Date: Fri, 2 Dec 2022 22:03:46 +0400
+Subject: [PATCH] add support for x86_64_v{2,3,4} autodetection
 
+This adds detection of x86_64_v2, x86_64_v3, x86_64_v4.
+
+x86_64_v2: inherits all x86_64_v1 + [SSSE3, SSE4_1, SSE4_2]
+x86_64_v3: inherits all x86_64_v1,x86_64_v2 + [AVX, AVX2]
+x86_64_v4: inherits all x86_64_v1,x86_64_v2,x86_64_v3 +
+[AVX512BW,AVX512BW,AVX512CD,AVX512DQ,AVX512VL]
 ---
  lib/libalpm/alpm.h             |   7 ++
- lib/libalpm/cpu_capabilities.c | 156 +++++++++++++++++++++++++++++++++
+ lib/libalpm/cpu_capabilities.c | 184 +++++++++++++++++++++++++++++++++
  lib/libalpm/meson.build        |   1 +
- src/pacman/conf.c              |  20 +++--
- 4 files changed, 177 insertions(+), 7 deletions(-)
+ src/pacman/conf.c              |  20 ++--
+ 4 files changed, 205 insertions(+), 7 deletions(-)
  create mode 100644 lib/libalpm/cpu_capabilities.c
 
 diff --git a/lib/libalpm/alpm.h b/lib/libalpm/alpm.h
@@ -31,10 +37,10 @@ index 3304ae77..9f543d91 100644
   * @return the configured package architectures
 diff --git a/lib/libalpm/cpu_capabilities.c b/lib/libalpm/cpu_capabilities.c
 new file mode 100644
-index 00000000..95e1251e
+index 00000000..8eaa844f
 --- /dev/null
 +++ b/lib/libalpm/cpu_capabilities.c
-@@ -0,0 +1,156 @@
+@@ -0,0 +1,184 @@
 +/*
 + *  cpu_capabilities.c
 + *
@@ -56,6 +62,7 @@ index 00000000..95e1251e
 +
 +#include <stdlib.h>
 +#include <string.h>
++#include <stdbool.h>
 +#include <sys/types.h>
 +#include <sys/utsname.h> /* uname */
 +
@@ -111,17 +118,21 @@ index 00000000..95e1251e
 +  SSE2 = 1 << 0,
 +  SSSE3 = 1 << 1,
 +  SSE41 = 1 << 2,
-+  AVX = 1 << 3,
-+  AVX2 = 1 << 4,
-+  AVX512F = 1 << 5,
-+  AVX512VL = 1 << 6,
++  SSE42 = 1 << 3,
++  AVX = 1 << 4,
++  AVX2 = 1 << 5,
++  AVX512F = 1 << 6,
++  AVX512BW = 1 << 7,
++  AVX512CD = 1 << 8,
++  AVX512DQ = 1 << 9,
++  AVX512VL = 1 << 10,
 +  /* ... */
 +  UNDEFINED = 1 << 30
 +};
 +
-+enum cpu_feature g_cpu_features = UNDEFINED;
++static enum cpu_feature g_cpu_features = UNDEFINED;
 +
-+enum cpu_feature get_cpu_features(void) {
++static enum cpu_feature get_cpu_features(void) {
 +  if (g_cpu_features != UNDEFINED) {
 +    return g_cpu_features;
 +  }
@@ -143,6 +154,8 @@ index 00000000..95e1251e
 +    features |= SSSE3;
 +  if (*ecx & (1UL << 19))
 +    features |= SSE41;
++  if (*ecx & (1UL << 20))
++    features |= SSE42;
 +
 +  if (*ecx & (1UL << 27)) { // OSXSAVE
 +    const uint64_t mask = xgetbv();
@@ -158,6 +171,12 @@ index 00000000..95e1251e
 +            features |= AVX512VL;
 +          if (*ebx & (1UL << 16))
 +            features |= AVX512F;
++          if (*ebx & (1UL << 30))
++            features |= AVX512BW;
++          if (*ebx & (1UL << 28))
++            features |= AVX512CD;
++          if (*ebx & (1UL << 17))
++            features |= AVX512DQ;
 +        }
 +      }
 +    }
@@ -183,10 +202,25 @@ index 00000000..95e1251e
 +
 +    const enum cpu_feature features = get_cpu_features();
 +
++    /* Check for x86_64_v2 */
++    const bool supports_v2 = (features & SSSE3) && (features & SSE41) && (features & SSE42);
++    if (supports_v2) {
++        _alpm_log(handle, ALPM_LOG_DEBUG, "cpu supports x86_64_v2\n");
++        supported_architectures = alpm_list_add(supported_architectures, strdup("x86_64_v2"));
++    }
++
 +    /* Check for x86_64_v3 */
-+    if ((features & SSE41) && (features & AVX) && (features & AVX2)) {
++    const bool supports_v3 = (supports_v2) && (features & AVX) && (features & AVX2);
++    if (supports_v3) {
 +        _alpm_log(handle, ALPM_LOG_DEBUG, "cpu supports x86_64_v3\n");
 +        supported_architectures = alpm_list_add(supported_architectures, strdup("x86_64_v3"));
++    }
++    
++    /* Check for x86_64_v4 */
++    const bool supports_v4 = (supports_v3) && (features & AVX512F) && (features & AVX512VL) && (features & AVX512BW) && (features & AVX512CD) && (features & AVX512DQ);
++    if (supports_v4) {
++        _alpm_log(handle, ALPM_LOG_DEBUG, "cpu supports x86_64_v4\n");
++        supported_architectures = alpm_list_add(supported_architectures, strdup("x86_64_v4"));
 +    }
 +
 +    return supported_architectures;
@@ -242,5 +276,5 @@ index f9edf75b..5401acb0 100644
  
  	pm_printf(ALPM_LOG_DEBUG, "config: arch: %s\n", arch);
 -- 
-2.38.0
+2.38.1
 
