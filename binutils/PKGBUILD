@@ -7,8 +7,8 @@
 
 pkgname=binutils
 pkgver=2.39
-_commit=aab7ad7d33e8c82f59fcc3f56435a2453b4177df
-pkgrel=5
+_commit=3480ff9ff3e6dbd48fc2df569529caa02c7651f2
+pkgrel=7
 pkgdesc='A set of programs to assemble and manipulate binary and object files'
 arch=(x86_64)
 url='https://www.gnu.org/software/binutils/'
@@ -20,6 +20,7 @@ checkdepends=(dejagnu debuginfod bc)
 optdepends=('debuginfod: for debuginfod server/client functionality')
 conflicts=(binutils-multilib)
 replaces=(binutils-multilib)
+backup=('etc/gprofng.rc')
 options=(staticlibs !distcc !ccache debug)
 source=(git+https://sourceware.org/git/binutils-gdb.git#commit=${_commit}
         gold-warn-unsupported.patch)
@@ -43,11 +44,28 @@ prepare() {
   patch -Np1 -i "${srcdir}"/gold-warn-unsupported.patch
 }
 
+prepare() {
+  [[ ! -d binutils-gdb ]] && ln -s binutils-$pkgver binutils-gdb
+  mkdir -p binutils-build
+
+  cd binutils-gdb
+
+  # Turn off development mode (-Werror, gas run-time checks, date in sonames)
+  sed -i '/^development=/s/true/false/' bfd/development.sh
+
+  # Creds @Fedora
+  # Change the gold configuration script to only warn about
+  # unsupported targets.  This allows the binutils to be built with
+  # BPF support enabled.
+  patch -Np1 -i "${srcdir}"/gold-warn-unsupported.patch
+}
+
 build() {
   cd binutils-build
 
   "$srcdir/binutils-gdb/configure" \
     --prefix=/usr \
+    --sysconfdir="${pkgdir}"/etc \
     --with-lib-path=/usr/lib:/usr/local/lib \
     --with-bugurl=https://bugs.archlinux.org/ \
     --enable-cet \
@@ -57,6 +75,7 @@ build() {
     --enable-install-libiberty \
     --enable-jansson \
     --enable-ld=default \
+    --enable-new-dtags \
     --enable-pgo-build=lto \
     --enable-plugins \
     --enable-relro \
