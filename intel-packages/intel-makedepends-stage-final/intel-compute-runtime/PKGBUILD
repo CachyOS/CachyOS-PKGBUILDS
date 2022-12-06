@@ -2,7 +2,7 @@
 # Maintainer: Bruno Pagani <archange@archlinux.org>
 
 pkgname=intel-compute-runtime
-pkgver=22.43.24558
+pkgver=22.43.24595.30
 pkgrel=1
 pkgdesc="Intel(R) Graphics Compute Runtime for oneAPI Level Zero and OpenCL(TM) Driver"
 arch=(x86_64)
@@ -16,7 +16,7 @@ provides=(opencl-driver level-zero-driver)
 # https://github.com/intel/compute-runtime/issues/528
 options=(!lto)
 source=(https://github.com/intel/compute-runtime/archive/${pkgver}/${pkgname}-${pkgver}.tar.gz)
-sha256sums=('0b0e4b94192b848d67e19926622c6a19ae59567d363ec6740d0491483bf60b69')
+sha256sums=('b032e55e16675d75540782dd7d044b7af0923afb34a9a3945656078f97e96491')
 
 build() {
   # ${${pkgver#*.}%.*} not supported by bash?
@@ -36,6 +36,6 @@ package() {
   make -C build DESTDIR="${pkgdir}" install
   install -Dm755 build/bin/libocloc.so -t "${pkgdir}"/usr/lib/intel-opencl
   install -Dm644 compute-runtime-${pkgver}/LICENSE.md -t "${pkgdir}"/usr/share/licenses/${pkgname}
-  
+
   ln -s $(find "${pkgdir}"/usr/lib -regex '.*libze_intel_gpu.so.[0-9]*' -exec basename {} \;) "${pkgdir}"/usr/lib/libze_intel_gpu.so
 }
