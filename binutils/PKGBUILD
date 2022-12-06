@@ -44,22 +44,6 @@ prepare() {
   patch -Np1 -i "${srcdir}"/gold-warn-unsupported.patch
 }
 
-prepare() {
-  [[ ! -d binutils-gdb ]] && ln -s binutils-$pkgver binutils-gdb
-  mkdir -p binutils-build
-
-  cd binutils-gdb
-
-  # Turn off development mode (-Werror, gas run-time checks, date in sonames)
-  sed -i '/^development=/s/true/false/' bfd/development.sh
-
-  # Creds @Fedora
-  # Change the gold configuration script to only warn about
-  # unsupported targets.  This allows the binutils to be built with
-  # BPF support enabled.
-  patch -Np1 -i "${srcdir}"/gold-warn-unsupported.patch
-}
-
 build() {
   cd binutils-build
 
