@@ -9,7 +9,7 @@ shopt -s extglob
 pkgbase=python
 pkgname=(python python-tests)
 pkgver=3.10.8
-pkgrel=4
+pkgrel=5
 _pybasever=${pkgver%.*}
 pkgdesc="Next generation of the python high-level scripting language"
 arch=('x86_64')
@@ -45,8 +45,8 @@ prepare() {
 build() {
   cd Python-${pkgver}
 
-  # PGO should be done with -O3
-  CFLAGS="${CFLAGS/-O2/-O3} -ffat-lto-objects"
+  export CFLAGS+="-ffunction-sections -fno-semantic-interposition -fomit-frame-pointer "
+  export CXXLAGS+="-ffunction-sections -fno-semantic-interposition -fomit-frame-pointer "
 
   msg2 "---- clearlinux patches"
   patch -Np1 -i "${srcdir}/0003-AVX2-and-AVX512-support.patch"

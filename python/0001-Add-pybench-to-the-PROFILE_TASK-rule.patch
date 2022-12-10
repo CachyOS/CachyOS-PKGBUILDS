@@ -1,0 +1,37 @@
+From 69f1e6caf7118c2d698a1dd879f01b47fb49d690 Mon Sep 17 00:00:00 2001
+From: vrodri3 <victor.rodriguez.bahena@intel.com>
+Date: Tue, 16 Feb 2016 19:52:48 +0000
+Subject: [PATCH] Add pybench to the PROFILE_TASK rule
+
+This is necesary due to the fact that pybench is the main benchmark that
+industry use to compare python performance. Openbenchmarking used it
+so we need it as a base of PGO optimizations
+
+Signed-off-by: vrodri3 <victor.rodriguez.bahena@intel.com>
+---
+ Makefile.pre.in | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/Makefile.pre.in b/Makefile.pre.in
+index ee73edd..82d3173 100644
+--- a/Makefile.pre.in
++++ b/Makefile.pre.in
+@@ -210,6 +210,7 @@ TCLTK_LIBS=	@TCLTK_LIBS@
+ 
+ # The task to run while instrument when building the profile-opt target
+ PROFILE_TASK=-m test.regrtest --pgo -x test_asyncore test_gdb test_multiprocessing test_subprocess
++PROFILE_TASK_PYBENCH= $(srcdir)/Tools/pybench/pybench.py -n 2 --with-gc --with-syscheck
+ 
+ # === Definitions added by makesetup ===
+ 
+@@ -450,6 +451,7 @@ build_all_generate_profile:
+ run_profile_task:
+ 	: # FIXME: can't run for a cross build
+ 	$(LLVM_PROF_FILE) $(RUNSHARED) ./$(BUILDPYTHON) $(PROFILE_TASK) || true
++	$(LLVM_PROF_FILE) $(RUNSHARED) ./$(BUILDPYTHON) $(PROFILE_TASK_PYBENCH) || true
+ 
+ build_all_merge_profile:
+ 	$(LLVM_PROF_MERGER)
+-- 
+2.7.0
+
