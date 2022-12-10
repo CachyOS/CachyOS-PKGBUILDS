@@ -1,0 +1,48 @@
+From 71f678a31b50524bfa9c0f9d8a25223e104a6c31 Mon Sep 17 00:00:00 2001
+From: Arjan van de Ven <arjan@linux.intel.com>
+Date: Thu, 23 Jan 2020 12:39:31 -0800
+Subject: [PATCH 5/5] Enable hugepages.
+
+---
+ Zend/zend_alloc.c               | 5 ++++-
+ ext/opcache/shared_alloc_mmap.c | 1 +
+ 2 files changed, 5 insertions(+), 1 deletion(-)
+
+diff --git a/Zend/zend_alloc.c b/Zend/zend_alloc.c
+index 21ccf850..7c275ba2 100644
+--- a/Zend/zend_alloc.c
++++ b/Zend/zend_alloc.c
+@@ -195,7 +195,7 @@ typedef struct  _zend_mm_free_slot zend_mm_free_slot;
+ typedef struct  _zend_mm_chunk     zend_mm_chunk;
+ typedef struct  _zend_mm_huge_list zend_mm_huge_list;
+ 
+-int zend_mm_use_huge_pages = 0;
++int zend_mm_use_huge_pages = 1;
+ 
+ /*
+  * Memory is retrieved from OS by chunks of fixed size 2MB.
+@@ -478,6 +478,9 @@ static void *zend_mm_mmap(size_t size)
+ #endif
+ 		return NULL;
+ 	}
++	if (zend_mm_use_huge_pages && size == ZEND_MM_CHUNK_SIZE) {
++		madvise (ptr, size , MADV_HUGEPAGE);
++	}
+ 	return ptr;
+ #endif
+ }
+diff --git a/ext/opcache/shared_alloc_mmap.c b/ext/opcache/shared_alloc_mmap.c
+index dc02d038..62e9bb5c 100644
+--- a/ext/opcache/shared_alloc_mmap.c
++++ b/ext/opcache/shared_alloc_mmap.c
+@@ -74,6 +74,7 @@ static int create_segments(size_t requested_size, zend_shared_segment ***shared_
+ 		*error_in = "mmap";
+ 		return ALLOC_FAILURE;
+ 	}
++	madvise (shared_segment->p, requested_size , MADV_HUGEPAGE);
+ 
+ 	shared_segment->pos = 0;
+ 	shared_segment->size = requested_size;
+-- 
+2.25.0
+

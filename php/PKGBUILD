@@ -1,0 +1,346 @@
+# Maintainer: Pierre Schmitz <pierre@archlinux.de>
+
+pkgbase=php
+pkgname=('php'
+         'php-cgi'
+         'php-apache'
+         'php-fpm'
+         'php-embed'
+         'php-phpdbg'
+         'php-dblib'
+         'php-enchant'
+         'php-gd'
+         'php-imap'
+         'php-intl'
+         'php-sodium'
+         'php-odbc'
+         'php-pgsql'
+         'php-pspell'
+         'php-snmp'
+         'php-sqlite'
+         'php-tidy'
+         'php-xsl')
+pkgver=8.1.3
+pkgrel=2
+arch=('x86_64')
+license=('PHP')
+url='https://www.php.net/'
+makedepends=('apache' 'aspell' 'c-client' 'db' 'gdbm' 'enchant' 'gd' 'gmp' 'icu' 'libsodium' 'libxslt' 'libzip' 'net-snmp'
+             'postgresql-libs' 'sqlite' 'systemd' 'tidy' 'unixodbc' 'curl' 'libtool' 'postfix' 'freetds' 'pcre2' 'libnsl'
+             'oniguruma')
+checkdepends=('procps-ng')
+options=(debug)
+source=("https://php.net/distributions/${pkgbase}-${pkgver}.tar.xz"{,.asc}
+        'apache.patch' 'apache.conf' 'php-fpm.patch' 'php-fpm.tmpfiles' 'php.ini.patch'
+        '0005-Enable-hugepages.patch')
+sha256sums=('5d65a11071b47669c17452fb336c290b67c101efb745c1dbe7525b5caf546ec6'
+            'SKIP'
+            '702b163c66c65af92dcad8d79f41bda84bcd5d863235fcf1497c33a86db9e4ca'
+            '4a2add00d93fa991ccdf6356090264c1059c79935642afff6e8d4a2107fa037e'
+            'aa55fa4fc5c2b2493065bbd00cfe3c97a1b22b3dc7d34f8fd303de18cafe844f'
+            '640dba0d960bfeaae9ad38d2826d3f6b5d6c175a4d3e16664eefff29141faad5'
+            'b3b3385f1c36e272671c7db238b2a69896e11a82db90dafd74964f2eabbfa2f2'
+            'f13b7c538f967e663cf597d61dbc6c859a33fe8263cbe8f0732aa99b3b0cdc54')
+validpgpkeys=('F1F692238FBC1666E5A5CCD4199F9DFEF6FFBAFD'
+              '39B641343D8C104B2B146DC3F9C39DC0B9698544')
+_interpreter=${pkgver%.*}
+
+prepare() {
+	cd "${srcdir}/${pkgbase}-${pkgver}"
+
+	patch -p0 -i "${srcdir}/apache.patch"
+	patch -p0 -i "${srcdir}/php-fpm.patch"
+	patch -p0 -i "${srcdir}/php.ini.patch"
+	patch -Np1 < "${srcdir}/0005-Enable-hugepages.patch"
+	autoconf
+
+	# Disable failing tests
+	rm tests/output/stream_isatty_*.phpt
+	rm Zend/tests/arginfo_zpp_mismatch*.phpt
+}
+
+build() {
+
+    export CFLAGS+="-fno-semantic-interposition -mprefer-vector-width=256 "
+	export CXXLAGS+="-fno-semantic-interposition -mprefer-vector-width=256 "
+	local _phpconfig="--srcdir=../${pkgbase}-${pkgver} \
+		--config-cache \
+		--prefix=/usr \
+		--sbindir=/usr/bin \
+		--sysconfdir=/etc/php \
+		--localstatedir=/var \
+		--with-layout=GNU \
+		--with-config-file-path=/etc/php \
+		--with-config-file-scan-dir=/etc/php/conf.d \
+		--disable-rpath \
+		--mandir=/usr/share/man \
+		--disable-gcc-global-regs \
+		"
+
+	local _phpextensions="\
+		--enable-bcmath=shared \
+		--enable-calendar=shared \
+		--enable-dba=shared \
+		--enable-exif=shared \
+		--enable-ftp=shared \
+		--enable-gd=shared \
+		--enable-intl=shared \
+		--enable-mbstring \
+		--enable-pcntl \
+		--enable-shmop=shared \
+		--enable-soap=shared \
+		--enable-sockets=shared \
+		--enable-sysvmsg=shared \
+		--enable-sysvsem=shared \
+		--enable-sysvshm=shared \
+		--with-bz2=shared \
+		--with-curl=shared \
+		--with-db4=/usr \
+		--with-enchant=shared \
+		--with-external-gd \
+		--with-external-pcre \
+		--with-ffi=shared \
+		--with-gdbm \
+		--with-gettext=shared \
+		--with-gmp=shared \
+		--with-iconv=shared \
+		--with-imap-ssl \
+		--with-imap=shared \
+		--with-kerberos \
+		--with-ldap=shared \
+		--with-ldap-sasl \
+		--with-mhash \
+		--with-mysql-sock=/run/mysqld/mysqld.sock \
+		--with-mysqli=shared,mysqlnd \
+		--with-openssl \
+		--with-password-argon2 \
+		--with-pdo-dblib=shared,/usr \
+		--with-pdo-mysql=shared,mysqlnd \
+		--with-pdo-odbc=shared,unixODBC,/usr \
+		--with-pdo-pgsql=shared \
+		--with-pdo-sqlite=shared \
+		--with-pgsql=shared \
+		--with-pspell=shared \
+		--with-readline \
+		--with-snmp=shared \
+		--with-sodium=shared \
+		--with-sqlite3=shared \
+		--with-tidy=shared \
+		--with-unixODBC=shared \
+		--with-xsl=shared \
+		--with-zip=shared \
+		--with-zlib \
+		"
+
+	EXTENSION_DIR=/usr/lib/php/modules
+	export EXTENSION_DIR
+
+	mkdir "${srcdir}/build"
+	cd "${srcdir}/build"
+	ln -s "../${pkgbase}-${pkgver}/configure"
+	./configure ${_phpconfig} \
+		--enable-cgi \
+		--enable-fpm \
+		--with-fpm-systemd \
+		--with-fpm-acl \
+		--with-fpm-user=http \
+		--with-fpm-group=http \
+		--enable-embed=shared \
+		${_phpextensions}
+	make
+
+	# apache
+	# reuse the previous run; this will save us a lot of time
+	cp -a "${srcdir}/build" "${srcdir}/build-apache"
+	cd "${srcdir}/build-apache"
+	./configure ${_phpconfig} \
+		--with-apxs2 \
+		${_phpextensions}
+	make
+
+	# phpdbg
+	cp -a "${srcdir}/build" "${srcdir}/build-phpdbg"
+	cd "${srcdir}/build-phpdbg"
+	./configure ${_phpconfig} \
+		--enable-phpdbg \
+		${_phpextensions}
+	make
+}
+
+check() {
+	cd "${srcdir}/build"
+
+	# Check if sendmail was configured correctly (FS#47600)
+	sapi/cli/php -n -r 'echo ini_get("sendmail_path");' | grep -q '/usr/bin/sendmail'
+
+	export REPORT_EXIT_STATUS=1
+	export NO_INTERACTION=1
+	export SKIP_ONLINE_TESTS=1
+	export SKIP_SLOW_TESTS=1
+	export TEST_PHP_ARGS="-j$(nproc)"
+	export TESTS='tests Zend'
+
+	make test
+}
+
+package_php() {
+	pkgdesc='A general-purpose scripting language that is especially suited to web development'
+	depends=('libxml2' 'curl' 'libzip' 'pcre2' 'argon2' 'oniguruma' 'db' 'gdbm')
+	replaces=('php-ldap')
+	conflicts=('php-ldap')
+	provides=("php-interpreter=$_interpreter" "php-ldap=${pkgver}")
+	backup=('etc/php/php.ini')
+
+	cd "${srcdir}/build"
+	make -j1 INSTALL_ROOT="${pkgdir}" install-{modules,cli,build,headers,programs,pharcmd}
+	install -D -m644 "${srcdir}/${pkgbase}-${pkgver}/php.ini-production" "${pkgdir}/etc/php/php.ini"
+	install -d -m755 "${pkgdir}/etc/php/conf.d/"
+
+	# remove static modules
+	rm -f "${pkgdir}/usr/lib/php/modules/"*.a
+	# remove modules provided by sub packages
+	rm -f "${pkgdir}/usr/lib/php/modules/"{enchant,gd,imap,intl,sodium,odbc,pdo_dblib,pdo_odbc,pgsql,pdo_pgsql,pspell,snmp,sqlite3,pdo_sqlite,tidy,xsl}.so
+	# remove empty directory
+	rmdir "${pkgdir}/usr/include/php/include"
+}
+
+package_php-cgi() {
+	pkgdesc='CGI and FCGI SAPI for PHP'
+	depends=('php')
+
+	cd "${srcdir}/build"
+	make -j1 INSTALL_ROOT="${pkgdir}" install-cgi
+}
+
+package_php-apache() {
+	pkgdesc='Apache SAPI for PHP'
+	depends=('php' 'apache' 'libnsl')
+	backup=('etc/httpd/conf/extra/php_module.conf')
+
+	install -D -m755 "${srcdir}/build-apache/libs/libphp.so" "${pkgdir}/usr/lib/httpd/modules/libphp.so"
+	install -D -m644 "${srcdir}/apache.conf" "${pkgdir}/etc/httpd/conf/extra/php_module.conf"
+}
+
+package_php-fpm() {
+	pkgdesc='FastCGI Process Manager for PHP'
+	depends=('php' 'systemd')
+	backup=('etc/php/php-fpm.conf' 'etc/php/php-fpm.d/www.conf')
+	options=('!emptydirs')
+
+	cd "${srcdir}/build"
+	make -j1 INSTALL_ROOT="${pkgdir}" install-fpm
+	install -D -m644 sapi/fpm/php-fpm.service "${pkgdir}/usr/lib/systemd/system/php-fpm.service"
+	install -D -m644 "${srcdir}/php-fpm.tmpfiles" "${pkgdir}/usr/lib/tmpfiles.d/php-fpm.conf"
+}
+
+package_php-embed() {
+	pkgdesc='Embedded PHP SAPI library'
+	depends=('php' 'systemd-libs' 'libnsl' 'libxcrypt')
+	options=('!emptydirs')
+
+	cd "${srcdir}/build"
+	make -j1 INSTALL_ROOT="${pkgdir}" PHP_SAPI=embed install-sapi
+}
+
+package_php-phpdbg() {
+	pkgdesc='Interactive PHP debugger'
+	depends=('php')
+	options=('!emptydirs')
+
+	cd "${srcdir}/build-phpdbg"
+	make -j1 INSTALL_ROOT="${pkgdir}" install-phpdbg
+}
+
+package_php-dblib() {
+	pkgdesc='dblib module for PHP'
+	depends=('php' 'freetds')
+
+	install -D -m755 "${srcdir}/build/modules/pdo_dblib.so" "${pkgdir}/usr/lib/php/modules/pdo_dblib.so"
+}
+
+package_php-enchant() {
+	pkgdesc='enchant module for PHP'
+	depends=('php' 'enchant')
+
+	install -D -m755 "${srcdir}/build/modules/enchant.so" "${pkgdir}/usr/lib/php/modules/enchant.so"
+}
+
+package_php-gd() {
+	pkgdesc='gd module for PHP'
+	depends=('php' 'gd')
+
+	install -D -m755 "${srcdir}/build/modules/gd.so" "${pkgdir}/usr/lib/php/modules/gd.so"
+}
+
+package_php-imap() {
+	pkgdesc='imap module for PHP'
+	depends=('php' 'c-client' 'libxcrypt')
+
+	install -D -m755 "${srcdir}/build/modules/imap.so" "${pkgdir}/usr/lib/php/modules/imap.so"
+}
+
+package_php-intl() {
+	pkgdesc='intl module for PHP'
+	depends=('php' 'icu')
+
+	install -D -m755 "${srcdir}/build/modules/intl.so" "${pkgdir}/usr/lib/php/modules/intl.so"
+}
+
+package_php-sodium() {
+	pkgdesc='sodium module for PHP'
+	depends=('php' 'libsodium')
+
+	install -D -m755 "${srcdir}/build/modules/sodium.so" "${pkgdir}/usr/lib/php/modules/sodium.so"
+}
+
+package_php-odbc() {
+	pkgdesc='ODBC modules for PHP'
+	depends=('php' 'unixodbc')
+
+	install -D -m755 "${srcdir}/build/modules/odbc.so" "${pkgdir}/usr/lib/php/modules/odbc.so"
+	install -D -m755 "${srcdir}/build/modules/pdo_odbc.so" "${pkgdir}/usr/lib/php/modules/pdo_odbc.so"
+}
+
+package_php-pgsql() {
+	pkgdesc='PostgreSQL modules for PHP'
+	depends=('php' 'postgresql-libs')
+
+	install -D -m755 "${srcdir}/build/modules/pgsql.so" "${pkgdir}/usr/lib/php/modules/pgsql.so"
+	install -D -m755 "${srcdir}/build/modules/pdo_pgsql.so" "${pkgdir}/usr/lib/php/modules/pdo_pgsql.so"
+}
+
+package_php-pspell() {
+	pkgdesc='pspell module for PHP'
+	depends=('php' 'aspell')
+
+	install -D -m755 "${srcdir}/build/modules/pspell.so" "${pkgdir}/usr/lib/php/modules/pspell.so"
+}
+
+package_php-snmp() {
+	pkgdesc='snmp module for PHP'
+	depends=('php' 'net-snmp')
+
+	install -D -m755 "${srcdir}/build/modules/snmp.so" "${pkgdir}/usr/lib/php/modules/snmp.so"
+}
+
+package_php-sqlite() {
+	pkgdesc='sqlite module for PHP'
+	depends=('php' 'sqlite')
+
+	install -D -m755 "${srcdir}/build/modules/sqlite3.so" "${pkgdir}/usr/lib/php/modules/sqlite3.so"
+	install -D -m755 "${srcdir}/build/modules/pdo_sqlite.so" "${pkgdir}/usr/lib/php/modules/pdo_sqlite.so"
+}
+
+package_php-tidy() {
+	pkgdesc='tidy module for PHP'
+	depends=('php' 'tidy')
+
+	install -D -m755 "${srcdir}/build/modules/tidy.so" "${pkgdir}/usr/lib/php/modules/tidy.so"
+}
+
+package_php-xsl() {
+	pkgdesc='xsl module for PHP'
+	depends=('php' 'libxslt')
+
+	install -D -m755 "${srcdir}/build/modules/xsl.so" "${pkgdir}/usr/lib/php/modules/xsl.so"
+}
