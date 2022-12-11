@@ -8,7 +8,7 @@ pkgname=cachy-browser
 _pkgname=Cachy
 __pkgname=cachy
 pkgver=107.0.1
-pkgrel=1
+pkgrel=2
 pkgdesc="Community-maintained fork of Firefox, focused on privacy, security and freedom."
 arch=(x86_64 x86_64_v3)
 license=(MPL GPL LGPL)
@@ -210,8 +210,8 @@ END
     msg2 "fix telemetry removal, see https://gitlab.com/librewolf-community/browser/linux/-/merge_requests/17, for example"
     patch -Np1 -i ${_patches_dir}/librewolf/disable-data-reporting-at-compile-time.patch
 
-    msg2 "Hide passwordmgr"
-    patch -Np1 -i ${_patches_dir}/librewolf/hide-passwordmgr.patch
+#    msg2 "Hide passwordmgr"
+#    patch -Np1 -i ${_patches_dir}/librewolf/hide-passwordmgr.patch
     
     msg2 "Patch Devtools to bypass devtool detection"
     patch -Np1 -i ${_patches_dir}/devtools-bypass.patch
