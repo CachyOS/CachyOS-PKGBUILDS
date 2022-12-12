@@ -3,7 +3,7 @@
 
 pkgname=obs-studio
 pkgver=28.1.2
-pkgrel=2
+pkgrel=3
 pkgdesc="Free, open source software for live streaming and recording"
 arch=('x86_64')
 url="https://obsproject.com"
@@ -19,21 +19,27 @@ optdepends=('libfdk-aac: FDK AAC codec support'
             'sndio: Sndio input client'
             'v4l2loopback-dkms: virtual camera support'
             'obs-vkcapture: OBS Linux Vulkan/OpenGL game capture'
-            'obs-vaapi: OBS Studio VAAPI support via GStreamer')
+            'obs-vaapi: OBS Studio VAAPI support via GStreamer'
+            'amf-amdgpu-pro: for AMF encoding')
 source=($pkgname-$pkgver.tar.gz::https://github.com/jp9000/obs-studio/archive/$pkgver.tar.gz
+        cef_binary_4638_linux64.tar.bz2::https://cdn-fastly.obsproject.com/downloads/cef_binary_4638_linux64.tar.bz2
         fix_python_binary_loading.patch
         ignore_unused_submodules.patch
-        6207.patch)
-sha256sums=('7ee15aec4749778eb60031513ad3720f35cd9c7735416f654e61b45f850b6f1b'
+        6207.patch
+        7206.patch)
+sha256sums=('c51c72945867cd9862ba663b01cc8313153a0249dd3df0626e63fc5d82a84b39'
+            '54aba14a7228bb8f2573e081d795b4161bf3568796f8729ad42a9f8ef9c6d1ec'
             'bdfbd062f080bc925588aec1989bb1df34bf779cc2fc08ac27236679cf612abd'
             '60b0ee1f78df632e1a8c13cb0a7a5772b2a4b092c4a2a78f23464a7d239557c3'
-            '70be83b9ea66bc58f70cd083d964d1d63678ce9848059c41bbad349beaf838b5')
+            '70be83b9ea66bc58f70cd083d964d1d63678ce9848059c41bbad349beaf838b5'
+            '87bc6bab3492002cd6aec54136b0374c98a407e5a359e1bdd3d71ca6729619b0')
 
 prepare() {
   cd $pkgname-$pkgver
   patch -Np1 < "$srcdir"/fix_python_binary_loading.patch
   patch -Np1 < "$srcdir"/ignore_unused_submodules.patch
   patch -Np1 < "$srcdir"/6207.patch
+  patch -Np1 < "$srcdir"/7206.patch
 }
 
 build() {
@@ -47,6 +53,7 @@ build() {
     -DENABLE_VLC=OFF \
     -DENABLE_NEW_MPEGTS_OUTPUT=OFF \
     -DENABLE_AJA=OFF \
+    -DCEF_ROOT_DIR="../../cef_binary_4638_linux64" \
     -DENABLE_JACK=ON \
     -DENABLE_LIBFDK=ON \
     -DOBS_VERSION_OVERRIDE="$pkgver-$pkgrel" ..
