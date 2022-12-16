@@ -8,7 +8,7 @@ pkgname=cachy-browser
 _pkgname=Cachy
 __pkgname=cachy
 pkgver=108.0
-pkgrel=1
+pkgrel=2
 pkgdesc="Community-maintained fork of Firefox, focused on privacy, security and freedom."
 arch=(x86_64 x86_64_v3)
 license=(MPL GPL LGPL)
@@ -198,7 +198,7 @@ END
     msg2 "lw-logo-devtools.patch"
     patch -Np1 -i ${_patches_dir}/librewolf-ui/lw-logo-devtools-cachy.patch
 
-#    patch -Np1 -i ${_patches_dir}/librewolf-ui/handlers.patch # Waiting for upstream fix
+    patch -Np1 -i ${_patches_dir}/librewolf-ui/handlers.patch
     msg2 "Firefox View"
     patch -Np1 -i ${_patches_dir}/librewolf-ui/firefox-view.patch	
     msg2 "change bus/dbus/remoting names to org.cachyos"
@@ -215,13 +215,13 @@ END
 
     msg2 "KDE UNITY"
     patch -Np1 -i ${_patches_dir}/librewolf/unity-menubar.patch
-#    msg2 "mozilla-kde_after_unity"
-#    patch -Np1 -i ${_patches_dir}/librewolf/mozilla-kde_after_unity.patch # Waiting for upstream fix
-
+    msg2 "mozilla-kde_after_unity"
+    patch -Np1 -i ${_patches_dir}/librewolf/mozilla-kde_after_unity.patch
     msg2 "mozilla-nongnome-proxies"
     patch -Np1 -i ${_patches_dir}/kde/mozilla-nongnome-proxies.patch
-#    msg2  " some undesired requests (https://gitlab.com/librewolf-community/browser/common/-/issues/10)"
-#    patch -Np1 -i ${_patches_dir}/sed-patches/stop-undesired-requests.patch # Waiting for upstream fix
+    msg2  " some undesired requests (https://gitlab.com/librewolf-community/browser/common/-/issues/10)"
+    patch -Np1 -i ${_patches_dir}/sed-patches/stop-undesired-requests.patch
+    
     # https://bugs.archlinux.org/task/76231
     # https://bugzilla.mozilla.org/show_bug.cgi?id=1790496
     # https://src.fedoraproject.org/rpms/firefox/blob/rawhide/f/libwebrtc-screen-cast-sync.patch
