@@ -1,0 +1,79 @@
+# Maintainer: Levente Polyak <anthraxx[at]archlinux[dot]org>
+# Contributor: Daniel Isenmann <daniel@archlinux.org>
+
+pkgname=gimp
+pkgver=2.10.32
+pkgrel=3
+pkgdesc='GNU Image Manipulation Program'
+url='https://www.gimp.org/'
+arch=('x86_64')
+license=('GPL' 'LGPL')
+depends=('babl' 'dbus-glib' 'desktop-file-utils' 'gegl' 'glib-networking' 'hicolor-icon-theme'
+         'openjpeg2' 'lcms2' 'libheif' 'libexif' 'libgudev' 'libmng' 'libmypaint' 'librsvg' 'libwebp'
+         'libwmf' 'libxmu' 'libxpm' 'mypaint-brushes1' 'openexr' 'poppler-data' 'gtk2' 'graphviz')
+makedepends=('alsa-lib' 'curl' 'ghostscript' 'gtk-doc' 'intltool' 'iso-codes' 'poppler-glib')
+optdepends=('gutenprint: for sophisticated printing only as gimp has built-in cups print support'
+            'poppler-glib: for pdf support'
+            'alsa-lib: for MIDI event controller module'
+            'curl: for URI support'
+            'ghostscript: for postscript support'
+            'gvfs: for HTTP/S support (and many other schemes)')
+conflicts=('gimp-plugin-wavelet-decompose')
+replaces=('gimp-plugin-wavelet-decompose')
+options=('debug')
+install=gimp.install
+source=(https://download.gimp.org/pub/gimp/v${pkgver%.*}/${pkgname}-${pkgver}.tar.bz2
+        0001-no-check-update.patch
+        linux.gpl
+        fastmath.patch
+        buffer.patch)
+sha256sums=('3f15c70554af5dcc1b46e6dc68f3d8f0a6cc9fe56b6d78ac08c0fd859ab89a25'
+            'ac3e8b44cf391f4ab3050652f2cc1f146f451fb25178d5a596d905f5bad13fcf'
+            '1003bbf5fc292d0d63be44562f46506f7b2ca5729770da9d38d3bb2e8a2f36b3'
+            '82f95de394d267f6e113817a652f91c5ba915a008ec2be7e7402c8fc94c9cdba'
+            '4dc2594582081aba6826f9cc368f0f8713f80bb6d05904241045211fc812e635')
+
+prepare() {
+  cd ${pkgname}-${pkgver}
+
+  patch -Np1 < ../0001-no-check-update.patch
+  patch -Np1 < ../fastmath.patch
+  patch -Np1 < ../buffer.patch
+  autoreconf -vi
+}
+
+build() {
+
+export CFLAGS="$CFLAGS -O3 -Ofast -falign-functions=32 -ffat-lto-objects -flto=auto -fno-semantic-interposition -mprefer-vector-width=256"
+export CXXFLAGS="$CXXFLAGS -O3 -Ofast -falign-functions=32 -ffat-lto-objects -flto=auto -fno-semantic-interposition -mprefer-vector-width=256 "
+
+pkg-config --exists --print-errors "OpenEXR >= 1.6.1"
+  cd ${pkgname}-${pkgver}
+  PYTHON=/usr/bin/python ./configure \
+    --prefix=/usr \
+    --sysconfdir=/etc \
+    --libexecdir=/usr/bin \
+    --enable-mp \
+    --enable-gimp-console \
+    --enable-gtk-doc \
+    --disable-check-update \
+    --disable-python \
+    --with-bug-report-url='https://bugs.archlinux.org/?string=gimp' \
+    --with-openexr \
+    --without-aa
+  sed -i -e 's/ -shared / -Wl,-O1,--as-needed\0/g' libtool
+  make
+}
+
+package() {
+  cd ${pkgname}-${pkgver}
+  make DESTDIR="${pkgdir}" install
+  install -D -m644 "${srcdir}/linux.gpl" "${pkgdir}/usr/share/gimp/2.0/palettes/Linux.gpl"
+
+  rm "${pkgdir}/usr/share/man/man1/gimp-console.1"
+  ln -s gimp-console-${pkgver%.*}.1.gz "${pkgdir}/usr/share/man/man1/gimp-console.1.gz"
+  ln -s gimptool-2.0 "${pkgdir}/usr/bin/gimptool"
+  ln -sf gimptool-2.0.1.gz "${pkgdir}/usr/share/man/man1/gimptool.1.gz"
+}
+
+# vim: ts=2 sw=2 et:
