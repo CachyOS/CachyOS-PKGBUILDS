@@ -6,7 +6,7 @@ _bootloader=${_bootloader-'grub'}
 
 pkgname=cachyos-calamares-${_bootloader}
 pkgver=3.3.1
-pkgrel=1
+pkgrel=2
 pkgdesc='Distribution-independent installer framework'
 arch=('i686' 'x86_64' 'x86_64_v3')
 license=('GPL3')
@@ -18,19 +18,18 @@ depends=( 'qt5-svg' 'qt5-webengine' 'yaml-cpp' 'networkmanager' 'upower' 'kcorea
           'kwidgetsaddons' 'kpmcore' 'squashfs-tools' 'rsync' 'cryptsetup' 'qt5-xmlpatterns' 'doxygen' 'dmidecode' 'qt5-quickcontrols2' 'qt5-quickcontrols' \
           'gptfdisk' 'hwinfo' 'kparts' 'polkit-qt5' 'python' 'solid' 'qt5-tools' 'boost-libs' 'libpwquality' 'ckbcomp' 'mkinitcpio-openswap')
 source=(https://github.com/calamares/calamares/commit/79db04dc2eb00b354044f73c054a94fe2b9f9aae.patch)
-sha256sums=('3457ab03e46dcbb4e5e42c078c3cf0349e1eace31ca4ae6ee6f030810f57c6b8')
+sha256sums=('3457ab03e46dcbb4e5e42c078c3cf0349e1eace31ca4ae6ee6f030810f57c6b8'
+            'SKIP')
 # Bootloader
 ## systemd-boot
 if [ "$_bootloader" = "systemd" ]; then
 source+=(calamares::git+https://github.com/cachyos/cachyos-calamares.git#branch=cachyos-systemd)
-sha256sums+=('SKIP')
 fi
 ## grub
 if [ "$_bootloader" = "grub" ]; then
 source+=(calamares::git+https://github.com/cachyos/cachyos-calamares.git#branch=cachyos-grub)
-sha256sums+=('SKIP')
 fi
-options=('lto' '!strip' '!emptydirs')
+options=('!strip' '!emptydirs')
 
 prepare() {
     cd ${srcdir}/calamares
