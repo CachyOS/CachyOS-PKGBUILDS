@@ -19,7 +19,6 @@ options=('debug' '!lto') # uses internal LTO
 depends=('bzip2' 'expat' 'gdbm' 'libffi' 'libnsl' 'libxcrypt' 'openssl' 'zlib')
 makedepends=('tk' 'sqlite' 'bluez-libs' 'mpdecimal' 'llvm' 'gdb' 'xorg-server-xvfb' 'ttf-font')
 source=("https://www.python.org/ftp/python/${pkgver%rc*}/Python-${pkgver}.tar.xz"{,.asc}
-		"0001-Add-pybench-to-the-PROFILE_TASK-rule.patch"
         "0003-AVX2-and-AVX512-support.patch"
         "0004-Build-avx2-and-avx512-versions-of-the-math-library.patch"
         "bolt2.patch")
@@ -46,7 +45,6 @@ prepare() {
   rm -r Modules/_decimal/libmpdec
   
   msg2 "---- clearlinux patches"
-  patch -Np1 -i "${srcdir}/0001-Add-pybench-to-the-PROFILE_TASK-rule.patch"
   patch -Np1 -i "${srcdir}/0003-AVX2-and-AVX512-support.patch"
   patch -Np1 -i "${srcdir}/0004-Build-avx2-and-avx512-versions-of-the-math-library.patch"
 
@@ -58,8 +56,8 @@ prepare() {
 build() {
   cd Python-${pkgver}
 
-  export CFLAGS+="-ffunction-sections -fno-semantic-interposition -fomit-frame-pointer "
-  export CXXLAGS+="-ffunction-sections -fno-semantic-interposition -fomit-frame-pointer "
+  export CFLAGS+=" -fno-semantic-interposition"
+  export CXXLAGS+=" -fno-semantic-interposition"
 
   # Disable bundled pip & setuptools
   ./configure --prefix=/usr \
