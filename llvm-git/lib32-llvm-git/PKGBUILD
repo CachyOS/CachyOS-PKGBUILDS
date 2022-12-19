@@ -18,7 +18,7 @@ source=("llvm-project::git+https://github.com/llvm/llvm-project.git")
 
 md5sums=('SKIP')
 sha512sums=('SKIP')
-options=('staticlibs') # 'debug' takes way too long to scan for the source files...
+options=('staticlibs' '!lto') # 'debug' takes way too long to scan for the source files...
 
 pkgver() {
     cd llvm-project/llvm
@@ -41,11 +41,6 @@ prepare() {
 }
 
 build() {
-    CFLAGS+=" -ffile-prefix-map=${srcdir}=${DBGSRCDIR:-/usr/src/debug}"
-    CXXFLAGS+=" -ffile-prefix-map=${srcdir}=${DBGSRCDIR:-/usr/src/debug}"
-    CFLAGS+=' -fasynchronous-unwind-tables'
-    CXXFLAGS+=' -fasynchronous-unwind-tables'
-    LDFLAGS+=' -fasynchronous-unwind-tables'
 
     export PKG_CONFIG_PATH="/usr/lib32/pkgconfig"
 
