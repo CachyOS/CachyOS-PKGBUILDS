@@ -1,7 +1,7 @@
 
 pkgname=llvm-git
 pkgdesc="LLVM Toolchain with clang, clang-tools-extra, compiler-rt, openmp, polly, lldb, lld"
-pkgver=16.0.0_r436660.525a400c7ca5
+pkgver=16.0.0_r446173.1456b6868680
 pkgrel=1
 arch=('x86_64')
 url="https://llvm.org/"
@@ -13,10 +13,8 @@ provides=('aur-llvm-git' 'compiler-rt-git' 'clang-git' 'lldb-git' 'lld-git' 'pol
 # A package always provides itself, so there's no need to provide llvm-git
 conflicts=('llvm' 'compiler-rt' 'clang' 'lldb' 'polly' 'lld' 'llvm-libs' 'openmp' 'pstl' 'mlir' 'libc++abi' 'libc++experimental' 'libc++')
 depends=('libelf' 'libffi' 'libedit' 'libxml2' 'ncurses')
-_ocaml_ver=4.13.1
 makedepends=(
     'git' 'ninja' 'cmake'
-    "ocaml>=${_ocaml_ver}" 'ocaml-ctypes' 'ocaml-findlib'
     'python-setuptools' 'python-psutil' 'python-sphinx'
     'python-recommonmark' 'clang' 'lld' 'llvm-libs' 'llvm' 'mold'
 )
@@ -105,10 +103,10 @@ build() {
     fi
 
     if ld.lld --version 2>/dev/null | grep -iq "LLD\s*[0-9]"; then
-        export LD=ld.lld
-        export CC_LD=lld
-        export CXX_LD=lld
-        export HOSTLD=ld.lld
+        export LD=ld.mold
+        export CC_LD=mold
+        export CXX_LD=mold
+        export HOSTLD=ld.mold
         _extra_build_flags+=(-DLLVM_USE_LINKER=mold)
     fi
 
@@ -155,9 +153,6 @@ package() {
         exit 1
     )
 
-    if [[ _build_documentation -eq 0 ]]; then
-        mkdir -p "${srcdir:?}/llvm-project/build/docs/ocamldoc/html/"
-    fi
 
     DESTDIR="${pkgdir:?}" ninja -C build install
 
@@ -209,5 +204,8 @@ package() {
     install -Dm644 "${srcdir:?}/llvm-project/lldb/LICENSE.TXT" "${pkgdir:?}/usr/share/licenses/${pkgname}/lldb-LICENSE"
     install -Dm644 "${srcdir:?}/llvm-project/polly/LICENSE.TXT" "${pkgdir:?}/usr/share/licenses/${pkgname}/polly-LICENSE"
     install -Dm644 "${srcdir:?}/llvm-project/openmp/LICENSE.TXT" "${pkgdir:?}/usr/share/licenses/${pkgname}/openmp-LICENSE"
+
+    ## remove files from bolt
+    rm -rf "$pkgdir"/tmp
 
 }
