@@ -16,8 +16,8 @@ index 21ccf850..7c275ba2 100644
  typedef struct  _zend_mm_chunk     zend_mm_chunk;
  typedef struct  _zend_mm_huge_list zend_mm_huge_list;
  
--int zend_mm_use_huge_pages = 0;
-+int zend_mm_use_huge_pages = 1;
+-static bool zend_mm_use_huge_pages = false;
++static bool zend_mm_use_huge_pages = true;
  
  /*
   * Memory is retrieved from OS by chunks of fixed size 2MB.
@@ -31,18 +31,3 @@ index 21ccf850..7c275ba2 100644
  	return ptr;
  #endif
  }
-diff --git a/ext/opcache/shared_alloc_mmap.c b/ext/opcache/shared_alloc_mmap.c
-index dc02d038..62e9bb5c 100644
---- a/ext/opcache/shared_alloc_mmap.c
-+++ b/ext/opcache/shared_alloc_mmap.c
-@@ -74,6 +74,7 @@ static int create_segments(size_t requested_size, zend_shared_segment ***shared_
- 		*error_in = "mmap";
- 		return ALLOC_FAILURE;
- 	}
-+	madvise (shared_segment->p, requested_size , MADV_HUGEPAGE);
- 
- 	shared_segment->pos = 0;
- 	shared_segment->size = requested_size;
--- 
-2.25.0
-
