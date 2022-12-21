@@ -43,7 +43,7 @@ source=(git://gcc.gnu.org/git/gcc.git#commit=$_commit
         c89 c99
         gcc-ada-repro.patch
         x86-always-generate-branch-hint.patch
-        vectorcost.patch
+        default-no-plt.patch
 )
 validpgpkeys=(F3691687D867B81B51CE07D9BBE43771487328A9  # bpiotrowski@archlinux.org
               86CFFCA918CF3AF47147588051E8B148A9999C34  # evangelos@foutrelis.com
@@ -53,8 +53,8 @@ sha256sums=('SKIP'
             'de48736f6e4153f03d0a5d38ceb6c6fdb7f054e8f47ddd6af0a3dbf14f27b931'
             '2513c6d9984dd0a2058557bf00f06d8d5181734e41dcfe07be7ed86f2959622a'
             '1773f5137f08ac1f48f0f7297e324d5d868d55201c03068670ee4602babdef2f'
-            '0d820b955a91d0c5285458860dcdef5f0723cd6e739f0a58d6f13d3ba8150e38'
-            '47a8e9b762a4fe7005a59aece381fe12a5f0db7fd840518c044f76835842c3e3')
+            '98ff3c8e240f23efe025ac03bd8d51084e3863b326354b77885c4f3fb893b869'
+            '7517708e36e2f047be841eba754f14a511edc2a80eefbf0b1698223419ff6802')
 
 _patch() {
 
@@ -77,8 +77,8 @@ prepare() {
   _patch gcc-ada-repro.patch
   # Clearlinux gcc patches
   _patch x86-always-generate-branch-hint.patch
-  _patch vectorcost.patch
-  
+  _patch default-no-plt.patch
+
   mkdir -p "$srcdir/gcc-build"
   mkdir -p "$srcdir/libgccjit-build"
 }
