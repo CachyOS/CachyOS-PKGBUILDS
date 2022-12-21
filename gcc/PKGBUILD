@@ -42,7 +42,6 @@ _commit=2ee5e4300186a92ad73f1a1a64cb918dc76c8d67
 source=(git://gcc.gnu.org/git/gcc.git#commit=$_commit
         c89 c99
         gcc-ada-repro.patch
-        optimize.patch
         x86-always-generate-branch-hint.patch
         default-no-plt.patch
 )
@@ -54,7 +53,6 @@ sha256sums=('SKIP'
             'de48736f6e4153f03d0a5d38ceb6c6fdb7f054e8f47ddd6af0a3dbf14f27b931'
             '2513c6d9984dd0a2058557bf00f06d8d5181734e41dcfe07be7ed86f2959622a'
             '1773f5137f08ac1f48f0f7297e324d5d868d55201c03068670ee4602babdef2f'
-            '3cc05b738a198d998631ab4b52590c92a92e6bb96ac1be22ba742e7bcd9ad89d'
             '98ff3c8e240f23efe025ac03bd8d51084e3863b326354b77885c4f3fb893b869'
             '7517708e36e2f047be841eba754f14a511edc2a80eefbf0b1698223419ff6802')
 
@@ -76,7 +74,6 @@ prepare() {
   # Reproducible gcc-ada
   _patch -Np1 gcc-ada-repro.patch
   # Clearlinux gcc patches
-  _patch -p1 optimize.patch
   _patch -p1 x86-always-generate-branch-hint.patch
   _patch -p1 default-no-plt.patch
 
