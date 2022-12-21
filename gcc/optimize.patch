@@ -1,0 +1,44 @@
+From 28e56e571f903b9e5dd306081f45c393d0cd0947 Mon Sep 17 00:00:00 2001
+From: William Douglas <william.douglas@intel.com>
+Date: Tue, 5 Apr 2022 09:54:10 -0700
+Subject: [PATCH] Make optimize increasing only
+
+This patch is trying to catch the cases where we as OS pass -O3 and
+then some package makefile overrides with -O2.
+
+And let O0 go through as a special case.
+---
+ gcc/opts.cc | 10 ++++++++--
+ 1 file changed, 8 insertions(+), 2 deletions(-)
+
+diff --git a/gcc/opts.cc b/gcc/opts.cc
+index ef5fe9b11..1fc265e2f 100644
+--- a/gcc/opts.cc
++++ b/gcc/opts.cc
+@@ -713,7 +713,8 @@ default_options_optimization (struct gcc_options *opts,
+ 	case OPT_O:
+ 	  if (*opt->arg == '\0')
+ 	    {
+-	      opts->x_optimize = 1;
++	      if (opts->x_optimize == 0)
++		opts->x_optimize = 1;
+ 	      opts->x_optimize_size = 0;
+ 	      opts->x_optimize_fast = 0;
+ 	      opts->x_optimize_debug = 0;
+@@ -726,7 +727,12 @@ default_options_optimization (struct gcc_options *opts,
+ 			       "integer, %<g%>, %<s%>, %<z%> or %<fast%>");
+ 	      else
+ 		{
+-		  opts->x_optimize = optimize_val;
++		  /* Keep higher opts value */
++		  if (optimize_val > opts->x_optimize)
++		    opts->x_optimize = optimize_val;
++		  /* But honors 0 opts  */
++		  if (optimize_val == 0)
++		    opts->x_optimize = optimize_val;
+ 		  if ((unsigned int) opts->x_optimize > 255)
+ 		    opts->x_optimize = 255;
+ 		  opts->x_optimize_size = 0;
+-- 
+2.35.1
+
