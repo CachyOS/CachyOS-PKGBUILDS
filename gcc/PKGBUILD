@@ -10,7 +10,7 @@
 pkgname=(gcc gcc-libs lib32-gcc-libs gcc-fortran gcc-objc gcc-ada gcc-go gcc-d lto-dump libgccjit)
 pkgver=12.2.0
 _majorver=${pkgver%%.*}
-pkgrel=4
+pkgrel=1.1
 pkgdesc='The GNU Compiler Collection'
 arch=(x86_64)
 license=(GPL3 LGPL FDL custom)
@@ -42,8 +42,6 @@ _commit=2ee5e4300186a92ad73f1a1a64cb918dc76c8d67
 source=(git://gcc.gnu.org/git/gcc.git#commit=$_commit
         c89 c99
         gcc-ada-repro.patch
-        x86-always-generate-branch-hint.patch
-        default-no-plt.patch
 )
 validpgpkeys=(F3691687D867B81B51CE07D9BBE43771487328A9  # bpiotrowski@archlinux.org
               86CFFCA918CF3AF47147588051E8B148A9999C34  # evangelos@foutrelis.com
@@ -52,14 +50,7 @@ validpgpkeys=(F3691687D867B81B51CE07D9BBE43771487328A9  # bpiotrowski@archlinux.
 sha256sums=('SKIP'
             'de48736f6e4153f03d0a5d38ceb6c6fdb7f054e8f47ddd6af0a3dbf14f27b931'
             '2513c6d9984dd0a2058557bf00f06d8d5181734e41dcfe07be7ed86f2959622a'
-            '1773f5137f08ac1f48f0f7297e324d5d868d55201c03068670ee4602babdef2f'
-            '98ff3c8e240f23efe025ac03bd8d51084e3863b326354b77885c4f3fb893b869'
-            '7517708e36e2f047be841eba754f14a511edc2a80eefbf0b1698223419ff6802')
-
-_patch() {
-  echo -e "\E[1;33m Apply patch: ${2}\E[0m"
-  patch "${1}" "${srcdir:?}/${2}"
-}
+            '1773f5137f08ac1f48f0f7297e324d5d868d55201c03068670ee4602babdef2f')
 
 prepare() {
   [[ ! -d gcc ]] && ln -s gcc-${pkgver/+/-} gcc
@@ -72,12 +63,7 @@ prepare() {
   sed -i '/m64=/s/lib64/lib/' gcc/config/i386/t-linux64
 
   # Reproducible gcc-ada
-  #_patch -Np0 gcc-ada-repro.patch
   patch -Np0 < "$srcdir/gcc-ada-repro.patch"
-  # Clearlinux gcc patches
-  _patch -p1 x86-always-generate-branch-hint.patch
-  _patch -p1 default-no-plt.patch
-
   mkdir -p "$srcdir/gcc-build"
   mkdir -p "$srcdir/libgccjit-build"
 }
@@ -104,8 +90,6 @@ build() {
       --enable-linker-build-id
       --enable-lto
       --enable-multilib
-      --with-tune=skylake
-      --with-arch=x86-64-v3
       --enable-plugin
       --enable-shared
       --enable-threads=posix
@@ -117,7 +101,6 @@ build() {
   )
 
 
-
   cd gcc-build
 
   # Credits @allanmcrae
@@ -126,18 +109,13 @@ build() {
   CFLAGS=${CFLAGS/-Werror=format-security/}
   CXXFLAGS=${CXXFLAGS/-Werror=format-security/}
 
-export CFLAGS+=" -fno-semantic-interposition"
-export CXXLAGS+=" -fno-semantic-interposition"
-export CFLAGS_FOR_TARGET="$CFLAGS -march=x86-64-v3 -mtune=skylake -fno-semantic-interposition"
-export CXXFLAGS_FOR_TARGET="$CXXFLAGS -march=x86-64-v3 -mtune=skylake -fno-semantic-interposition"
-
   "$srcdir/gcc/configure" \
     --enable-languages=c,c++,ada,fortran,go,lto,objc,obj-c++,d \
     --enable-bootstrap \
     "${_confflags[@]:?_confflags unset}"
 
   # see https://bugs.archlinux.org/task/71777 for rationale re *FLAGS handling
-  make -O STAGE1_CFLAGS="-O3" \
+  make -O STAGE1_CFLAGS="-O2" \
           BOOT_CFLAGS="$CFLAGS" \
           BOOT_LDFLAGS="$LDFLAGS" \
           LDFLAGS_FOR_TARGET="$LDFLAGS" \
@@ -157,7 +135,7 @@ export CXXFLAGS_FOR_TARGET="$CXXFLAGS -march=x86-64-v3 -mtune=skylake -fno-seman
     "${_confflags[@]:?_confflags unset}"
 
   # see https://bugs.archlinux.org/task/71777 for rationale re *FLAGS handling
-  make -O STAGE1_CFLAGS="-O3" \
+  make -O STAGE1_CFLAGS="-O2" \
           BOOT_CFLAGS="$CFLAGS" \
           BOOT_LDFLAGS="$LDFLAGS" \
           LDFLAGS_FOR_TARGET="$LDFLAGS" \
