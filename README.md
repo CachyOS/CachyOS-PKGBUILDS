@@ -1,3 +1,9 @@
+<div align="center">
+  <img src="https://github.com/CachyOS/calamares-config/blob/grub-3.2/etc/calamares/branding/cachyos/logo.png" width="64" alt="CachyOS logo"></img>
+  <br/>
+  <h1 align="center">CachyOS</h1>
+</div>
+
 # CachyOS PKGBUILDS
 
 [CachyOS](https://cachyos.org/) PKGBUILDS is a collection of [PKGBUILD](https://wiki.archlinux.org/index.php/PKGBUILD) scripts for building and installing packages on any Arch Linux-based operating system.
