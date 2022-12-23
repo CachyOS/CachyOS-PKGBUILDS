@@ -4,25 +4,23 @@
 
 pkgname=uksmd-git
 gitname=uksmd
-pkgver=0.0.0.r47.g7719612
+pkgver=1.0.0.r0.g6f5cb36
 pkgrel=1
 epoch=1
 pkgdesc="Userspace KSM helper daemon"
-url="https://codeberg.org/sirlucjan/uksmd"
+url="https://github.com/CachyOS/uksmd"
 license=('GPL3')
 arch=('x86_64')
 depends=('procps-ng' 'libcap-ng')
 makedepends=('meson' 'git')
 conflicts=('uksmd')
 provides=("uksmd=${pkgver}")
-#source=('git+https://codeberg.org/pf-kernel/uksmd')
-source=('git+https://codeberg.org/sirlucjan/uksmd')
+source=('git+https://github.com/CachyOS/uksmd')
 sha256sums=('SKIP')
 
 pkgver() {
   cd $gitname
-  _ver="$(cat meson.build | grep -m1 'version' | grep -o "[[:digit:]]*" | paste -sd'.')"
-  printf "${_ver}.r$(git rev-list --count HEAD).g$(git rev-parse --short HEAD)"
+  git describe --long --tags | sed 's/^v//;s/\([^-]*-g\)/r\1/;s/-/./g'
 }
 
 prepare() {
