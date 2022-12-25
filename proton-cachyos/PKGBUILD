@@ -10,7 +10,7 @@ _commit=
 pkgver=7.0
 _geckover=2.47.3
 _monover=7.4.0
-pkgrel=4
+pkgrel=5
 pkgdesc="Compatibility tool for Steam Play based on Wine and additional components, experimental branch with some cachyos changes"
 url="https://github.com/ValveSoftware/Proton"
 arch=(x86_64 x86_64_v3)
@@ -128,6 +128,7 @@ source=(
     gst-plugins-rs::git+https://gitlab.freedesktop.org/gstreamer/gst-plugins-rs.git
     dxil-spirv::git+https://github.com/HansKristian-Work/dxil-spirv.git
     graphene::git+https://github.com/ebassi/graphene.git
+    libdisplay-info::git+https://gitlab.freedesktop.org/JoshuaAshton/libdisplay-info.git
     https://dl.winehq.org/wine/wine-gecko/${_geckover}/wine-gecko-${_geckover}-x86{,_64}.tar.xz
     https://github.com/madewokherd/wine-mono/releases/download/wine-mono-${_monover}/wine-mono-${_monover}-x86.tar.xz
     0001-wldap32-25946b48148784e8275c1685f6498ab88f553ca3.patch
@@ -224,6 +225,10 @@ prepare() {
         git submodule set-url include/vulkan "$srcdir/Vulkan-Headers"
         git submodule set-url include/spirv "$srcdir/SPIRV-Headers"
         git -c protocol.file.allow=always submodule update include/{vulkan,spirv}
+
+        git submodule init subprojects/libdisplay-info
+        git submodule set-url subprojects/libdisplay-info "$srcdir/libdisplay-info"
+        git -c protocol.file.allow=always submodule update subprojects/libdisplay-info
     popd
 
     pushd vkd3d-proton
@@ -262,6 +267,7 @@ prepare() {
         sed 's|OpenCL/opencl.h|CL/opencl.h|g' -i configure*
         # Fix openldap 2.5+ detection
         sed 's/-lldap_r/-lldap/' -i configure
+        # Fix wldap32 compilation on 32bit
         patch -p1 -i "$srcdir"/0001-wldap32-25946b48148784e8275c1685f6498ab88f553ca3.patch
     popd
 
