@@ -10,7 +10,7 @@ _commit=
 pkgver=7.0
 _geckover=2.47.3
 _monover=7.4.0
-pkgrel=5
+pkgrel=6
 pkgdesc="Compatibility tool for Steam Play based on Wine and additional components, experimental branch with some cachyos changes"
 url="https://github.com/ValveSoftware/Proton"
 arch=(x86_64 x86_64_v3)
@@ -271,6 +271,13 @@ prepare() {
         patch -p1 -i "$srcdir"/0001-wldap32-25946b48148784e8275c1685f6498ab88f553ca3.patch
     popd
 
+    cd "$srcdir"/proton/wine
+    msg2 "WINE: -GAME FIXES- killer instinct vulkan fix"
+    patch -Np1 < "$srcdir"/killer-instinct-winevulkan_fix.patch
+    msg2 "FSR PATCHES"
+    patch -Np1 < "$srcdir"/FSR.patch
+    msg2 "ENABLE LTO for wineserver"
+    patch -Np1 < "$srcdir"/server-Enable-link-time-optimization.patch
     cd "$srcdir"/wine-valve
     msg2 "WINE: -GAME FIXES- killer instinct vulkan fix"
     patch -Np1 < "$srcdir"/killer-instinct-winevulkan_fix.patch
@@ -286,7 +293,7 @@ prepare() {
     patch -Np1 < "$srcdir"/0001-AUR-pkgbuild-changes.patch
     fi
     msg2 "DXVK ASYNC"
-    cd "$srcdir"/dxvk
+    cd "$srcdir"/proton/dxvk
     patch -Np1 < "$srcdir"/dxvk-async.patch
 
     # Remove repos from srcdir to save space
@@ -389,6 +396,7 @@ package() {
 }
 
 sha256sums=('SKIP'
+            'SKIP'
             'SKIP'
             'SKIP'
             'SKIP'
