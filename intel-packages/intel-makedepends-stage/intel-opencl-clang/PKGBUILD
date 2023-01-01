@@ -1,0 +1,38 @@
+# Maintainer: Daniel Bermond <dbermond@archlinux.org>
+# Maintainer: Bruno Pagani <archange@archlinux.org>
+
+_srcname=opencl-clang
+pkgname=intel-${_srcname}
+pkgver=14.0.0.r3+g5dd5031
+pkgrel=1
+pkgdesc="Wrapper library around clang that can compile OpenCL C kernels to SPIR-V modules"
+arch=(x86_64)
+url="https://github.com/intel/opencl-clang"
+license=(custom)
+depends=(clang llvm-libs spirv-llvm-translator)
+makedepends=(cmake llvm git)
+# Current point in the used LLVM branch
+_commit=c78c1f884ffe8b40e1681a90ebde1a919c08ddb1
+source=(git+${url}.git#commit=$_commit)
+sha256sums=(SKIP)
+
+pkgver() {
+  cd ${_srcname}
+  git describe --tags | sed 's/^v//;s/\([^-]*-g\)/r\1/;s/-/./;s/-/+/'
+}
+
+build() {
+  cmake -B build -S ${_srcname} \
+    -DCMAKE_INSTALL_PREFIX=/usr \
+    -DLLVMSPIRV_INCLUDED_IN_LLVM=OFF \
+    -DSPIRV_TRANSLATOR_DIR=/usr \
+    -DLLVM_NO_DEAD_STRIP=ON \
+    -DPREFERRED_LLVM_VERSION=14.0.5 \
+    -Wno-dev
+  make -C build
+}
+
+package() {
+  make -C build DESTDIR="${pkgdir}" install
+  install -Dm644 ${_srcname}/LICENSE -t "${pkgdir}"/usr/share/licenses/${pkgname}
+}
