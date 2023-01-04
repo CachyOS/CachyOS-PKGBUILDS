@@ -1,6 +1,6 @@
 pkgbase = php
 	pkgver = 8.2.1
-	pkgrel = 1
+	pkgrel = 2
 	url = https://www.php.net/
 	arch = x86_64
 	license = PHP
@@ -58,6 +58,9 @@ pkgname = php
 	depends = argon2
 	depends = oniguruma
 	provides = php-interpreter=8.2
+	provides = php-intl=8.2.1
+	conflicts = php-intl
+	replaces = php-intl
 	backup = etc/php/php.ini
 
 pkgname = php-cgi
@@ -103,10 +106,6 @@ pkgname = php-gd
 	pkgdesc = gd module for PHP
 	depends = php
 	depends = gd
-
-pkgname = php-intl
-	pkgdesc = intl module for PHP
-	depends = php
 
 pkgname = php-sodium
 	pkgdesc = sodium module for PHP
