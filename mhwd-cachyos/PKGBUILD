@@ -6,7 +6,7 @@ pkgbase=mhwd-cachyos
 pkgname=('mhwd-cachyos' 'mhwd-db-cachyos')
 pkgname=mhwd-cachyos
 pkgver=0.6.11
-pkgrel=2
+pkgrel=3
 pkgdesc="Manjaro's Hardware Detection for CachyOS"
 arch=(x86_64 x86_64_v3)
 url="https://github.com/cachyos/mhwd-cachyos"
@@ -50,7 +50,7 @@ package_mhwd-cachyos() {
 
 package_mhwd-db-cachyos() {
   pkgdesc="mhwd-cachyos Database"
-  depends=('libnotify' 'mhwd-nvidia' 'mhwd-amdgpu' 'mhwd-ati' 'mhwd-nvidia>=455')
+  depends=('libnotify' 'mhwd-nvidia' 'mhwd-amdgpu' 'mhwd-ati' 'mhwd-nvidia>=455' 'mhwd-nvidia-390xx')
   provides=('mhwd-db' 'mhwd-db-cachyos')
   conflicts=('mhwd-db' 'mhwd-db-cachyos')
   install=mhwd-db.install
