@@ -1,7 +1,7 @@
 # Maintainer: Adrian Perez de Castro <aperez@igalia.com>
 
 pkgname=wayfire-plugins-extra
-pkgver=0.7.0
+pkgver=0.7.5
 pkgrel=1
 pkgdesc='Additional plugins for Wayfire'
 url=https://github.com/WayfireWM/wayfire-plugins-extra
@@ -13,13 +13,13 @@ makedepends=(meson wayland-protocols ninja glm git cmake)
 _commit=5076dc1100071d8ed220e06a4723bde16ac864f7
 source=("https://github.com/WayfireWM/${pkgname}/releases/download/v${pkgver}/${pkgname}-${pkgver}.tar.xz"
         "fix-build.patch")
-sha512sums=('ff25a4685c88ca0129a2372b216166246cab072c2cb4f84eb7bd500db525bf5881bd7e54d0d888473d4aab0e5b33d2ee13eb7f788bb2a524e1e8e0c5efc1a6bd'
+sha512sums=('9cc816c3c727b0093fd15ef52dea215598b4c49ef96c098f53938c041b3908b30f4dd616be4b459b7382d630a47b36baf845c24de84f35670ba2912711205911'
             'b0283ccce25f717c0bdfef868bb4830241c696f2536de656ca68df01dcc5ab8e57ca877348e8c2f7dfca4e7389096e4a9990ac20c0fc16b5e6a3d3fa34ba4624')
 
-prepare() {
-  cd "${srcdir}/$pkgname-$pkgver"
-  patch -Np1 -i "$srcdir/fix-build.patch"
-}
+#prepare() {
+#  cd "${srcdir}/$pkgname-$pkgver"
+#  patch -Np1 -i "$srcdir/fix-build.patch"
+#}
 
 build () {
   cd "${srcdir}/$pkgname-$pkgver"
