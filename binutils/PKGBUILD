@@ -6,22 +6,22 @@
 # toolchain build order: linux-api-headers->glibc->binutils->gcc->glibc->binutils->gcc
 
 pkgname=binutils
-pkgver=2.39
-_commit=cab2aac95461f81ec8b22dcd65247531cbd2069c
-pkgrel=8
+pkgver=2.40
+_commit=78eca0130feecb321bb6943045b2161583f61dd2
+pkgrel=2
 pkgdesc='A set of programs to assemble and manipulate binary and object files'
 arch=(x86_64)
 url='https://www.gnu.org/software/binutils/'
 license=('GPL3' 'GPL' 'FDL1.3' 'custom:FSFAP')
 groups=(base-devel)
-depends=(glibc zlib libelf jansson)
+depends=(glibc jansson libelf zlib zstd)
 makedepends=(git)
 checkdepends=(dejagnu debuginfod bc)
 optdepends=('debuginfod: for debuginfod server/client functionality')
 conflicts=(binutils-multilib)
 replaces=(binutils-multilib)
 backup=('etc/gprofng.rc')
-options=(staticlibs !distcc !ccache debug)
+options=(staticlibs !distcc !ccache)
 source=(git+https://sourceware.org/git/binutils-gdb.git#commit=${_commit}
         gold-warn-unsupported.patch)
 sha256sums=('SKIP'
@@ -53,6 +53,7 @@ build() {
     --with-lib-path=/usr/lib:/usr/local/lib \
     --with-bugurl=https://bugs.archlinux.org/ \
     --enable-cet \
+    --enable-colored-disassembly \
     --enable-default-execstack=no \
     --enable-deterministic-archives \
     --enable-gold \
