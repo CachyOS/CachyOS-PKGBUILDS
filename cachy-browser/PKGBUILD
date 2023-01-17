@@ -255,10 +255,10 @@ END
     msg2 "Patch Devtools to bypass devtool detection"
     patch -Np1 -i ${_patches_dir}/devtools-bypass.patch
 
-    msg2 "KDE UNITY"
-    patch -Np1 -i ${_patches_dir}/librewolf/unity-menubar.patch
-    msg2 "mozilla-kde_after_unity"
-    patch -Np1 -i ${_patches_dir}/librewolf/mozilla-kde_after_unity.patch
+#    msg2 "KDE UNITY"
+#    patch -Np1 -i ${_patches_dir}/librewolf/unity-menubar.patch
+#    msg2 "mozilla-kde_after_unity"
+#    patch -Np1 -i ${_patches_dir}/librewolf/mozilla-kde_after_unity.patch
     msg2 "mozilla-nongnome-proxies"
     patch -Np1 -i ${_patches_dir}/kde/mozilla-nongnome-proxies.patch
     msg2  " some undesired requests (https://gitlab.com/librewolf-community/browser/common/-/issues/10)"
@@ -271,8 +271,8 @@ END
     patch -Np1 -i ../libwebrtc-screen-cast-sync.patch
     # https://bugzilla.mozilla.org/show_bug.cgi?id=1804973
     patch -Np1 -i ../0002-Bug-1804973-Wayland-Check-size-for-valid-EGLWindows-.patch
-    msg2 "Match to system libs"
-    patch -Np1 -i ../match.patch
+#    msg2 "Match to system libs"
+#    patch -Np1 -i ../match.patch
 
     rm -f ${srcdir}/cachyos-browser-common/source_files/mozconfig
     cp -r ${srcdir}/cachyos-browser-common/source_files/browser ./
