@@ -7,8 +7,8 @@
 
 pkgname=binutils
 pkgver=2.40
-_commit=78eca0130feecb321bb6943045b2161583f61dd2
-pkgrel=2
+_commit=bcea253f5fa194e57f9564e8461c718e228bd26e
+pkgrel=3
 pkgdesc='A set of programs to assemble and manipulate binary and object files'
 arch=(x86_64)
 url='https://www.gnu.org/software/binutils/'
@@ -21,7 +21,7 @@ optdepends=('debuginfod: for debuginfod server/client functionality')
 conflicts=(binutils-multilib)
 replaces=(binutils-multilib)
 backup=('etc/gprofng.rc')
-options=(staticlibs !distcc !ccache)
+options=(staticlibs !distcc !ccache debug)
 source=(git+https://sourceware.org/git/binutils-gdb.git#commit=${_commit}
         gold-warn-unsupported.patch)
 sha256sums=('SKIP'
