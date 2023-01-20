@@ -5,7 +5,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='protonfixes',
-    version=1.0.15
+    version='1.0.15',
     description='Protonfixes fork by GloriousEggroll',
     url='https://github.com/GloriousEggroll/protonfixes.git',
     author='Thomas Crider',

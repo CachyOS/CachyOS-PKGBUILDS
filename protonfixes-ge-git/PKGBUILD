@@ -12,13 +12,13 @@ provides=('protonfixes')
 conflicts=('protonfixes')
 makedepends=(git python-setuptools)
 depends=(libmspack winetricks)
-source=($pkgname::git+https://github.com/GloriousEggroll/${_gitname}.git
+source=($_gitname::git+https://github.com/GloriousEggroll/${_gitname}.git
         setup.py)
 sha256sums=('SKIP'
-            '58561f68aea810b6440b354d7d66860e6086bd23c6fd80e069a9e478fc7e4600')
+            'ea220fffadfdf2748d5095e78958c50222f8c4c1f3aea40a66b386afbbcded74')
 
 pkgver() {
-    cd "${srcdir}/${pkgname}"
+    cd "${srcdir}/${_gitname}"
     git describe --long --tags | sed 's/\([^-]*-g\)/r\1/;s/-/./g'
 }
 
