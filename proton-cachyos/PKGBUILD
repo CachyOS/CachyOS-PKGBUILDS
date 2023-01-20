@@ -10,7 +10,7 @@ _commit=
 pkgver=7.0
 _geckover=2.47.3
 _monover=7.4.0
-pkgrel=7
+pkgrel=8
 pkgdesc="Compatibility tool for Steam Play based on Wine and additional components, experimental branch with some cachyos changes"
 url="https://github.com/ValveSoftware/Proton"
 arch=(x86_64 x86_64_v3)
@@ -136,7 +136,6 @@ source=(
     0001-AUR-pkgbuild-changes.patch
     FSR.patch
     server-Enable-link-time-optimization.patch
-    dxvk-async.patch
     killer-instinct-winevulkan_fix.patch
 )
 noextract=(
@@ -292,9 +291,6 @@ prepare() {
     else
     patch -Np1 < "$srcdir"/0001-AUR-pkgbuild-changes.patch
     fi
-    msg2 "DXVK ASYNC"
-    cd "$srcdir"/proton/dxvk
-    patch -Np1 < "$srcdir"/dxvk-async.patch
 
     # Remove repos from srcdir to save space
     for submodule in "${_submodules[@]}"; do
@@ -427,5 +423,4 @@ sha256sums=('SKIP'
             'caa5cdc0be010cf81ccc4478cf5b472090d648d2782a5816281fa3e0270a59ff'
             '789bdf2df961bf749c6f7e5f250823d5344141f3c383d2616a21794e9d2802d0'
             '81472533dd83454b203937e68b0999c436701314bad6c1f3bb256d0e6f2a2372'
-            '687d9a7f3184ce2416769a3eed896c936264baa1c2ea92f7d40320a027ab54ca'
             '3cb267a126d712f4f15fd95d16b7f5b8974acd3b7a6b185c565634eae200ea85')
