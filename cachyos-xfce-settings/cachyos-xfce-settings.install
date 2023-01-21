@@ -1,4 +1,18 @@
+generate_lightdm_greeter_config() {
+    if [[ -f "/etc/lightdm/lightdm-gtk-greeter.conf" ]]; then
+        cp /etc/lightdm/lightdm-gtk-greeter.conf /etc/lightdm/lightdm-gtk-greeter-backup.conf
+    fi
+
+    cat << 'EOF' > /etc/lightdm/lightdm-gtk-greeter.conf
+[greeter]
+theme-name = cachyos-nord
+icon-theme-name = Qogir
+background = /usr/share/wallpapers/cachyos-wallpapers/Dimensions.png
+EOF
+}
+
 post_install() {
+    generate_lightdm_greeter_config
     post_upgrade
 }
 
