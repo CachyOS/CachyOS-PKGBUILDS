@@ -1,2 +1,0 @@
-# Cachyos Theming
-
