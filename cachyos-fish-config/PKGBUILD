@@ -1,6 +1,6 @@
 pkgname=cachyos-fish-config
-pkgver=6
-pkgrel=3
+pkgver=7
+pkgrel=1
 pkgdesc="Fish configuration of CachyOS"
 arch=(any)
 url="https://github.com/CachyOS/$pkgname"
@@ -18,8 +18,10 @@ depends=('bat'
         'pkgfile')
 makedepends=('git')
 conflicts=('kwin-scripts-window-colors')
-source=("git+$url.git")
-sha256sums=('SKIP')
+source=("git+$url.git"
+		"$pkgname.install")
+sha256sums=('SKIP'
+            '329dcbf629974d004643fa2b6b3575db83ee89d3cf72c0b70d430110e6690a7e')
 
 package() {
         cd $srcdir/$pkgname
