@@ -5,7 +5,7 @@
 
 pkgname=zstd
 pkgver=1.5.3
-pkgrel=8
+pkgrel=10
 pkgdesc='Zstandard - Fast real-time compression algorithm'
 url='https://facebook.github.io/zstd/'
 arch=(x86_64)
@@ -15,6 +15,7 @@ makedepends=(cmake gtest ninja git)
 provides=(libzstd.so)
 source=(git+https://github.com/facebook/zstd.git#commit=5d2fb4288f8230cc32c12f235b716fd25ecc89e1)
 sha256sums=('SKIP')
+options=('debug')
 
 prepare() {
   cd ${pkgname}
@@ -31,7 +32,9 @@ build() {
   cmake -S build/cmake -B build -G Ninja \
     -DCMAKE_BUILD_TYPE=None \
     -DCMAKE_INSTALL_PREFIX=/usr \
-    -DCMAKE_INSTALL_LIBDIR=lib \
+    -DZSTD_ZLIB_SUPPORT=ON \
+    -DZSTD_LZMA_SUPPORT=ON \
+    -DZSTD_LZ4_SUPPORT=ON \
     -DZSTD_BUILD_CONTRIB=ON \
     -DZSTD_BUILD_STATIC=OFF \
     -DZSTD_BUILD_TESTS=ON \
