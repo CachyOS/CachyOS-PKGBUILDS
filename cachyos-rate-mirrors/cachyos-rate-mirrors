@@ -89,7 +89,7 @@ rate_mirror_ex() {
 
     TMPFILE="$(mktemp)"
 
-    _rate_mirrors_flags=("--allow-root" "--save=${TMPFILE}" "${name}")
+    _rate_mirrors_flags=("--allow-root" "--save=${TMPFILE}" "${name}" "--fetch-mirrors-timeout=30000")
     if [[ -n "${special_arch}" ]]; then
         _rate_mirrors_flags+=("--arch=${special_arch}")
     fi
