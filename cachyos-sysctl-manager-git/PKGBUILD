@@ -1,9 +1,10 @@
 # Maintainer: Vladislav Nepogodin <nepogodin.vlad@gmail.com>
 
 pkgname=cachyos-sysctl-manager-git
-pkgver=r3.1d9290a
+pkgver=1.0.0.r0.g3bd74be
 pkgrel=1
-pkgdesc="Manage sysctl options"
+epoch=1
+pkgdesc="Manage linux kernel sysctl options"
 arch=(aarch64 x86_64 x86_64_v3)
 url="https://github.com/cachyos/sysctl-manager"
 license=(GPLv3)
@@ -17,7 +18,7 @@ options=(strip)
 
 pkgver() {
   cd "${srcdir}/${pkgname}"
-  printf "r%s.%s" "$(git rev-list --count HEAD)" "$(git rev-parse --short HEAD)"
+  git describe --long --tags | sed 's/^v//;s/\([^-]*-g\)/r\1/;s/-/./g'
 }
 
 build() {
