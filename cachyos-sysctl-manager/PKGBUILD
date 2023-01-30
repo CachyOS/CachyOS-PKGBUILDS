@@ -1,0 +1,42 @@
+# Maintainer: Vladislav Nepogodin <nepogodin.vlad@gmail.com>
+
+pkgname=cachyos-sysctl-manager
+pkgver=1.0.0
+pkgrel=1
+pkgdesc="Manage linux kernel sysctl options"
+arch=(aarch64 x86_64 x86_64_v3)
+url="https://github.com/cachyos/sysctl-manager"
+license=(GPLv3)
+depends=('qt5-base' 'polkit-qt5')
+makedepends=('cmake' 'ninja' 'git')
+groups=('cachyos')
+source=("sysctl-manager-$pkgver.tar.gz::$url/archive/v$pkgver.tar.gz")
+sha256sums=('8be2a60f701c02a801e2eba70e5dc31af8249a9a61c4ff7ffb90fa710062f7fe')
+provides=('cachyos-sysctl-manager')
+conflicts=('cachyos-sysctl-manager')
+options=(strip)
+
+build() {
+  cd ${srcdir}/sysctl-manager-${pkgver}
+
+  CFLAGS=${CFLAGS/-Wp,-D_GLIBCXX_ASSERTIONS}
+  CXXFLAGS=${CXXFLAGS/-Wp,-D_GLIBCXX_ASSERTIONS}
+
+  _cpuCount=$(grep -c -w ^processor /proc/cpuinfo)
+
+  cmake -S . -Bbuild \
+        -GNinja \
+        -DCMAKE_BUILD_TYPE=Release \
+        -DCMAKE_INSTALL_PREFIX=/usr \
+        -DCMAKE_INSTALL_LIBDIR=lib
+  cmake --build build --parallel $_cpuCount
+}
+
+package() {
+  cd ${srcdir}/sysctl-manager-${pkgver}
+  DESTDIR="${pkgdir}" cmake --build build --target install
+
+  install -Dm644 LICENSE "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE"
+}
+
+# vim:set sw=2 sts=2 et:
