@@ -10,9 +10,9 @@ _rogue_company_fix="false"
 
 pkgbase=glibc
 pkgname=(glibc lib32-glibc)
-pkgver=2.36
-_commit=93967a2a7bbdcedb73e0b246713580c7c84d001e
-pkgrel=18
+pkgver=2.37
+_commit=a704fd9a133bfb10510e18702f48a6a9c88dbbd5
+pkgrel=1
 arch=(x86_64)
 url='https://www.gnu.org/software/libc'
 license=(GPL LGPL)
@@ -51,8 +51,6 @@ prepare() {
   # which relies on DT_HASH to be present in these libs.
   # reconsider 2023-01
   patch -Np1 -i "${srcdir}"/reenable_DT_HASH.patch
-  patch -Np1 -i "${srcdir}"/gcc13.patch
-  patch -Np1 -i "${srcdir}"/gcc13-2.patch
   # Reverting 7a5db2e82fbb6c3a6e3fdae02b7166c5d0e8c7a8, 8208be389bce84be0e1c35a3daa0c3467418f921, 6bf789d69e6be48419094ca98f064e00297a27d5, b89d5de2508215ef3131db7bed76ac50b3f4c205, 86f0179bc003ffc34ffaa8d528a7a90153ac06c6 for Rogue Company to work again
 if [ "$_rogue_company_fix" = "true" ]; then
   patch -Np1 -i "${srcdir}"/rogue_company_reverts.patch
