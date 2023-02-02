@@ -27,5 +27,6 @@ pkgver() {
 
 package() {
     cd $srcdir/$pkgname
+    install -D -m644 cachyos-config.zsh $pkgdir/usr/share/cachyos-zsh-config/cachyos-config.zsh
     install -D -m644 zshrc $pkgdir/etc/skel/.zshrc
 }
