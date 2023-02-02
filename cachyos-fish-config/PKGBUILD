@@ -1,8 +1,8 @@
 pkgname=cachyos-fish-config
-pkgver=7
+pkgver=8
 pkgrel=1
 pkgdesc="Fish configuration of CachyOS"
-arch=(any)
+arch=('any')
 url="https://github.com/CachyOS/$pkgname"
 license=('MIT')
 depends=('bat'
@@ -19,12 +19,14 @@ depends=('bat'
 makedepends=('git')
 conflicts=('kwin-scripts-window-colors')
 source=("git+$url.git"
-		"$pkgname.install")
+        "$pkgname.install")
 sha256sums=('SKIP'
             '329dcbf629974d004643fa2b6b3575db83ee89d3cf72c0b70d430110e6690a7e')
 
 package() {
-        cd $srcdir/$pkgname
-        install -D -m644 config.fish $pkgdir/etc/skel/.config/fish/config.fish
-        install -D -m644 conf.d/done.fish $pkgdir/etc/skel/.config/fish/conf.d/done.fish
+    cd $srcdir/$pkgname
+
+    install -D -m644 conf.d/done.fish $pkgdir/usr/share/cachyos-fish-config/conf.d/done.fish
+    install -D -m644 cachyos-config.fish $pkgdir/usr/share/cachyos-fish-config/cachyos-config.fish
+    install -D -m644 config.fish $pkgdir/etc/skel/.config/fish/config.fish
 }
