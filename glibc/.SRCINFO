@@ -1,6 +1,6 @@
 pkgbase = glibc
-	pkgver = 2.36
-	pkgrel = 16
+	pkgver = 2.37
+	pkgrel = 1
 	url = https://www.gnu.org/software/libc
 	arch = x86_64
 	license = GPL
@@ -9,18 +9,15 @@ pkgbase = glibc
 	makedepends = gd
 	makedepends = lib32-gcc-libs
 	makedepends = python
-	options = debug
 	options = staticlibs
 	options = !lto
-	source = git+https://sourceware.org/git/glibc.git#commit=3aae843e9e9e6a2502e98ff44d2671b20a023f8e
+	source = git+https://sourceware.org/git/glibc.git#commit=a704fd9a133bfb10510e18702f48a6a9c88dbbd5
 	source = locale.gen.txt
 	source = locale-gen
 	source = lib32-glibc.conf
 	source = sdt.h
 	source = sdt-config.h
 	source = reenable_DT_HASH.patch
-	source = gcc13.patch
-	source = gcc13-2.patch
 	source = rogue_company_reverts.patch
 	validpgpkeys = 7273542B39962DF7B299931416792B4EA25340F8
 	validpgpkeys = BC7C7372637EC10C57D7AA6579C43DFBF1CF2187
@@ -31,8 +28,6 @@ pkgbase = glibc
 	b2sums = a6a5e2f2a627cc0d13d11a82458cfd0aa75ec1c5a3c7647e5d5a3bb1d4c0770887a3909bfda1236803d5bc9801bfd6251e13483e9adf797e4725332cd0d91a0e
 	b2sums = 214e995e84b342fe7b2a7704ce011b7c7fc74c2971f98eeb3b4e677b99c860addc0a7d91b8dc0f0b8be7537782ee331999e02ba48f4ccc1c331b60f27d715678
 	b2sums = 5fdd133c367af2f5454ea1eea7907de12166fb95eb59dbe33eae16aa9e26209b6585972bc1c80e36a0af4bfb04296acaf940ee78cd624cdcbab9669dff46c051
-	b2sums = 50e9df34c4dc1789c7ec021777fac4e4b5630ee9df111d7f7716f611cf5e481cee38a97b86486c2974582852be167bc09a2ef84b3c7c030975ef3e78c15bb854
-	b2sums = a0feefe27330c71c99af44cea417ab91e7003024d306f97e49e4ce9bff2b2fdd538a0d5f7b39bac23706b1075e3a4eed7c9ced60b8b8fa0086c042f82652b2a2
 	b2sums = b3e61c54da02ee2a21acf5181ec8a8fa8c7d76af66269096c0defb200c79c110519f95dff1dc50cfc2594c56d2a20274a6e0aed5c82fdbe4fd7addea48065a48
 
 pkgname = glibc
@@ -49,8 +44,7 @@ pkgname = glibc
 
 pkgname = lib32-glibc
 	pkgdesc = GNU C Library (32-bit)
-	depends = glibc=2.36
-	options = debug
+	depends = glibc=2.37
 	options = staticlibs
 	options = !lto
 	options = !emptydirs
