@@ -8,7 +8,7 @@ pkgname=proton-cachyos
 _commit=$(curl -s https://api.github.com/repos/ValveSoftware/Proton/commits?sha=experimental_7.0 | grep '"sha"' | head -n 1 | cut -d '"' -f 4)
 _raw_date=$(curl -s https://api.github.com/repos/ValveSoftware/Proton/commits/$_commit | grep '"date"' | cut -d '"' -f 4)
 _date=$(echo $_raw_date | cut -d '-' -f 1-3 | tr -d '-' | cut -d 'T' -f 1)
-_srctag=7.0-$_date
+pkgver=7.0.$_date
 pkgver=${_srctag//-/.}
 _geckover=2.47.3
 _monover=7.4.0
