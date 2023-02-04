@@ -5,13 +5,13 @@
 _optimize=${_optimize-y}
 
 pkgname=proton-cachyos
-#_srctag=7.0-20221102
+_srctag=7.0-20230201
 _commit=
-pkgver=7.0
+pkgver=${_srctag//-/.}
 _geckover=2.47.3
 _monover=7.4.0
-pkgrel=9
-pkgdesc="Compatibility tool for Steam Play based on Wine and additional components, experimental branch with some cachyos changes"
+pkgrel=1
+pkgdesc="Compatibility tool for Steam Play based on Wine and additional components, experimental branch with extra CachyOS flavour"
 url="https://github.com/ValveSoftware/Proton"
 arch=(x86_64 x86_64_v3)
 options=(!staticlibs !lto emptydirs)
@@ -105,16 +105,16 @@ makedepends=(${makedepends[@]} ${depends[@]})
 provides=('proton')
 install=${pkgname}.install
 source=(
-    proton::git+https://github.com/ValveSoftware/Proton.git#branch=experimental_7.0
-    wine-valve::git+https://github.com/ValveSoftware/wine.git#branch=experimental_7.0
-    dxvk::git+https://github.com/doitsujin/dxvk.git#branch=master
+    proton::git+https://github.com/ValveSoftware/Proton.git#tag=experimental-${_srctag}
+    wine-valve::git+https://github.com/ValveSoftware/wine.git
+    dxvk::git+https://github.com/doitsujin/dxvk.git
     openvr::git+https://github.com/ValveSoftware/openvr.git
     liberation-fonts::git+https://github.com/liberationfonts/liberation-fonts.git
     gstreamer::git+https://gitlab.freedesktop.org/gstreamer/gstreamer.git
     gst-plugins-base::git+https://gitlab.freedesktop.org/gstreamer/gst-plugins-base.git
     gst-plugins-good::git+https://gitlab.freedesktop.org/gstreamer/gst-plugins-good.git
     gst-orc::git+https://gitlab.freedesktop.org/gstreamer/orc.git
-    vkd3d-proton::git+https://github.com/HansKristian-Work/vkd3d-proton.git#branch=master
+    vkd3d-proton::git+https://github.com/HansKristian-Work/vkd3d-proton.git
     OpenXR-SDK::git+https://github.com/KhronosGroup/OpenXR-SDK.git
     dxvk-nvapi::git+https://github.com/jp7677/dxvk-nvapi.git
     vkd3d-valve::git+https://github.com/ValveSoftware/vkd3d.git
@@ -132,7 +132,6 @@ source=(
     https://dl.winehq.org/wine/wine-gecko/${_geckover}/wine-gecko-${_geckover}-x86{,_64}.tar.xz
     https://github.com/madewokherd/wine-mono/releases/download/wine-mono-${_monover}/wine-mono-${_monover}-x86.tar.xz
     0001-wldap32-25946b48148784e8275c1685f6498ab88f553ca3.patch
-    0001-AUR-pkgbuild-changes-v3.patch
     0001-AUR-pkgbuild-changes.patch
     FSR.patch
     server-Enable-link-time-optimization.patch
@@ -270,27 +269,16 @@ prepare() {
         patch -p1 -i "$srcdir"/0001-wldap32-25946b48148784e8275c1685f6498ab88f553ca3.patch
     popd
 
-    cd "$srcdir"/proton/wine
-    msg2 "WINE: -GAME FIXES- killer instinct vulkan fix"
-    patch -Np1 < "$srcdir"/killer-instinct-winevulkan_fix.patch
-    msg2 "FSR PATCHES"
-    patch -Np1 < "$srcdir"/FSR.patch
-    msg2 "ENABLE LTO for wineserver"
-    patch -Np1 < "$srcdir"/server-Enable-link-time-optimization.patch
-    cd "$srcdir"/wine-valve
-    msg2 "WINE: -GAME FIXES- killer instinct vulkan fix"
-    patch -Np1 < "$srcdir"/killer-instinct-winevulkan_fix.patch
-    msg2 "FSR PATCHES"
-    patch -Np1 < "$srcdir"/FSR.patch
-    msg2 "ENABLE LTO for wineserver"
-    patch -Np1 < "$srcdir"/server-Enable-link-time-optimization.patch
-    cd "$srcdir"/proton
-    msg2 "Needed PKGBUILD changes"
-    if [ -n "$_optimize" ]; then
-    patch -Np1 < "$srcdir"/0001-AUR-pkgbuild-changes-v3.patch
-    else
-    patch -Np1 < "$srcdir"/0001-AUR-pkgbuild-changes.patch
-    fi
+    pushd wine
+        echo "Wine: Killer Instinct vulkan fix"
+        patch -Np1 -i "$srcdir"/killer-instinct-winevulkan_fix.patch
+        echo "Wine: Fidelity SuperResolution patches"
+        patch -Np1 -i "$srcdir"/FSR.patch
+        echo "Wine: Enable LTO for wineserver"
+        patch -Np1 -i "$srcdir"/server-Enable-link-time-optimization.patch
+    popd
+
+    patch -p1 -i "$srcdir"/0001-AUR-pkgbuild-changes.patch
 
     # Remove repos from srcdir to save space
     for submodule in "${_submodules[@]}"; do
@@ -318,17 +306,15 @@ build() {
     # If you want the "best" possible optimizations for your system you can use
     # `-march=native` and remove the `-mtune=core-avx2` option.
     if [ -n "$_optimize" ]; then
-    export CFLAGS="-O3 -march=x86-64-v3 -mtune=skylake -pipe -fno-semantic-interposition"
-    export CXXFLAGS="-O3 -march=x86-64-v3 -mtune=skylake -pipe -fno-semantic-interposition"
-    export RUSTFLAGS="-C opt-level=3 -C target-cpu=x86-64-v3"
-    export LDFLAGS="-Wl,-O1,--sort-common,--as-needed"
+        export CFLAGS="-O3 -march=x86-64-v3 -mtune=skylake -pipe -fno-semantic-interposition"
+        export CXXFLAGS="-O3 -march=x86-64-v3 -mtune=skylake -pipe -fno-semantic-interposition"
+        export RUSTFLAGS="-C opt-level=3 -C target-cpu=x86-64-v3"
     else
-    export CFLAGS="-O2 -march=x86-64-v2 -mtune=core-avx2 -pipe"
-    export CXXFLAGS="-O2 -march=x86-64-v2 -mtune=core-avx2 -pipe"
-    export RUSTFLAGS="-C opt-level=2 -C target-cpu=x86-64-v2"
-    export LDFLAGS="-Wl,-O1,--sort-common,--as-needed"
+    export CFLAGS="-O2 -march=nocona -mtune=core-avx2 -pipe"
+    export CXXFLAGS="-O2 -march=nocona -mtune=core-avx2 -pipe"
+    export RUSTFLAGS="-C opt-level=2 -C target-cpu=nocona"
     fi
-
+    export LDFLAGS="-Wl,-O1,--sort-common,--as-needed"
 
     # If using -march=native and the CPU supports AVX, launching a d3d9
     # game can cause an Unhandled exception. The cause seems to be the
@@ -342,7 +328,7 @@ build() {
     # AVX is "hard" disabled for 32bit in any case.
     # AVX2 for 64bit is disabled below.
     if [ -n "$_optimize" ]; then
-    echo "use AVX2"
+        echo "Allowing AVX2 instructions"
     else
     export CFLAGS+=" -mno-avx2"
     export CXXFLAGS+=" -mno-avx2"
