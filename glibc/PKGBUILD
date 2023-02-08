@@ -11,8 +11,8 @@ _rogue_company_fix="false"
 pkgbase=glibc
 pkgname=(glibc lib32-glibc)
 pkgver=2.37
-_commit=a704fd9a133bfb10510e18702f48a6a9c88dbbd5
-pkgrel=2
+_commit=6fe86ecd787a2624cd638131629ba9a824040308
+pkgrel=3
 arch=(x86_64)
 url='https://www.gnu.org/software/libc'
 license=(GPL LGPL)
@@ -25,7 +25,6 @@ source=(git+https://sourceware.org/git/glibc.git#commit=${_commit}
         sdt.h sdt-config.h
         reenable_DT_HASH.patch
         rogue_company_reverts.patch
-        cve-2023-25139.patch
 )
 validpgpkeys=(7273542B39962DF7B299931416792B4EA25340F8 # Carlos O'Donell
               BC7C7372637EC10C57D7AA6579C43DFBF1CF2187) # Siddhesh Poyarekar
@@ -49,15 +48,11 @@ prepare() {
   # reconsider 2023-01
   patch -Np1 -i "${srcdir}"/reenable_DT_HASH.patch
   
-  # Add a temporary patch for cve 2023-25139 until a fix has been backported.
-  # Technical the fix itself is complete but the test cases aren't.
-  # See https://sourceware.org/bugzilla/show_bug.cgi?id=30068
-  patch -Np1 -i "${srcdir}"/cve-2023-25139.patch
-  
   # Reverting 7a5db2e82fbb6c3a6e3fdae02b7166c5d0e8c7a8, 8208be389bce84be0e1c35a3daa0c3467418f921, 6bf789d69e6be48419094ca98f064e00297a27d5, b89d5de2508215ef3131db7bed76ac50b3f4c205, 86f0179bc003ffc34ffaa8d528a7a90153ac06c6 for Rogue Company to work again
 if [ "$_rogue_company_fix" = "true" ]; then
   patch -Np1 -i "${srcdir}"/rogue_company_reverts.patch
 fi
+
 }
 
 build() {
