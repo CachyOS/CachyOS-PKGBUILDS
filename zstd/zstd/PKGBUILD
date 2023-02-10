@@ -4,28 +4,29 @@
 # Contributor: Johan Förberg <johan@forberg.se>
 
 pkgname=zstd
-pkgver=1.5.3
-pkgrel=10
+pkgver=1.5.4
+pkgrel=1
 pkgdesc='Zstandard - Fast real-time compression algorithm'
 url='https://facebook.github.io/zstd/'
 arch=(x86_64)
 license=(BSD GPL2)
 depends=(glibc gcc-libs zlib xz lz4)
-makedepends=(cmake gtest ninja git)
+makedepends=(cmake gtest ninja)
 provides=(libzstd.so)
-source=(git+https://github.com/facebook/zstd.git#commit=5d2fb4288f8230cc32c12f235b716fd25ecc89e1)
-sha256sums=('SKIP')
+source=(https://github.com/facebook/zstd/releases/download/v${pkgver}/zstd-${pkgver}.tar.zst{,.sig})
+sha256sums=('6925880b84aca086308c27036ef1c16e76817372301ead7c37f90e23567f704e'
+            'SKIP')
 options=('debug')
 
 prepare() {
-  cd ${pkgname}
+  cd ${pkgname}-${pkgver}
   # avoid error on tests without static libs, we use LD_LIBRARY_PATH
   sed '/build static library to build tests/d' -i build/cmake/CMakeLists.txt
   sed 's/libzstd_static/libzstd_shared/g' -i build/cmake/tests/CMakeLists.txt
 }
 
 build() {
-  cd ${pkgname}
+  cd ${pkgname}-${pkgver}
   export CFLAGS+=' -ffat-lto-objects'
   export CXXFLAGS+=' -ffat-lto-objects'
 
@@ -43,14 +44,15 @@ build() {
 }
 
 check() {
-  cd ${pkgname}
+  cd ${pkgname}-${pkgver}
   export LD_LIBRARY_PATH="$(pwd)/build/lib"
   ctest -VV --test-dir build
 }
 
 package() {
-  cd ${pkgname}
+  cd ${pkgname}-${pkgver}
   DESTDIR="${pkgdir}" cmake --install build
+  ln -sf /usr/bin/zstd "${pkgdir}/usr/bin/zstdmt"
   install -Dm 644 LICENSE -t "${pkgdir}/usr/share/licenses/${pkgname}"
 }
 

@@ -5,20 +5,26 @@
 
 _pkgname=zstd
 pkgname=lib32-zstd
-pkgver=1.5.3
+pkgver=1.5.4
 pkgrel=1
 pkgdesc='Zstandard - Fast real-time compression algorithm (32-bit)'
 url='https://facebook.github.io/zstd/'
 arch=('x86_64')
 license=('BSD' 'GPL2')
 depends=('zstd' 'lib32-glibc')
-makedepends=('gtest' 'gcc-libs' 'lib32-gcc-libs')
+makedepends=('gtest')
 provides=('libzstd.so')
-source=(git+https://github.com/facebook/zstd.git#commit=5d2fb4288f8230cc32c12f235b716fd25ecc89e1)
-sha256sums=('SKIP')
+source=(https://github.com/facebook/zstd/releases/download/v${pkgver}/zstd-${pkgver}.tar.zst{,.sig})
+sha256sums=('6925880b84aca086308c27036ef1c16e76817372301ead7c37f90e23567f704e'
+            'SKIP')
+sha512sums=('d4ecbfb43c3d8217dd20043ba1945ec2048c6620246b4f91595436f25dbb7eb7d14fe07e6bc538ad6a5a89209bdfe987245a25d20e5fcf615176bcd35eb26a3b'
+            'SKIP')
+b2sums=('8caea5dae06928076c2e54b059a501bd757663bae5948cb49ae32a7591c11636b22cb3b45d4f91653da800e1815cf5b28f72c69f4696ada4fdc746a272239da9'
+        'SKIP')
+validpgpkeys=(4EF4AC63455FC9F4545D9B7DEF8FE99528B52FFD)
 
 build() {
-  cd ${_pkgname}
+  cd ${_pkgname}-${pkgver}
   export CC="gcc -m32"
   export CXX="g++ -m32"
   export PKG_CONFIG_PATH="/usr/lib32/pkgconfig"
@@ -28,13 +34,13 @@ build() {
 }
 
 check() {
-  cd ${_pkgname}
+  cd ${_pkgname}-${pkgver}
   make check
   make -C contrib/pzstd test
 }
 
 package() {
-  cd ${_pkgname}
+  cd ${_pkgname}-${pkgver}
   make \
     PREFIX=/usr \
     LIBDIR=/usr/lib32 \
