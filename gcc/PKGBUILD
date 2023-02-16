@@ -10,7 +10,7 @@
 pkgname=(gcc gcc-libs lib32-gcc-libs gcc-fortran gcc-objc gcc-ada gcc-go gcc-d lto-dump libgccjit)
 pkgver=12.2.1
 _majorver=${pkgver%%.*}
-pkgrel=3
+pkgrel=4
 pkgdesc='The GNU Compiler Collection'
 arch=(x86_64)
 license=(GPL3 LGPL FDL custom)
@@ -36,9 +36,9 @@ checkdepends=(
   python-pytest
   tcl
 )
-options=(!emptydirs !lto)
+options=(!emptydirs !lto debug)
 _libdir=usr/lib/gcc/$CHOST/${pkgver%%+*}
-_commit=fb2d50f72caf3b84b315bc760368670680999749
+_commit=86caa970dddfac124a2bbbfe3e695348d00eb926
 source=(git://gcc.gnu.org/git/gcc.git#commit=$_commit
         c89 c99
         gcc-ada-repro.patch
