@@ -23,13 +23,13 @@ optdepends=('perl-locale-gettext: translation support in makepkg-template')
 provides=('libalpm.so')
 backup=(etc/pacman.conf
         etc/makepkg.conf)
-options=('strip' '!lto')
+options=('strip')
 #validpgpkeys=('6645B0A8C7005E78DB1D7864F99FFE0FEAE999BD'  # Allan McRae <allan@archlinux.org>
 #              'B8151B117037781095514CA7BBDFFC92306B1121') # Andrew Gregory (pacman) <andrew@archlinux.org>
 _commit="9df9992f91f604eca49697a477e91b93accecf22"
 if $_staging; then
     _commit="c6ddee1af69ee7e43594be10a7c47750e6f7b8e7"
-    makedepends+=('cmake' 'mold' 'rustup' 'clang')
+    makedepends+=('cmake' 'rust' 'clang')
 fi
 source=(
 #       https://sources.archlinux.org/other/pacman/$pkgname-$_pkgver.tar.xz{,.sig}
@@ -64,15 +64,11 @@ prepare() {
 build() {
   cd "${pkgname}"
 
-  if ! rustc --version | grep nightly >/dev/null 2>&1; then
-    echo "Installing nightly compiler…"
-    rustup toolchain install nightly
-    rustup default nightly
-  fi
-
-  _cpuCount=$(grep -c -w ^processor /proc/cpuinfo)
-
-  export RUSTFLAGS="-Cembed-bitcode -C opt-level=3 -Ccodegen-units=1 -Clinker=clang -C link-arg=-flto -Clink-arg=-fuse-ld=/usr/bin/mold"
+  export CFLAGS+=" -fno-semantic-interposition -flto=thin"
+  export CXXLAGS+=" -fno-semantic-interposition -flto=thin"
+  export RUSTFLAGS+=" -Cembed-bitcode -Clinker-plugin-lto -Clinker=clang -C link-arg=-flto=thin"
+  export CC=clang
+  export CXX=clang++
   meson --prefix=/usr \
         --buildtype=plain \
         -Ddoc=enabled \
@@ -81,18 +77,28 @@ build() {
         -Dldconfig=/usr/bin/ldconfig \
         build
 
-  meson compile -C build --jobs $_cpuCount
+  meson compile -C build
 }
 
 check() {
   cd "${pkgname}"
 
+  export CFLAGS+=" -fno-semantic-interposition -flto=thin"
+  export CXXLAGS+=" -fno-semantic-interposition -flto=thin"
+  export RUSTFLAGS+=" -Cembed-bitcode -Clinker-plugin-lto -Clinker=clang -C link-arg=-flto=thin"
+  export CC=clang
+  export CXX=clang++
   meson test -C build
 }
 
 package() {
   cd "${pkgname}"
 
+  export CFLAGS+=" -fno-semantic-interposition -flto=thin"
+  export CXXLAGS+=" -fno-semantic-interposition -flto=thin"
+  export RUSTFLAGS+=" -Cembed-bitcode -Clinker-plugin-lto -Clinker=clang -C link-arg=-flto=thin"
+  export CC=clang
+  export CXX=clang++
   DESTDIR="$pkgdir" meson install -C build
 
   # install Arch specific stuff
