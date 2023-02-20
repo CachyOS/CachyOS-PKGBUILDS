@@ -29,7 +29,7 @@ options=('strip')
 _commit="9df9992f91f604eca49697a477e91b93accecf22"
 if $_staging; then
     _commit="c6ddee1af69ee7e43594be10a7c47750e6f7b8e7"
-    makedepends+=('cmake' 'rust' 'clang')
+    makedepends+=('cmake' 'mold' 'rustup' 'clang')
 fi
 source=(
 #       https://sources.archlinux.org/other/pacman/$pkgname-$_pkgver.tar.xz{,.sig}
@@ -64,7 +64,15 @@ prepare() {
 build() {
   cd "${pkgname}"
 
-  export RUSTFLAGS="${RUSTFLAGS}"
+  if ! rustc --version | grep nightly >/dev/null 2>&1; then
+    echo "Installing nightly compiler…"
+    rustup toolchain install nightly
+    rustup default nightly
+  fi
+
+  _cpuCount=$(grep -c -w ^processor /proc/cpuinfo)
+
+  export RUSTFLAGS="-Cembed-bitcode -C opt-level=3 -Ccodegen-units=1 -Clinker=clang -C link-arg=-flto -Clink-arg=-fuse-ld=/usr/bin/mold"
   meson --prefix=/usr \
         --buildtype=plain \
         -Ddoc=enabled \
@@ -73,7 +81,7 @@ build() {
         -Dldconfig=/usr/bin/ldconfig \
         build
 
-  meson compile -C build
+  meson compile -C build --jobs $_cpuCount
 }
 
 check() {
