@@ -52,7 +52,7 @@ build() {
 }
 
 package() {
-  cd "$srcdir/${_pkgname}-${pkgver}"
+  cd "$srcdir/${pkgname}-${pkgver}"
 
   DESTDIR="$pkgdir" make install
   install -Dm644 "${srcdir}/90-dracut-install.hook" "${pkgdir}/usr/share/libalpm/hooks/90-dracut-install.hook"
