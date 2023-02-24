@@ -1,12 +1,8 @@
 #!/usr/bin/env bash
 #
-# Calls kernel-install on all kernels found in /usr/lib/modules
+# Rebuild the initrds for all kernels found in /usr/lib/modules
 #
-# Run kernel install for all the installed kernels
-while read -r pkgbase; do
-    kernelversion=$(basename "${pkgbase%/pkgbase}")
-    kernelname=$(cat "${pkgbase}")
-    echo "Running dracut for ${kernelname}-${kernelversion}"
-    dracut --force --hostonly --no-hostonly-cmdline "/boot/initramfs-${kernelname}.img" "${kernelversion}"
-    dracut --force --no-hostonly "/boot/initramfs-${kernelname}-fallback.img" "${kernelversion}"
-done < <(find /usr/lib/modules -maxdepth 2 -type f -name pkgbase)
+# Run dracut for all the installed kernels
+
+# This script requires passing a valid file to regenerate all initrds so we pass a file we know will exist
+/usr/share/libalpm/scripts/dracut-install < "/usr/bin/dracut-rebuild"
