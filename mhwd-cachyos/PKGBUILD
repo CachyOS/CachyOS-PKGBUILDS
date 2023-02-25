@@ -36,8 +36,7 @@ build() {
 
 package_mhwd-cachyos() {
   pkgdesc="mhwd-cachyos library and application"
-  depends=('hwinfo' 'mesa' 'mhwd-db-cachyos' 'pacman')
-  optdepends=('lib32-mesa: for 32bit libgl support')
+  depends=('hwinfo' 'mhwd-db-cachyos' 'pacman')
   provides=('mhwd' 'mhwd-cachyos')
   conflicts=('mhwd' 'mhwd-cachyos')
   install=mhwd.install
@@ -50,7 +49,7 @@ package_mhwd-cachyos() {
 
 package_mhwd-db-cachyos() {
   pkgdesc="mhwd-cachyos Database"
-  depends=('libnotify' 'mhwd-nvidia' 'mhwd-amdgpu' 'mhwd-ati' 'mhwd-nvidia>=455' 'mhwd-nvidia-390xx')
+  depends=('libnotify' 'mhwd-nvidia' 'mhwd-nvidia>=525' 'mhwd-nvidia-470xx' 'mhwd-nvidia-390xx')
   provides=('mhwd-db' 'mhwd-db-cachyos')
   conflicts=('mhwd-db' 'mhwd-db-cachyos')
   install=mhwd-db.install
