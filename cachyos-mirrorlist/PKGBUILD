@@ -1,6 +1,6 @@
 
 pkgname=cachyos-mirrorlist
-pkgver=16
+pkgver=17
 pkgrel=1
 pkgdesc="cachyos mirrorlist"
 arch=('any')
@@ -9,7 +9,7 @@ groups=(cachyos)
 options=(!strip !emptydirs)
 backup=("etc/pacman.d/$pkgname")  # to keep possibly ranked mirrorlist
 source=(cachyos-mirrorlist)
-sha512sums=('dbd820a969954e529f6fda7890e3d897d2cf37ecae3db5b75a9e58b57e025e6c15bd4edb02eaef08d34473562c85f7a3624a7fafbb1b627d950b489c6332522d')
+sha512sums=('80d9d9ed84c880ed2b4d21dca5d73b832dbc15bb21bf1932efa8de95f8b2092681ba801203d26e8d1908bf92497cfa7c270cd18482fc3c075ee27d67a79c6f61')
 package() {
  #install -d "$pkgdir/etc/pacman.d"
  install -Dm644 "$srcdir/$pkgname" "$pkgdir/etc/pacman.d/$pkgname"
