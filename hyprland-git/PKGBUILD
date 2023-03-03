@@ -53,7 +53,6 @@ source=("${_pkgname}::git+https://github.com/hyprwm/Hyprland.git")
 conflicts=("${_pkgname}")
 provides=('hyprland')
 sha256sums=('SKIP')
-options=(!buildflags)
 
 pkgver() {
   cd "${srcdir}/${_pkgname}"
@@ -65,6 +64,11 @@ pkgver() {
 build() {
   cd "${srcdir}/${_pkgname}"
   git submodule update --init
+
+  # With those flags set Hyprland does crash
+  export CFLAGS=${CFLAGS/-Wp,-D_GLIBCXX_ASSERTIONS}
+  export CXXFLAGS=${CXXFLAGS/-Wp,-D_GLIBCXX_ASSERTIONS}
+
   make fixwlr
 
   cd "${srcdir}/${_pkgname}/subprojects/wlroots"
