@@ -2,7 +2,6 @@ post_install() {
   echo "Attempting to enable services..."
   systemctl enable irqbalance
   systemctl enable ananicy-cpp 
-  systemctl enable reflector.timer
   systemctl enable uksmd
 }
 
@@ -10,6 +9,5 @@ post_upgrade() {
   echo "Attempting to enable services..."
   systemctl is-active irqbalance >/dev/null || systemctl enable irqbalance
   systemctl is-active ananicy-cpp >/dev/null || systemctl enable ananicy-cpp.service
-  systemctl is-active reflector.timer >/dev/null || systemctl enable reflector.timer
   systemctl is-active uksmd >/dev/null || systemctl enable uksmd
   }
