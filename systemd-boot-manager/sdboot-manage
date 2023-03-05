@@ -115,7 +115,7 @@ generate_entries() {
                     sdoptions="root=UUID=${srcdev_uuid} rw rootflags=subvol=${srcdev_fsroot}"
                 fi
                 if [[ ${CDISCARD,,} == "yes" ]]; then
-                    sdoptions="${sdoptions},discard"
+                    sdoptions="${sdoptions},discard=async"
                 fi
                 ;;
             *)
