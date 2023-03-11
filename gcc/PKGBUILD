@@ -10,7 +10,7 @@
 pkgname=(gcc gcc-libs lib32-gcc-libs gcc-fortran gcc-objc gcc-ada gcc-go gcc-d lto-dump libgccjit)
 pkgver=12.2.1
 _majorver=${pkgver%%.*}
-pkgrel=4
+pkgrel=5
 pkgdesc='The GNU Compiler Collection'
 arch=(x86_64)
 license=(GPL3 LGPL FDL custom)
@@ -36,9 +36,9 @@ checkdepends=(
   python-pytest
   tcl
 )
-options=(!emptydirs !lto)
+options=(!emptydirs !lto) # LTO is enabled at configure
 _libdir=usr/lib/gcc/$CHOST/${pkgver%%+*}
-_commit=86caa970dddfac124a2bbbfe3e695348d00eb926
+_commit=67608f7a2cf3eff99654ab3f44d5183049e3b36c
 source=(git://gcc.gnu.org/git/gcc.git#commit=$_commit
         c89 c99
         gcc-ada-repro.patch
@@ -119,7 +119,7 @@ build() {
     "${_confflags[@]:?_confflags unset}"
 
   # see https://bugs.archlinux.org/task/71777 for rationale re *FLAGS handling
-  make -O STAGE1_CFLAGS="-O2" \
+  make -O STAGE1_CFLAGS="-O3" \
           BOOT_CFLAGS="$CFLAGS" \
           BOOT_LDFLAGS="$LDFLAGS" \
           LDFLAGS_FOR_TARGET="$LDFLAGS" \
