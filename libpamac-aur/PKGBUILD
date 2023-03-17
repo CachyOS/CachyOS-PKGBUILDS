@@ -5,12 +5,12 @@ ENABLE_FLATPAK=0
 ENABLE_SNAPD=0
 
 pkgname=libpamac-aur
-pkgver=11.4.1
-pkgrel=3
+pkgver=11.5.0
+pkgrel=1
 _pkgfixver=$pkgver
 
-_commit='29d71809ee4171585d58a2f652a2eaa05e3dbfb0'
-sha256sums=('b7f69c45f89fc587241b0237dab00cb19314904a4dc7025523aebd28ea59d3d2'
+_commit='e76e49d7b045eb99dffe25f38655661b559b6ad1'
+sha256sums=('7872ae9d64571f99a13a69e33cf139594b2f2f8a7b7e62af9513b10f86b3d976'
             '6e0c25f0fcb0076ce78845b037e32925fcc3f1cd1670062c48ed35f564a10244'
             'c2b943318a01ba1f3dabbf32e48e6a6f4b4b774e167ab86c6bfee31aa4a3424c'
             '23862d7ba3507670cbdd00b949c453bf8b8f2bb876cbd5943b2ceb60cc13cc6f')
@@ -19,7 +19,7 @@ pkgdesc="Pamac package manager library based on libalpm"
 arch=('i686' 'x86_64' 'arm' 'armv6h' 'armv7h' 'aarch64')
 url="https://gitlab.manjaro.org/applications/libpamac"
 license=('GPL3')
-depends=('glib2>=2.42' 'json-glib' 'libsoup3' 'dbus-glib' 'polkit' 'vte3>=0.38' 
+depends=('glib2>=2.42' 'json-glib' 'libsoup3' 'dbus-glib' 'polkit' 'vte3>=0.38'
          'libnotify' 'pacman>=6.0' 'pacman<6.1' 'gnutls>=3.4' 'git'
          'appstream-glib>=0.7.18-1' 'archlinux-appstream-data' 'git')
 
@@ -68,7 +68,6 @@ package() {
   DESTDIR="$pkgdir" ninja install
   # fix appstream issue
   install -Dm644 "$srcdir/fix-appstream-data.hook" "$pkgdir/etc/pacman.d/hooks/fix-appstream-data.hook"
-  install -Dm755 "$srcdir/fix-appstream-data.sh" "$pkgdir/etc/pacman.d/hooks.bin/fix-appstream-data.sh"  
-
+  install -Dm755 "$srcdir/fix-appstream-data.sh" "$pkgdir/etc/pacman.d/hooks.bin/fix-appstream-data.sh"
 }
 # vim:set ts=2 sw=2 et:
