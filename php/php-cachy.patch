@@ -1,6 +1,6 @@
---- php.ini-production.orig
-+++ php.ini-production
-@@ -1763,13 +1763,13 @@
+--- php.ini-production.orig     2023-03-17 18:57:48.255618251 +0100
++++ php.ini-production  2023-03-17 18:59:02.432322652 +0100
+@@ -1772,13 +1772,13 @@
  
  [opcache]
  ; Determines if Zend OPCache is enabled
@@ -17,7 +17,7 @@
  
  ; The amount of memory for interned strings in Mbytes.
  ;opcache.interned_strings_buffer=8
-@@ -1794,7 +1794,7 @@
+@@ -1803,7 +1803,7 @@
  ; How often (in seconds) to check file timestamps for changes to the shared
  ; memory storage allocation. ("1" means validate once per second, but only
  ; once per request. "0" means always validate)
@@ -26,11 +26,11 @@
  
  ; Enables or disables file search in include_path optimization
  ;opcache.revalidate_path=0
-@@ -1885,7 +1885,9 @@
- 
- ; Enables or disables copying of PHP code (text segment) into HUGE PAGES.
- ; This should improve performance, but requires appropriate OS configuration.
--;opcache.huge_code_pages=1
+@@ -1899,7 +1899,9 @@
+ ; delays PHP startup, increases memory usage and degrades performance
+ ; under memory pressure - use with care.
+ ; Requires appropriate OS configuration.
+-;opcache.huge_code_pages=0
 +opcache.huge_code_pages=1
 +opcache.jit_buffer_size=128M
 +opcache.jit = tracing
