@@ -1,7 +1,7 @@
 # Maintainer: Peter Jung <admin@ptr1337.dev>
 
+_gitname=CachyOS-Settings
 pkgname=cachyos-settings
-gitname=CachyOS-Settings
 pkgver=27
 pkgrel=1
 groups=(cachyos)
@@ -9,8 +9,8 @@ arch=('any')
 license=('GPL')
 makedepends=('coreutils')
 pkgdesc='CachyOS - Settings'
-source=("git+https://github.com/CachyOS/$gitname")
-install=$pkgname.install
+source=("git+https://github.com/CachyOS/$_gitname")
+install="$pkgname.install"
 sha256sums=('SKIP')
 depends=(
     'irqbalance'
@@ -18,10 +18,11 @@ depends=(
     'ananicy-cpp'
     'cachyos-ananicy-rules'
     'uksmd'
-    )
+)
+
 package() {
-  install -d $pkgdir/etc
-  cp -rf $srcdir/$gitname/etc $pkgdir
-  install -d $pkgdir/usr
-  cp -rf $srcdir/$gitname/usr $pkgdir
+  install -d "$pkgdir/etc"
+  cp -rf "${srcdir}/${_gitname}/etc" "$pkgdir"
+  install -d "$pkgdir/usr"
+  cp -rf "${srcdir}/${_gitname}/usr" "$pkgdir"
 }
