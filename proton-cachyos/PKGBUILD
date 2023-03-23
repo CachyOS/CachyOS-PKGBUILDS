@@ -264,7 +264,7 @@ prepare() {
         patch -Np1 -i "$srcdir"/server-Enable-link-time-optimization.patch
     popd
 
-    patch -p1 -i "$srcdir"/0001-AUR-Pkgbuild-changes.patch
+    patch -p1 -i "$srcdir"/0001-AUR-pkgbuild-changes.patch
     # Remove repos from srcdir to save space
     for submodule in "${_submodules[@]}"; do
         rm -rf "$srcdir"/"${submodule%::*}"
