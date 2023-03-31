@@ -8,22 +8,21 @@ pkgdesc='Cachy OS Pacman Hooks'
 groups=('cachyos')
 arch=('any')
 license=('GPL3')
-url=https://github.com/cachyos/$pkgname/master
+url="https://github.com/cachyos/${pkgname}/master"
 source=("git+https://github.com/CachyOS/cachyos-hooks")
-
 sha512sums=('SKIP')
 
 package() {
-  cd $pkgname
-  local hooks=$pkgdir/usr/share/libalpm/hooks
-  local bin=$pkgdir/usr/bin
+  cd "$pkgname"
+  local hooks="$pkgdir/usr/share/libalpm/hooks"
+  local bin="$pkgdir/usr/bin"
 
-  install -Dm644 lsb-release.hook                 $hooks/lsb-release.hook
-  install -Dm644 os-release.hook                  $hooks/os-release.hook
-  install -Dm644 ${pkgname}.hook                  $hooks/${pkgname}.hook
-  install -Dm644 cachyos-reboot-required.hook     $hooks/cachyos-reboot-required.hook
+  install -Dm644 lsb-release.hook                 "$hooks/lsb-release.hook"
+  install -Dm644 os-release.hook                  "$hooks/os-release.hook"
+  install -Dm644 ${pkgname}.hook                  "$hooks/${pkgname}.hook"
+  install -Dm644 cachyos-reboot-required.hook     "$hooks/cachyos-reboot-required.hook"
 
-  install -Dm755 cachyos-reboot-required          $bin/cachyos-reboot-required
-  install -Dm755 cachyos-check-reboot-required    $bin/cachyos-check-reboot-required
-  install -Dm755 ${pkgname}-runner                $bin/${pkgname}-runner
+  install -Dm755 cachyos-reboot-required          "$bin/cachyos-reboot-required"
+  install -Dm755 cachyos-check-reboot-required    "$bin/cachyos-check-reboot-required"
+  install -Dm755 ${pkgname}-runner                "$bin/${pkgname}-runner"
 }
