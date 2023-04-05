@@ -8,7 +8,7 @@ shopt -s extglob
 
 pkgbase=python
 pkgname=(python python-tests)
-pkgver=3.10.10
+pkgver=3.11.3
 pkgrel=2
 _pybasever=${pkgver%.*}
 pkgdesc="Next generation of the python high-level scripting language"
@@ -22,11 +22,11 @@ source=("https://www.python.org/ftp/python/${pkgver%rc*}/Python-${pkgver}.tar.xz
         "0003-AVX2-and-AVX512-support.patch"
         "0004-Build-avx2-and-avx512-versions-of-the-math-library.patch"
         "bolt2.patch")
-sha512sums=('f0aee65970a68287b34c4eafcf35c6fa09c81ba234ac356db16fbbc6c36417e4ac67071e616d118f5e192d541d7f177dcab5585b9780e842f656c09e01c37ced'
+sha512sums=('a3bba4b69322a47bfeefe42ba0fd7331b5b67fd2ab41441e2219d16ef8c6f307f1a48977afd073c18cfd24ec6cb1bfe0c4bb4b273031eb524dc7e9fb5fbcc3b6'
             'SKIP'
             '2bfab3aaf5b72cd090aa396fb93575ba8db96abc9a6b9098ca661f3b62b01e6b8828b382495e8eb966f7b2f1a5ec02ef5ca08a2d296a57f656e7ea7cb534fb80'
             '617cbf2672e4ebb82026207faba3cf92dbde0bd5109ef4458e9106755990e4023d242d8fdc0b754a191179e40a041194e9e8572e22afce276b96e526babcad07'
-            'a447b81b94e406c128e03a88e0e50e41f0640ae2519fb0cc09ac1deda804ce05ee8a6745d4ae3aed40a36382afdcedc32d4f152ab1ee38fc2df0b55b5f79c97b')
+            '034411efc61c4ce674e61c2d835f7537d1aa4c539636a780543deb392755063a70dd07da73fb30ec9a46c5284fefc469f88e09549ee7659567414f8e44666f47')
 validpgpkeys=('0D96DF4D4110E5C43FBFB17F2D347EA6AA65421D'  # Ned Deily (Python release signing key) <nad@python.org>
               'E3FF2839C048B25C084DEBE9B26995E310250568'  # Łukasz Langa (GPG langa.pl) <lukasz@langa.pl>
               'A035C8C19219BA821ECEA86B64E628F8D684696D') # Pablo Galindo Salgado <pablogsal@gmail.com>
@@ -45,7 +45,7 @@ prepare() {
   
   msg2 "---- clearlinux patches"
   patch -Np1 -i "${srcdir}/0003-AVX2-and-AVX512-support.patch"
-  patch -Np1 -i "${srcdir}/0004-Build-avx2-and-avx512-versions-of-the-math-library.patch"
+#  patch -Np1 -i "${srcdir}/0004-Build-avx2-and-avx512-versions-of-the-math-library.patch"
 
   msg2 "Include --enable-bolt"
   patch -Np1 -i "${srcdir}/bolt2.patch"
@@ -82,7 +82,7 @@ build() {
 
 check() {
   # test_socket: test.test_socket.RDSTest.testPeek hangs https://bugs.python.org/issue35247
-  # test_tk: tkinter.test.test_tkinter.test_colorchooser.DefaultRootTest hangs
+  # test_tk: test_askcolor tkinter.test.test_tkinter.test_colorchooser.DefaultRootTest hangs
   # test_pyexpat: our `debug` implementation rewrites source location, which breaks the build-time
   #               only test test.test_pyexpat.HandlerExceptionTest as it cannot find source file in
   #               the to-be-installed debug package
@@ -95,7 +95,7 @@ check() {
 
   LD_LIBRARY_PATH="${srcdir}/Python-${pkgver}":${LD_LIBRARY_PATH} \
   LC_CTYPE=en_US.UTF-8 xvfb-run -s "-screen 0 1920x1080x16 -ac +extension GLX" -a -n "$servernum" \
-    "${srcdir}/Python-${pkgver}/python" -m test.regrtest -v -uall -x test_socket -x test_tk -x test_pyexpat
+    "${srcdir}/Python-${pkgver}/python" -m test.regrtest -v -uall -x test_tk -x test_pyexpat
 }
 
 package_python() {
@@ -135,7 +135,7 @@ package_python() {
 
   # Split tests
   cd "$pkgdir"/usr/lib/python*/
-  rm -r {ctypes/test,distutils/tests,idlelib/idle_test,lib2to3/tests,sqlite3/test,tkinter/test,unittest/test}
+  rm -r {ctypes/test,distutils/tests,idlelib/idle_test,lib2to3/tests,tkinter/test,unittest/test}
   cd test
   # FS#76193
   rm -r !(support)
@@ -149,7 +149,7 @@ package_python-tests() {
 
   make DESTDIR="${pkgdir}" EXTRA_CFLAGS="$CFLAGS" libinstall
   cd "$pkgdir"/usr/lib/python*/
-  rm -r !(test|ctypes|distutils|idlelib|lib2to3|sqlite3|tkinter|unittest)
+  rm -r !(test|ctypes|distutils|idlelib|lib2to3|tkinter|unittest)
   cd "$pkgdir"/usr/lib/python*/test
   rm -r support
   cd "$pkgdir"/usr/lib/python*/ctypes
@@ -160,8 +160,6 @@ package_python-tests() {
   rm -r !(idle_test)
   cd "$pkgdir"/usr/lib/python*/lib2to3
   rm -r !(tests)
-  cd "$pkgdir"/usr/lib/python*/sqlite3
-  rm -r !(test)
   cd "$pkgdir"/usr/lib/python*/tkinter
   rm -r !(test)
   cd "$pkgdir"/usr/lib/python*/unittest
