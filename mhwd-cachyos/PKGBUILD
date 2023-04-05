@@ -29,6 +29,8 @@ build() {
   export RUSTFLAGS="-Cembed-bitcode -C opt-level=3 -Ccodegen-units=1 -Clinker=clang -C link-arg=-flto -Clink-arg=-fuse-ld=/usr/bin/mold"
   cargo build --release
 
+  cd ../../
+
   _cpuCount=$(grep -c -w ^processor /proc/cpuinfo)
   cmake -S . -Bbuild \
         -GNinja \
@@ -45,13 +47,12 @@ package_mhwd-cachyos() {
   conflicts=('mhwd' 'mhwd-cachyos')
   install=mhwd.install
 
-  cd $pkgname
-  cp scripts/chwd-kernel/target/release/chwd-kernel "$pkgdir"/usr/bin/
-
   cd $pkgname/build
 
   DESTDIR="${pkgdir}" ninja install
   install -d -m755 "$pkgdir"/var/lib/mhwd/{db,local}/{pci,usb}
+
+  cp ../scripts/chwd-kernel/target/release/chwd-kernel "$pkgdir"/usr/bin/
 }
 
 package_mhwd-db-cachyos() {
