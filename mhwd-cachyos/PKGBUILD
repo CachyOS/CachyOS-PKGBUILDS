@@ -16,7 +16,8 @@ makedepends=('cmake' 'ninja' 'git' 'rust' 'mold' 'clang' 'llvm')
 groups=('cachyos')
 _commit_hash=f632bc998b030fe35b95648db280b74c220a3a61
 source=("git+${url}.git#commit=${_commit_hash}"
-        "git+${url/-cachyos}-db-cachyos.git")
+        "git+${url/-cachyos}-db-cachyos.git"
+        "git+https://github.com/LebJe/toml.lua.git#commit=9ac034b7939a7df02f6452ffee952dea3a6e3098")
 sha256sums=('SKIP'
             'SKIP')
 options=(!strip)
@@ -45,6 +46,14 @@ build() {
         -DCMAKE_INSTALL_PREFIX=/usr \
         -DCMAKE_INSTALL_LIBDIR=lib
   cmake --build build --parallel $_cpuCount
+
+  cd ../toml.lua
+  cmake -S . -Bbuild \
+        -GNinja \
+        -DCMAKE_BUILD_TYPE=Release \
+        -DCMAKE_INSTALL_PREFIX=/usr \
+        -DCMAKE_INSTALL_LIBDIR=lib
+  cmake --build build --parallel $_cpuCount
 }
 
 package_mhwd-cachyos() {
@@ -60,6 +69,9 @@ package_mhwd-cachyos() {
   install -d -m755 "$pkgdir"/var/lib/mhwd/{db,local}/{pci,usb}
 
   cp ../scripts/chwd-kernel/target/release/chwd-kernel "$pkgdir"/usr/bin/
+
+  cd ../../toml.lua/build
+  DESTDIR="${pkgdir}" ninja install
 }
 
 package_mhwd-db-cachyos() {
