@@ -5,7 +5,7 @@
 pkgbase=mhwd-cachyos
 pkgname=('mhwd-cachyos' 'mhwd-db-cachyos')
 pkgname=mhwd-cachyos
-pkgver=0.6.14
+pkgver=0.7.0
 pkgrel=1
 pkgdesc="Hardware Detection for CachyOS"
 arch=(x86_64 x86_64_v3)
@@ -14,7 +14,7 @@ license=(GPLv3)
 depends=('gcc-libs' 'hwinfo')
 makedepends=('cmake' 'ninja' 'git' 'rust' 'mold' 'clang')
 groups=('cachyos')
-_commit_hash=b80a078a75d6fb3598603028654b35612d716479
+_commit_hash=dcbd37da1bb222ac01156a4a8da3749de8afc949
 source=("git+${url}.git#commit=${_commit_hash}"
         "git+${url/-cachyos}-db-cachyos.git")
 sha256sums=('SKIP'
@@ -23,6 +23,13 @@ options=(!strip)
 
 build() {
   cd $pkgname
+
+  # Compile with clang
+  export AR=llvm-ar
+  export CC=clang
+  export CXX=clang++
+  export NM=llvm-nm
+  export RANLIB=llvm-ranlib
 
   cd scripts/chwd-kernel
 
