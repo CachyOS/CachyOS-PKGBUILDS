@@ -6,7 +6,7 @@ pkgbase=mhwd-cachyos
 pkgname=('mhwd-cachyos' 'mhwd-db-cachyos')
 pkgname=mhwd-cachyos
 pkgver=0.7.0
-pkgrel=1
+pkgrel=2
 pkgdesc="Hardware Detection for CachyOS"
 arch=(x86_64 x86_64_v3)
 url="https://github.com/cachyos/mhwd-cachyos"
@@ -53,7 +53,6 @@ package_mhwd-cachyos() {
   depends=('hwinfo' 'mhwd-db-cachyos' 'pacman')
   provides=('mhwd' 'mhwd-cachyos')
   conflicts=('mhwd' 'mhwd-cachyos')
-  install=mhwd.install
 
   cd $pkgname
 
@@ -74,7 +73,6 @@ package_mhwd-db-cachyos() {
   depends=('libnotify' 'mhwd-nvidia' 'mhwd-nvidia>=525' 'mhwd-nvidia-470xx' 'mhwd-nvidia-390xx')
   provides=('mhwd-db' 'mhwd-db-cachyos')
   conflicts=('mhwd-db' 'mhwd-db-cachyos')
-  install=mhwd-db.install
 
   cd $pkgname
 
