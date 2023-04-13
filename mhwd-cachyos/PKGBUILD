@@ -14,12 +14,10 @@ license=(GPLv3)
 depends=('gcc-libs' 'hwinfo' 'lua')
 makedepends=('cmake' 'ninja' 'git' 'rust' 'mold' 'clang' 'llvm')
 groups=('cachyos')
-_commit_hash=f632bc998b030fe35b95648db280b74c220a3a61
+_commit_hash=c3eaf6f41735af4d183c537e95b8c505977641bb
 source=("git+${url}.git#commit=${_commit_hash}"
-        "git+${url/-cachyos}-db-cachyos.git"
-        "git+https://github.com/LebJe/toml.lua.git#commit=9ac034b7939a7df02f6452ffee952dea3a6e3098")
+        "git+${url/-cachyos}-db-cachyos.git")
 sha256sums=('SKIP'
-            'SKIP'
             'SKIP')
 options=(!strip)
 
@@ -45,15 +43,8 @@ build() {
         -GNinja \
         -DCMAKE_BUILD_TYPE=Release \
         -DCMAKE_INSTALL_PREFIX=/usr \
-        -DCMAKE_INSTALL_LIBDIR=lib
-  cmake --build build --parallel $_cpuCount
-
-  cd ../toml.lua
-  cmake -S . -Bbuild \
-        -GNinja \
-        -DCMAKE_BUILD_TYPE=Release \
-        -DCMAKE_INSTALL_PREFIX=/usr \
-        -DCMAKE_INSTALL_LIBDIR=lib
+        -DCMAKE_INSTALL_LIBDIR=lib \
+        -DCMAKE_EXE_LINKER_FLAGS="-fuse-ld=mold"
   cmake --build build --parallel $_cpuCount
 }
 
@@ -64,15 +55,18 @@ package_mhwd-cachyos() {
   conflicts=('mhwd' 'mhwd-cachyos')
   install=mhwd.install
 
-  cd $pkgname/build
+  cd $pkgname
 
-  DESTDIR="${pkgdir}" ninja install
+  install -Dm755 ./bin/mhwd "$pkgdir"/usr/bin/mhwd
+  install -Dm755 ./scripts/chwd "$pkgdir"/var/lib/mhwd/scripts/chwd
+  install -Dm755 ./scripts/mhwd-fb "$pkgdir"/usr/bin/mhwd-fb
+
+  install -Dm755 ./scripts/initcpio/hooks/mhwd-fb "$pkgdir"/usr/lib/initcpio/hooks/mhwd-fb
+  install -Dm755 ./scripts/initcpio/install/mhwd-fb "$pkgdir"/usr/lib/initcpio/install/mhwd-fb
+
   install -d -m755 "$pkgdir"/var/lib/mhwd/{db,local}/{pci,usb}
 
-  cp ../scripts/chwd-kernel/target/release/chwd-kernel "$pkgdir"/usr/bin/
-
-  cd ../../toml.lua/build
-  DESTDIR="${pkgdir}" ninja install
+  cp ./scripts/chwd-kernel/target/release/chwd-kernel "$pkgdir"/usr/bin/
 }
 
 package_mhwd-db-cachyos() {
