@@ -1,43 +1,21 @@
+SERVICES=("irqbalance" "ananicy-cpp" "uksmd" "optimize-interruptfreq" "pci-latency")
+
 post_install() {
     echo "Enabling services..."
-    systemctl enable irqbalance --now
-    systemctl enable ananicy-cpp --now
-    systemctl enable uksmd --now
-    systemctl enable optimize-interruptfreq --now
-    systemctl enable pci-latency --now
+    for service in "${SERVICES[@]}"; do
+        systemctl enable "$service" --now
+    done
 }
 
 post_upgrade() {
     echo "Enabling services..."
     systemctl daemon-reload >/dev/null
 
-    if systemctl is-active irqbalance >/dev/null; then
-        systemctl restart irqbalance
-    else
-        systemctl enable irqbalance --now
-    fi
-
-    if systemctl is-active ananicy-cpp >/dev/null; then
-        systemctl restart ananicy-cpp
-    else
-        systemctl enable ananicy-cpp --now
-    fi
-
-    if systemctl is-active uksmd >/dev/null; then
-        systemctl restart uksmd
-    else
-        systemctl enable uksmd --now
-    fi
-
-    if systemctl is-active optimize-interruptfreq >/dev/null; then
-        systemctl restart optimize-interruptfreq
-    else
-        systemctl enable optimize-interruptfreq --now
-    fi
-
-    if systemctl is-active pci-latency >/dev/null; then
-        systemctl restart pci-latency
-    else
-        systemctl enable pci-latency --now
-    fi
+    for service in "${SERVICES[@]}"; do
+        if systemctl is-active "$service" >/dev/null; then
+            systemctl restart "$service"
+        else
+            systemctl enable "$service" --now
+        fi
+    done
 }
