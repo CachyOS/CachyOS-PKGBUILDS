@@ -5,8 +5,6 @@ post_install() {
     for service in "${SERVICES[@]}"; do
         systemctl enable "$service" --now
     done
-
-    update-kernel-cmdline
 }
 
 post_upgrade() {
@@ -20,6 +18,4 @@ post_upgrade() {
             systemctl enable "$service" --now
         fi
     done
-
-    update-kernel-cmdline
 }
