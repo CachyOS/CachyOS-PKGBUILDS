@@ -5,8 +5,8 @@
 pkgbase=mhwd-cachyos
 pkgname=('mhwd-cachyos' 'mhwd-db-cachyos')
 pkgname=mhwd-cachyos
-pkgver=0.7.0
-pkgrel=3
+pkgver=0.7.1
+pkgrel=1
 pkgdesc="Hardware Detection for CachyOS"
 arch=(x86_64 x86_64_v3)
 url="https://github.com/cachyos/mhwd-cachyos"
@@ -14,7 +14,7 @@ license=(GPLv3)
 depends=('gcc-libs' 'hwinfo' 'lua')
 makedepends=('cmake' 'ninja' 'git' 'rust' 'mold' 'clang' 'llvm')
 groups=('cachyos')
-_commit_hash=171a202fd60b00b3f82de5872d4e6fd3d1cfdd73
+_commit_hash=2f5819453ea8c3ef956d4ce73e1dd6d3bb69bf97
 source=("git+${url}.git#commit=${_commit_hash}"
         "git+${url/-cachyos}-db-cachyos.git")
 sha256sums=('SKIP'
@@ -51,17 +51,13 @@ build() {
 package_mhwd-cachyos() {
   pkgdesc="mhwd-cachyos library and application"
   depends=('hwinfo' 'mhwd-db-cachyos' 'pacman')
-  provides=('mhwd' 'mhwd-cachyos')
-  conflicts=('mhwd' 'mhwd-cachyos')
+  provides=('mhwd-cachyos')
+  conflicts=('mhwd-cachyos')
 
   cd $pkgname
 
   install -Dm755 ./bin/mhwd "$pkgdir"/usr/bin/mhwd
   install -Dm755 ./scripts/chwd "$pkgdir"/var/lib/mhwd/scripts/chwd
-  install -Dm755 ./scripts/mhwd-fb "$pkgdir"/usr/bin/mhwd-fb
-
-  install -Dm755 ./scripts/initcpio/hooks/mhwd-fb "$pkgdir"/usr/lib/initcpio/hooks/mhwd-fb
-  install -Dm755 ./scripts/initcpio/install/mhwd-fb "$pkgdir"/usr/lib/initcpio/install/mhwd-fb
 
   install -d -m755 "$pkgdir"/var/lib/mhwd/{db,local}/{pci,usb}
 
@@ -71,13 +67,12 @@ package_mhwd-cachyos() {
 package_mhwd-db-cachyos() {
   pkgdesc="mhwd-cachyos Database"
   depends=('libnotify' 'mhwd-nvidia' 'mhwd-nvidia>=525' 'mhwd-nvidia-470xx' 'mhwd-nvidia-390xx')
-  provides=('mhwd-db' 'mhwd-db-cachyos')
-  conflicts=('mhwd-db' 'mhwd-db-cachyos')
+  provides=('mhwd-db-cachyos')
+  conflicts=('mhwd-db-cachyos')
 
   cd $pkgname
 
   mkdir -p "$pkgdir"/var/lib/mhwd/db
-  mkdir -p "$pkgdir"/etc/X11/mhwd.d
   cp -r pci "$pkgdir"/var/lib/mhwd/db/
 }
 
