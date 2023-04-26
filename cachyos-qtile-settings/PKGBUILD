@@ -2,13 +2,13 @@
 
 pkgname=cachyos-qtile-settings
 pkgdesc='CachyOS Qtile settings'
-pkgver=1.0
+pkgver=1.1
 pkgrel=1
 arch=('any')
 url="https://github.com/cachyos/$pkgname"
 license=('GPL')
 makedepends=('coreutils')
-_commit="48d7d8725ffaec56e52d40f8ecd2236570f0c47f"
+_commit="ec73c6468df71346703320794bd0a8f821c4dffe"
 source=("git+https://github.com/CachyOS/$pkgname.git#commit=${_commit}")
 sha512sums=('SKIP')
 depends=('picom'
@@ -29,7 +29,7 @@ depends=('picom'
          'capitaine-cursors'
          'flameshot'
          'gnome-themes-extra'
-         'cachyos-wallpapers') 
+         'cachyos-wallpapers')
 install=$pkgname.install
 provides=('cachyos-desktop-settings')
 conflicts=('cachyos-desktop-settings')
@@ -37,6 +37,4 @@ conflicts=('cachyos-desktop-settings')
 package() {
     install -d $pkgdir/etc
     cp -rf $srcdir/$pkgname/etc $pkgdir
-#    install -d $pkgdir/usr
-#    cp -rf $srcdir/$pkgname/usr $pkgdir
 }
