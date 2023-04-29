@@ -1,7 +1,7 @@
-From 7009f8d1a4674b7ff7fc1c545aa4506e7d743e87 Mon Sep 17 00:00:00 2001
+From 3992d030fd6ddf53f0b997b382ff415242ea0c1d Mon Sep 17 00:00:00 2001
 From: Stelios Tsampas <loathingkernel@gmail.com>
-Date: Tue, 7 Feb 2023 21:58:22 +0200
-Subject: [PATCH] AUR Pkgbuild changes
+Date: Wed, 26 Apr 2023 14:22:23 +0300
+Subject: [PATCH 1/2] AUR Pkgbuild changes
 
 ---
  Makefile.in                    | 71 ++++++++++++++++++++++++++--------
@@ -19,14 +19,14 @@ Subject: [PATCH] AUR Pkgbuild changes
  12 files changed, 83 insertions(+), 40 deletions(-)
 
 diff --git a/Makefile.in b/Makefile.in
-index fc46bafc..55e0d465 100644
+index d2943e34..d66489ac 100644
 --- a/Makefile.in
 +++ b/Makefile.in
 @@ -24,7 +24,6 @@ SHELL := /bin/bash
  #   BUILD_NAME      - Name of the build for manifests etc.
  #   STEAMRT_IMAGE   - Name of the docker image to use for building
  
--STEAMRT_IMAGE ?= registry.gitlab.steamos.cloud/proton/sniper/sdk:0.20221017.1-0
+-STEAMRT_IMAGE ?= registry.gitlab.steamos.cloud/proton/sniper/sdk:0.20221017.1-1
  
  ifeq ($(SRCDIR),)
  	foo := $(error SRCDIR not set, do not include Makefile.in directly, run ./configure.sh to generate Makefile)
@@ -224,7 +224,7 @@ index fc46bafc..55e0d465 100644
  	rm -rf $(abspath $(DIST_PREFIX))
  	python3 $(SRCDIR)/default_pfx.py $(abspath $(DIST_PREFIX)) $(abspath $(DST_DIR))
  
-@@ -1103,7 +1146,6 @@ ifeq ($(ENABLE_CCACHE),1)
+@@ -1094,7 +1137,6 @@ ifeq ($(ENABLE_CCACHE),1)
  	export CCACHE_DIR := $(if $(CCACHE_DIR),$(CCACHE_DIR),$(HOME)/.ccache)
  	override DOCKER_OPTS := -v $(CCACHE_DIR):$(CCACHE_DIR)$(CONTAINER_MOUNT_OPTS) $(CCACHE_ENV) -e CCACHE_DIR=$(CCACHE_DIR) $(DOCKER_OPTS)
  else
@@ -232,7 +232,7 @@ index fc46bafc..55e0d465 100644
  	override DOCKER_OPTS := $(CCACHE_ENV) -e CCACHE_DISABLE=1 $(DOCKER_OPTS)
  endif
  
-@@ -1118,9 +1160,6 @@ ifeq ($(CONTAINER_ENGINE),)
+@@ -1109,9 +1151,6 @@ ifeq ($(CONTAINER_ENGINE),)
  	CONTAINER_ENGINE := docker
  endif
  
@@ -256,10 +256,10 @@ index 5ac60e8b..e580cd20 100644
        "from_oslist"  "windows"
        "to_oslist"    "linux"
 diff --git a/configure.sh b/configure.sh
-index f7b70544..98ca6ca7 100755
+index bc3ccc65..faa4d6e3 100755
 --- a/configure.sh
 +++ b/configure.sh
-@@ -123,6 +123,7 @@ function configure() {
+@@ -128,6 +128,7 @@ function configure() {
      CONTAINER_MOUNT_OPTS=:Z
    fi
  
@@ -267,7 +267,7 @@ index f7b70544..98ca6ca7 100755
    if [[ -n "$arg_container_engine" ]]; then
      check_container_engine "$arg_container_engine" "$steamrt_image" || die "Specified container engine \"$arg_container_engine\" doesn't work"
    else
-@@ -135,6 +136,7 @@ function configure() {
+@@ -140,6 +141,7 @@ function configure() {
          die "${arg_container_engine:-Container engine discovery} has failed. Please fix your setup."
      fi
    fi
@@ -428,7 +428,7 @@ index 5c3b59a3..ed6589e0 100644
  	winebuild --$(lastword $(subst ., ,$(4))) --fake-module -E "$(basename $(4)).spec" -o "$(4).fake"
  	mkdir -p $$($(2)_LIBDIR$(3))/$(LIBDIR_WINE_$(3))
 diff --git a/proton b/proton
-index 3a7c9073..bbd7bfc0 100755
+index f011243c..fe793dda 100755
 --- a/proton
 +++ b/proton
 @@ -423,7 +423,6 @@ class Proton:
@@ -439,16 +439,16 @@ index 3a7c9073..bbd7bfc0 100755
  
      def path(self, d):
          return self.base_dir + d
-@@ -1610,8 +1609,6 @@ if __name__ == "__main__":
+@@ -1627,8 +1626,6 @@ if __name__ == "__main__":
  
      g_proton = Proton(os.path.dirname(sys.argv[0]))
  
--    if g_proton.need_tarball_extraction():
--        g_proton.extract_tarball()
+-    g_proton.cleanup_legacy_dist()
+-    g_proton.do_steampipe_fixups()
  
      g_compatdata = CompatData(os.environ["STEAM_COMPAT_DATA_PATH"])
  
-@@ -1620,7 +1617,8 @@ if __name__ == "__main__":
+@@ -1637,7 +1634,8 @@ if __name__ == "__main__":
      g_session.init_wine()
  
      if g_proton.missing_default_prefix():
@@ -471,5 +471,5 @@ index beddcbbb..b6f36788 100644
 -  "compatmanager_layer_name" "proton"
  }
 -- 
-2.40.0
+2.40.1
 
