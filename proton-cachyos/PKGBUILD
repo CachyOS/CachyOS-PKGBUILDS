@@ -5,13 +5,13 @@
 _optimize=${_optimize-y}
 
 pkgname=proton-cachyos
-_srctag=8.0-1d
+_srctag=8.0-20230426
 _commit=
 pkgver=8.0 
 # pkgver=${_srctag//-/.}
 _geckover=2.47.3
 _monover=7.4.1
-pkgrel=1
+pkgrel=2
 pkgdesc="Compatibility tool for Steam Play based on Wine and additional components, experimental branch with extra CachyOS flavour"
 url="https://github.com/ValveSoftware/Proton"
 arch=(x86_64 x86_64_v3)
@@ -88,7 +88,7 @@ makedepends=(${makedepends[@]} ${depends[@]})
 provides=('proton')
 install=${pkgname}.install
 source=(
-    proton::git+https://github.com/ValveSoftware/Proton.git#tag=proton-${_srctag}
+    proton::git+https://github.com/ValveSoftware/Proton.git#tag=experimental-${_srctag}
     wine-valve::git+https://github.com/ValveSoftware/wine.git
     dxvk::git+https://github.com/doitsujin/dxvk.git
     openvr::git+https://github.com/ValveSoftware/openvr.git
