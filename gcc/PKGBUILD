@@ -7,10 +7,11 @@
 # toolchain build order: linux-api-headers->glibc->binutils->gcc->glibc->binutils->gcc
 # NOTE: libtool requires rebuilt with each new gcc version
 
-pkgname=(gcc gcc-libs lib32-gcc-libs gcc-fortran gcc-objc gcc-ada gcc-go gcc-d lto-dump libgccjit)
-pkgver=12.2.1
+pkgname=(gcc gcc-libs lib32-gcc-libs gcc-ada gcc-d gcc-fortran gcc-go gcc-objc lto-dump libgccjit)
+pkgver=13.1.1
 _majorver=${pkgver%%.*}
-pkgrel=5
+_commit=9a167ee2f8b9a0859fbab6cfdc276cf1f272effe
+pkgrel=1
 pkgdesc='The GNU Compiler Collection'
 arch=(x86_64)
 license=(GPL3 LGPL FDL custom)
@@ -25,7 +26,6 @@ makedepends=(
   lib32-gcc-libs
   libisl
   libmpc
-  libxcrypt
   python
   zstd
 )
@@ -36,10 +36,9 @@ checkdepends=(
   python-pytest
   tcl
 )
-options=(!emptydirs !lto) # LTO is enabled at configure
+options=(!emptydirs !lto)
 _libdir=usr/lib/gcc/$CHOST/${pkgver%%+*}
-_commit=67608f7a2cf3eff99654ab3f44d5183049e3b36c
-source=(git://gcc.gnu.org/git/gcc.git#commit=$_commit
+source=(git+https://sourceware.org/git/gcc.git#commit=${_commit}
         c89 c99
         gcc-ada-repro.patch
 )
@@ -64,6 +63,7 @@ prepare() {
 
   # Reproducible gcc-ada
   patch -Np0 < "$srcdir/gcc-ada-repro.patch"
+
   mkdir -p "$srcdir/gcc-build"
   mkdir -p "$srcdir/libgccjit-build"
 }
@@ -76,6 +76,7 @@ build() {
       --mandir=/usr/share/man
       --infodir=/usr/share/info
       --with-bugurl=https://bugs.archlinux.org/
+      --with-build-config=bootstrap-lto
       --with-linker-hash-style=gnu
       --with-system-zlib
       --enable-__cxa_atexit
@@ -87,6 +88,7 @@ build() {
       --enable-gnu-indirect-function
       --enable-gnu-unique-object
       --enable-libstdcxx-backtrace
+      --enable-link-serialization=1
       --enable-linker-build-id
       --enable-lto
       --enable-multilib
@@ -94,12 +96,9 @@ build() {
       --enable-shared
       --enable-threads=posix
       --disable-libssp
-      --with-build-config=bootstrap-lto
-      --enable-link-serialization=1
       --disable-libstdcxx-pch
       --disable-werror
   )
-
 
   cd gcc-build
 
@@ -108,13 +107,11 @@ build() {
   # TODO: properly deal with the build issues resulting from this
   CFLAGS=${CFLAGS/-Werror=format-security/}
   CXXFLAGS=${CXXFLAGS/-Werror=format-security/}
-
   export CFLAGS+=" -fno-semantic-interposition"
   export CXXLAGS+=" -fno-semantic-interposition"
 
-
   "$srcdir/gcc/configure" \
-    --enable-languages=c,c++,ada,fortran,go,lto,objc,obj-c++,d \
+    --enable-languages=ada,c,c++,d,fortran,go,lto,objc,obj-c++ \
     --enable-bootstrap \
     "${_confflags[@]:?_confflags unset}"
 
@@ -139,7 +136,7 @@ build() {
     "${_confflags[@]:?_confflags unset}"
 
   # see https://bugs.archlinux.org/task/71777 for rationale re *FLAGS handling
-  make -O STAGE1_CFLAGS="-O2" \
+  make -O STAGE1_CFLAGS="-O3" \
           BOOT_CFLAGS="$CFLAGS" \
           BOOT_LDFLAGS="$LDFLAGS" \
           LDFLAGS_FOR_TARGET="$LDFLAGS" \
@@ -268,6 +265,12 @@ package_gcc() {
   # many packages expect this symlink
   ln -s gcc "$pkgdir"/usr/bin/cc
 
+  # create cc-rs compatible symlinks
+  # https://github.com/rust-lang/cc-rs/blob/1.0.73/src/lib.rs#L2578-L2581
+  for binary in {c++,g++,gcc,gcc-ar,gcc-nm,gcc-ranlib}; do
+    ln -s /usr/bin/${binary} "${pkgdir}"/usr/bin/x86_64-linux-gnu-${binary}
+  done
+
   # POSIX conformance launcher scripts for c89 and c99
   install -Dm755 "$srcdir/c89" "$pkgdir/usr/bin/c89"
   install -Dm755 "$srcdir/c99" "$pkgdir/usr/bin/c99"
@@ -393,7 +396,6 @@ package_lib32-gcc-libs() {
   pkgdesc='32-bit runtime libraries shipped by GCC'
   depends=('lib32-glibc>=2.27')
   provides=(libgo.so libgfortran.so libubsan.so libasan.so)
-  groups=(multilib-devel)
   options=(!emptydirs !strip)
 
   cd gcc-build
@@ -448,6 +450,23 @@ package_gcc-d() {
   ln -s /usr/share/licenses/gcc-libs/RUNTIME.LIBRARY.EXCEPTION \
     "$pkgdir/usr/share/licenses/$pkgname/"
 }
+
+#package_gcc-rust() {
+#  pkgdesc="Rust frontend for GCC"
+#  depends=("gcc=$pkgver-$pkgrel" libisl.so)
+#  replaces=(gcc-rust-git)
+#
+#  cd gcc-build
+#  make -C gcc DESTDIR="$pkgdir" rust.install-{common,man,info}
+#
+#  install -Dm755 gcc/gccrs "$pkgdir"/usr/bin/gccrs
+#  install -Dm755 gcc/rust1 "$pkgdir"/"$_libdir"/rust1
+#
+#  # Install Runtime Library Exception
+#  install -d "$pkgdir/usr/share/licenses/$pkgname/"
+#  ln -s /usr/share/licenses/gcc-libs/RUNTIME.LIBRARY.EXCEPTION \
+#    "$pkgdir/usr/share/licenses/$pkgname/"
+#}
 
 package_lto-dump() {
   pkgdesc="Dump link time optimization object files"

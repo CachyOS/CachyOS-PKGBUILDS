@@ -1,7 +1,7 @@
 pkgbase = gcc
 	pkgdesc = The GNU Compiler Collection
-	pkgver = 12.2.1
-	pkgrel = 5
+	pkgver = 13.1.1
+	pkgrel = 1
 	url = https://gcc.gnu.org
 	arch = x86_64
 	license = GPL3
@@ -22,12 +22,11 @@ pkgbase = gcc
 	makedepends = lib32-gcc-libs
 	makedepends = libisl
 	makedepends = libmpc
-	makedepends = libxcrypt
 	makedepends = python
 	makedepends = zstd
 	options = !emptydirs
 	options = !lto
-	source = git://gcc.gnu.org/git/gcc.git#commit=67608f7a2cf3eff99654ab3f44d5183049e3b36c
+	source = git+https://sourceware.org/git/gcc.git#commit=9a167ee2f8b9a0859fbab6cfdc276cf1f272effe
 	source = c89
 	source = c99
 	source = gcc-ada-repro.patch
@@ -42,7 +41,7 @@ pkgbase = gcc
 
 pkgname = gcc
 	pkgdesc = The GNU Compiler Collection - C and C++ frontends
-	depends = gcc-libs=12.2.1-5
+	depends = gcc-libs=13.1.1-1
 	depends = binutils>=2.28
 	depends = libmpc
 	depends = zstd
@@ -71,7 +70,6 @@ pkgname = gcc-libs
 
 pkgname = lib32-gcc-libs
 	pkgdesc = 32-bit runtime libraries shipped by GCC
-	groups = multilib-devel
 	depends = lib32-glibc>=2.27
 	provides = libgo.so
 	provides = libgfortran.so
@@ -80,52 +78,52 @@ pkgname = lib32-gcc-libs
 	options = !emptydirs
 	options = !strip
 
-pkgname = gcc-fortran
-	pkgdesc = Fortran front-end for GCC
-	depends = gcc=12.2.1-5
-	depends = libisl.so
-	provides = gcc-fortran-multilib
-	replaces = gcc-fortran-multilib
-
-pkgname = gcc-objc
-	pkgdesc = Objective-C front-end for GCC
-	depends = gcc=12.2.1-5
-	depends = libisl.so
-	provides = gcc-objc-multilib
-	replaces = gcc-objc-multilib
-
 pkgname = gcc-ada
 	pkgdesc = Ada front-end for GCC (GNAT)
-	depends = gcc=12.2.1-5
+	depends = gcc=13.1.1-1
 	depends = libisl.so
 	provides = gcc-ada-multilib
 	replaces = gcc-ada-multilib
 	options = !emptydirs
 	options = staticlibs
 
+pkgname = gcc-d
+	pkgdesc = D frontend for GCC
+	depends = gcc=13.1.1-1
+	depends = libisl.so
+	provides = gdc
+	replaces = gdc
+	options = staticlibs
+
+pkgname = gcc-fortran
+	pkgdesc = Fortran front-end for GCC
+	depends = gcc=13.1.1-1
+	depends = libisl.so
+	provides = gcc-fortran-multilib
+	replaces = gcc-fortran-multilib
+
 pkgname = gcc-go
 	pkgdesc = Go front-end for GCC
-	depends = gcc=12.2.1-5
+	depends = gcc=13.1.1-1
 	depends = libisl.so
 	provides = go=1.18
 	provides = gcc-go-multilib
 	conflicts = go
 	replaces = gcc-go-multilib
 
-pkgname = gcc-d
-	pkgdesc = D frontend for GCC
-	depends = gcc=12.2.1-5
+pkgname = gcc-objc
+	pkgdesc = Objective-C front-end for GCC
+	depends = gcc=13.1.1-1
 	depends = libisl.so
-	provides = gdc
-	replaces = gdc
-	options = staticlibs
+	provides = gcc-objc-multilib
+	replaces = gcc-objc-multilib
 
 pkgname = lto-dump
 	pkgdesc = Dump link time optimization object files
-	depends = gcc=12.2.1-5
+	depends = gcc=13.1.1-1
 	depends = libisl.so
 
 pkgname = libgccjit
 	pkgdesc = Just-In-Time Compilation with GCC backend
-	depends = gcc=12.2.1-5
+	depends = gcc=13.1.1-1
 	depends = libisl.so
