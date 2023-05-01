@@ -214,6 +214,9 @@ build() {
   # https://crbug.com/957519#c122
   CXXFLAGS=${CXXFLAGS/-Wp,-D_GLIBCXX_ASSERTIONS}
 
+  export CFLAGS+=" -fno-semantic-interposition"
+  export CXXLAGS+=" -fno-semantic-interposition"
+
   gn gen out/Release --args="${_flags[*]}"
   ninja -C out/Release chrome chrome_sandbox chromedriver.unstripped
   
