@@ -18,7 +18,7 @@ depends=('gtk3' 'nss' 'alsa-lib' 'xdg-utils' 'libxss' 'libcups' 'libgcrypt'
          'ttf-liberation' 'systemd' 'dbus' 'libpulse' 'pciutils' 'libva'
          'libffi' 'desktop-file-utils' 'hicolor-icon-theme')
 makedepends=('python' 'gn' 'ninja' 'clang' 'lld' 'gperf' 'nodejs' 'pipewire'
-             'qt5-base' 'java-runtime-headless' 'git' 'llvm-git' 'perf')
+             'qt5-base' 'java-runtime-headless' 'git' 'llvm-git' 'perf' 'xorg-server-xvfb')
 optdepends=('pipewire: WebRTC desktop sharing under Wayland'
             'kdialog: support for native dialogs in Plasma'
             'qt5-base: enable Qt5 with --enable-features=AllowQt'
@@ -235,6 +235,7 @@ build() {
         -o out/Release/chrome.inst
  
   # Run a workload with to gather instrumenting data  
+  xvfb-run -s "-screen 0 1920x1080x24 -nolisten local" \
   vpython3 tools/perf/run_benchmark speedometer2 \
   --assert-gpu-compositing --browser=exact \
   --browser-executable=out/Release/chrome.inst
