@@ -33,14 +33,16 @@ source=(https://commondatastorage.googleapis.com/chromium-browser-official/chrom
         disable-GlobalMediaControlsCastStartStop.patch
         use-oauth2-client-switches-as-default.patch
         relocs.patch
-        relocs2.patch)
+        relocs2.patch
+        fix-bench.patch)
 sha256sums=('76cec11dc13abe6703305b0300e1fe24c8f547c1ff313f7be09db0e23d12ee1e'
             '213e50f48b67feb4441078d50b0fd431df34323be15be97c55302d3fdac4483a'
             '5f868cba9e4d387499711738adc6fd87ab9f1ef61f464016bc682660ae59206a'
             'd464eed4be4e9bf6187b4c40a759c523b7befefa25ba34ad6401b2a07649ca2a'
             '590fabbb26270947cb477378b53a9dcd17855739076b4af9983e1e54dfcab6d7'
             '7f3b1b22d6a271431c1f9fc92b6eb49c6d80b8b3f868bdee07a6a1a16630a302'
-            'e393174d7695d0bafed69e868c5fbfecf07aa6969f3b64596d0bae8b067e1711')
+            'e393174d7695d0bafed69e868c5fbfecf07aa6969f3b64596d0bae8b067e1711'
+            'ff35b8cf40652c639c11cb0590e7f8f191cfd57adaac6f8ed2ba412fd9c43ed6')
 
 if (( _manual_clone )); then
   source[0]=fetch-chromium-release
@@ -123,6 +125,9 @@ prepare() {
   # Use relocations for BOLT
   patch -Np1 -i ../relocs.patch
   patch -Np1 -i ../relocs2.patch
+
+  # Fix telemetry
+  patch -Np1 -i ../fix-bench.patch
 
   # Link to system tools required by the build
   mkdir -p third_party/node/linux/node-linux-x64/bin
@@ -219,12 +224,12 @@ build() {
 
   gn gen out/Release --args="${_flags[*]}"
   ninja -C out/Release chrome chrome_sandbox chromedriver.unstripped
-  
+
   ## Export PATH for vpython
   export PATH+=":$PWD/third_party/depot_tools"
 
   ## Branch Sampling for BOLT
-#  perf record -e cycles:u -j any,u -o perf.data -- 
+  # perf record -e cycles:u -j any,u -o perf.data --
 
   # Use instrumenting since branch sampling does not work inside the docker container. Maybe requires some Cap's
   llvm-bolt \
@@ -233,18 +238,18 @@ build() {
         --instrumentation-file=chrome.fdata \
         out/Release/chrome \
         -o out/Release/chrome.inst
- 
-  # Run a workload with to gather instrumenting data  
+
+  # Run a workload with to gather instrumenting data
   xvfb-run -s "-screen 0 1920x1080x24 -nolisten local" \
   vpython3 tools/perf/run_benchmark speedometer2 \
   --assert-gpu-compositing --browser=exact \
   --browser-executable=out/Release/chrome.inst
-  
-# Merge fdata
-  merge-fdata chrome*.fdata > chrome-combined.fdata 
 
-  ## Convert Profile from BOLT for optimizing  # For 
-#  perf2bolt out/Release/chrome -perfdata=perf.data -o perf.fdata -strict=0
+  # Merge fdata
+  merge-fdata chrome*.fdata > chrome-combined.fdata
+
+  ## Convert Profile from BOLT for optimizing  # For
+  # perf2bolt out/Release/chrome -perfdata=perf.data -o perf.fdata -strict=0
 
   ## Optimize BOLT
   llvm-bolt out/Default/chrome -o out/Release/chrome.bolt \
@@ -252,7 +257,6 @@ build() {
     -reorder-blocks=ext-tsp -reorder-functions=hfsort \
     -split-functions -split-all-cold -split-eh \
     -skip-funcs=Builtins_.\*
-  
 }
 
 package() {

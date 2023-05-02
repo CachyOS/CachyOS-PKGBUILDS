@@ -1,0 +1,22 @@
+diff --git a/third_party/catapult/telemetry/telemetry/internal/platform/linux_platform_backend.py b/third_party/catapult/telemetry/telemetry/internal/platform/linux_platform_backend.py
+index 6e1ec424f..51a4bda61 100644
+--- a/third_party/catapult/telemetry/telemetry/internal/platform/linux_platform_backend.py
++++ b/third_party/catapult/telemetry/telemetry/internal/platform/linux_platform_backend.py
+@@ -77,7 +77,7 @@ class LinuxPlatformBackend(
+       os_release = self._ReadReleaseFile(path)
+       if os_release:
+         codename = os_release.get('ID', 'linux')
+-        version = _GetOSVersion(os_release.get('VERSION_ID'))
++        version = _GetOSVersion('0.0')
+         return os_version.OSVersion(codename, version)
+ 
+     # Use lsb-release as a fallback.
+@@ -95,7 +95,7 @@ class LinuxPlatformBackend(
+       os_release = self._ReadReleaseFile(path)
+       if os_release:
+         codename = os_release.get('NAME')
+-        version = os_release.get('VERSION')
++        version = '0.0'
+         return codename + ' ' + version
+ 
+     # Use lsb-release as a fallback.
