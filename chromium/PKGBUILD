@@ -224,17 +224,30 @@ build() {
   export PATH+=":$PWD/third_party/depot_tools"
 
   ## Branch Sampling for BOLT
-  perf record -e cycles:u -j any,u -o perf.data -- \
+#  perf record -e cycles:u -j any,u -o perf.data -- 
+
+  # Use instrumenting since branch sampling does not work inside the docker container. Maybe requires some Cap's
+  llvm-bolt \
+        --instrument \
+        --instrumentation-file-append-pid \
+        --instrumentation-file=chrome.fdata \
+        out/Release/chrome \
+        -o out/Release/chrome.inst
+ 
+  # Run a workload with to gather instrumenting data  
   vpython3 tools/perf/run_benchmark speedometer2 \
   --assert-gpu-compositing --browser=exact \
-  --browser-executable=out/Release/chrome
+  --browser-executable=out/Release/chrome.inst
+  
+# Merge fdata
+  merge-fdata chrome*.fdata > chrome-combined.fdata 
 
-  ## Convert Profile from BOLT for optimizing
-  perf2bolt out/Release/chrome -perfdata=perf.data -o perf.fdata -strict=0
+  ## Convert Profile from BOLT for optimizing  # For 
+#  perf2bolt out/Release/chrome -perfdata=perf.data -o perf.fdata -strict=0
 
   ## Optimize BOLT
   llvm-bolt out/Default/chrome -o out/Release/chrome.bolt \
-    -data=perf.fdata -dyno-stats \
+    -data=chrome-combined.fdata -dyno-stats \
     -reorder-blocks=ext-tsp -reorder-functions=hfsort \
     -split-functions -split-all-cold -split-eh \
     -skip-funcs=Builtins_.\*
