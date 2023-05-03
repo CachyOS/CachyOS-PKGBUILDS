@@ -56,7 +56,7 @@ index 79616160e495..d373aaf532d0 100644
 +	@LLVM_BOLT@ $(BUILDPYTHON) -instrument -instrumentation-file-append-pid -instrumentation-file=$(abspath $(BUILDPYTHON).bolt) -o $(BUILDPYTHON).bolt_inst
 +	./$(BUILDPYTHON).bolt_inst $(PROFILE_TASK) || true
 +	@MERGE_FDATA@ $(BUILDPYTHON).*.fdata > $(BUILDPYTHON).fdata
-+	@LLVM_BOLT@ $(BUILDPYTHON) -o $(BUILDPYTHON).bolt -data=$(BUILDPYTHON).fdata -update-debug-sections -reorder-blocks=ext-tsp -reorder-functions=hfsort+ -split-functions=3 -icf=1 -inline-all -split-eh -reorder-functions-use-hot-size -peepholes=all -jump-tables=aggressive -inline-ap -indirect-call-promotion=all -dyno-stats -use-gnu-stack -frame-opt=hot
++	@LLVM_BOLT@ $(BUILDPYTHON) -o $(BUILDPYTHON).bolt -data=$(BUILDPYTHON).fdata -update-debug-sections -reorder-blocks=ext-tsp -reorder-functions=hfsort+ -split-functions -icf=1 -inline-all -split-eh -reorder-functions-use-hot-size -peepholes=none -jump-tables=aggressive -inline-ap -indirect-call-promotion=all -dyno-stats -use-gnu-stack -frame-opt=hot
 +	rm -f *.fdata
 +	mv $(BUILDPYTHON).bolt $(BUILDPYTHON)
 +
@@ -533,7 +533,7 @@ index d373aaf532d0..7af2d40a4b40 100644
 +++ b/Makefile.pre.in
 @@ -647,6 +647,7 @@ bolt-opt: @PREBOLT_RULE@
  	@MERGE_FDATA@ $(BUILDPYTHON).*.fdata > $(BUILDPYTHON).fdata
- 	@LLVM_BOLT@ $(BUILDPYTHON) -o $(BUILDPYTHON).bolt -data=$(BUILDPYTHON).fdata -update-debug-sections -reorder-blocks=ext-tsp -reorder-functions=hfsort+ -split-functions=3 -icf=1 -inline-all -split-eh -reorder-functions-use-hot-size -peepholes=all -jump-tables=aggressive -inline-ap -indirect-call-promotion=all -dyno-stats -use-gnu-stack -frame-opt=hot
+ 	@LLVM_BOLT@ $(BUILDPYTHON) -o $(BUILDPYTHON).bolt -data=$(BUILDPYTHON).fdata -update-debug-sections -reorder-blocks=ext-tsp -reorder-functions=hfsort+ -split-functions -icf=1 -inline-all -split-eh -reorder-functions-use-hot-size -peepholes=none -jump-tables=aggressive -inline-ap -indirect-call-promotion=all -dyno-stats -use-gnu-stack -frame-opt=hot
  	rm -f *.fdata
 +        rm -f $(BUILDPYTHON).bolt_inst
  	mv $(BUILDPYTHON).bolt $(BUILDPYTHON)
@@ -636,21 +636,6 @@ index 4e50e73a11b8..b0629e422692 100644
  .. cmdoption:: --with-computed-gotos
  
     Enable computed gotos in evaluation loop (enabled by default on supported
-diff --git a/Doc/whatsnew/3.12.rst b/Doc/whatsnew/3.12.rst
-index 5926205ce5c0..d91173205d34 100644
---- a/Doc/whatsnew/3.12.rst
-+++ b/Doc/whatsnew/3.12.rst
-@@ -133,6 +133,10 @@ Optimizations
-   It reduces object size by 8 or 16 bytes on 64bit platform. (:pep:`623`)
-   (Contributed by Inada Naoki in :gh:`92536`.)
- 
-+* Added experimental support for using the BOLT binary optimizer in the build
-+  process, which improves performance by 1-5%.
-+  (Contributed by Kevin Modzelewski in :gh:`90536`.)
-+
- 
- CPython bytecode changes
- ========================
 
 From 0050190807789c7786f817da4eb04697fbb55f5c Mon Sep 17 00:00:00 2001
 From: Kevin Modzelewski <kevmod@gmail.com>
@@ -674,8 +659,8 @@ index 7af2d40a4b40..94f9ac7b6a9e 100644
 +	@LLVM_BOLT@ ./$(BUILDPYTHON) -instrument -instrumentation-file-append-pid -instrumentation-file=$(abspath $(BUILDPYTHON).bolt) -o $(BUILDPYTHON).bolt_inst
  	./$(BUILDPYTHON).bolt_inst $(PROFILE_TASK) || true
  	@MERGE_FDATA@ $(BUILDPYTHON).*.fdata > $(BUILDPYTHON).fdata
--	@LLVM_BOLT@ $(BUILDPYTHON) -o $(BUILDPYTHON).bolt -data=$(BUILDPYTHON).fdata -update-debug-sections -reorder-blocks=ext-tsp -reorder-functions=hfsort+ -split-functions=3 -icf=1 -inline-all -split-eh -reorder-functions-use-hot-size -peepholes=all -jump-tables=aggressive -inline-ap -indirect-call-promotion=all -dyno-stats -use-gnu-stack -frame-opt=hot
-+	@LLVM_BOLT@ ./$(BUILDPYTHON) -o $(BUILDPYTHON).bolt -data=$(BUILDPYTHON).fdata -update-debug-sections -reorder-blocks=ext-tsp -reorder-functions=hfsort+ -split-functions=3 -icf=1 -inline-all -split-eh -reorder-functions-use-hot-size -peepholes=all -jump-tables=aggressive -inline-ap -indirect-call-promotion=all -dyno-stats -use-gnu-stack -frame-opt=hot
+-	@LLVM_BOLT@ $(BUILDPYTHON) -o $(BUILDPYTHON).bolt -data=$(BUILDPYTHON).fdata -update-debug-sections -reorder-blocks=ext-tsp -reorder-functions=hfsort+ -split-functions -icf=1 -inline-all -split-eh -reorder-functions-use-hot-size -peepholes=none -jump-tables=aggressive -inline-ap -indirect-call-promotion=all -dyno-stats -use-gnu-stack -frame-opt=hot
++	@LLVM_BOLT@ ./$(BUILDPYTHON) -o $(BUILDPYTHON).bolt -data=$(BUILDPYTHON).fdata -update-debug-sections -reorder-blocks=ext-tsp -reorder-functions=hfsort+ -split-functions -icf=1 -inline-all -split-eh -reorder-functions-use-hot-size -peepholes=none -jump-tables=aggressive -inline-ap -indirect-call-promotion=all -dyno-stats -use-gnu-stack -frame-opt=hot
  	rm -f *.fdata
          rm -f $(BUILDPYTHON).bolt_inst
  	mv $(BUILDPYTHON).bolt $(BUILDPYTHON)
@@ -710,7 +695,7 @@ index 94f9ac7b6a9e..0622e6c35cd4 100644
 +++ b/Makefile.pre.in
 @@ -647,7 +647,7 @@ bolt-opt: @PREBOLT_RULE@
  	@MERGE_FDATA@ $(BUILDPYTHON).*.fdata > $(BUILDPYTHON).fdata
- 	@LLVM_BOLT@ ./$(BUILDPYTHON) -o $(BUILDPYTHON).bolt -data=$(BUILDPYTHON).fdata -update-debug-sections -reorder-blocks=ext-tsp -reorder-functions=hfsort+ -split-functions=3 -icf=1 -inline-all -split-eh -reorder-functions-use-hot-size -peepholes=all -jump-tables=aggressive -inline-ap -indirect-call-promotion=all -dyno-stats -use-gnu-stack -frame-opt=hot
+ 	@LLVM_BOLT@ ./$(BUILDPYTHON) -o $(BUILDPYTHON).bolt -data=$(BUILDPYTHON).fdata -update-debug-sections -reorder-blocks=ext-tsp -reorder-functions=hfsort+ -split-functions -icf=1 -inline-all -split-eh -reorder-functions-use-hot-size -peepholes=none -jump-tables=aggressive -inline-ap -indirect-call-promotion=all -dyno-stats -use-gnu-stack -frame-opt=hot
  	rm -f *.fdata
 -        rm -f $(BUILDPYTHON).bolt_inst
 +	rm -f $(BUILDPYTHON).bolt_inst
