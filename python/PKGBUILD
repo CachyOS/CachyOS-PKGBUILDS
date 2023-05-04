@@ -9,7 +9,7 @@ shopt -s extglob
 pkgbase=python
 pkgname=(python python-tests)
 pkgver=3.11.3
-pkgrel=2
+pkgrel=3
 _pybasever=${pkgver%.*}
 pkgdesc="Next generation of the python high-level scripting language"
 arch=('x86_64')
@@ -21,8 +21,7 @@ makedepends=('tk' 'sqlite' 'bluez-libs' 'mpdecimal' 'llvm' 'gdb' 'xorg-server-xv
 source=("https://www.python.org/ftp/python/${pkgver%rc*}/Python-${pkgver}.tar.xz"{,.asc}
         "0003-AVX2-and-AVX512-support.patch"
         "0004-Build-avx2-and-avx512-versions-of-the-math-library.patch"
-        "bolt2.patch"
-        "boltorg.patch")
+        "bolt2.patch")
 sha512sums=('a3bba4b69322a47bfeefe42ba0fd7331b5b67fd2ab41441e2219d16ef8c6f307f1a48977afd073c18cfd24ec6cb1bfe0c4bb4b273031eb524dc7e9fb5fbcc3b6'
             'SKIP'
             '2bfab3aaf5b72cd090aa396fb93575ba8db96abc9a6b9098ca661f3b62b01e6b8828b382495e8eb966f7b2f1a5ec02ef5ca08a2d296a57f656e7ea7cb534fb80'
@@ -44,12 +43,8 @@ prepare() {
   rm -r Modules/_ctypes/{darwin,libffi}*
   rm -r Modules/_decimal/libmpdec
   
-  msg2 "---- clearlinux patches"
-  patch -Np1 -i "${srcdir}/0003-AVX2-and-AVX512-support.patch"
-#  patch -Np1 -i "${srcdir}/0004-Build-avx2-and-avx512-versions-of-the-math-library.patch"
-
   msg2 "Include --enable-bolt"
-  patch -Np1 -i "${srcdir}/boltorg.patch"
+  patch -Np1 -i "${srcdir}/bolt2.patch"
   
 }
 
