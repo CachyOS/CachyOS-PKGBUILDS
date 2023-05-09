@@ -3,7 +3,7 @@
 _gitname=CachyOS-Settings
 pkgname=cachyos-settings
 pkgver=29
-pkgrel=2
+pkgrel=3
 groups=(cachyos)
 arch=('any')
 license=('GPL')
@@ -19,7 +19,8 @@ depends=(
     'cachyos-ananicy-rules'
     'uksmd'
 )
-optdepends=('ruby: for tunecfs2')
+optdepends=('ruby: for tunecfs2'
+            'lua-filesystem: for topmem')
 
 package() {
   install -d "$pkgdir/etc"
