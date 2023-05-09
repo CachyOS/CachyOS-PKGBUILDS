@@ -28,6 +28,9 @@ prepare() {
   cd oneTBB-$pkgver
   # FS#77894
   patch -p1 -i ../retry-pthread_create.patch
+
+  # Fix compilation with gcc13
+  patch -p1 -i ../add-missing-header.patch
 }
 
 build() {
