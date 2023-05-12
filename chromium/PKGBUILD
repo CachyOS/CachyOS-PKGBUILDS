@@ -282,11 +282,11 @@ build() {
   export PATH+=":$PWD/third_party/depot_tools"
 
   ## Branch Sampling for BOLT
-  perf record -e cycles:u -j any,u -o perf.data --
+  perf record -e cycles:u -j any,u -o perf.data --  \
   xvfb-run -s "-screen 0 1920x1080x24 -nolisten local" \
   vpython3 tools/perf/run_benchmark speedometer2 \
   --assert-gpu-compositing --browser=exact \
-  --browser-executable=out/Release/chrome
+  --browser-executable=out/Release/chrome || true
   
   # Use instrumenting since branch sampling does not work inside the docker container. Maybe requires some Cap's
   #llvm-bolt \
