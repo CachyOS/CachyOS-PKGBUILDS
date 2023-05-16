@@ -1,0 +1,45 @@
+# Maintainer: Piotr Górski <lucjan.lucjanov@gmail.com>
+# Contributor: Oleksandr Natalenko <oleksandr@natalenko.name>
+# Contributor: Damian N. <nycko123 at gmail>
+
+pkgname=uksmd-lts
+_pkgname=uksmd
+pkgver=1.0.0
+pkgrel=1
+epoch=1
+pkgdesc="Userspace KSM helper daemon"
+url="https://github.com/CachyOS/uksmd"
+license=('GPL3')
+arch=('x86_64')
+depends=('procps-ng' 'libcap-ng')
+makedepends=('meson' 'git')
+conflicts=('uksmd')
+provides=("uksmd=${pkgver}")
+source=("$url/archive/v$pkgver.tar.gz")
+sha256sums=('096468b71c80ebea6a414d5e25ffbaed0eb0303a44dd5e12cbaff510728e0f2e')
+
+prepare() {
+ cd $_pkgname-$pkgver
+
+ local src
+  for src in "${source[@]}"; do
+    src="${src%%::*}"
+    src="${src##*/}"
+    [[ $src = *.patch ]] || continue
+    echo "Applying patch $src..."
+    patch -Np1 < "../$src"
+  done
+}
+
+build() {
+  cd $_pkgname-$pkgver
+  arch-meson . build
+  meson compile -C build
+}
+
+package() {
+  depends+=(UKSMD-BUILTIN)
+
+  cd $_pkgname-$pkgver
+  meson install -C build --destdir "${pkgdir}"
+}
