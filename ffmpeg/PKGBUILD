@@ -6,7 +6,7 @@
 
 pkgname=ffmpeg
 pkgver=6.0
-pkgrel=4
+pkgrel=7
 epoch=2
 pkgdesc='Complete solution to record, convert and stream audio and video'
 arch=(x86_64)
@@ -32,6 +32,7 @@ depends=(
   libfreetype.so
   libgl
   libiec61883
+  libjxl.so
   libmfx
   libmodplug
   libopenmpt.so
@@ -127,8 +128,8 @@ pkgver() {
 build() {
   cd ffmpeg
 
-  export CFLAGS+=" -march=x86-64-v3 -mtune=skylake -O3 -Ofast -fno-semantic-interposition -mprefer-vector-width=256"
-  export CXXLAGS+=" -march=x86-64-v3 -mtune=skylake -O3 -Ofast -fno-semantic-interposition -mprefer-vector-width=256"
+  export CFLAGS+=" -march=x86-64-v3 -mtune=generic -Ofast -fno-semantic-interposition"
+  export CXXLAGS+=" -march=x86-64-v3 -mtune=generic -Ofast -fno-semantic-interposition"
 
   ./configure \
     --prefix=/usr \
@@ -155,6 +156,7 @@ build() {
     --enable-libgsm \
     --enable-libiec61883 \
     --enable-libjack \
+    --enable-libjxl \
     --enable-libmfx \
     --enable-libmodplug \
     --enable-libmp3lame \
