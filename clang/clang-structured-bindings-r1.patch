@@ -1,0 +1,1625 @@
+From 127bf44385424891eb04cff8e52d3f157fc2cb7c Mon Sep 17 00:00:00 2001
+From: Corentin Jabot <corentinjabot@gmail.com>
+Date: Wed, 30 Mar 2022 14:27:44 +0200
+Subject: [PATCH] [Clang][C++20] Support capturing structured bindings in
+ lambdas
+
+This completes the implementation of P1091R3 and P1381R1.
+
+This patch allow the capture of structured bindings
+both for C++20+ and C++17, with extension/compat warning.
+
+In addition, capturing an anonymous union member,
+a bitfield, or a structured binding thereof now has a
+better diagnostic.
+
+We only support structured bindings - as opposed to other kinds
+of structured statements/blocks. We still emit an error for those.
+
+In addition, support for structured bindings capture is entirely disabled in
+OpenMP mode as this needs more investigation - a specific diagnostic indicate the feature is not yet supported there.
+
+Note that the rest of P1091R3 (static/thread_local structured bindings) was already implemented.
+
+at the request of @shafik, i can confirm the correct behavior of lldb wit this change.
+
+Fixes https://github.com/llvm/llvm-project/issues/54300
+Fixes https://github.com/llvm/llvm-project/issues/54300
+Fixes https://github.com/llvm/llvm-project/issues/52720
+
+Reviewed By: aaron.ballman
+
+Differential Revision: https://reviews.llvm.org/D122768
+---
+ .../clang-tidy/modernize/LoopConvertUtils.cpp |   4 +-
+ clang/docs/ReleaseNotes.rst                   |  10 +
+ clang/include/clang/AST/Decl.h                |   5 +
+ clang/include/clang/AST/DeclCXX.h             |   5 +-
+ clang/include/clang/AST/LambdaCapture.h       |   8 +-
+ clang/include/clang/AST/Stmt.h                |   1 +
+ clang/include/clang/ASTMatchers/ASTMatchers.h |   2 +-
+ .../clang/Basic/DiagnosticSemaKinds.td        |  10 +
+ clang/include/clang/Sema/ScopeInfo.h          |  27 ++-
+ clang/include/clang/Sema/Sema.h               |  12 +-
+ clang/lib/AST/ASTImporter.cpp                 |   2 +-
+ clang/lib/AST/Decl.cpp                        |   6 +
+ clang/lib/AST/DeclCXX.cpp                     |   4 +-
+ clang/lib/AST/ExprCXX.cpp                     |   6 +-
+ clang/lib/AST/ExprConstant.cpp                |   2 +-
+ clang/lib/AST/StmtPrinter.cpp                 |   3 +-
+ clang/lib/Analysis/AnalysisDeclContext.cpp    |   6 +-
+ clang/lib/CodeGen/CGDebugInfo.cpp             |   2 +-
+ clang/lib/CodeGen/CGExpr.cpp                  |   7 +-
+ clang/lib/CodeGen/CGOpenMPRuntime.cpp         |   6 +-
+ clang/lib/CodeGen/CGOpenMPRuntimeGPU.cpp      |  15 +-
+ clang/lib/CodeGen/CodeGenFunction.h           |   2 +-
+ clang/lib/Sema/SemaDecl.cpp                   |   2 +-
+ clang/lib/Sema/SemaExpr.cpp                   | 200 ++++++++++++------
+ clang/lib/Sema/SemaInit.cpp                   |   2 +-
+ clang/lib/Sema/SemaLambda.cpp                 |  31 ++-
+ clang/lib/Sema/SemaOpenMP.cpp                 |   4 +-
+ clang/lib/Sema/SemaStmt.cpp                   |  10 +-
+ clang/lib/Sema/TreeTransform.h                |   9 +-
+ clang/lib/Serialization/ASTWriter.cpp         |   2 +-
+ .../Checkers/DeadStoresChecker.cpp            |   8 +-
+ .../WebKit/UncountedLambdaCapturesChecker.cpp |   4 +-
+ clang/lib/StaticAnalyzer/Core/ExprEngine.cpp  |   2 +-
+ .../lib/StaticAnalyzer/Core/LoopUnrolling.cpp |   2 +-
+ clang/test/CodeGenCXX/cxx20-decomposition.cpp |  48 +++++
+ clang/test/SemaCXX/cxx1z-decomposition.cpp    |  54 ++++-
+ clang/test/SemaCXX/cxx20-decomposition.cpp    | 141 ++++++++++++
+ clang/test/SemaCXX/decomposition-blocks.cpp   |  14 ++
+ clang/test/SemaCXX/decomposition-openmp.cpp   |  13 ++
+ clang/tools/libclang/CIndex.cpp               |   8 +-
+ clang/www/cxx_status.html                     |   2 +-
+ 41 files changed, 539 insertions(+), 162 deletions(-)
+ create mode 100644 clang/test/CodeGenCXX/cxx20-decomposition.cpp
+ create mode 100644 clang/test/SemaCXX/cxx20-decomposition.cpp
+ create mode 100644 clang/test/SemaCXX/decomposition-blocks.cpp
+ create mode 100644 clang/test/SemaCXX/decomposition-openmp.cpp
+
+diff --git a/clang-tools-extra/clang-tidy/modernize/LoopConvertUtils.cpp b/clang-tools-extra/clang-tidy/modernize/LoopConvertUtils.cpp
+index 5d4f3b8249249..fc3dfbdeac785 100644
+--- a/clang-tools-extra/clang-tidy/modernize/LoopConvertUtils.cpp
++++ b/clang-tools-extra/clang-tidy/modernize/LoopConvertUtils.cpp
+@@ -785,8 +785,8 @@ bool ForLoopIndexUseVisitor::TraverseLambdaCapture(LambdaExpr *LE,
+                                                    const LambdaCapture *C,
+                                                    Expr *Init) {
+   if (C->capturesVariable()) {
+-    const VarDecl *VDecl = C->getCapturedVar();
+-    if (areSameVariable(IndexVar, cast<ValueDecl>(VDecl))) {
++    const ValueDecl *VDecl = C->getCapturedVar();
++    if (areSameVariable(IndexVar, VDecl)) {
+       // FIXME: if the index is captured, it will count as an usage and the
+       // alias (if any) won't work, because it is only used in case of having
+       // exactly one usage.
+diff --git a/clang/docs/ReleaseNotes.rst b/clang/docs/ReleaseNotes.rst
+index 7d90b08814baa..878effe08294c 100644
+--- a/clang/docs/ReleaseNotes.rst
++++ b/clang/docs/ReleaseNotes.rst
+@@ -108,6 +108,16 @@ C++ Language Changes in Clang
+ C++20 Feature Support
+ ^^^^^^^^^^^^^^^^^^^^^
+ 
++- Support capturing structured bindings in lambdas
++  (`P1091R3 <https://wg21.link/p1091r3>`_ and `P1381R1 <https://wg21.link/P1381R1>`).
++  This fixes issues `GH52720 <https://github.com/llvm/llvm-project/issues/52720>`_,
++  `GH54300 <https://github.com/llvm/llvm-project/issues/54300>`_,
++  `GH54301 <https://github.com/llvm/llvm-project/issues/54301>`_,
++  and `GH49430 <https://github.com/llvm/llvm-project/issues/49430>`_.
++
++
++
++
+ C++2b Feature Support
+ ^^^^^^^^^^^^^^^^^^^^^
+ 
+diff --git a/clang/include/clang/AST/Decl.h b/clang/include/clang/AST/Decl.h
+index 6441cd339d917..1b414b5c0c194 100644
+--- a/clang/include/clang/AST/Decl.h
++++ b/clang/include/clang/AST/Decl.h
+@@ -689,6 +689,11 @@ class ValueDecl : public NamedDecl {
+   ///        or declared with the weak or weak-ref attr.
+   bool isWeak() const;
+ 
++  /// Whether this variable is the implicit variable for a lambda init-capture.
++  /// Only VarDecl can be init captures, but both VarDecl and BindingDecl
++  /// can be captured.
++  bool isInitCapture() const;
++
+   // Implement isa/cast/dyncast/etc.
+   static bool classof(const Decl *D) { return classofKind(D->getKind()); }
+   static bool classofKind(Kind K) { return K >= firstValue && K <= lastValue; }
+diff --git a/clang/include/clang/AST/DeclCXX.h b/clang/include/clang/AST/DeclCXX.h
+index 9e4fc3fc1254f..c97301957cb60 100644
+--- a/clang/include/clang/AST/DeclCXX.h
++++ b/clang/include/clang/AST/DeclCXX.h
+@@ -1057,8 +1057,9 @@ class CXXRecordDecl : public RecordDecl {
+   ///
+   /// \note No entries will be added for init-captures, as they do not capture
+   /// variables.
+-  void getCaptureFields(llvm::DenseMap<const VarDecl *, FieldDecl *> &Captures,
+-                        FieldDecl *&ThisCapture) const;
++  void
++  getCaptureFields(llvm::DenseMap<const ValueDecl *, FieldDecl *> &Captures,
++                   FieldDecl *&ThisCapture) const;
+ 
+   using capture_const_iterator = const LambdaCapture *;
+   using capture_const_range = llvm::iterator_range<capture_const_iterator>;
+diff --git a/clang/include/clang/AST/LambdaCapture.h b/clang/include/clang/AST/LambdaCapture.h
+index 7ad1e2361e427..62e7716ed3699 100644
+--- a/clang/include/clang/AST/LambdaCapture.h
++++ b/clang/include/clang/AST/LambdaCapture.h
+@@ -71,7 +71,7 @@ class LambdaCapture {
+   /// capture that is a pack expansion, or an invalid source
+   /// location to indicate that this is not a pack expansion.
+   LambdaCapture(SourceLocation Loc, bool Implicit, LambdaCaptureKind Kind,
+-                VarDecl *Var = nullptr,
++                ValueDecl *Var = nullptr,
+                 SourceLocation EllipsisLoc = SourceLocation());
+ 
+   /// Determine the kind of capture.
+@@ -86,7 +86,7 @@ class LambdaCapture {
+ 
+   /// Determine whether this capture handles a variable.
+   bool capturesVariable() const {
+-    return isa_and_nonnull<VarDecl>(DeclAndBits.getPointer());
++    return isa_and_nonnull<ValueDecl>(DeclAndBits.getPointer());
+   }
+ 
+   /// Determine whether this captures a variable length array bound
+@@ -101,9 +101,9 @@ class LambdaCapture {
+   ///
+   /// This operation is only valid if this capture is a variable capture
+   /// (other than a capture of \c this).
+-  VarDecl *getCapturedVar() const {
++  ValueDecl *getCapturedVar() const {
+     assert(capturesVariable() && "No variable available for capture");
+-    return static_cast<VarDecl *>(DeclAndBits.getPointer());
++    return static_cast<ValueDecl *>(DeclAndBits.getPointer());
+   }
+ 
+   /// Determine whether this was an implicit capture (not
+diff --git a/clang/include/clang/AST/Stmt.h b/clang/include/clang/AST/Stmt.h
+index 49a66a1ea5b86..52c0ca51ea866 100644
+--- a/clang/include/clang/AST/Stmt.h
++++ b/clang/include/clang/AST/Stmt.h
+@@ -59,6 +59,7 @@ class RecordDecl;
+ class SourceManager;
+ class StringLiteral;
+ class Token;
++class ValueDecl;
+ class VarDecl;
+ 
+ //===----------------------------------------------------------------------===//
+diff --git a/clang/include/clang/ASTMatchers/ASTMatchers.h b/clang/include/clang/ASTMatchers/ASTMatchers.h
+index 9f4d807c232dc..5bcf1d3896e89 100644
+--- a/clang/include/clang/ASTMatchers/ASTMatchers.h
++++ b/clang/include/clang/ASTMatchers/ASTMatchers.h
+@@ -4722,7 +4722,7 @@ AST_MATCHER_P(LambdaExpr, hasAnyCapture, internal::Matcher<LambdaCapture>,
+ /// In the matcher
+ /// lambdaExpr(hasAnyCapture(lambdaCapture(capturesVar(hasName("x")))),
+ /// capturesVar(hasName("x")) matches `x` and `x = 1`.
+-AST_MATCHER_P(LambdaCapture, capturesVar, internal::Matcher<VarDecl>,
++AST_MATCHER_P(LambdaCapture, capturesVar, internal::Matcher<ValueDecl>,
+               InnerMatcher) {
+   auto *capturedVar = Node.getCapturedVar();
+   return capturedVar && InnerMatcher.matches(*capturedVar, Finder, Builder);
+diff --git a/clang/include/clang/Basic/DiagnosticSemaKinds.td b/clang/include/clang/Basic/DiagnosticSemaKinds.td
+index 6ff5b8de57fd0..550ad5ab73c64 100644
+--- a/clang/include/clang/Basic/DiagnosticSemaKinds.td
++++ b/clang/include/clang/Basic/DiagnosticSemaKinds.td
+@@ -9013,6 +9013,16 @@ def ext_ms_anonymous_record : ExtWarn<
+ def err_reference_to_local_in_enclosing_context : Error<
+   "reference to local %select{variable|binding}1 %0 declared in enclosing "
+   "%select{%3|block literal|lambda expression|context}2">;
++def err_bitfield_capture_by_ref : Error<
++  "cannot capture a bit-field by reference">;
++def err_capture_binding_openmp : Error<
++  "capturing a structured binding is not yet supported in OpenMP">;
++def ext_capture_binding : ExtWarn<
++  "captured structured bindings are a C++20 extension">, InGroup<CXX20>;
++def warn_cxx17_compat_capture_binding : Warning<
++  "captured structured bindings are incompatible with "
++  "C++ standards before C++20">,
++  InGroup<CXXPre20Compat>, DefaultIgnore;
+ 
+ def err_static_data_member_not_allowed_in_local_class : Error<
+   "static data member %0 not allowed in local %sub{select_tag_type_kind}2 %1">;
+diff --git a/clang/include/clang/Sema/ScopeInfo.h b/clang/include/clang/Sema/ScopeInfo.h
+index 18848c8d8a456..c0dfcb89e86ff 100644
+--- a/clang/include/clang/Sema/ScopeInfo.h
++++ b/clang/include/clang/Sema/ScopeInfo.h
+@@ -553,7 +553,7 @@ class Capture {
+     const VariableArrayType *CapturedVLA;
+ 
+     /// Otherwise, the captured variable (if any).
+-    VarDecl *CapturedVar;
++    ValueDecl *CapturedVar;
+   };
+ 
+   /// The source location at which the first capture occurred.
+@@ -589,12 +589,13 @@ class Capture {
+   unsigned Invalid : 1;
+ 
+ public:
+-  Capture(VarDecl *Var, bool Block, bool ByRef, bool IsNested,
++  Capture(ValueDecl *Var, bool Block, bool ByRef, bool IsNested,
+           SourceLocation Loc, SourceLocation EllipsisLoc, QualType CaptureType,
+           bool Invalid)
+       : CapturedVar(Var), Loc(Loc), EllipsisLoc(EllipsisLoc),
+-        CaptureType(CaptureType),
+-        Kind(Block ? Cap_Block : ByRef ? Cap_ByRef : Cap_ByCopy),
++        CaptureType(CaptureType), Kind(Block   ? Cap_Block
++                                       : ByRef ? Cap_ByRef
++                                               : Cap_ByCopy),
+         Nested(IsNested), CapturesThis(false), ODRUsed(false),
+         NonODRUsed(false), Invalid(Invalid) {}
+ 
+@@ -639,7 +640,7 @@ class Capture {
+       NonODRUsed = true;
+   }
+ 
+-  VarDecl *getVariable() const {
++  ValueDecl *getVariable() const {
+     assert(isVariableCapture());
+     return CapturedVar;
+   }
+@@ -678,7 +679,7 @@ class CapturingScopeInfo : public FunctionScopeInfo {
+       : FunctionScopeInfo(Diag), ImpCaptureStyle(Style) {}
+ 
+   /// CaptureMap - A map of captured variables to (index+1) into Captures.
+-  llvm::DenseMap<VarDecl*, unsigned> CaptureMap;
++  llvm::DenseMap<ValueDecl *, unsigned> CaptureMap;
+ 
+   /// CXXThisCaptureIndex - The (index+1) of the capture of 'this';
+   /// zero if 'this' is not captured.
+@@ -695,7 +696,7 @@ class CapturingScopeInfo : public FunctionScopeInfo {
+   /// or null if unknown.
+   QualType ReturnType;
+ 
+-  void addCapture(VarDecl *Var, bool isBlock, bool isByref, bool isNested,
++  void addCapture(ValueDecl *Var, bool isBlock, bool isByref, bool isNested,
+                   SourceLocation Loc, SourceLocation EllipsisLoc,
+                   QualType CaptureType, bool Invalid) {
+     Captures.push_back(Capture(Var, isBlock, isByref, isNested, Loc,
+@@ -722,23 +723,21 @@ class CapturingScopeInfo : public FunctionScopeInfo {
+   }
+ 
+   /// Determine whether the given variable has been captured.
+-  bool isCaptured(VarDecl *Var) const {
+-    return CaptureMap.count(Var);
+-  }
++  bool isCaptured(ValueDecl *Var) const { return CaptureMap.count(Var); }
+ 
+   /// Determine whether the given variable-array type has been captured.
+   bool isVLATypeCaptured(const VariableArrayType *VAT) const;
+ 
+   /// Retrieve the capture of the given variable, if it has been
+   /// captured already.
+-  Capture &getCapture(VarDecl *Var) {
++  Capture &getCapture(ValueDecl *Var) {
+     assert(isCaptured(Var) && "Variable has not been captured");
+     return Captures[CaptureMap[Var] - 1];
+   }
+ 
+-  const Capture &getCapture(VarDecl *Var) const {
+-    llvm::DenseMap<VarDecl*, unsigned>::const_iterator Known
+-      = CaptureMap.find(Var);
++  const Capture &getCapture(ValueDecl *Var) const {
++    llvm::DenseMap<ValueDecl *, unsigned>::const_iterator Known =
++        CaptureMap.find(Var);
+     assert(Known != CaptureMap.end() && "Variable has not been captured");
+     return Captures[Known->second - 1];
+   }
+diff --git a/clang/include/clang/Sema/Sema.h b/clang/include/clang/Sema/Sema.h
+index ed50b9ef42ef4..706383e8943fc 100644
+--- a/clang/include/clang/Sema/Sema.h
++++ b/clang/include/clang/Sema/Sema.h
+@@ -5325,23 +5325,23 @@ class Sema final {
+   ///
+   /// \returns true if an error occurred (i.e., the variable cannot be
+   /// captured) and false if the capture succeeded.
+-  bool tryCaptureVariable(VarDecl *Var, SourceLocation Loc, TryCaptureKind Kind,
+-                          SourceLocation EllipsisLoc, bool BuildAndDiagnose,
+-                          QualType &CaptureType,
++  bool tryCaptureVariable(ValueDecl *Var, SourceLocation Loc,
++                          TryCaptureKind Kind, SourceLocation EllipsisLoc,
++                          bool BuildAndDiagnose, QualType &CaptureType,
+                           QualType &DeclRefType,
+                           const unsigned *const FunctionScopeIndexToStopAt);
+ 
+   /// Try to capture the given variable.
+-  bool tryCaptureVariable(VarDecl *Var, SourceLocation Loc,
++  bool tryCaptureVariable(ValueDecl *Var, SourceLocation Loc,
+                           TryCaptureKind Kind = TryCapture_Implicit,
+                           SourceLocation EllipsisLoc = SourceLocation());
+ 
+   /// Checks if the variable must be captured.
+-  bool NeedToCaptureVariable(VarDecl *Var, SourceLocation Loc);
++  bool NeedToCaptureVariable(ValueDecl *Var, SourceLocation Loc);
+ 
+   /// Given a variable, determine the type that a reference to that
+   /// variable will have in the given scope.
+-  QualType getCapturedDeclRefType(VarDecl *Var, SourceLocation Loc);
++  QualType getCapturedDeclRefType(ValueDecl *Var, SourceLocation Loc);
+ 
+   /// Mark all of the declarations referenced within a particular AST node as
+   /// referenced. Used when template instantiation instantiates a non-dependent
+diff --git a/clang/lib/AST/ASTImporter.cpp b/clang/lib/AST/ASTImporter.cpp
+index 159010713f434..2e230921b938f 100644
+--- a/clang/lib/AST/ASTImporter.cpp
++++ b/clang/lib/AST/ASTImporter.cpp
+@@ -1006,7 +1006,7 @@ ASTNodeImporter::import(const Designator &D) {
+ 
+ template <>
+ Expected<LambdaCapture> ASTNodeImporter::import(const LambdaCapture &From) {
+-  VarDecl *Var = nullptr;
++  ValueDecl *Var = nullptr;
+   if (From.capturesVariable()) {
+     if (auto VarOrErr = import(From.getCapturedVar()))
+       Var = *VarOrErr;
+diff --git a/clang/lib/AST/Decl.cpp b/clang/lib/AST/Decl.cpp
+index 030792bfc7ca3..61688688b0a73 100644
+--- a/clang/lib/AST/Decl.cpp
++++ b/clang/lib/AST/Decl.cpp
+@@ -4983,6 +4983,12 @@ bool ValueDecl::isWeak() const {
+          MostRecent->hasAttr<WeakRefAttr>() || isWeakImported();
+ }
+ 
++bool ValueDecl::isInitCapture() const {
++  if (auto *Var = llvm::dyn_cast<VarDecl>(this))
++    return Var->isInitCapture();
++  return false;
++}
++
+ void ImplicitParamDecl::anchor() {}
+ 
+ ImplicitParamDecl *ImplicitParamDecl::Create(ASTContext &C, DeclContext *DC,
+diff --git a/clang/lib/AST/DeclCXX.cpp b/clang/lib/AST/DeclCXX.cpp
+index a955b4f3aba00..38c46b112b803 100644
+--- a/clang/lib/AST/DeclCXX.cpp
++++ b/clang/lib/AST/DeclCXX.cpp
+@@ -1570,8 +1570,8 @@ CXXMethodDecl *CXXRecordDecl::getLambdaStaticInvoker(CallingConv CC) const {
+ }
+ 
+ void CXXRecordDecl::getCaptureFields(
+-       llvm::DenseMap<const VarDecl *, FieldDecl *> &Captures,
+-       FieldDecl *&ThisCapture) const {
++    llvm::DenseMap<const ValueDecl *, FieldDecl *> &Captures,
++    FieldDecl *&ThisCapture) const {
+   Captures.clear();
+   ThisCapture = nullptr;
+ 
+diff --git a/clang/lib/AST/ExprCXX.cpp b/clang/lib/AST/ExprCXX.cpp
+index 6328fa4a7dd51..1f860a351866f 100644
+--- a/clang/lib/AST/ExprCXX.cpp
++++ b/clang/lib/AST/ExprCXX.cpp
+@@ -1087,7 +1087,7 @@ CXXConstructExpr::CXXConstructExpr(StmtClass SC, EmptyShell Empty,
+     : Expr(SC, Empty), NumArgs(NumArgs) {}
+ 
+ LambdaCapture::LambdaCapture(SourceLocation Loc, bool Implicit,
+-                             LambdaCaptureKind Kind, VarDecl *Var,
++                             LambdaCaptureKind Kind, ValueDecl *Var,
+                              SourceLocation EllipsisLoc)
+     : DeclAndBits(Var, 0), Loc(Loc), EllipsisLoc(EllipsisLoc) {
+   unsigned Bits = 0;
+@@ -1211,8 +1211,8 @@ const CompoundStmt *LambdaExpr::getCompoundStmtBody() const {
+ }
+ 
+ bool LambdaExpr::isInitCapture(const LambdaCapture *C) const {
+-  return (C->capturesVariable() && C->getCapturedVar()->isInitCapture() &&
+-          (getCallOperator() == C->getCapturedVar()->getDeclContext()));
++  return C->capturesVariable() && C->getCapturedVar()->isInitCapture() &&
++         getCallOperator() == C->getCapturedVar()->getDeclContext();
+ }
+ 
+ LambdaExpr::capture_iterator LambdaExpr::capture_begin() const {
+diff --git a/clang/lib/AST/ExprConstant.cpp b/clang/lib/AST/ExprConstant.cpp
+index efaccf52132b3..6f3539a4b2c17 100644
+--- a/clang/lib/AST/ExprConstant.cpp
++++ b/clang/lib/AST/ExprConstant.cpp
+@@ -578,7 +578,7 @@ namespace {
+ 
+     /// LambdaCaptureFields - Mapping from captured variables/this to
+     /// corresponding data members in the closure class.
+-    llvm::DenseMap<const VarDecl *, FieldDecl *> LambdaCaptureFields;
++    llvm::DenseMap<const ValueDecl *, FieldDecl *> LambdaCaptureFields;
+     FieldDecl *LambdaThisCaptureField;
+ 
+     CallStackFrame(EvalInfo &Info, SourceLocation CallLoc,
+diff --git a/clang/lib/AST/StmtPrinter.cpp b/clang/lib/AST/StmtPrinter.cpp
+index 8d778500d1033..9cb72ee6b1964 100644
+--- a/clang/lib/AST/StmtPrinter.cpp
++++ b/clang/lib/AST/StmtPrinter.cpp
+@@ -2164,7 +2164,8 @@ void StmtPrinter::VisitLambdaExpr(LambdaExpr *Node) {
+       OS << "...";
+ 
+     if (Node->isInitCapture(C)) {
+-      VarDecl *D = C->getCapturedVar();
++      // Init captures are always VarDecl.
++      auto *D = cast<VarDecl>(C->getCapturedVar());
+ 
+       llvm::StringRef Pre;
+       llvm::StringRef Post;
+diff --git a/clang/lib/Analysis/AnalysisDeclContext.cpp b/clang/lib/Analysis/AnalysisDeclContext.cpp
+index f20924604f649..f72c75a12fec9 100644
+--- a/clang/lib/Analysis/AnalysisDeclContext.cpp
++++ b/clang/lib/Analysis/AnalysisDeclContext.cpp
+@@ -142,7 +142,7 @@ bool AnalysisDeclContext::isBodyAutosynthesizedFromModelFile() const {
+ 
+ /// Returns true if \param VD is an Objective-C implicit 'self' parameter.
+ static bool isSelfDecl(const VarDecl *VD) {
+-  return isa<ImplicitParamDecl>(VD) && VD->getName() == "self";
++  return isa_and_nonnull<ImplicitParamDecl>(VD) && VD->getName() == "self";
+ }
+ 
+ const ImplicitParamDecl *AnalysisDeclContext::getSelfDecl() const {
+@@ -169,8 +169,8 @@ const ImplicitParamDecl *AnalysisDeclContext::getSelfDecl() const {
+     if (!LC.capturesVariable())
+       continue;
+ 
+-    VarDecl *VD = LC.getCapturedVar();
+-    if (isSelfDecl(VD))
++    ValueDecl *VD = LC.getCapturedVar();
++    if (isSelfDecl(dyn_cast<VarDecl>(VD)))
+       return dyn_cast<ImplicitParamDecl>(VD);
+   }
+ 
+diff --git a/clang/lib/CodeGen/CGDebugInfo.cpp b/clang/lib/CodeGen/CGDebugInfo.cpp
+index 522ed7ae8b144..6527d87399bef 100644
+--- a/clang/lib/CodeGen/CGDebugInfo.cpp
++++ b/clang/lib/CodeGen/CGDebugInfo.cpp
+@@ -1497,7 +1497,7 @@ void CGDebugInfo::CollectRecordLambdaFields(
+     if (C.capturesVariable()) {
+       SourceLocation Loc = C.getLocation();
+       assert(!Field->isBitField() && "lambdas don't have bitfield members!");
+-      VarDecl *V = C.getCapturedVar();
++      ValueDecl *V = C.getCapturedVar();
+       StringRef VName = V->getName();
+       llvm::DIFile *VUnit = getOrCreateFile(Loc);
+       auto Align = getDeclAlignIfRequired(V, CGM.getContext());
+diff --git a/clang/lib/CodeGen/CGExpr.cpp b/clang/lib/CodeGen/CGExpr.cpp
+index 91a6b4e528472..e26822eaa601e 100644
+--- a/clang/lib/CodeGen/CGExpr.cpp
++++ b/clang/lib/CodeGen/CGExpr.cpp
+@@ -2942,8 +2942,13 @@ LValue CodeGenFunction::EmitDeclRefLValue(const DeclRefExpr *E) {
+   // FIXME: While we're emitting a binding from an enclosing scope, all other
+   // DeclRefExprs we see should be implicitly treated as if they also refer to
+   // an enclosing scope.
+-  if (const auto *BD = dyn_cast<BindingDecl>(ND))
++  if (const auto *BD = dyn_cast<BindingDecl>(ND)) {
++    if (E->refersToEnclosingVariableOrCapture()) {
++      auto *FD = LambdaCaptureFields.lookup(BD);
++      return EmitCapturedFieldLValue(*this, FD, CXXABIThisValue);
++    }
+     return EmitLValue(BD->getBinding());
++  }
+ 
+   // We can form DeclRefExprs naming GUID declarations when reconstituting
+   // non-type template parameters into expressions.
+diff --git a/clang/lib/CodeGen/CGOpenMPRuntime.cpp b/clang/lib/CodeGen/CGOpenMPRuntime.cpp
+index 3a1ed38d491fc..9fc7360e92472 100644
+--- a/clang/lib/CodeGen/CGOpenMPRuntime.cpp
++++ b/clang/lib/CodeGen/CGOpenMPRuntime.cpp
+@@ -409,7 +409,7 @@ class CGOpenMPInnerExprInfo final : public CGOpenMPInlinedRegionInfo {
+ /// RAII for emitting code of OpenMP constructs.
+ class InlinedOpenMPRegionRAII {
+   CodeGenFunction &CGF;
+-  llvm::DenseMap<const VarDecl *, FieldDecl *> LambdaCaptureFields;
++  llvm::DenseMap<const ValueDecl *, FieldDecl *> LambdaCaptureFields;
+   FieldDecl *LambdaThisCaptureField = nullptr;
+   const CodeGen::CGBlockInfo *BlockInfo = nullptr;
+   bool NoInheritance = false;
+@@ -8948,7 +8948,7 @@ class MappableExprsHandler {
+     Address VDAddr(Arg, CGF.ConvertTypeForMem(VDType),
+                    CGF.getContext().getDeclAlign(VD));
+     LValue VDLVal = CGF.MakeAddrLValue(VDAddr, VDType);
+-    llvm::DenseMap<const VarDecl *, FieldDecl *> Captures;
++    llvm::DenseMap<const ValueDecl *, FieldDecl *> Captures;
+     FieldDecl *ThisCapture = nullptr;
+     RD->getCaptureFields(Captures, ThisCapture);
+     if (ThisCapture) {
+@@ -8970,7 +8970,7 @@ class MappableExprsHandler {
+     for (const LambdaCapture &LC : RD->captures()) {
+       if (!LC.capturesVariable())
+         continue;
+-      const VarDecl *VD = LC.getCapturedVar();
++      const VarDecl *VD = cast<VarDecl>(LC.getCapturedVar());
+       if (LC.getCaptureKind() != LCK_ByRef && !VD->getType()->isPointerType())
+         continue;
+       auto It = Captures.find(VD);
+diff --git a/clang/lib/CodeGen/CGOpenMPRuntimeGPU.cpp b/clang/lib/CodeGen/CGOpenMPRuntimeGPU.cpp
+index 058b312c0ce68..e8affaaecc980 100644
+--- a/clang/lib/CodeGen/CGOpenMPRuntimeGPU.cpp
++++ b/clang/lib/CodeGen/CGOpenMPRuntimeGPU.cpp
+@@ -444,9 +444,8 @@ class CheckVarsEscapingDeclContext final
+       markAsEscaped(VD);
+     if (isa<OMPCapturedExprDecl>(VD))
+       VisitValueDecl(VD);
+-    else if (const auto *VarD = dyn_cast<VarDecl>(VD))
+-      if (VarD->isInitCapture())
+-        VisitValueDecl(VD);
++    else if (VD->isInitCapture())
++      VisitValueDecl(VD);
+   }
+   void VisitUnaryOperator(const UnaryOperator *E) {
+     if (!E)
+@@ -3810,7 +3809,7 @@ void CGOpenMPRuntimeGPU::adjustTargetSpecificDataForLambdas(
+     else
+       VDLVal = CGF.MakeAddrLValue(
+           VDAddr, VD->getType().getCanonicalType().getNonReferenceType());
+-    llvm::DenseMap<const VarDecl *, FieldDecl *> Captures;
++    llvm::DenseMap<const ValueDecl *, FieldDecl *> Captures;
+     FieldDecl *ThisCapture = nullptr;
+     RD->getCaptureFields(Captures, ThisCapture);
+     if (ThisCapture && CGF.CapturedStmtInfo->isCXXThisExprCaptured()) {
+@@ -3822,13 +3821,15 @@ void CGOpenMPRuntimeGPU::adjustTargetSpecificDataForLambdas(
+     for (const LambdaCapture &LC : RD->captures()) {
+       if (LC.getCaptureKind() != LCK_ByRef)
+         continue;
+-      const VarDecl *VD = LC.getCapturedVar();
+-      if (!CS->capturesVariable(VD))
++      const ValueDecl *VD = LC.getCapturedVar();
++      // FIXME: For now VD is always a VarDecl because OpenMP does not support
++      //  capturing structured bindings in lambdas yet.
++      if (!CS->capturesVariable(cast<VarDecl>(VD)))
+         continue;
+       auto It = Captures.find(VD);
+       assert(It != Captures.end() && "Found lambda capture without field.");
+       LValue VarLVal = CGF.EmitLValueForFieldInitialization(VDLVal, It->second);
+-      Address VDAddr = CGF.GetAddrOfLocalVar(VD);
++      Address VDAddr = CGF.GetAddrOfLocalVar(cast<VarDecl>(VD));
+       if (VD->getType().getCanonicalType()->isReferenceType())
+         VDAddr = CGF.EmitLoadOfReferenceLValue(VDAddr,
+                                                VD->getType().getCanonicalType())
+diff --git a/clang/lib/CodeGen/CodeGenFunction.h b/clang/lib/CodeGen/CodeGenFunction.h
+index fe0890f433e8c..b61a2a68687d9 100644
+--- a/clang/lib/CodeGen/CodeGenFunction.h
++++ b/clang/lib/CodeGen/CodeGenFunction.h
+@@ -609,7 +609,7 @@ class CodeGenFunction : public CodeGenTypeCache {
+   const CodeGen::CGBlockInfo *BlockInfo = nullptr;
+   llvm::Value *BlockPointer = nullptr;
+ 
+-  llvm::DenseMap<const VarDecl *, FieldDecl *> LambdaCaptureFields;
++  llvm::DenseMap<const ValueDecl *, FieldDecl *> LambdaCaptureFields;
+   FieldDecl *LambdaThisCaptureField = nullptr;
+ 
+   /// A mapping from NRVO variables to the flags used to indicate
+diff --git a/clang/lib/Sema/SemaDecl.cpp b/clang/lib/Sema/SemaDecl.cpp
+index eca20002b30da..b110a07f4fcba 100644
+--- a/clang/lib/Sema/SemaDecl.cpp
++++ b/clang/lib/Sema/SemaDecl.cpp
+@@ -14681,7 +14681,7 @@ static void RebuildLambdaScopeInfo(CXXMethodDecl *CallOperator,
+   auto I = LambdaClass->field_begin();
+   for (const auto &C : LambdaClass->captures()) {
+     if (C.capturesVariable()) {
+-      VarDecl *VD = C.getCapturedVar();
++      ValueDecl *VD = C.getCapturedVar();
+       if (VD->isInitCapture())
+         S.CurrentInstantiationScope->InstantiatedLocal(VD, VD);
+       const bool ByRef = C.getCaptureKind() == LCK_ByRef;
+diff --git a/clang/lib/Sema/SemaExpr.cpp b/clang/lib/Sema/SemaExpr.cpp
+index 6f758e437a905..9497c4b5d5300 100644
+--- a/clang/lib/Sema/SemaExpr.cpp
++++ b/clang/lib/Sema/SemaExpr.cpp
+@@ -2082,9 +2082,8 @@ Sema::BuildDeclRefExpr(ValueDecl *D, QualType Ty, ExprValueKind VK,
+                        NestedNameSpecifierLoc NNS, NamedDecl *FoundD,
+                        SourceLocation TemplateKWLoc,
+                        const TemplateArgumentListInfo *TemplateArgs) {
+-  bool RefersToCapturedVariable =
+-      isa<VarDecl>(D) &&
+-      NeedToCaptureVariable(cast<VarDecl>(D), NameInfo.getLoc());
++  bool RefersToCapturedVariable = isa<VarDecl, BindingDecl>(D) &&
++                                  NeedToCaptureVariable(D, NameInfo.getLoc());
+ 
+   DeclRefExpr *E = DeclRefExpr::Create(
+       Context, NNS, TemplateKWLoc, D, RefersToCapturedVariable, NameInfo, Ty,
+@@ -3252,8 +3251,9 @@ ExprResult Sema::BuildDeclarationNameExpr(const CXXScopeSpec &SS,
+   return ULE;
+ }
+ 
+-static void diagnoseUncapturableValueReference(Sema &S, SourceLocation loc,
+-                                               ValueDecl *var);
++static void diagnoseUncapturableValueReferenceOrBinding(Sema &S,
++                                                        SourceLocation loc,
++                                                        ValueDecl *var);
+ 
+ /// Complete semantic analysis for a reference to the given declaration.
+ ExprResult Sema::BuildDeclarationNameExpr(
+@@ -3411,20 +3411,11 @@ ExprResult Sema::BuildDeclarationNameExpr(
+     break;
+   }
+ 
+-  case Decl::Binding: {
++  case Decl::Binding:
+     // These are always lvalues.
+     valueKind = VK_LValue;
+     type = type.getNonReferenceType();
+-    // FIXME: Support lambda-capture of BindingDecls, once CWG actually
+-    // decides how that's supposed to work.
+-    auto *BD = cast<BindingDecl>(VD);
+-    if (BD->getDeclContext() != CurContext) {
+-      auto *DD = dyn_cast_or_null<VarDecl>(BD->getDecomposedDecl());
+-      if (DD && DD->hasLocalStorage())
+-        diagnoseUncapturableValueReference(*this, Loc, BD);
+-    }
+     break;
+-  }
+ 
+   case Decl::Function: {
+     if (unsigned BID = cast<FunctionDecl>(VD)->getBuiltinID()) {
+@@ -16411,8 +16402,9 @@ ExprResult Sema::ActOnBlockStmtExpr(SourceLocation CaretLoc,
+   for (Capture &Cap : BSI->Captures) {
+     if (Cap.isInvalid() || Cap.isThisCapture())
+       continue;
+-
+-    VarDecl *Var = Cap.getVariable();
++    // Cap.getVariable() is always a VarDecl because
++    // blocks cannot capture structured bindings or other ValueDecl kinds.
++    auto *Var = cast<VarDecl>(Cap.getVariable());
+     Expr *CopyExpr = nullptr;
+     if (getLangOpts().CPlusPlus && Cap.isCopyCapture()) {
+       if (const RecordType *Record =
+@@ -18243,8 +18235,8 @@ void Sema::MarkCaptureUsedInEnclosingContext(VarDecl *Capture,
+   MarkVarDeclODRUsed(Capture, Loc, *this, &CapturingScopeIndex);
+ }
+ 
+-static void diagnoseUncapturableValueReference(Sema &S, SourceLocation loc,
+-                                               ValueDecl *var) {
++void diagnoseUncapturableValueReferenceOrBinding(Sema &S, SourceLocation loc,
++                                                 ValueDecl *var) {
+   DeclContext *VarDC = var->getDeclContext();
+ 
+   //  If the parameter still belongs to the translation unit, then
+@@ -18284,12 +18276,12 @@ static void diagnoseUncapturableValueReference(Sema &S, SourceLocation loc,
+   // capture.
+ }
+ 
+-
+-static bool isVariableAlreadyCapturedInScopeInfo(CapturingScopeInfo *CSI, VarDecl *Var,
+-                                      bool &SubCapturesAreNested,
+-                                      QualType &CaptureType,
+-                                      QualType &DeclRefType) {
+-   // Check whether we've already captured it.
++static bool isVariableAlreadyCapturedInScopeInfo(CapturingScopeInfo *CSI,
++                                                 ValueDecl *Var,
++                                                 bool &SubCapturesAreNested,
++                                                 QualType &CaptureType,
++                                                 QualType &DeclRefType) {
++  // Check whether we've already captured it.
+   if (CSI->CaptureMap.count(Var)) {
+     // If we found a capture, any subcaptures are nested.
+     SubCapturesAreNested = true;
+@@ -18316,14 +18308,22 @@ static bool isVariableAlreadyCapturedInScopeInfo(CapturingScopeInfo *CSI, VarDec
+ 
+ // Only block literals, captured statements, and lambda expressions can
+ // capture; other scopes don't work.
+-static DeclContext *getParentOfCapturingContextOrNull(DeclContext *DC, VarDecl *Var,
+-                                 SourceLocation Loc,
+-                                 const bool Diagnose, Sema &S) {
++static DeclContext *getParentOfCapturingContextOrNull(DeclContext *DC,
++                                                      ValueDecl *Var,
++                                                      SourceLocation Loc,
++                                                      const bool Diagnose,
++                                                      Sema &S) {
+   if (isa<BlockDecl>(DC) || isa<CapturedDecl>(DC) || isLambdaCallOperator(DC))
+     return getLambdaAwareParentOfDeclContext(DC);
+-  else if (Var->hasLocalStorage()) {
+-    if (Diagnose)
+-       diagnoseUncapturableValueReference(S, Loc, Var);
++
++  ValueDecl *Underlying = Var;
++  auto *BD = dyn_cast_or_null<BindingDecl>(Var);
++  if (BD)
++    Underlying = BD->getDecomposedDecl();
++
++  if (auto *VD = dyn_cast<VarDecl>(Underlying)) {
++    if (VD->hasLocalStorage() && Diagnose)
++      diagnoseUncapturableValueReferenceOrBinding(S, Loc, Var);
+   }
+   return nullptr;
+ }
+@@ -18331,9 +18331,12 @@ static DeclContext *getParentOfCapturingContextOrNull(DeclContext *DC, VarDecl *
+ // Certain capturing entities (lambdas, blocks etc.) are not allowed to capture
+ // certain types of variables (unnamed, variably modified types etc.)
+ // so check for eligibility.
+-static bool isVariableCapturable(CapturingScopeInfo *CSI, VarDecl *Var,
+-                                 SourceLocation Loc,
+-                                 const bool Diagnose, Sema &S) {
++static bool isVariableCapturable(CapturingScopeInfo *CSI, ValueDecl *Var,
++                                 SourceLocation Loc, const bool Diagnose,
++                                 Sema &S) {
++
++  assert((isa<VarDecl, BindingDecl>(Var)) &&
++         "Only variables and structured bindings can be captured");
+ 
+   bool IsBlock = isa<BlockScopeInfo>(CSI);
+   bool IsLambda = isa<LambdaScopeInfo>(CSI);
+@@ -18390,17 +18393,28 @@ static bool isVariableCapturable(CapturingScopeInfo *CSI, VarDecl *Var,
+     return false;
+   }
+ 
++  if (isa<BindingDecl>(Var)) {
++    if (!IsLambda || !S.getLangOpts().CPlusPlus) {
++      if (Diagnose)
++        diagnoseUncapturableValueReferenceOrBinding(S, Loc, Var);
++      return false;
++    } else if (Diagnose && S.getLangOpts().CPlusPlus) {
++      S.Diag(Loc, S.LangOpts.CPlusPlus20
++                      ? diag::warn_cxx17_compat_capture_binding
++                      : diag::ext_capture_binding)
++          << Var;
++      S.Diag(Var->getLocation(), diag::note_entity_declared_at) << Var;
++    }
++  }
++
+   return true;
+ }
+ 
+ // Returns true if the capture by block was successful.
+-static bool captureInBlock(BlockScopeInfo *BSI, VarDecl *Var,
+-                                 SourceLocation Loc,
+-                                 const bool BuildAndDiagnose,
+-                                 QualType &CaptureType,
+-                                 QualType &DeclRefType,
+-                                 const bool Nested,
+-                                 Sema &S, bool Invalid) {
++static bool captureInBlock(BlockScopeInfo *BSI, ValueDecl *Var,
++                           SourceLocation Loc, const bool BuildAndDiagnose,
++                           QualType &CaptureType, QualType &DeclRefType,
++                           const bool Nested, Sema &S, bool Invalid) {
+   bool ByRef = false;
+ 
+   // Blocks are not allowed to capture arrays, excepting OpenCL.
+@@ -18464,10 +18478,9 @@ static bool captureInBlock(BlockScopeInfo *BSI, VarDecl *Var,
+   return !Invalid;
+ }
+ 
+-
+ /// Capture the given variable in the captured region.
+ static bool captureInCapturedRegion(
+-    CapturedRegionScopeInfo *RSI, VarDecl *Var, SourceLocation Loc,
++    CapturedRegionScopeInfo *RSI, ValueDecl *Var, SourceLocation Loc,
+     const bool BuildAndDiagnose, QualType &CaptureType, QualType &DeclRefType,
+     const bool RefersToCapturedVariable, Sema::TryCaptureKind Kind,
+     bool IsTopScope, Sema &S, bool Invalid) {
+@@ -18506,16 +18519,12 @@ static bool captureInCapturedRegion(
+ }
+ 
+ /// Capture the given variable in the lambda.
+-static bool captureInLambda(LambdaScopeInfo *LSI,
+-                            VarDecl *Var,
+-                            SourceLocation Loc,
+-                            const bool BuildAndDiagnose,
+-                            QualType &CaptureType,
+-                            QualType &DeclRefType,
++static bool captureInLambda(LambdaScopeInfo *LSI, ValueDecl *Var,
++                            SourceLocation Loc, const bool BuildAndDiagnose,
++                            QualType &CaptureType, QualType &DeclRefType,
+                             const bool RefersToCapturedVariable,
+                             const Sema::TryCaptureKind Kind,
+-                            SourceLocation EllipsisLoc,
+-                            const bool IsTopScope,
++                            SourceLocation EllipsisLoc, const bool IsTopScope,
+                             Sema &S, bool Invalid) {
+   // Determine whether we are capturing by reference or by value.
+   bool ByRef = false;
+@@ -18524,6 +18533,40 @@ static bool captureInLambda(LambdaScopeInfo *LSI,
+   } else {
+     ByRef = (LSI->ImpCaptureStyle == LambdaScopeInfo::ImpCap_LambdaByref);
+   }
++  // C++20 : [expr.prim.lambda.capture]p12
++  // A bit-field or a member of an anonymous union shall
++  // not be captured by reference.
++  MemberExpr *ME = nullptr;
++  BindingDecl *BD = nullptr;
++  if (auto *V = dyn_cast<VarDecl>(Var)) {
++    if (V->getInit())
++      ME = dyn_cast<MemberExpr>(V->getInit()->IgnoreImplicit());
++  } else if ((BD = dyn_cast<BindingDecl>(Var))) {
++    ME = dyn_cast_or_null<MemberExpr>(BD->getBinding());
++  }
++
++  // Capturing a bitfield by reference is not allowed except in OpenMP.
++  if (ByRef && ME &&
++      (isa<BindingDecl>(Var) || !S.LangOpts.OpenMP ||
++       !S.isOpenMPCapturedDecl(Var))) {
++    const auto *FD = dyn_cast_or_null<FieldDecl>(ME->getMemberDecl());
++    if (FD && FD->isBitField()) {
++      if (BuildAndDiagnose) {
++        S.Diag(Loc, diag::err_bitfield_capture_by_ref) << Var;
++        S.Diag(Var->getLocation(), diag::note_entity_declared_at) << Var;
++        S.Diag(FD->getLocation(), diag::note_bitfield_decl) << FD;
++      }
++      Invalid = true;
++    }
++  }
++  // FIXME: We should support capturing structured bindings in OpenMP.
++  if (!Invalid && BD && S.LangOpts.OpenMP) {
++    if (BuildAndDiagnose) {
++      S.Diag(Loc, diag::err_capture_binding_openmp) << Var;
++      S.Diag(Var->getLocation(), diag::note_entity_declared_at) << Var;
++    }
++    Invalid = true;
++  }
+ 
+   // Compute the type of the field that will capture this variable.
+   if (ByRef) {
+@@ -18605,7 +18648,8 @@ static bool captureInLambda(LambdaScopeInfo *LSI,
+   return !Invalid;
+ }
+ 
+-static bool canCaptureVariableByCopy(VarDecl *Var, const ASTContext &Context) {
++static bool canCaptureVariableByCopy(ValueDecl *Var,
++                                     const ASTContext &Context) {
+   // Offer a Copy fix even if the type is dependent.
+   if (Var->getType()->isDependentType())
+     return true;
+@@ -18631,7 +18675,7 @@ static bool canCaptureVariableByCopy(VarDecl *Var, const ASTContext &Context) {
+ /// standard, for example we can't emit a default copy capture fix-it if we
+ /// already explicitly copy capture capture another variable.
+ static void buildLambdaCaptureFixit(Sema &Sema, LambdaScopeInfo *LSI,
+-                                    VarDecl *Var) {
++                                    ValueDecl *Var) {
+   assert(LSI->ImpCaptureStyle == CapturingScopeInfo::ImpCap_None);
+   // Don't offer Capture by copy of default capture by copy fixes if Var is
+   // known not to be copy constructible.
+@@ -18707,14 +18751,21 @@ static void buildLambdaCaptureFixit(Sema &Sema, LambdaScopeInfo *LSI,
+ }
+ 
+ bool Sema::tryCaptureVariable(
+-    VarDecl *Var, SourceLocation ExprLoc, TryCaptureKind Kind,
++    ValueDecl *Var, SourceLocation ExprLoc, TryCaptureKind Kind,
+     SourceLocation EllipsisLoc, bool BuildAndDiagnose, QualType &CaptureType,
+     QualType &DeclRefType, const unsigned *const FunctionScopeIndexToStopAt) {
+   // An init-capture is notionally from the context surrounding its
+   // declaration, but its parent DC is the lambda class.
+   DeclContext *VarDC = Var->getDeclContext();
+-  if (Var->isInitCapture())
+-    VarDC = VarDC->getParent();
++  const auto *VD = dyn_cast<VarDecl>(Var);
++  if (VD) {
++    if (VD->isInitCapture())
++      VarDC = VarDC->getParent();
++  } else {
++    VD = dyn_cast<DecompositionDecl>(
++        cast<BindingDecl>(Var)->getDecomposedDecl());
++  }
++  assert(VD && "Cannot capture a null variable");
+ 
+   DeclContext *DC = CurContext;
+   const unsigned MaxFunctionScopesIndex = FunctionScopeIndexToStopAt
+@@ -18736,12 +18787,14 @@ bool Sema::tryCaptureVariable(
+ 
+   // Capture global variables if it is required to use private copy of this
+   // variable.
+-  bool IsGlobal = !Var->hasLocalStorage();
++  bool IsGlobal = !VD->hasLocalStorage();
+   if (IsGlobal &&
+       !(LangOpts.OpenMP && isOpenMPCapturedDecl(Var, /*CheckScopeInfo=*/true,
+                                                 MaxFunctionScopesIndex)))
+     return true;
+-  Var = Var->getCanonicalDecl();
++
++  if (isa<VarDecl>(Var))
++    Var = cast<VarDecl>(Var->getCanonicalDecl());
+ 
+   // Walk up the stack to determine whether we can capture the variable,
+   // performing the "simple" checks that don't depend on type. We stop when
+@@ -18797,7 +18850,7 @@ bool Sema::tryCaptureVariable(
+           Diag(LSI->Lambda->getBeginLoc(), diag::note_lambda_decl);
+           buildLambdaCaptureFixit(*this, LSI, Var);
+         } else
+-          diagnoseUncapturableValueReference(*this, ExprLoc, Var);
++          diagnoseUncapturableValueReferenceOrBinding(*this, ExprLoc, Var);
+       }
+       return true;
+     }
+@@ -18945,7 +18998,7 @@ bool Sema::tryCaptureVariable(
+   return Invalid;
+ }
+ 
+-bool Sema::tryCaptureVariable(VarDecl *Var, SourceLocation Loc,
++bool Sema::tryCaptureVariable(ValueDecl *Var, SourceLocation Loc,
+                               TryCaptureKind Kind, SourceLocation EllipsisLoc) {
+   QualType CaptureType;
+   QualType DeclRefType;
+@@ -18954,7 +19007,7 @@ bool Sema::tryCaptureVariable(VarDecl *Var, SourceLocation Loc,
+                             DeclRefType, nullptr);
+ }
+ 
+-bool Sema::NeedToCaptureVariable(VarDecl *Var, SourceLocation Loc) {
++bool Sema::NeedToCaptureVariable(ValueDecl *Var, SourceLocation Loc) {
+   QualType CaptureType;
+   QualType DeclRefType;
+   return !tryCaptureVariable(Var, Loc, TryCapture_Implicit, SourceLocation(),
+@@ -18962,7 +19015,7 @@ bool Sema::NeedToCaptureVariable(VarDecl *Var, SourceLocation Loc) {
+                              DeclRefType, nullptr);
+ }
+ 
+-QualType Sema::getCapturedDeclRefType(VarDecl *Var, SourceLocation Loc) {
++QualType Sema::getCapturedDeclRefType(ValueDecl *Var, SourceLocation Loc) {
+   QualType CaptureType;
+   QualType DeclRefType;
+ 
+@@ -19558,6 +19611,24 @@ static void DoMarkVarDeclReferenced(
+   }
+ }
+ 
++static void DoMarkBindingDeclReferenced(Sema &SemaRef, SourceLocation Loc,
++                                        BindingDecl *BD) {
++  BD->setReferenced();
++
++  if (BD->isInvalidDecl())
++    return;
++
++  OdrUseContext OdrUse = isOdrUseContext(SemaRef);
++  if (OdrUse == OdrUseContext::Used) {
++    QualType CaptureType, DeclRefType;
++    SemaRef.tryCaptureVariable(BD, Loc, Sema::TryCapture_Implicit,
++                               /*EllipsisLoc*/ SourceLocation(),
++                               /*BuildAndDiagnose*/ true, CaptureType,
++                               DeclRefType,
++                               /*FunctionScopeIndexToStopAt*/ nullptr);
++  }
++}
++
+ /// Mark a variable referenced, and check whether it is odr-used
+ /// (C++ [basic.def.odr]p2, C99 6.9p3).  Note that this should not be
+ /// used directly for normal expressions referring to VarDecl.
+@@ -19577,6 +19648,11 @@ MarkExprReferenced(Sema &SemaRef, SourceLocation Loc, Decl *D, Expr *E,
+     return;
+   }
+ 
++  if (BindingDecl *Decl = dyn_cast<BindingDecl>(D)) {
++    DoMarkBindingDeclReferenced(SemaRef, Loc, Decl);
++    return;
++  }
++
+   SemaRef.MarkAnyDeclReferenced(Loc, D, MightBeOdrUse);
+ 
+   // If this is a call to a method via a cast, also mark the method in the
+diff --git a/clang/lib/Sema/SemaInit.cpp b/clang/lib/Sema/SemaInit.cpp
+index d3b454843234b..737952bdfe810 100644
+--- a/clang/lib/Sema/SemaInit.cpp
++++ b/clang/lib/Sema/SemaInit.cpp
+@@ -7846,7 +7846,7 @@ void Sema::checkInitializerLifetime(const InitializedEntity &Entity,
+           break;
+         // FIXME: We can't easily tell apart an init-capture from a nested
+         // capture of an init-capture.
+-        const VarDecl *VD = Elem.Capture->getCapturedVar();
++        const ValueDecl *VD = Elem.Capture->getCapturedVar();
+         Diag(Elem.Capture->getLocation(), diag::note_lambda_capture_initializer)
+             << VD << VD->isInitCapture() << Elem.Capture->isExplicit()
+             << (Elem.Capture->getCaptureKind() == LCK_ByRef) << VD
+diff --git a/clang/lib/Sema/SemaLambda.cpp b/clang/lib/Sema/SemaLambda.cpp
+index afc2f3ef4d76e..3f271d6c53f17 100644
+--- a/clang/lib/Sema/SemaLambda.cpp
++++ b/clang/lib/Sema/SemaLambda.cpp
+@@ -1088,7 +1088,7 @@ void Sema::ActOnStartOfLambdaDefinition(LambdaIntroducer &Intro,
+     if (C->Init.isInvalid())
+       continue;
+ 
+-    VarDecl *Var = nullptr;
++    ValueDecl *Var = nullptr;
+     if (C->Init.isUsable()) {
+       Diag(C->Loc, getLangOpts().CPlusPlus14
+                        ? diag::warn_cxx11_compat_init_capture
+@@ -1166,7 +1166,10 @@ void Sema::ActOnStartOfLambdaDefinition(LambdaIntroducer &Intro,
+           continue;
+       }
+ 
+-      Var = R.getAsSingle<VarDecl>();
++      if (auto *BD = R.getAsSingle<BindingDecl>())
++        Var = BD;
++      else
++        Var = R.getAsSingle<VarDecl>();
+       if (Var && DiagnoseUseOfDecl(Var, C->Loc))
+         continue;
+     }
+@@ -1200,7 +1203,13 @@ void Sema::ActOnStartOfLambdaDefinition(LambdaIntroducer &Intro,
+     if (Var->isInvalidDecl())
+       continue;
+ 
+-    if (!Var->hasLocalStorage()) {
++    VarDecl *Underlying;
++    if (auto *BD = dyn_cast<BindingDecl>(Var))
++      Underlying = dyn_cast<VarDecl>(BD->getDecomposedDecl());
++    else
++      Underlying = cast<VarDecl>(Var);
++
++    if (!Underlying->hasLocalStorage()) {
+       Diag(C->Loc, diag::err_capture_non_automatic_variable) << C->Id;
+       Diag(Var->getLocation(), diag::note_previous_decl) << C->Id;
+       continue;
+@@ -1224,7 +1233,7 @@ void Sema::ActOnStartOfLambdaDefinition(LambdaIntroducer &Intro,
+     }
+ 
+     if (C->Init.isUsable()) {
+-      addInitCapture(LSI, Var);
++      addInitCapture(LSI, cast<VarDecl>(Var));
+     } else {
+       TryCaptureKind Kind = C->Kind == LCK_ByRef ? TryCapture_ExplicitByRef :
+                                                    TryCapture_ExplicitByVal;
+@@ -1574,7 +1583,7 @@ ExprResult Sema::BuildCaptureInit(const Capture &Cap,
+ 
+   // An init-capture is initialized directly from its stored initializer.
+   if (Cap.isInitCapture())
+-    return Cap.getVariable()->getInit();
++    return cast<VarDecl>(Cap.getVariable())->getInit();
+ 
+   // For anything else, build an initialization expression. For an implicit
+   // capture, the capture notionally happens at the capture-default, so use
+@@ -1605,7 +1614,7 @@ ExprResult Sema::BuildCaptureInit(const Capture &Cap,
+       Init = This;
+   } else {
+     assert(Cap.isVariableCapture() && "unknown kind of capture");
+-    VarDecl *Var = Cap.getVariable();
++    ValueDecl *Var = Cap.getVariable();
+     Name = Var->getIdentifier();
+     Init = BuildDeclarationNameExpr(
+       CXXScopeSpec(), DeclarationNameInfo(Var->getDeclName(), Loc), Var);
+@@ -1654,7 +1663,7 @@ mapImplicitCaptureStyle(CapturingScopeInfo::ImplicitCaptureStyle ICS) {
+ 
+ bool Sema::CaptureHasSideEffects(const Capture &From) {
+   if (From.isInitCapture()) {
+-    Expr *Init = From.getVariable()->getInit();
++    Expr *Init = cast<VarDecl>(From.getVariable())->getInit();
+     if (Init && Init->HasSideEffects(Context))
+       return true;
+   }
+@@ -1704,9 +1713,9 @@ FieldDecl *Sema::BuildCaptureField(RecordDecl *RD,
+ 
+   TypeSourceInfo *TSI = nullptr;
+   if (Capture.isVariableCapture()) {
+-    auto *Var = Capture.getVariable();
+-    if (Var->isInitCapture())
+-      TSI = Capture.getVariable()->getTypeSourceInfo();
++    const auto *Var = dyn_cast_or_null<VarDecl>(Capture.getVariable());
++    if (Var && Var->isInitCapture())
++      TSI = Var->getTypeSourceInfo();
+   }
+ 
+   // FIXME: Should we really be doing this? A null TypeSourceInfo seems more
+@@ -1854,7 +1863,7 @@ ExprResult Sema::BuildLambdaExpr(SourceLocation StartLoc, SourceLocation EndLoc,
+           return LambdaCapture(From.getLocation(), IsImplicit, LCK_VLAType);
+         } else {
+           assert(From.isVariableCapture() && "unknown kind of capture");
+-          VarDecl *Var = From.getVariable();
++          ValueDecl *Var = From.getVariable();
+           LambdaCaptureKind Kind =
+               From.isCopyCapture() ? LCK_ByCopy : LCK_ByRef;
+           return LambdaCapture(From.getLocation(), IsImplicit, Kind, Var,
+diff --git a/clang/lib/Sema/SemaOpenMP.cpp b/clang/lib/Sema/SemaOpenMP.cpp
+index a92fec6a02323..4279a152db907 100644
+--- a/clang/lib/Sema/SemaOpenMP.cpp
++++ b/clang/lib/Sema/SemaOpenMP.cpp
+@@ -4677,12 +4677,12 @@ void Sema::tryCaptureOpenMPLambdas(ValueDecl *V) {
+       DSAStack->setForceCaptureByReferenceInTargetExecutable(
+           /*V=*/true);
+       if (RD->isLambda()) {
+-        llvm::DenseMap<const VarDecl *, FieldDecl *> Captures;
++        llvm::DenseMap<const ValueDecl *, FieldDecl *> Captures;
+         FieldDecl *ThisCapture;
+         RD->getCaptureFields(Captures, ThisCapture);
+         for (const LambdaCapture &LC : RD->captures()) {
+           if (LC.getCaptureKind() == LCK_ByRef) {
+-            VarDecl *VD = LC.getCapturedVar();
++            VarDecl *VD = cast<VarDecl>(LC.getCapturedVar());
+             DeclContext *VDC = VD->getDeclContext();
+             if (!VDC->Encloses(CurContext))
+               continue;
+diff --git a/clang/lib/Sema/SemaStmt.cpp b/clang/lib/Sema/SemaStmt.cpp
+index c6ca10c0342c5..73d243cda974e 100644
+--- a/clang/lib/Sema/SemaStmt.cpp
++++ b/clang/lib/Sema/SemaStmt.cpp
+@@ -4695,11 +4695,11 @@ buildCapturedStmtCaptureList(Sema &S, CapturedRegionScopeInfo *RSI,
+       if (S.getLangOpts().OpenMP && RSI->CapRegionKind == CR_OpenMP)
+         S.setOpenMPCaptureKind(Field, Cap.getVariable(), RSI->OpenMPLevel);
+ 
+-      Captures.push_back(CapturedStmt::Capture(Cap.getLocation(),
+-                                               Cap.isReferenceCapture()
+-                                                   ? CapturedStmt::VCK_ByRef
+-                                                   : CapturedStmt::VCK_ByCopy,
+-                                               Cap.getVariable()));
++      Captures.push_back(CapturedStmt::Capture(
++          Cap.getLocation(),
++          Cap.isReferenceCapture() ? CapturedStmt::VCK_ByRef
++                                   : CapturedStmt::VCK_ByCopy,
++          cast<VarDecl>(Cap.getVariable())));
+     }
+     CaptureInits.push_back(Init.get());
+   }
+diff --git a/clang/lib/Sema/TreeTransform.h b/clang/lib/Sema/TreeTransform.h
+index 86d92158da8df..14f652614730d 100644
+--- a/clang/lib/Sema/TreeTransform.h
++++ b/clang/lib/Sema/TreeTransform.h
+@@ -12986,7 +12986,7 @@ TreeTransform<Derived>::TransformLambdaExpr(LambdaExpr *E) {
+       continue;
+ 
+     TransformedInitCapture &Result = InitCaptures[C - E->capture_begin()];
+-    VarDecl *OldVD = C->getCapturedVar();
++    auto *OldVD = cast<VarDecl>(C->getCapturedVar());
+ 
+     auto SubstInitCapture = [&](SourceLocation EllipsisLoc,
+                                 Optional<unsigned> NumExpansions) {
+@@ -13003,7 +13003,8 @@ TreeTransform<Derived>::TransformLambdaExpr(LambdaExpr *E) {
+           getSema().buildLambdaInitCaptureInitialization(
+               C->getLocation(), OldVD->getType()->isReferenceType(),
+               EllipsisLoc, NumExpansions, OldVD->getIdentifier(),
+-              C->getCapturedVar()->getInitStyle() != VarDecl::CInit,
++              cast<VarDecl>(C->getCapturedVar())->getInitStyle() !=
++                  VarDecl::CInit,
+               NewExprInit);
+       Result.Expansions.push_back(
+           InitCaptureInfoTy(NewExprInit, NewInitCaptureType));
+@@ -13170,7 +13171,7 @@ TreeTransform<Derived>::TransformLambdaExpr(LambdaExpr *E) {
+     if (E->isInitCapture(C)) {
+       TransformedInitCapture &NewC = InitCaptures[C - E->capture_begin()];
+ 
+-      VarDecl *OldVD = C->getCapturedVar();
++      auto *OldVD = cast<VarDecl>(C->getCapturedVar());
+       llvm::SmallVector<Decl*, 4> NewVDs;
+ 
+       for (InitCaptureInfoTy &Info : NewC.Expansions) {
+@@ -13225,7 +13226,7 @@ TreeTransform<Derived>::TransformLambdaExpr(LambdaExpr *E) {
+         // The transform has determined that we should perform an expansion;
+         // transform and capture each of the arguments.
+         // expansion of the pattern. Do so.
+-        VarDecl *Pack = C->getCapturedVar();
++        auto *Pack = cast<VarDecl>(C->getCapturedVar());
+         for (unsigned I = 0; I != *NumExpansions; ++I) {
+           Sema::ArgumentPackSubstitutionIndexRAII SubstIndex(getSema(), I);
+           VarDecl *CapturedVar
+diff --git a/clang/lib/Serialization/ASTWriter.cpp b/clang/lib/Serialization/ASTWriter.cpp
+index 34af5d6600126..7e0496fcf34d2 100644
+--- a/clang/lib/Serialization/ASTWriter.cpp
++++ b/clang/lib/Serialization/ASTWriter.cpp
+@@ -5786,7 +5786,7 @@ void ASTRecordWriter::AddCXXDefinitionData(const CXXRecordDecl *D) {
+         break;
+       case LCK_ByCopy:
+       case LCK_ByRef:
+-        VarDecl *Var =
++        ValueDecl *Var =
+             Capture.capturesVariable() ? Capture.getCapturedVar() : nullptr;
+         AddDeclRef(Var);
+         AddSourceLocation(Capture.isPackExpansion() ? Capture.getEllipsisLoc()
+diff --git a/clang/lib/StaticAnalyzer/Checkers/DeadStoresChecker.cpp b/clang/lib/StaticAnalyzer/Checkers/DeadStoresChecker.cpp
+index 2102f9233bc10..8b6304f65dce5 100644
+--- a/clang/lib/StaticAnalyzer/Checkers/DeadStoresChecker.cpp
++++ b/clang/lib/StaticAnalyzer/Checkers/DeadStoresChecker.cpp
+@@ -504,7 +504,7 @@ class FindEscaped {
+   // Treat local variables captured by reference in C++ lambdas as escaped.
+   void findLambdaReferenceCaptures(const LambdaExpr *LE)  {
+     const CXXRecordDecl *LambdaClass = LE->getLambdaClass();
+-    llvm::DenseMap<const VarDecl *, FieldDecl *> CaptureFields;
++    llvm::DenseMap<const ValueDecl *, FieldDecl *> CaptureFields;
+     FieldDecl *ThisCaptureField;
+     LambdaClass->getCaptureFields(CaptureFields, ThisCaptureField);
+ 
+@@ -512,14 +512,14 @@ class FindEscaped {
+       if (!C.capturesVariable())
+         continue;
+ 
+-      VarDecl *VD = C.getCapturedVar();
++      ValueDecl *VD = C.getCapturedVar();
+       const FieldDecl *FD = CaptureFields[VD];
+-      if (!FD)
++      if (!FD || !isa<VarDecl>(VD))
+         continue;
+ 
+       // If the capture field is a reference type, it is capture-by-reference.
+       if (FD->getType()->isReferenceType())
+-        Escaped.insert(VD);
++        Escaped.insert(cast<VarDecl>(VD));
+     }
+   }
+ };
+diff --git a/clang/lib/StaticAnalyzer/Checkers/WebKit/UncountedLambdaCapturesChecker.cpp b/clang/lib/StaticAnalyzer/Checkers/WebKit/UncountedLambdaCapturesChecker.cpp
+index deebbd603b2c1..0c952b5ab9a54 100644
+--- a/clang/lib/StaticAnalyzer/Checkers/WebKit/UncountedLambdaCapturesChecker.cpp
++++ b/clang/lib/StaticAnalyzer/Checkers/WebKit/UncountedLambdaCapturesChecker.cpp
+@@ -57,7 +57,7 @@ class UncountedLambdaCapturesChecker
+   void visitLambdaExpr(LambdaExpr *L) const {
+     for (const LambdaCapture &C : L->captures()) {
+       if (C.capturesVariable()) {
+-        VarDecl *CapturedVar = C.getCapturedVar();
++        ValueDecl *CapturedVar = C.getCapturedVar();
+         if (auto *CapturedVarType = CapturedVar->getType().getTypePtrOrNull()) {
+           Optional<bool> IsUncountedPtr = isUncountedPtr(CapturedVarType);
+           if (IsUncountedPtr && *IsUncountedPtr) {
+@@ -68,7 +68,7 @@ class UncountedLambdaCapturesChecker
+     }
+   }
+ 
+-  void reportBug(const LambdaCapture &Capture, VarDecl *CapturedVar,
++  void reportBug(const LambdaCapture &Capture, ValueDecl *CapturedVar,
+                  const Type *T) const {
+     assert(CapturedVar);
+ 
+diff --git a/clang/lib/StaticAnalyzer/Core/ExprEngine.cpp b/clang/lib/StaticAnalyzer/Core/ExprEngine.cpp
+index cdd566029ae0c..049b7d4724353 100644
+--- a/clang/lib/StaticAnalyzer/Core/ExprEngine.cpp
++++ b/clang/lib/StaticAnalyzer/Core/ExprEngine.cpp
+@@ -2732,7 +2732,7 @@ void ExprEngine::VisitCommonDeclRefExpr(const Expr *Ex, const NamedDecl *D,
+         MD->getParent()->isLambda()) {
+       // Lookup the field of the lambda.
+       const CXXRecordDecl *CXXRec = MD->getParent();
+-      llvm::DenseMap<const VarDecl *, FieldDecl *> LambdaCaptureFields;
++      llvm::DenseMap<const ValueDecl *, FieldDecl *> LambdaCaptureFields;
+       FieldDecl *LambdaThisCaptureField;
+       CXXRec->getCaptureFields(LambdaCaptureFields, LambdaThisCaptureField);
+ 
+diff --git a/clang/lib/StaticAnalyzer/Core/LoopUnrolling.cpp b/clang/lib/StaticAnalyzer/Core/LoopUnrolling.cpp
+index 506d61d94d5fe..f6efde8c90d13 100644
+--- a/clang/lib/StaticAnalyzer/Core/LoopUnrolling.cpp
++++ b/clang/lib/StaticAnalyzer/Core/LoopUnrolling.cpp
+@@ -175,7 +175,7 @@ static bool isCapturedByReference(ExplodedNode *N, const DeclRefExpr *DR) {
+   const CXXRecordDecl *LambdaCXXRec = MD->getParent();
+ 
+   // Lookup the fields of the lambda
+-  llvm::DenseMap<const VarDecl *, FieldDecl *> LambdaCaptureFields;
++  llvm::DenseMap<const ValueDecl *, FieldDecl *> LambdaCaptureFields;
+   FieldDecl *LambdaThisCaptureField;
+   LambdaCXXRec->getCaptureFields(LambdaCaptureFields, LambdaThisCaptureField);
+ 
+diff --git a/clang/test/CodeGenCXX/cxx20-decomposition.cpp b/clang/test/CodeGenCXX/cxx20-decomposition.cpp
+new file mode 100644
+index 0000000000000..165450318a80a
+--- /dev/null
++++ b/clang/test/CodeGenCXX/cxx20-decomposition.cpp
+@@ -0,0 +1,48 @@
++// RUN: %clang_cc1 -std=c++20 -triple x86_64-linux-gnu -emit-llvm %s -o - | FileCheck %s
++
++struct S {
++  int i;
++  int j;
++};
++
++int f() {
++  auto [i, j] = S{1, 42};
++  return [&i, j] {
++    return i + j;
++  }();
++}
++
++// Ensures the representation of the lambda, the order of the
++// 1st 2nd don't matter except for ABI-esque things, but make sure
++// that the ref-capture is a ptr, and 'j' is captured by value.
++// CHECK: %[[LAMBDA_TY:.+]] = type <{ ptr, i32, [4 x i8] }>
++
++// Check the captures themselves.
++// CHECK: define{{.*}} i32 @_Z1fv()
++// CHECK: %[[BINDING:.+]] = alloca %struct.S
++// CHECK: %[[LAMBDA:.+]] = alloca %[[LAMBDA_TY]]
++
++// Copy a pointer to the binding, for reference capture.
++// CHECK: %[[LAMBDA_CAP_PTR:.+]] = getelementptr inbounds %[[LAMBDA_TY]], ptr %[[LAMBDA]], i32 0, i32 0
++// CHECK: %[[BINDING_PTR:.+]] = getelementptr inbounds %struct.S, ptr %[[BINDING]], i32 0, i32 0
++// CHECK: store ptr %[[BINDING_PTR]], ptr %[[LAMBDA_CAP_PTR]]
++
++// Copy the integer from the binding, for copy capture.
++// CHECK: %[[LAMBDA_CAP_INT:.+]] = getelementptr inbounds %[[LAMBDA_TY]], ptr %[[LAMBDA]], i32 0, i32 1
++// CHECK: %[[PTR_TO_J:.+]] = getelementptr inbounds %struct.S, ptr %[[BINDING]], i32 0, i32 1
++// CHECK: %[[J_COPY:.+]] = load i32, ptr %[[PTR_TO_J]]
++// CHECK: store i32 %[[J_COPY]], ptr %[[LAMBDA_CAP_INT]]
++
++// Ensure the captures are properly extracted in operator().
++// CHECK: define{{.*}} i32 @"_ZZ1fvENK3$_0clEv"
++// CHECK: %[[THIS_ADDR:.+]] = alloca ptr
++// CHECK: %[[THIS_PTR:.+]] = load ptr, ptr %[[THIS_ADDR]]
++
++// Load 'i', passed by reference.
++// CHECK: %[[LAMBDA_GEP_TO_PTR:.+]] = getelementptr inbounds %[[LAMBDA_TY]], ptr %[[THIS_PTR]], i32 0, i32 0
++// CHECK: %[[I_PTR:.+]] = load ptr, ptr %[[LAMBDA_GEP_TO_PTR]]
++// CHECK: %[[I_VALUE:.+]] = load i32, ptr %[[I_PTR]]
++
++// Load the 'j', passed by value.
++// CHECK: %[[LAMBDA_GEP_TO_INT:.+]] = getelementptr inbounds %[[LAMBDA_TY]], ptr %[[THIS_PTR]], i32 0, i32 1
++// CHECK: %[[J_VALUE:.+]] = load i32, ptr %[[LAMBDA_GEP_TO_INT]]
+diff --git a/clang/test/SemaCXX/cxx1z-decomposition.cpp b/clang/test/SemaCXX/cxx1z-decomposition.cpp
+index 4c8c64177ed13..7165f30dc0703 100644
+--- a/clang/test/SemaCXX/cxx1z-decomposition.cpp
++++ b/clang/test/SemaCXX/cxx1z-decomposition.cpp
+@@ -1,4 +1,5 @@
+-// RUN: %clang_cc1 -std=c++17 -verify %s
++// RUN: %clang_cc1 -std=c++17 -Wc++20-extensions -verify=expected %s
++// RUN: %clang_cc1 -std=c++20 -Wpre-c++20-compat -verify=expected %s
+ 
+ void use_from_own_init() {
+   auto [a] = a; // expected-error {{binding 'a' cannot appear in the initializer of its own decomposition declaration}}
+@@ -46,25 +47,58 @@ constexpr int f(S s) {
+ }
+ static_assert(f({1, 2}) == 12);
+ 
+-constexpr bool g(S &&s) { 
++constexpr bool g(S &&s) {
+   auto &[a, b] = s;
+   return &a == &s.a && &b == &s.b && &a != &b;
+ }
+ static_assert(g({1, 2}));
+ 
+-auto [outer1, outer2] = S{1, 2};
++struct S1 {
++  int a, b;
++};
++struct S2 {
++  int a : 1; // expected-note 2{{bit-field is declared here}}
++  int b;
++};
++
++auto [outer1, outer2] = S1{1, 2};
++auto [outerbit1, outerbit2] = S1{1, 2}; // expected-note {{declared here}}
++
+ void enclosing() {
+   struct S { int a = outer1; };
+-  auto [n] = S(); // expected-note 2{{'n' declared here}}
++  auto [n] = S(); // expected-note 3{{'n' declared here}}
++
++  struct Q {
++    int f() { return n; } // expected-error {{reference to local binding 'n' declared in enclosing function 'enclosing'}}
++  };
++
++  (void)[&] { return n; }; // expected-warning {{C++20}}
++  (void)[n] { return n; }; // expected-warning {{C++20}}
+ 
+-  struct Q { int f() { return n; } }; // expected-error {{reference to local binding 'n' declared in enclosing function}}
+-  (void) [&] { return n; }; // expected-error {{reference to local binding 'n' declared in enclosing function}}
+-  (void) [n] {}; // expected-error {{'n' in capture list does not name a variable}}
++  static auto [m] = S(); // expected-note {{'m' declared here}} \
++                         // expected-warning {{C++20}}
+ 
+-  static auto [m] = S(); // expected-warning {{extension}}
+   struct R { int f() { return m; } };
+   (void) [&] { return m; };
+-  (void) [m] {}; // expected-error {{'m' in capture list does not name a variable}}
++  (void)[m]{}; // expected-error {{'m' cannot be captured because it does not have automatic storage duration}}
++
++  (void)[outerbit1]{}; // expected-error {{'outerbit1' cannot be captured because it does not have automatic storage duration}}
++
++  auto [bit, var] = S2{1, 1}; // expected-note 4{{'bit' declared here}}
++
++  (void)[&bit] { // expected-error {{cannot capture a bit-field by reference}} \
++                    // expected-warning {{C++20}}
++    return bit;
++  };
++
++  union { // expected-note {{declared here}}
++    int u;
++  };
++
++  (void)[&] { return bit + u; } // expected-error {{unnamed variable cannot be implicitly captured in a lambda expression}} \
++                                // expected-error {{cannot capture a bit-field by reference}} \
++                                // expected-warning {{C++20}}
++  ();
+ }
+ 
+ void bitfield() {
+@@ -98,7 +132,7 @@ template <class T> void dependent_foreach(T t) {
+ 
+ struct PR37352 {
+   int n;
+-  void f() { static auto [a] = *this; } // expected-warning {{C++20 extension}}
++  void f() { static auto [a] = *this; } // expected-warning {{C++20}}
+ };
+ 
+ namespace instantiate_template {
+diff --git a/clang/test/SemaCXX/cxx20-decomposition.cpp b/clang/test/SemaCXX/cxx20-decomposition.cpp
+new file mode 100644
+index 0000000000000..a99766f5775b2
+--- /dev/null
++++ b/clang/test/SemaCXX/cxx20-decomposition.cpp
+@@ -0,0 +1,141 @@
++// RUN: %clang_cc1 -fsyntax-only -std=c++20 -verify %s
++// expected-no-diagnostics
++
++template <typename, typename>
++constexpr bool is_same = false;
++template <typename T>
++constexpr bool is_same<T, T> = true;
++
++struct S {
++  int i;
++  int &j;
++};
++
++void check_category() {
++  int a = 42;
++  {
++    auto [v, r] = S{1, a};
++    (void)[ v, r ] {
++      static_assert(is_same<decltype(v), int>);
++      static_assert(is_same<decltype(r), int &>);
++    };
++  }
++  {
++    auto [v, r] = S{1, a};
++    (void)[&v, &r ] {
++      static_assert(is_same<decltype(v), int>);
++      static_assert(is_same<decltype(r), int &>);
++    };
++  }
++  {
++    S s{1, a};
++    const auto &[v, r] = s;
++    (void)[ v, r ] {
++      static_assert(is_same<decltype(v), const int>);
++      static_assert(is_same<decltype(r), int &>);
++    };
++  }
++  {
++    S s{1, a};
++    const auto &[v, r] = s;
++    (void)[&v, &r ] {
++      static_assert(is_same<decltype(v), const int>);
++      static_assert(is_same<decltype(r), int &>);
++    };
++  }
++}
++
++void check_array() {
++  int arr[2] = {42, 42};
++  auto &[a, b] = arr;
++  (void)[ a, &b ] {
++    static_assert(is_same<decltype(a), int>);
++    static_assert(is_same<decltype(b), int>);
++  };
++}
++
++struct tuple {
++  template <unsigned long I>
++  decltype(auto) get() {
++    if constexpr (I == 0) {
++      return a;
++    } else {
++      return b;
++    }
++  }
++
++  template <unsigned long I>
++  decltype(auto) get() const {
++    if constexpr (I == 0) {
++      return a;
++    } else {
++      return b;
++    }
++  }
++
++  int a = 0;
++  int &b = a;
++};
++
++namespace std {
++
++template <typename T>
++struct tuple_size {
++  static constexpr unsigned long value = 2;
++};
++
++template <unsigned long, typename T>
++struct tuple_element;
++
++template <>
++struct tuple_element<0, tuple> {
++  using type = int;
++};
++
++template <>
++struct tuple_element<1, tuple> {
++  using type = int &;
++};
++
++template <>
++struct tuple_element<0, const tuple> {
++  using type = int;
++};
++
++template <>
++struct tuple_element<1, const tuple> {
++  using type = const int &;
++};
++} // namespace std
++
++void check_tuple_like() {
++  tuple t;
++  {
++    auto [v, r] = t;
++    (void)[ v, r ] {
++      static_assert(is_same<decltype(v), int>);
++      static_assert(is_same<decltype(r), int &>);
++    };
++  }
++  {
++    auto &[v, r] = t;
++    (void)[&v, &r ] {
++      static_assert(is_same<decltype(v), int>);
++      static_assert(is_same<decltype(r), int &>);
++    };
++  }
++  {
++    const auto &[v, r] = t;
++    (void)[ v, r ] {
++      static_assert(is_same<decltype(v), int>);
++      static_assert(is_same<decltype(r), const int &>);
++    };
++  }
++  {
++    const auto &[v, r] = t;
++    (void)[&v, &r ] {
++      static_assert(is_same<decltype(v), int>);
++      static_assert(is_same<decltype(r), const int &>);
++    };
++  }
++}
+diff --git a/clang/test/SemaCXX/decomposition-blocks.cpp b/clang/test/SemaCXX/decomposition-blocks.cpp
+new file mode 100644
+index 0000000000000..21f66f8c7c1b8
+--- /dev/null
++++ b/clang/test/SemaCXX/decomposition-blocks.cpp
+@@ -0,0 +1,14 @@
++// RUN: %clang_cc1 -std=c++17 -fsyntax-only -verify %s -fblocks
++
++struct S {
++  int i : 1;
++  int j;
++};
++
++void run(void (^)());
++void test() {
++  auto [i, j] = S{1, 42}; // expected-note {{'i' declared here}}
++  run(^{
++    (void)i; // expected-error {{reference to local binding 'i' declared in enclosing function 'test'}}
++  });
++}
+diff --git a/clang/test/SemaCXX/decomposition-openmp.cpp b/clang/test/SemaCXX/decomposition-openmp.cpp
+new file mode 100644
+index 0000000000000..28afc39800399
+--- /dev/null
++++ b/clang/test/SemaCXX/decomposition-openmp.cpp
+@@ -0,0 +1,13 @@
++
++// RUN: %clang_cc1 -fsyntax-only -verify -std=c++20 -fopenmp %s
++
++// FIXME: OpenMP should support capturing structured bindings
++auto f() {
++  int i[2] = {};
++  auto [a, b] = i; // expected-note 2{{declared here}}
++  return [=, &a] {
++    // expected-error@-1 {{capturing a structured binding is not yet supported in OpenMP}}
++    return a + b;
++    // expected-error@-1 {{capturing a structured binding is not yet supported in OpenMP}}
++  };
++}
+diff --git a/clang/tools/libclang/CIndex.cpp b/clang/tools/libclang/CIndex.cpp
+index 9356dd4a23774..b3f91ef794ba2 100644
+--- a/clang/tools/libclang/CIndex.cpp
++++ b/clang/tools/libclang/CIndex.cpp
+@@ -3482,9 +3482,11 @@ bool CursorVisitor::RunVisitorWorkList(VisitorWorkList &WL) {
+            C != CEnd; ++C) {
+         if (!C->capturesVariable())
+           continue;
+-
+-        if (Visit(MakeCursorVariableRef(C->getCapturedVar(), C->getLocation(),
+-                                        TU)))
++        // TODO: handle structured bindings here ?
++        if (!isa<VarDecl>(C->getCapturedVar()))
++          continue;
++        if (Visit(MakeCursorVariableRef(cast<VarDecl>(C->getCapturedVar()),
++                                        C->getLocation(), TU)))
+           return true;
+       }
+       // Visit init captures
+diff --git a/clang/www/cxx_status.html b/clang/www/cxx_status.html
+index 41b788e82d73d..5aae4ba822826 100755
+--- a/clang/www/cxx_status.html
++++ b/clang/www/cxx_status.html
+@@ -1140,7 +1140,7 @@ <h2 id="cxx20">C++20 implementation status</h2>
+     <tr>
+       <td rowspan="2">Structured binding extensions</td>
+       <td><a href="https://wg21.link/p1091r3">P1091R3</a></td>
+-      <td rowspan="2" class="partial" align="center">Partial</td>
++      <td rowspan="2" class="unreleased" align="center">Clang 16</td>
+     </tr>
+       <tr>
+         <td><a href="https://wg21.link/p1381r1">P1381R1</a></td>

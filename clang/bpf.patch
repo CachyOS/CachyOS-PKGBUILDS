@@ -1,0 +1,99 @@
+diff --git a/clang/lib/CodeGen/TargetInfo.cpp b/clang/lib/CodeGen/TargetInfo.cpp
+--- a/clang/lib/CodeGen/TargetInfo.cpp
++++ b/clang/lib/CodeGen/TargetInfo.cpp
+@@ -11499,6 +11499,56 @@
+ };
+ } // end anonymous namespace
+ 
++//===----------------------------------------------------------------------===//
++// BPF ABI Implementation
++//===----------------------------------------------------------------------===//
++
++namespace {
++
++class BPFABIInfo : public DefaultABIInfo {
++public:
++  BPFABIInfo(CodeGenTypes &CGT) : DefaultABIInfo(CGT) {}
++
++  ABIArgInfo classifyReturnType(QualType RetTy) const {
++    if (RetTy->isVoidType())
++      return ABIArgInfo::getIgnore();
++
++    if (isAggregateTypeForABI(RetTy))
++      return getNaturalAlignIndirect(RetTy);
++
++    // Treat an enum type as its underlying type.
++    if (const EnumType *EnumTy = RetTy->getAs<EnumType>())
++      RetTy = EnumTy->getDecl()->getIntegerType();
++
++    ASTContext &Context = getContext();
++    if (const auto *EIT = RetTy->getAs<BitIntType>())
++      if (EIT->getNumBits() > Context.getTypeSize(Context.Int128Ty))
++        return getNaturalAlignIndirect(RetTy);
++
++    // Caller will do necessary sign/zero extension.
++    return ABIArgInfo::getDirect();
++  }
++
++  void computeInfo(CGFunctionInfo &FI) const override {
++    FI.getReturnInfo() = classifyReturnType(FI.getReturnType());
++    for (auto &I : FI.arguments())
++      I.info = classifyArgumentType(I.type);
++  }
++
++};
++
++class BPFTargetCodeGenInfo : public TargetCodeGenInfo {
++public:
++  BPFTargetCodeGenInfo(CodeGenTypes &CGT)
++      : TargetCodeGenInfo(std::make_unique<BPFABIInfo>(CGT)) {}
++
++  const BPFABIInfo &getABIInfo() const {
++    return static_cast<const BPFABIInfo&>(TargetCodeGenInfo::getABIInfo());
++  }
++};
++
++}
++
+ //===----------------------------------------------------------------------===//
+ // Driver code
+ //===----------------------------------------------------------------------===//
+@@ -11727,6 +11777,9 @@
+                                                       : hasFP64   ? 64
+                                                                   : 32));
+   }
++  case llvm::Triple::bpfeb:
++  case llvm::Triple::bpfel:
++    return SetCGInfo(new BPFTargetCodeGenInfo(Types));
+   }
+ }
+ 
+diff --git a/clang/test/CodeGen/bpf-abiinfo.c b/clang/test/CodeGen/bpf-abiinfo.c
+new file mode 100644
+--- /dev/null
++++ b/clang/test/CodeGen/bpf-abiinfo.c
+@@ -0,0 +1,24 @@
++// REQUIRES: bpf-registered-target
++// RUN: %clang_cc1 -triple bpf -O2 -emit-llvm -disable-llvm-passes %s -o - | FileCheck %s
++
++_Bool bar_bool(void);
++unsigned char bar_char(void);
++short bar_short(void);
++int bar_int(void);
++
++int foo_bool(void) {
++        if (bar_bool() != 1) return 0; else return 1;
++}
++// CHECK: %call = call i1 @bar_bool()
++int foo_char(void) {
++        if (bar_char() != 10) return 0; else return 1;
++}
++// CHECK: %call = call i8 @bar_char()
++int foo_short(void) {
++        if (bar_short() != 10) return 0; else return 1;
++}
++// CHECK: %call = call i16 @bar_short()
++int foo_int(void) {
++        if (bar_int() != 10) return 0; else return 1;
++}
++// CHECK: %call = call i32 @bar_int()

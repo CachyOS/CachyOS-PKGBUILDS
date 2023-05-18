@@ -1,0 +1,91 @@
+From a1a71b7dc97b35133425a31ede90c40529f1be9e Mon Sep 17 00:00:00 2001
+From: Corentin Jabot <corentinjabot@gmail.com>
+Date: Thu, 4 Aug 2022 23:02:17 +0200
+Subject: [PATCH] [Clang] Fix capture of values initialized by bitfields
+
+This fixes a regression introduced in 127bf44
+
+Differential Revision: https://reviews.llvm.org/D131202
+---
+ .../clang/Basic/DiagnosticSemaKinds.td        |  2 --
+ clang/lib/Sema/SemaExpr.cpp                   | 28 ++-----------------
+ clang/test/SemaCXX/cxx1z-decomposition.cpp    |  6 ++--
+ 3 files changed, 5 insertions(+), 31 deletions(-)
+
+diff --git a/clang/include/clang/Basic/DiagnosticSemaKinds.td b/clang/include/clang/Basic/DiagnosticSemaKinds.td
+index 550ad5ab73c64..13209d3bff24f 100644
+--- a/clang/include/clang/Basic/DiagnosticSemaKinds.td
++++ b/clang/include/clang/Basic/DiagnosticSemaKinds.td
+@@ -9013,8 +9013,6 @@ def ext_ms_anonymous_record : ExtWarn<
+ def err_reference_to_local_in_enclosing_context : Error<
+   "reference to local %select{variable|binding}1 %0 declared in enclosing "
+   "%select{%3|block literal|lambda expression|context}2">;
+-def err_bitfield_capture_by_ref : Error<
+-  "cannot capture a bit-field by reference">;
+ def err_capture_binding_openmp : Error<
+   "capturing a structured binding is not yet supported in OpenMP">;
+ def ext_capture_binding : ExtWarn<
+diff --git a/clang/lib/Sema/SemaExpr.cpp b/clang/lib/Sema/SemaExpr.cpp
+index 9497c4b5d5300..152f15159fa1f 100644
+--- a/clang/lib/Sema/SemaExpr.cpp
++++ b/clang/lib/Sema/SemaExpr.cpp
+@@ -18533,32 +18533,8 @@ static bool captureInLambda(LambdaScopeInfo *LSI, ValueDecl *Var,
+   } else {
+     ByRef = (LSI->ImpCaptureStyle == LambdaScopeInfo::ImpCap_LambdaByref);
+   }
+-  // C++20 : [expr.prim.lambda.capture]p12
+-  // A bit-field or a member of an anonymous union shall
+-  // not be captured by reference.
+-  MemberExpr *ME = nullptr;
+-  BindingDecl *BD = nullptr;
+-  if (auto *V = dyn_cast<VarDecl>(Var)) {
+-    if (V->getInit())
+-      ME = dyn_cast<MemberExpr>(V->getInit()->IgnoreImplicit());
+-  } else if ((BD = dyn_cast<BindingDecl>(Var))) {
+-    ME = dyn_cast_or_null<MemberExpr>(BD->getBinding());
+-  }
+-
+-  // Capturing a bitfield by reference is not allowed except in OpenMP.
+-  if (ByRef && ME &&
+-      (isa<BindingDecl>(Var) || !S.LangOpts.OpenMP ||
+-       !S.isOpenMPCapturedDecl(Var))) {
+-    const auto *FD = dyn_cast_or_null<FieldDecl>(ME->getMemberDecl());
+-    if (FD && FD->isBitField()) {
+-      if (BuildAndDiagnose) {
+-        S.Diag(Loc, diag::err_bitfield_capture_by_ref) << Var;
+-        S.Diag(Var->getLocation(), diag::note_entity_declared_at) << Var;
+-        S.Diag(FD->getLocation(), diag::note_bitfield_decl) << FD;
+-      }
+-      Invalid = true;
+-    }
+-  }
++
++  BindingDecl *BD = dyn_cast<BindingDecl>(Var);
+   // FIXME: We should support capturing structured bindings in OpenMP.
+   if (!Invalid && BD && S.LangOpts.OpenMP) {
+     if (BuildAndDiagnose) {
+diff --git a/clang/test/SemaCXX/cxx1z-decomposition.cpp b/clang/test/SemaCXX/cxx1z-decomposition.cpp
+index 7165f30dc0703..13fe826759a34 100644
+--- a/clang/test/SemaCXX/cxx1z-decomposition.cpp
++++ b/clang/test/SemaCXX/cxx1z-decomposition.cpp
+@@ -84,9 +84,9 @@ void enclosing() {
+ 
+   (void)[outerbit1]{}; // expected-error {{'outerbit1' cannot be captured because it does not have automatic storage duration}}
+ 
+-  auto [bit, var] = S2{1, 1}; // expected-note 4{{'bit' declared here}}
++  auto [bit, var] = S2{1, 1}; // expected-note 2{{'bit' declared here}}
+ 
+-  (void)[&bit] { // expected-error {{cannot capture a bit-field by reference}} \
++  (void)[&bit] { // expected-error {{non-const reference cannot bind to bit-field 'a'}} \
+                     // expected-warning {{C++20}}
+     return bit;
+   };
+@@ -96,7 +96,7 @@ void enclosing() {
+   };
+ 
+   (void)[&] { return bit + u; } // expected-error {{unnamed variable cannot be implicitly captured in a lambda expression}} \
+-                                // expected-error {{cannot capture a bit-field by reference}} \
++                                // expected-error {{non-const reference cannot bind to bit-field 'a'}} \
+                                 // expected-warning {{C++20}}
+   ();
+ }
