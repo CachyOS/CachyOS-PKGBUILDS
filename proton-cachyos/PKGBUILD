@@ -5,13 +5,13 @@
 _optimize=${_optimize-y}
 
 pkgname=proton-cachyos
-_srctag=8.0-2c
+_srctag=8.0-20230426
 _commit=
 pkgver=8.0 
 # pkgver=${_srctag//-/.}
 _geckover=2.47.3
 _monover=7.4.1
-pkgrel=4
+pkgrel=5
 pkgdesc="Compatibility tool for Steam Play based on Wine and additional components, experimental branch with extra CachyOS flavour"
 url="https://github.com/ValveSoftware/Proton"
 arch=(x86_64 x86_64_v3)
@@ -86,9 +86,9 @@ makedepends=(${makedepends[@]} ${depends[@]})
 provides=('proton')
 install=${pkgname}.install
 source=(
-    proton::git+https://github.com/ValveSoftware/Proton.git#tag=proton-${_srctag}
+    proton::git+https://github.com/ValveSoftware/Proton.git#tag=experimental-${_srctag}
     wine-valve::git+https://github.com/ValveSoftware/wine.git
-    dxvk::git+https://github.com/doitsujin/dxvk.git
+    dxvk-valve::git+https://github.com/ValveSoftware/dxvk.git
     openvr::git+https://github.com/ValveSoftware/openvr.git
     liberation-fonts::git+https://github.com/liberationfonts/liberation-fonts.git
     gstreamer::git+https://gitlab.freedesktop.org/gstreamer/gstreamer.git
@@ -169,7 +169,7 @@ prepare() {
 
     _submodules=(
         wine-valve::wine
-        dxvk
+        dxvk-valve::dxvk
         openvr
         liberation-fonts::fonts/liberation-fonts
         gstreamer
@@ -238,7 +238,6 @@ prepare() {
 
     patch -p1 -i "$srcdir"/0001-AUR-Pkgbuild-changes.patch
     patch -p1 -i "$srcdir"/0002-AUR-Do-not-update-cargo-crates.patch
-
     patch -p1 -i "$srcdir"/fix_hwnd_changes_meaning.patch
 
     pushd wine
@@ -314,13 +313,12 @@ package() {
     local _compatdir="$pkgdir/usr/share/steam/compatibilitytools.d"
     mkdir -p "$_compatdir/${pkgname}"
     rsync --delete -arx dist/* "$_compatdir/${pkgname}"
-    cp -f dist/version "$_compatdir/${pkgname}/dist"
 
     mkdir -p "$pkgdir/usr/share/licenses/${pkgname}"
     mv "$_compatdir/${pkgname}"/LICENSE{,.OFL} \
         "$pkgdir/usr/share/licenses/${pkgname}"
 
-    cd "$_compatdir/${pkgname}/dist"
+    cd "$_compatdir/${pkgname}/files"
     i686-w64-mingw32-strip --strip-unneeded \
         $(find lib/wine \( -iname fakedlls -or -iname i386-windows \) -prune -false -or -iname "*.dll" -or -iname "*.exe")
     x86_64-w64-mingw32-strip --strip-unneeded \
@@ -370,8 +368,7 @@ sha256sums=('SKIP'
             '08d318f3dd6440a8a777cf044ccab039b0d9c8809991d2180eb3c9f903135db3'
             '0beac419c20ee2e68a1227b6e3fa8d59fec0274ed5e82d0da38613184716ef75'
             '1286afc67b0a329f5e2d98d9e803ca5906a841ad5486e9b3b1fefa1124b15622'
-            '2e2708c3858b897d63a619bab11e8df4bb6aba471cfa948eb441f6cda564e6f2'
+            'edbbcc93ef53a81150baa409b9c55e756edef6dcda4dd0b79f8fdcaae743aac9'
             '9c107461440cb8cd7d54f994b235dc0be6a11370e0a60578523633c07024c976'
-            '369193510b9309fc9cb80fc204220599583677a59976c7f434c2a33871b0cbe1'
-            '20824bb565fefcad4aa978c54e0f8b9d9d17b7b52fb03fc87943150de148f06f')
+            '369193510b9309fc9cb80fc204220599583677a59976c7f434c2a33871b0cbe1')
 
