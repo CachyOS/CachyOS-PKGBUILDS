@@ -7,7 +7,7 @@
 # fine with them.
 
 pkgname=blender
-pkgver=3.4.1
+pkgver=3.5.1
 pkgrel=6
 epoch=17
 pkgdesc="A fully integrated 3D graphics creation suite"
@@ -18,43 +18,35 @@ depends=('libpng' 'libtiff' 'openexr' 'python' 'desktop-file-utils' 'python-requ
          'shared-mime-info' 'hicolor-icon-theme' 'xdg-utils' 'glew' 'openjpeg2' 'python-numpy'
          'freetype2' 'openal' 'ffmpeg' 'fftw' 'boost-libs' 'opencollada' 'alembic' 'openxr'
          'openimageio' 'libsndfile' 'jack' 'opencolorio' 'openshadinglanguage' 'openimagedenoise'
-         'jemalloc' 'libspnav' 'ptex' 'opensubdiv' 'openvdb' 'log4cplus' 'sdl2' 'embree' 'libharu'
-         'draco' 'openpgl')
-makedepends=('cmake' 'boost' 'mesa' 'git' 'llvm' 'cuda' 'ninja' 'wayland-protocols' 'libxkbcommon'
-             'libdecor')
-optdepends=('cuda: cycles renderer cuda support'
+         'jemalloc' 'libspnav' 'ptex' 'opensubdiv' 'openvdb' 'sdl2' 'embree3' 'libharu'
+         'draco' 'openpgl' 'level-zero-loader'
+         'intel-oneapi-compiler-shared-runtime-libs' 'intel-oneapi-compiler-dpcpp-cpp-runtime-libs')
+makedepends=('cmake' 'boost' 'mesa' 'git' 'svn' 'llvm' 'cuda' 'ninja' 'wayland-protocols' 'libxkbcommon'
+             'libdecor' 'hip-runtime-amd' 'level-zero-headers' 'intel-oneapi-dpcpp-cpp'
+             'intel-oneapi-compiler-shared-runtime' 'intel-compute-runtime')
+optdepends=('cuda: Cycles renderer CUDA support'
+            'intel-compute-runtime: Cycles renderer Intel OneAPI support'
             'libdecor: wayland support')
-options=(!strip)
-source=("git+https://git.blender.org/blender.git#tag=v$pkgver"
-        "git+https://git.blender.org/blender-addons.git"
-        "git+https://git.blender.org/blender-addons-contrib.git"
-        "git+https://git.blender.org/blender-translations.git"
-        "git+https://git.blender.org/blender-dev-tools.git"
-        https://developer.download.nvidia.com/redist/optix/v7.5/OptiX-7.5-Include.zip
+# We're using !buildflags here as otherwise we get stuff such as FS#77557
+# It'd be better to figure out exactly which of the flags is the culprit which I attempted but without any success.
+options=('!buildflags')
+source=("git+https://projects.blender.org/blender/blender.git#tag=v$pkgver"
+        https://developer.download.nvidia.com/redist/optix/v7.6/OptiX-7.6-Include.zip
         force-draco1.patch
         force-draco2.patch)
 sha512sums=('SKIP'
-            'SKIP'
-            'SKIP'
-            'SKIP'
-            'SKIP'
-            '32a77c7a64c5d38f2af76b2c0d09c6b53b7adcc7d85a0b271ba09647858b21fb8f534da5dc4143079359cbedc8074a58715ff2cea0b85019596531a7dca8dbf7'
+            'dfe86de395dd298fb9feae73bff06a26742efa06a25bb5a4f78ffb1ba4c78f555d1af927efea98af281715cce01db219aa2adfd6bd323bf0d766c1c70ce03532'
             'e239da4f3906f1b54265435181cf770bae3d269c8d915df9a73861e6ee71ec70bf2339426e7c81a91e5a567273b3b3742d7a99feefd3398d821b26e1ff3a56d0'
-            '527ab66e5eace777de0043c1ca5787a488f6471450ce67fd6d08137ad0ef56177bc0c17696f30a5fca23fa55d8ca9c3f30cb7b17550dba2dbd8e89ca0b361990')
+            'c162646eba42ea7112cfb615466c2cbaddac8d254d4a9e91cf887c5bffef1325a983701163223a1fdee091310ac5574a400347aab7f52321825b5fa3d5a9036f')
 
 prepare() {
   cd "$pkgname"
 
-  git submodule init
-  git config submodule."release/scripts/addons".url "${srcdir}/blender-addons"
-  git config submodule."release/scripts/addons_contrib".url "${srcdir}/blender-addons-contrib"
-  git config submodule."release/datafiles/locale".url "${srcdir}/blender-translations"
-  git config submodule."source/tools".url "${srcdir}/blender-dev-tools"
-  git -c protocol.file.allow=always submodule update
-  git submodule foreach git checkout v${pkgver}
+  make update
 
+  # fix draco
   patch -p1 -i "$srcdir"/force-draco1.patch
-  patch -p1 -d release/scripts/addons -i "$srcdir"/force-draco2.patch
+  patch -p1 -d scripts/addons -i "$srcdir"/force-draco2.patch
 }
 
 get_pyver() {
@@ -70,24 +62,22 @@ build() {
   echo 'set(CYCLES_CUDA_BINARIES_ARCH sm_52 sm_53 sm_60 sm_61 sm_62 sm_70 sm_72 sm_75 sm_80 sm_86 sm_87 sm_89 compute_89 CACHE STRING "CUDA architectures to build binaries for" FORCE)' > precache
   echo 'mark_as_advanced(CYCLES_CUDA_BINARIES_ARCH)' >> precache
 
-  export CFLAGS+=" -O3 -Ofast -falign-functions=32 -ffat-lto-objects -flto=auto -fno-semantic-interposition -mprefer-vector-width=512"
-  export CXXLAGS+=" -O3 -Ofast -falign-functions=32 -ffat-lto-objects -flto=auto -fno-semantic-interposition -mprefer-vector-width=512"
-
   cmake \
     -Bbuild \
     -GNinja \
     -Cbuild_files/cmake/config/blender_release.cmake \
     -C precache \
+    -DCUDA_HOST_COMPILER=/usr/bin/gcc-12 \
+    -DPYTHON_VERSION=$PYTHON_VER \
+    -DHIP_ROOT_DIR=/opt/rocm \
     -DOPTIX_ROOT_DIR="$srcdir" \
     -DCMAKE_INSTALL_PREFIX=/usr \
     -DCMAKE_BUILD_TYPE=Release \
     -DWITH_INSTALL_PORTABLE=OFF \
     -DWITH_PYTHON_INSTALL=OFF \
-    -DPYTHON_VERSION="$PYTHON_VER" \
-    -DPYTHON_LIBPATH=/usr/lib \
-    -DPYTHON_LIBRARY="python$PYTHON_VER" \
-    -DPYTHON_INCLUDE_DIRS="/usr/include/python$PYTHON_VER" \
-    -DCMAKE_CXX_FLAGS="-I /usr/include/python$PYTHON_VER"
+    -DOCLOC_INSTALL_DIR=/usr \
+    -DSYCL_CPP_FLAGS=--verbose \
+    -DSYCL_OFFLINE_COMPILER_PARALLEL_JOBS=8
   cmake --build build
 }
 
@@ -102,10 +92,13 @@ package() {
   install -Dm644 release/freedesktop/org.blender.Blender.appdata.xml "${pkgdir}/usr/share/metainfo/org.blender.Blender.appdata.xml"
 
   # Manually install additional scripts (See FS#69351)
-  cp -r release/scripts/addons_contrib/* "${pkgdir}"/usr/share/blender/3*/scripts/addons_contrib/
+  cp -r scripts/addons_contrib/* "${pkgdir}"/usr/share/blender/3*/scripts/addons_contrib/
 
   # Manually install draco bindings (See FS#73415)
   mkdir -p "${pkgdir}/usr/lib/python$(get_pyver)"/
   mv "${pkgdir}"/usr/share/blender/3*/python/lib/* "${pkgdir}"/usr/lib/
   rm -r "${pkgdir}"/usr/share/blender/3*/python
+
+  # Move OneAPI AOT lib to proper place
+  mv "${pkgdir}"/usr/share/blender/lib/libcycles_kernel_oneapi_aot.so "${pkgdir}"/usr/lib/
 }
