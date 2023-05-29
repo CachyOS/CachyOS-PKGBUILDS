@@ -2,8 +2,8 @@
 
 _gitname=CachyOS-Settings
 pkgname=cachyos-settings
-pkgver=29
-pkgrel=3
+pkgver=30
+pkgrel=1
 groups=(cachyos)
 arch=('any')
 license=('GPL')
@@ -13,14 +13,14 @@ source=("git+https://github.com/CachyOS/$_gitname")
 install="$pkgname.install"
 sha256sums=('SKIP')
 depends=(
-    'irqbalance'
     'zram-generator'
     'ananicy-cpp'
     'cachyos-ananicy-rules'
     'uksmd'
 )
 optdepends=('ruby: for tunecfs2'
-            'lua-filesystem: for topmem')
+            'lua-filesystem: for topmem'
+            'irqbalance')
 
 package() {
   install -d "$pkgdir/etc"
