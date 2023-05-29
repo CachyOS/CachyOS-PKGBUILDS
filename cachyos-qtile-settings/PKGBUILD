@@ -2,8 +2,8 @@
 
 pkgname=cachyos-qtile-settings
 pkgdesc='CachyOS Qtile settings'
-pkgver=1.6
-pkgrel=2
+pkgver=1.7
+pkgrel=1
 arch=('any')
 url="https://github.com/cachyos/$pkgname"
 license=('GPL')
@@ -37,6 +37,10 @@ provides=('cachyos-desktop-settings')
 conflicts=('cachyos-desktop-settings')
 
 package() {
-    install -d $pkgdir/etc
-    cp -rf $srcdir/$pkgname/etc $pkgdir
+    install -d "$pkgdir/etc"
+    cp -rf "$srcdir/$pkgname/etc" "$pkgdir"
+    install -d "$pkgdir/usr/share/icons"
+    cp -rf "$srcdir/$pkgname/usr/share/icons" "$pkgdir/usr/share"
+    install -d "$pkgdir/usr/share/themes"
+    cp -rf "$srcdir/$pkgname/usr/share/themes" "$pkgdir/usr/share"
 }
