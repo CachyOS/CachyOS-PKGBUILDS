@@ -23,7 +23,7 @@ url="https://llvm.org/"
 license=('custom:Apache 2.0 with LLVM Exception')
 makedepends=('git' 'cmake' 'ninja' 'libffi' 'libedit' 'ncurses' 'libxml2' 
              'python-setuptools' 'lldb' 'python-sphinx' 'python-recommonmark' 'swig' 'python' 'python-six' 'lua53'
-             'ocl-icd' 'opencl-headers' 'z3' 'jsoncpp' 'mold' 'clang' 'llvm' 'llvm-libs')
+             'ocl-icd' 'opencl-headers' 'z3' 'jsoncpp' 'lld' 'clang' 'llvm' 'llvm-libs')
 checkdepends=("python-psutil")
 source=("llvm-project::git+https://github.com/llvm/llvm-project.git"
         "llvm-config.h")
@@ -84,7 +84,7 @@ build() {
         -D LLVM_ENABLE_DOXYGEN=OFF \
         -D LLVM_ENABLE_SPHINX=ON \
         -D LLVM_ENABLE_BINDINGS=OFF \
-        -D LLVM_USE_LINKER=mold \
+        -D LLVM_USE_LINKER=lld \
         -D SPHINX_OUTPUT_HTML:BOOL=OFF \
         -D SPHINX_WARNINGS_AS_ERRORS=OFF \
         -D POLLY_ENABLE_GPGPU_CODEGEN=ON \
