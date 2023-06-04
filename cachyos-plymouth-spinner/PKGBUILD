@@ -1,0 +1,36 @@
+# Maintainer: Michael Bolden Jnr SM9(); <me@sm9.dev>
+
+pkgname=cachyos-plymouth-spinner
+pkgver=1
+pkgrel=1
+groups=(cachyos)
+arch=('any')
+url="https://github.com/CachyOS/plymouth-themes"
+license=('GPL')
+pkgdesc="CachyOS plymouth spinner themes"
+depends=('plymouth')
+optdepends=('plymouth-kcm: for KDE settings integration')
+
+prepare() {
+  cd "${srcdir}"
+  git clone --depth=1 "${url}" "${pkgname}"
+}
+
+package() {
+  install -Dm644 "${srcdir}/${pkgname}/spinner/common/"* -t "${pkgdir}/usr/share/plymouth/cachy-spinner-common"
+ 
+  install -d -m755 "${pkgdir}/usr/share/plymouth/themes/cachy-blue-spinner"
+  install -d -m755 "${pkgdir}/usr/share/plymouth/themes/cachy-green-spinner"
+ 
+  install -Dm644 "${srcdir}/${pkgname}/spinner/watermark-blue.png" "${pkgdir}/usr/share/plymouth/themes/cachy-blue-spinner/watermark.png"
+  install -Dm644 "${srcdir}/${pkgname}/spinner/watermark-green.png" "${pkgdir}/usr/share/plymouth/themes/cachy-green-spinner/watermark.png"
+ 
+  install -Dm644 "${srcdir}/${pkgname}/spinner/preview-blue.gif" "${pkgdir}/usr/share/plymouth/themes/cachy-blue-spinner/preview.gif"
+  install -Dm644 "${srcdir}/${pkgname}/spinner/preview-green.gif" "${pkgdir}/usr/share/plymouth/themes/cachy-green-spinner/preview.gif"
+ 
+  install -Dm644 "${srcdir}/${pkgname}/spinner/cachy-blue-spinner.plymouth" "${pkgdir}/usr/share/plymouth/themes/cachy-blue-spinner/cachy-blue-spinner.plymouth"
+  install -Dm644 "${srcdir}/${pkgname}/spinner/cachy-green-spinner.plymouth" "${pkgdir}/usr/share/plymouth/themes/cachy-green-spinner/cachy-green-spinner.plymouth"
+  
+  find "${pkgdir}/usr/share/plymouth/cachy-spinner-common" -type f -exec ln -s -r {} "${pkgdir}/usr/share/plymouth/themes/cachy-blue-spinner/" \;
+  find "${pkgdir}/usr/share/plymouth/cachy-spinner-common" -type f -exec ln -s -r {} "${pkgdir}/usr/share/plymouth/themes/cachy-green-spinner/" \;
+}
