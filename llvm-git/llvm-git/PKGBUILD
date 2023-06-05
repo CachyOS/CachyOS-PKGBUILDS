@@ -62,8 +62,6 @@ build() {
     
     export CFLAGS+=" ${CPPFLAGS}"
     export CXXFLAGS+=" ${CPPFLAGS}"
-    export CC=clang
-    export CXX=clang++
     cmake \
         -B _build \
         -S "$srcdir"/llvm-project/llvm  \
@@ -84,7 +82,7 @@ build() {
         -D LLVM_ENABLE_DOXYGEN=OFF \
         -D LLVM_ENABLE_SPHINX=ON \
         -D LLVM_ENABLE_BINDINGS=OFF \
-        -D LLVM_USE_LINKER=lld \
+        -D LLVM_USE_LINKER=mold \
         -D SPHINX_OUTPUT_HTML:BOOL=OFF \
         -D SPHINX_WARNINGS_AS_ERRORS=OFF \
         -D LLVM_ENABLE_PROJECTS="polly;lldb;lld;compiler-rt;clang-tools-extra;clang;bolt" \
@@ -135,10 +133,9 @@ package_llvm-git() {
         mv "$pkgdir"/usr/include/llvm/Config/llvm-config{,-64}.h
         cp "$srcdir"/llvm-config.h "$pkgdir"/usr/include/llvm/Config/llvm-config.h
 
-    _py="3.11"
+    _py=$([[ "$(python -V)" =~ Python[[:space:]]*([0-9]+.[0-9]+) ]] && echo ${BASH_REMATCH[1]})
     cd llvm-project
     # Install Python bindings and optimize them
-    cp -a llvm/bindings/python/llvm  "$pkgdir"/usr/lib/python$_py/site-packages/
     cp -a clang/bindings/python/clang  "$pkgdir"/usr/lib/python$_py/site-packages/
     _python_optimize "$pkgdir"/usr/lib/python$_py/site-packages
 
