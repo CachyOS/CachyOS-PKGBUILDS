@@ -1,5 +1,6 @@
-# Maintainer: Angel Velasquez <angvp@archlinux.org>
 # Maintainer: Felix Yan <felixonmars@archlinux.org>
+# Contributor: morwel
+# Contributor: Angel Velasquez <angvp@archlinux.org>
 # Contributor: Stéphane Gaudreault <stephane@archlinux.org>
 # Contributor: Allan McRae <allan@archlinux.org>
 # Contributor: Jason Chu <jason@archlinux.org>
@@ -19,9 +20,8 @@ options=('!lto') # uses internal LTO
 depends=('bzip2' 'expat' 'gdbm' 'libffi' 'libnsl' 'libxcrypt' 'openssl' 'zlib')
 makedepends=('tk' 'sqlite' 'bluez-libs' 'mpdecimal' 'llvm' 'gdb' 'xorg-server-xvfb' 'ttf-font' 'llvm-git')
 source=("https://www.python.org/ftp/python/${pkgver%rc*}/Python-${pkgver}.tar.xz"{,.asc}
-        "0003-AVX2-and-AVX512-support.patch"
-        "0004-Build-avx2-and-avx512-versions-of-the-math-library.patch"
-        "bolt2.patch")
+        "bolt2.patch"
+        EXTERNALLY-MANAGED)
 sha512sums=('7eb14fecbf60824d10c22a9057584c3a142c2866f4af6caa2525c10c8bcb24e6e7afb32a44a0e118df0a2b2543d578c3b422ffd4a5fa317dfe6ea371cc7ee1ee'
             'SKIP'
             '2bfab3aaf5b72cd090aa396fb93575ba8db96abc9a6b9098ca661f3b62b01e6b8828b382495e8eb966f7b2f1a5ec02ef5ca08a2d296a57f656e7ea7cb534fb80'
@@ -51,8 +51,8 @@ prepare() {
 build() {
   cd Python-${pkgver}
 
-  export CFLAGS+=" -fno-semantic-interposition"
-  export CXXLAGS+=" -fno-semantic-interposition"
+  export CFLAGS+=" -fno-semantic-interposition -ffat-lto-objects"
+  export CXXLAGS+=" -fno-semantic-interposition -ffat-lto-objects"
 
   # Disable bundled pip & setuptools
   ./configure --prefix=/usr \
@@ -77,7 +77,6 @@ build() {
 }
 
 check() {
-  # test_socket: test.test_socket.RDSTest.testPeek hangs https://bugs.python.org/issue35247
   # test_tk: test_askcolor tkinter.test.test_tkinter.test_colorchooser.DefaultRootTest hangs
   # test_pyexpat: our `debug` implementation rewrites source location, which breaks the build-time
   #               only test test.test_pyexpat.HandlerExceptionTest as it cannot find source file in
@@ -101,8 +100,8 @@ package_python() {
               'mpdecimal: for decimal'
               'xz: for lzma'
               'tk: for tkinter')
-  provides=('python3')
-  replaces=('python3')
+  provides=('python3' 'python-externally-managed')
+  replaces=('python3' 'python-externally-managed')
 
   cd Python-${pkgver}
 
@@ -128,6 +127,9 @@ package_python() {
 
   # License
   install -Dm644 LICENSE "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE"
+
+  # PEP668
+  install -Dm644 "$srcdir"/EXTERNALLY-MANAGED -t "${pkgdir}/usr/lib/python${_pybasever}/"
 
   # Split tests
   cd "$pkgdir"/usr/lib/python*/
