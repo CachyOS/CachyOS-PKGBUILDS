@@ -111,4 +111,6 @@ MIRRORS_DEFAULT_DIR="/etc/pacman.d"
 
 rate_mirror_ex arch "${MIRRORS_DEFAULT_DIR}/mirrorlist"
 rate_mirror_ex cachyos "${MIRRORS_DEFAULT_DIR}/cachyos-mirrorlist"
-rate_mirror_ex cachyos "${MIRRORS_DEFAULT_DIR}/cachyos-v3-mirrorlist" x86_64_v3
+
+sudo cp -f "${MIRRORS_DEFAULT_DIR}/cachyos-mirrorlist" "${MIRRORS_DEFAULT_DIR}/cachyos-v3-mirrorlist"
+sudo sed -i 's|/repo/$arch/|/repo/$arch_v3/|g' "${MIRRORS_DEFAULT_DIR}/cachyos-v3-mirrorlist"
