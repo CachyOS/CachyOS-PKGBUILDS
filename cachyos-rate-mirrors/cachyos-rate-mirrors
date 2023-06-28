@@ -116,5 +116,12 @@ if [ -f "${MIRRORS_DEFAULT_DIR}/cachyos-v3-mirrorlist" ]; then
     mv -f "${MIRRORS_DEFAULT_DIR}/cachyos-v3-mirrorlist" "${MIRRORS_DEFAULT_DIR}/cachyos-v3-mirrorlist-backup"
 fi
 
+if [ -f "${MIRRORS_DEFAULT_DIR}/cachyos-v4-mirrorlist" ]; then
+    mv -f "${MIRRORS_DEFAULT_DIR}/cachyos-v4-mirrorlist" "${MIRRORS_DEFAULT_DIR}/cachyos-v4-mirrorlist-backup"
+fi
+
 cp -f "${MIRRORS_DEFAULT_DIR}/cachyos-mirrorlist" "${MIRRORS_DEFAULT_DIR}/cachyos-v3-mirrorlist"
 sed -i 's|/repo/$arch/|/repo/$arch_v3/|g' "${MIRRORS_DEFAULT_DIR}/cachyos-v3-mirrorlist"
+
+cp -f "${MIRRORS_DEFAULT_DIR}/cachyos-mirrorlist" "${MIRRORS_DEFAULT_DIR}/cachyos-v4-mirrorlist"
+sed -i 's|/repo/$arch/|/repo/$arch_v4/|g' "${MIRRORS_DEFAULT_DIR}/cachyos-v4-mirrorlist"
