@@ -113,7 +113,7 @@ rate_mirror_ex arch "${MIRRORS_DEFAULT_DIR}/mirrorlist"
 rate_mirror_ex cachyos "${MIRRORS_DEFAULT_DIR}/cachyos-mirrorlist"
 
 if [ -f "${MIRRORS_DEFAULT_DIR}/cachyos-v3-mirrorlist" ]; then
-    mv "${MIRRORS_DEFAULT_DIR}/cachyos-v3-mirrorlist" "${MIRRORS_DEFAULT_DIR}/cachyos-v3-mirrorlist-backup"
+    mv -f "${MIRRORS_DEFAULT_DIR}/cachyos-v3-mirrorlist" "${MIRRORS_DEFAULT_DIR}/cachyos-v3-mirrorlist-backup"
 fi
 
 cp -f "${MIRRORS_DEFAULT_DIR}/cachyos-mirrorlist" "${MIRRORS_DEFAULT_DIR}/cachyos-v3-mirrorlist"
