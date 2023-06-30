@@ -19,7 +19,7 @@ sha256sums=('SKIP'
             'SKIP')
 
 prepare() {
-  cd "$srcdir/$pkgname"
+  cd "$srcdir/chwd"
   cargo fetch --locked --target "$CARCH-unknown-linux-gnu"
 
   cd scripts/chwd-kernel
@@ -27,7 +27,7 @@ prepare() {
 }
 
 build() {
-  cd "$srcdir/$pkgname"
+  cd "$srcdir/chwd"
 
   # Compile with clang
   export AR=llvm-ar
@@ -51,7 +51,7 @@ package_mhwd-cachyos() {
   provides=('mhwd-cachyos')
   conflicts=('mhwd-cachyos')
 
-  cd "$srcdir/$pkgname"
+  cd "$srcdir/chwd"
 
   install -Dm644 "LICENSE" "$pkgdir/usr/share/licenses/chwd/LICENSE"
 
