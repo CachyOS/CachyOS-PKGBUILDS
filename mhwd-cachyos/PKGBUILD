@@ -1,8 +1,7 @@
 # Maintainer: Vladislav Nepogodin <nepogodin.vlad@gmail.com>
 
 pkgbase=mhwd-cachyos
-pkgname=('mhwd-cachyos' 'mhwd-db-cachyos')
-pkgname=mhwd-cachyos
+pkgname=('mhwd-cachyos' 'chwd-db')
 pkgver=0.9.0
 pkgrel=1
 pkgdesc="CachyOS Hardware Detection Tool"
@@ -47,7 +46,7 @@ build() {
 }
 
 package_mhwd-cachyos() {
-  depends=('gcc-libs' 'pciutils' 'lua' 'mhwd-db-cachyos' 'pacman')
+  depends=('gcc-libs' 'pciutils' 'lua' 'chwd-db' 'pacman')
   provides=('mhwd-cachyos')
   conflicts=('mhwd-cachyos')
 
@@ -69,10 +68,10 @@ package_mhwd-cachyos() {
   install -Dm755 "target/release/chwd-kernel" "$pkgdir/usr/bin/chwd-kernel"
 }
 
-package_mhwd-db-cachyos() {
-  pkgdesc="mhwd-cachyos Database"
+package_chwd-db() {
+  pkgdesc="Profiles we use at CachyOS :)"
   provides=('mhwd-db-cachyos')
-  conflicts=('mhwd-db-cachyos')
+  replaces=('mhwd-db-cachyos')
 
   cd $pkgname
 
