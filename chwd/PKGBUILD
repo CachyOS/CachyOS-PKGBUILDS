@@ -1,8 +1,8 @@
 # Maintainer: Vladislav Nepogodin <nepogodin.vlad@gmail.com>
 
-pkgbase=mhwd-cachyos
-pkgname=('mhwd-cachyos' 'chwd-db')
-pkgver=0.9.1
+pkgbase=chwd
+pkgname=('chwd' 'chwd-db')
+pkgver=1.0.0
 pkgrel=1
 pkgdesc="CachyOS Hardware Detection Tool"
 arch=(x86_64)
@@ -18,7 +18,7 @@ sha256sums=('SKIP'
             'SKIP')
 
 prepare() {
-  cd "$srcdir/chwd"
+  cd "$srcdir/$pkgname"
   cargo fetch --locked --target "$CARCH-unknown-linux-gnu"
 
   cd scripts/chwd-kernel
@@ -26,7 +26,7 @@ prepare() {
 }
 
 build() {
-  cd "$srcdir/chwd"
+  cd "$srcdir/$pkgname"
 
   # Compile with clang
   export AR=llvm-ar
@@ -45,12 +45,13 @@ build() {
   cargo build --release --frozen
 }
 
-package_mhwd-cachyos() {
+package_chwd() {
   depends=('gcc-libs' 'pciutils' 'lua' 'chwd-db' 'pacman')
   provides=('mhwd-cachyos')
   conflicts=('mhwd-cachyos')
+  replaces=('mhwd-cachyos')
 
-  cd "$srcdir/chwd"
+  cd "$srcdir/$pkgname"
 
   install -Dm644 "LICENSE" "$pkgdir/usr/share/licenses/chwd/LICENSE"
 
@@ -71,6 +72,7 @@ package_mhwd-cachyos() {
 package_chwd-db() {
   pkgdesc="Profiles we use at CachyOS :)"
   provides=('mhwd-db-cachyos')
+  conflicts=('mhwd-db-cachyos')
   replaces=('mhwd-db-cachyos')
 
   cd $pkgname
