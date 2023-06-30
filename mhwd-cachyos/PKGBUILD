@@ -3,16 +3,16 @@
 pkgbase=mhwd-cachyos
 pkgname=('mhwd-cachyos' 'mhwd-db-cachyos')
 pkgname=mhwd-cachyos
-pkgver=0.8.0
+pkgver=0.9.0
 pkgrel=1
-pkgdesc="Hardware Detection for CachyOS"
+pkgdesc="CachyOS Hardware Detection Tool"
 arch=(x86_64)
-url="https://github.com/cachyos/mhwd-cachyos"
+url="https://github.com/cachyos/chwd"
 license=(GPL3)
 depends=('gcc-libs' 'pciutils' 'lua')
 makedepends=('git' 'cargo' 'mold' 'clang' 'llvm')
 groups=('cachyos')
-_commit_hash=c27d61fe52862da841986d713899ccb6b7f45d92
+_commit_hash=98902459afddd1fec94c95ddb3137b25ca5b86b6
 source=("git+${url}.git#commit=${_commit_hash}"
         "git+${url/-cachyos}-db-cachyos.git")
 sha256sums=('SKIP'
@@ -71,7 +71,6 @@ package_mhwd-cachyos() {
 
 package_mhwd-db-cachyos() {
   pkgdesc="mhwd-cachyos Database"
-  depends=('mhwd-nvidia' 'mhwd-nvidia>=525' 'mhwd-nvidia-470xx' 'mhwd-nvidia-390xx')
   provides=('mhwd-db-cachyos')
   conflicts=('mhwd-db-cachyos')
 
