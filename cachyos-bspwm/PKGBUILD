@@ -11,9 +11,19 @@ arch=('any')
 url='https://github.com/baskerville/bspwm'
 license=(BSD)
 makedepends=(git)
-depends=(xcb-util xcb-util-wm xcb-util-keysyms)
-optdepends=('sxhkd: to define keyboard and pointer bindings'
-            'xdo: for the example panel')
+depends=('xcb-util'
+        'xcb-util-wm'
+        'xcb-util-keysyms'
+        'cachyos-zsh-config'
+        'rofi'
+        'rxvt-unicode'
+        # 'lightdm-webkit2-greeter'
+        'cachyos-picom-config'
+        'polybar'
+        'sxhkd'
+        'deadd-notification-center'
+        'ttf-fira-sans')
+install=$pkgname.install
 source=("git+$url#commit=2492695ad47c7ae8c630bdf22328334f57e41c1a"
         "rounded-corners.patch::https://github.com/j-james/bspwm-rounded-corners/commit/00e85df0505d2bfbd41234d1daf2f03c461b6a2b.patch")
 sha512sums=('SKIP'
