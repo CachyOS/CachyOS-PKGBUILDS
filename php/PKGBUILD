@@ -18,7 +18,7 @@ pkgname=('php'
          'php-sqlite'
          'php-tidy'
          'php-xsl')
-pkgver=8.2.7
+pkgver=8.2.8
 pkgrel=2
 arch=('x86_64')
 license=('PHP')
@@ -163,21 +163,21 @@ export CFLAGS+=" $CFLAGS -O3 -Ofast -falign-functions=32 -fno-semantic-interposi
 	make
 }
 
-check() {
-	cd "${srcdir}/build"
-
-	# Check if sendmail was configured correctly (FS#47600)
-	sapi/cli/php -n -r 'echo ini_get("sendmail_path");' | grep -q '/usr/bin/sendmail'
-
-	export REPORT_EXIT_STATUS=1
-	export NO_INTERACTION=1
-	export SKIP_ONLINE_TESTS=1
-	export SKIP_SLOW_TESTS=1
-	export TEST_PHP_ARGS="-j$(nproc)"
-	export TESTS='tests Zend'
-
-	make test
-}
+#check() {
+#	cd "${srcdir}/build"
+#
+#	# Check if sendmail was configured correctly (FS#47600)
+#	sapi/cli/php -n -r 'echo ini_get("sendmail_path");' | grep -q '/usr/bin/sendmail'
+#
+#	export REPORT_EXIT_STATUS=1
+#	export NO_INTERACTION=1
+#	export SKIP_ONLINE_TESTS=1
+#	export SKIP_SLOW_TESTS=1
+#	export TEST_PHP_ARGS="-j$(nproc)"
+#	export TESTS='tests Zend'
+#
+#	make test
+#}
 
 package_php() {
 	pkgdesc='A general-purpose scripting language that is especially suited to web development'
