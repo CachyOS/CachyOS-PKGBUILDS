@@ -19,8 +19,8 @@
 
 pkgbase=kodi
 pkgname=('kodi' 'kodi-eventclients' 'kodi-tools-texturepacker' 'kodi-dev')
-pkgver=20.1
-pkgrel=7
+pkgver=20.2
+pkgrel=2
 arch=('x86_64')
 url="https://kodi.tv"
 license=('GPL2')
@@ -65,9 +65,7 @@ source=(
   "$pkgbase-flatbuffers-$_flatbuffers_version.tar.gz::https://mirrors.kodi.tv/build-deps/sources/flatbuffers-$_flatbuffers_version.tar.gz"
   "$pkgbase-libudfread-$_libudfread_version.tar.gz::https://mirrors.kodi.tv/build-deps/sources/libudfread-$_libudfread_version.tar.gz"
   'cheat-sse-build.patch'
-  'gcc13.patch'
-  'https://github.com/xbmc/xbmc/commit/28ed2221.patch'
-  'https://github.com/xbmc/xbmc/commit/023717ed.patch'
+  'https://github.com/xbmc/xbmc/commit/35be40daa39965a9ea5b3569eb7d515e6a14da5d.patch'  # flatbuffers 23.3.3
 )
 noextract=(
   "$pkgbase-libdvdcss-$_libdvdcss_version.tar.gz"
@@ -79,7 +77,7 @@ noextract=(
   "$pkgbase-flatbuffers-$_flatbuffers_version.tar.gz"
   "$pkgbase-libudfread-$_libudfread_version.tar.gz"
 )
-sha512sums=('648df0649a0443d884b9414f43be4253764f1aaf9072aa8111e5a8a217c8291024ce1f27c2f7f673ac24005b32cc7dd25d86e99fc68166e3d5a637ae36b20f02'
+sha512sums=('ddeaa626f324817f6d038fd1eaeb851d0006156fa9ef96ef475932ec50c64cbdcc7ce8b93ceea0d8bfcd1f24edc1c9d0c4a97a163a615842a9fb698e5393f7ca'
             'd3be3bfc13c5ea56d8db745c2aab090c99760684fe4c8f62a13d266feb319e9180ceeecf8116bfd2ed90d9accba2c11dbbf93b61ad00f69a40812ebf4eabcdda'
             '51e6fc033121241354a5f0b3fc9a430577ae3ff6bb7f31445aa548ef4893037fb80eea3b2c6774c81e9ebaf9c45e9b490c98c2c65eb38f9f7daba84b236f7e1d'
             '629a41157d07b8ec0ea1fe89ae5ec48f63047472a862782b805c531ae31a0376fc4dc15175f8280c3ef91d7fa977bacebb1b51232640034a34bab2293210fc5e'
@@ -89,9 +87,7 @@ sha512sums=('648df0649a0443d884b9414f43be4253764f1aaf9072aa8111e5a8a217c8291024c
             '4066c94f2473c7ea16917d29a613e16f840a329089c88e0bdbdb999aef3442ba00abfd2aa92266fa9c067e399dc88e6f0ccac40dc151378857e665638e78bbf0'
             '3069feb5db40288beb5b112b285186162a704f0fdd3cf67a17fd4eeea015f2cfcfbb455b7aa7c3d79d00fd095a3fd11cffc7b121dce94d99c3b06a509a8977d2'
             '91409cc66959a30f2d0dbf8d28e47dd2acbac560efb8961550c5928ae8546a32d1f156f8e55f073f953b114230117ec96c224212d28c1c1d752540c836c9ae1a'
-            '4c9b6eebb0465f83b5ba13854b01fbecfef0c90c2a9ad5ec8ee275eccb00d3304ac378f30551a8011fef5f3e01959cf02f2e2109b73be19e24e5cbf4a209a09d'
-            '1c2bc6111e30033b13a912fc6ff49455a89ac71ddf22ecf2f833ed661154014f40c4b5625a98126ef8616184670b85e4b3aaef29f253ce46e559bcc56e07fbae'
-            'f2309773f7b12d6c0244549f3895f8cb24cb82d87a8c46f0c6987895e44ae97348e799f3237b859580aec0681fdfb09a92f07418e7a5c1cb0769f27aaaf9c45c')
+            'c05888d1ad11f9a33a578ddd2fdb705ccd385178f93f68c6af66d9361a16664f2efec7e92c3bdc2c5c93a979e973e6448ffd2b26dab6d120e1ce8a5ceb2bd948')
 
 prepare() {
   [[ -d kodi-build ]] && rm -rf kodi-build
@@ -99,10 +95,11 @@ prepare() {
 
   cd "xbmc-$pkgver-$_codename"
 
+  rm -rf system/certs # remove not needed cacert
+
   [[ "$_sse_workaround" -eq 1 ]] && patch -p1 -i "$srcdir/cheat-sse-build.patch"
-  patch -p1 -i ../28ed2221.patch # Fix build with GCC 13
-  patch -p1 -i ../023717ed.patch # Fix build with GCC 13
-  patch -p1 -i ../gcc13.patch # Fix build with GCC 13
+  # flatbuffers 23.3.3
+  patch -p1 -i "$srcdir/35be40daa39965a9ea5b3569eb7d515e6a14da5d.patch"
 }
 
 build() {
