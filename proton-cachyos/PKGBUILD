@@ -5,13 +5,13 @@
 _optimize=${_optimize-y}
 
 pkgname=proton-cachyos
-_srctag=8.0-20230525
+_srctag=8.0-20230706
 _commit=
-pkgver=8.0 
+pkgver=8.0
 # pkgver=${_srctag//-/.}
 _geckover=2.47.3
-_monover=7.4.1
-pkgrel=5
+_monover=8.0.0
+pkgrel=6
 pkgdesc="Compatibility tool for Steam Play based on Wine and additional components, experimental branch with extra CachyOS flavour"
 url="https://github.com/ValveSoftware/Proton"
 arch=(x86_64 x86_64_v3)
@@ -115,6 +115,8 @@ source=(
     0001-AUR-Pkgbuild-changes.patch
     0002-AUR-Do-not-update-cargo-crates.patch
     server-Enable-link-time-optimization.patch
+    0003-AUR-Remove-kaldi-openfst-vosk-api-modules-because-of.patch
+    0004-AUR-Copy-DLL-dependencies-of-32bit-libvkd3d-dlls-int.patch
     fix_hwnd_changes_meaning.patch
 )
 noextract=(
@@ -238,6 +240,8 @@ prepare() {
 
     patch -p1 -i "$srcdir"/0001-AUR-Pkgbuild-changes.patch
     patch -p1 -i "$srcdir"/0002-AUR-Do-not-update-cargo-crates.patch
+    patch -p1 -i "$srcdir"/0003-AUR-Remove-kaldi-openfst-vosk-api-modules-because-of.patch
+    patch -p1 -i "$srcdir"/0004-AUR-Copy-DLL-dependencies-of-32bit-libvkd3d-dlls-int.patch
     patch -p1 -i "$srcdir"/fix_hwnd_changes_meaning.patch
 
     pushd wine
@@ -314,6 +318,16 @@ package() {
     mkdir -p "$_compatdir/${pkgname}"
     rsync --delete -arx dist/* "$_compatdir/${pkgname}"
 
+    # For some unknown to me reason, 32bit vkd3d (not vkd3d-proton) always links
+    # to libgcc_s_dw2-1.dll no matter what linker options I tried.
+    # Copy the required dlls into the package, they will be copied later into the prefix
+    # by the patched proton script. Bundling the helps to avoid making mingw-w64-gcc package
+    # a runtime dependency.
+    cp /usr/i686-w64-mingw32/bin/{libgcc_s_dw2-1.dll,libwinpthread-1.dll} \
+        "$_compatdir/${pkgname}"/files/lib/vkd3d/
+    cp /usr/x86_64-w64-mingw32/bin/{libgcc_s_seh-1.dll,libwinpthread-1.dll} \
+        "$_compatdir/${pkgname}"/files/lib64/vkd3d/
+
     mkdir -p "$pkgdir/usr/share/licenses/${pkgname}"
     mv "$_compatdir/${pkgname}"/LICENSE{,.OFL} \
         "$pkgdir/usr/share/licenses/${pkgname}"
@@ -367,8 +381,11 @@ sha256sums=('SKIP'
             'SKIP'
             '08d318f3dd6440a8a777cf044ccab039b0d9c8809991d2180eb3c9f903135db3'
             '0beac419c20ee2e68a1227b6e3fa8d59fec0274ed5e82d0da38613184716ef75'
-            '1286afc67b0a329f5e2d98d9e803ca5906a841ad5486e9b3b1fefa1124b15622'
-            'edbbcc93ef53a81150baa409b9c55e756edef6dcda4dd0b79f8fdcaae743aac9'
-            '9c107461440cb8cd7d54f994b235dc0be6a11370e0a60578523633c07024c976'
-            '369193510b9309fc9cb80fc204220599583677a59976c7f434c2a33871b0cbe1')
+            '14c7d76780b79dc62d8ed9d1759e7adcfa332bb2406e2e694dee7b2128cc7a77'
+            '6a851889dc3a4333b79c80c39cc2e91c8f0c05a15578a1242ed4d30c6d7905cb'
+            '00c5c8373fcef43c01bc5071cb28b2e2797b4938b9eff3f5c357414addd1d061'
+            '369193510b9309fc9cb80fc204220599583677a59976c7f434c2a33871b0cbe1'
+            'b73f14ad1d95f27f64afa2ac5e396c970573c1e58f55510f728853d14d24d4ab'
+            'd4fa0959491f2bcb44728943588423fae15f53d5079bcd905a7bb563b81ec79e'
+            '20824bb565fefcad4aa978c54e0f8b9d9d17b7b52fb03fc87943150de148f06f')
 
