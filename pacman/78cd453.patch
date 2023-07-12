@@ -35,14 +35,14 @@ index 77a3907f..daab30d4 100644
 +++ b/doc/pacman.conf.5.asciidoc
 @@ -186,6 +186,9 @@ Options
  *Color*::
-    Automatically enable colors only when pacman's output is on a tty.
-
+ 	Automatically enable colors only when pacman's output is on a tty.
+ 
 +*PrettyProgressBar*::
-+   Use specific U+EE00..U+EE05 unicode characters to render pretty progress bars.
++	Use specific U+EE00..U+EE05 unicode characters to render pretty progress bars.
 +
  *NoProgressBar*::
-    Disables progress bars. This is useful for terminals which do
-    not support escape characters.
+ 	Disables progress bars. This is useful for terminals which do
+ 	not support escape characters.
 diff --git a/etc/pacman.conf.in b/etc/pacman.conf.in
 index 1799efc7..9ce2b938 100644
 --- a/etc/pacman.conf.in
@@ -60,190 +60,190 @@ index 5fd8aebc..e64a603e 100644
 --- a/scripts/completion/zsh_completion.in
 +++ b/scripts/completion/zsh_completion.in
 @@ -514,6 +514,7 @@ _pacman_conf_general_directives=(
-    'CheckSpace'
-    'VerbosePkgLists'
-    'DisableDownloadTimeout'
-+   'PrettyProgressBar'
-    'NoProgressBar'
-    'ParallelDownloads'
-    'CleanMethod'
+ 	'CheckSpace'
+ 	'VerbosePkgLists'
+ 	'DisableDownloadTimeout'
++	'PrettyProgressBar'
+ 	'NoProgressBar'
+ 	'ParallelDownloads'
+ 	'CleanMethod'
 diff --git a/src/pacman/callback.c b/src/pacman/callback.c
 index 75c74f8b..f72a91cf 100644
 --- a/src/pacman/callback.c
 +++ b/src/pacman/callback.c
 @@ -153,54 +153,72 @@ static int64_t get_update_timediff(int first_call)
  static void fill_progress(const int bar_percent, const int disp_percent,
-        const int proglen)
+ 		const int proglen)
  {
--   /* 8 = 1 space + 1 [ + 1 ] + 5 for percent */
--   const int hashlen = proglen > 8 ? proglen - 8 : 0;
--   const int hash = bar_percent * hashlen / 100;
--   static int lasthash = 0, mouth = 0;
-    int i;
-
--   if(bar_percent == 0) {
--       lasthash = 0;
--       mouth = 0;
-+   /* if pretty progress bar enabled */
-+   if(config->pretty) {
-+       /* 8 = 1 space + 1  + 1  + 5 for percent */
-+       const int hashlen = proglen > 8 ? proglen - 6 : 0;
-+       const int hash = bar_percent * hashlen / 100;
+-	/* 8 = 1 space + 1 [ + 1 ] + 5 for percent */
+-	const int hashlen = proglen > 8 ? proglen - 8 : 0;
+-	const int hash = bar_percent * hashlen / 100;
+-	static int lasthash = 0, mouth = 0;
+ 	int i;
+ 
+-	if(bar_percent == 0) {
+-		lasthash = 0;
+-		mouth = 0;
++	/* if pretty progress bar enabled */
++	if(config->pretty) {
++		/* 8 = 1 space + 1  + 1  + 5 for percent */
++		const int hashlen = proglen > 8 ? proglen - 6 : 0;
++		const int hash = bar_percent * hashlen / 100;
 +
-+       if(hashlen > 2) {
-+           fputs(hash > 0 ? " " : " ", stdout);
-+           for(i = hashlen - 1; i > 1; --i) {
-+               fputs(i > hashlen - hash ? "" : "", stdout);
-+           }
-+           fputs(hash == hashlen ? "" : "", stdout);
-+       }
++		if(hashlen > 2) {
++			fputs(hash > 0 ? " " : " ", stdout);
++			for(i = hashlen - 1; i > 1; --i) {
++				fputs(i > hashlen - hash ? "" : "", stdout);
++			}
++			fputs(hash == hashlen ? "" : "", stdout);
++		}
 +
-+   } else {
-+       /* 8 = 1 space + 1 [ + 1 ] + 5 for percent */
-+       const int hashlen = proglen > 8 ? proglen - 8 : 0;
-+       const int hash = bar_percent * hashlen / 100;
-+       static int lasthash = 0, mouth = 0;
++	} else {
++		/* 8 = 1 space + 1 [ + 1 ] + 5 for percent */
++		const int hashlen = proglen > 8 ? proglen - 8 : 0;
++		const int hash = bar_percent * hashlen / 100;
++		static int lasthash = 0, mouth = 0;
 +
-+       if(bar_percent == 0) {
-+           lasthash = 0;
-+           mouth = 0;
-+       }
++		if(bar_percent == 0) {
++			lasthash = 0;
++			mouth = 0;
++		}
 +
-+       if(hashlen > 0) {
-+           fputs(" [", stdout);
-+           for(i = hashlen; i > 0; --i) {
-+               /* if special progress bar enabled */
-+               if(config->chomp) {
-+                   if(i > hashlen - hash) {
-+                       putchar('-');
-+                   } else if(i == hashlen - hash) {
-+                       if(lasthash == hash) {
-+                           if(mouth) {
-+                               fputs("\033[1;33mC\033[m", stdout);
-+                           } else {
-+                               fputs("\033[1;33mc\033[m", stdout);
-+                           }
-+                       } else {
-+                           lasthash = hash;
-+                           mouth = mouth == 1 ? 0 : 1;
-+                           if(mouth) {
-+                               fputs("\033[1;33mC\033[m", stdout);
-+                           } else {
-+                               fputs("\033[1;33mc\033[m", stdout);
-+                           }
-+                       }
-+                   } else if(i % 3 == 0) {
-+                       fputs("\033[0;37mo\033[m", stdout);
-+                   } else {
-+                       fputs("\033[0;37m \033[m", stdout);
-+                   }
-+               } /* else regular progress bar */
-+               else if(i > hashlen - hash) {
-+                   putchar('#');
-+               } else {
-+                   putchar('-');
-+               }
-+           }
-+           putchar(']');
-+       }
-    }
-
--   if(hashlen > 0) {
--       fputs(" [", stdout);
--       for(i = hashlen; i > 0; --i) {
--           /* if special progress bar enabled */
--           if(config->chomp) {
--               if(i > hashlen - hash) {
--                   putchar('-');
--               } else if(i == hashlen - hash) {
--                   if(lasthash == hash) {
--                       if(mouth) {
--                           fputs("\033[1;33mC\033[m", stdout);
--                       } else {
--                           fputs("\033[1;33mc\033[m", stdout);
--                       }
--                   } else {
--                       lasthash = hash;
--                       mouth = mouth == 1 ? 0 : 1;
--                       if(mouth) {
--                           fputs("\033[1;33mC\033[m", stdout);
--                       } else {
--                           fputs("\033[1;33mc\033[m", stdout);
--                       }
--                   }
--               } else if(i % 3 == 0) {
--                   fputs("\033[0;37mo\033[m", stdout);
--               } else {
--                   fputs("\033[0;37m \033[m", stdout);
--               }
--           } /* else regular progress bar */
--           else if(i > hashlen - hash) {
--               putchar('#');
--           } else {
--               putchar('-');
--           }
--       }
--       putchar(']');
--   }
-    /* print display percent after progress bar */
-    /* 5 = 1 space + 3 digits + 1 % */
-    if(proglen >= 5) {
++		if(hashlen > 0) {
++			fputs(" [", stdout);
++			for(i = hashlen; i > 0; --i) {
++				/* if special progress bar enabled */
++				if(config->chomp) {
++					if(i > hashlen - hash) {
++						putchar('-');
++					} else if(i == hashlen - hash) {
++						if(lasthash == hash) {
++							if(mouth) {
++								fputs("\033[1;33mC\033[m", stdout);
++							} else {
++								fputs("\033[1;33mc\033[m", stdout);
++							}
++						} else {
++							lasthash = hash;
++							mouth = mouth == 1 ? 0 : 1;
++							if(mouth) {
++								fputs("\033[1;33mC\033[m", stdout);
++							} else {
++								fputs("\033[1;33mc\033[m", stdout);
++							}
++						}
++					} else if(i % 3 == 0) {
++						fputs("\033[0;37mo\033[m", stdout);
++					} else {
++						fputs("\033[0;37m \033[m", stdout);
++					}
++				} /* else regular progress bar */
++				else if(i > hashlen - hash) {
++					putchar('#');
++				} else {
++					putchar('-');
++				}
++			}
++			putchar(']');
++		}
+ 	}
+ 
+-	if(hashlen > 0) {
+-		fputs(" [", stdout);
+-		for(i = hashlen; i > 0; --i) {
+-			/* if special progress bar enabled */
+-			if(config->chomp) {
+-				if(i > hashlen - hash) {
+-					putchar('-');
+-				} else if(i == hashlen - hash) {
+-					if(lasthash == hash) {
+-						if(mouth) {
+-							fputs("\033[1;33mC\033[m", stdout);
+-						} else {
+-							fputs("\033[1;33mc\033[m", stdout);
+-						}
+-					} else {
+-						lasthash = hash;
+-						mouth = mouth == 1 ? 0 : 1;
+-						if(mouth) {
+-							fputs("\033[1;33mC\033[m", stdout);
+-						} else {
+-							fputs("\033[1;33mc\033[m", stdout);
+-						}
+-					}
+-				} else if(i % 3 == 0) {
+-					fputs("\033[0;37mo\033[m", stdout);
+-				} else {
+-					fputs("\033[0;37m \033[m", stdout);
+-				}
+-			} /* else regular progress bar */
+-			else if(i > hashlen - hash) {
+-				putchar('#');
+-			} else {
+-				putchar('-');
+-			}
+-		}
+-		putchar(']');
+-	}
+ 	/* print display percent after progress bar */
+ 	/* 5 = 1 space + 3 digits + 1 % */
+ 	if(proglen >= 5) {
 @@ -252,7 +270,7 @@ void cb_event(void *ctx, alpm_event_t *event)
-                alpm_event_hook_run_t *e = &event->hook_run;
-                int digits = number_length(e->total);
-                printf("(%*zu/%*zu) %s\n", digits, e->position,
--                       digits, e->total,
-+                       digits, e->total,
-                        e->desc ? e->desc : e->name);
-            }
-            break;
+ 				alpm_event_hook_run_t *e = &event->hook_run;
+ 				int digits = number_length(e->total);
+ 				printf("(%*zu/%*zu) %s\n", digits, e->position,
+-						digits, e->total, 
++						digits, e->total,
+ 						e->desc ? e->desc : e->name);
+ 			}
+ 			break;
 diff --git a/src/pacman/conf.c b/src/pacman/conf.c
 index 12fee64c..fa38930c 100644
 --- a/src/pacman/conf.c
 +++ b/src/pacman/conf.c
 @@ -604,6 +604,9 @@ static int _parse_options(const char *key, char *value,
-        } else if(strcmp(key, "ILoveCandy") == 0) {
-            config->chomp = 1;
-            pm_printf(ALPM_LOG_DEBUG, "config: chomp\n");
-+       } else if(strcmp(key, "PrettyProgressBar") == 0 ) {
-+           config->pretty = 1;
-+           pm_printf(ALPM_LOG_DEBUG, "config: pretty\n");
-        } else if(strcmp(key, "VerbosePkgLists") == 0) {
-            config->verbosepkglists = 1;
-            pm_printf(ALPM_LOG_DEBUG, "config: verbosepkglists\n");
+ 		} else if(strcmp(key, "ILoveCandy") == 0) {
+ 			config->chomp = 1;
+ 			pm_printf(ALPM_LOG_DEBUG, "config: chomp\n");
++		} else if(strcmp(key, "PrettyProgressBar") == 0 ) {
++			config->pretty = 1;
++			pm_printf(ALPM_LOG_DEBUG, "config: pretty\n");
+ 		} else if(strcmp(key, "VerbosePkgLists") == 0) {
+ 			config->verbosepkglists = 1;
+ 			pm_printf(ALPM_LOG_DEBUG, "config: verbosepkglists\n");
 diff --git a/src/pacman/conf.h b/src/pacman/conf.h
 index 04350d39..1ac6806f 100644
 --- a/src/pacman/conf.h
 +++ b/src/pacman/conf.h
 @@ -111,6 +111,8 @@ typedef struct __config_t {
-    /* conf file options */
-    /* I Love Candy! */
-    unsigned short chomp;
-+   /* Pretty progress bar */
-+   unsigned short pretty;
-    /* format target pkg lists as table */
-    unsigned short verbosepkglists;
-    /* number of parallel download streams */
+ 	/* conf file options */
+ 	/* I Love Candy! */
+ 	unsigned short chomp;
++	/* Pretty progress bar */
++	unsigned short pretty;
+ 	/* format target pkg lists as table */
+ 	unsigned short verbosepkglists;
+ 	/* number of parallel download streams */
 diff --git a/src/pacman/pacman-conf.c b/src/pacman/pacman-conf.c
 index 600f1622..3ea4816a 100644
 --- a/src/pacman/pacman-conf.c
 +++ b/src/pacman/pacman-conf.c
 @@ -267,6 +267,7 @@ static void dump_config(void)
-    show_bool("VerbosePkgLists", config->verbosepkglists);
-    show_bool("DisableDownloadTimeout", config->disable_dl_timeout);
-    show_bool("ILoveCandy", config->chomp);
-+   show_bool("PrettyProgressBar", config->pretty);
-    show_bool("NoProgressBar", config->noprogressbar);
-
-    show_int("ParallelDownloads", config->parallel_downloads);
+ 	show_bool("VerbosePkgLists", config->verbosepkglists);
+ 	show_bool("DisableDownloadTimeout", config->disable_dl_timeout);
+ 	show_bool("ILoveCandy", config->chomp);
++	show_bool("PrettyProgressBar", config->pretty);
+ 	show_bool("NoProgressBar", config->noprogressbar);
+ 
+ 	show_int("ParallelDownloads", config->parallel_downloads);
 @@ -379,6 +380,8 @@ static int list_directives(void)
-            show_bool("DisableDownloadTimeout", config->disable_dl_timeout);
-        } else if(strcasecmp(i->data, "ILoveCandy") == 0) {
-            show_bool("ILoveCandy", config->chomp);
-+       } else if(strcasecmp(i->data, "PrettyProgressBar") == 0) {
-+           show_bool("PrettyProgressBar", config->pretty);
-        } else if(strcasecmp(i->data, "NoProgressBar") == 0) {
-            show_bool("NoProgressBar", config->noprogressbar);
-
---
+ 			show_bool("DisableDownloadTimeout", config->disable_dl_timeout);
+ 		} else if(strcasecmp(i->data, "ILoveCandy") == 0) {
+ 			show_bool("ILoveCandy", config->chomp);
++		} else if(strcasecmp(i->data, "PrettyProgressBar") == 0) {
++			show_bool("PrettyProgressBar", config->pretty);
+ 		} else if(strcasecmp(i->data, "NoProgressBar") == 0) {
+ 			show_bool("NoProgressBar", config->noprogressbar);
+ 
+-- 
 2.40.1
