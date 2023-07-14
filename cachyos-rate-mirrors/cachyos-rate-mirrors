@@ -97,7 +97,9 @@ rate_mirror_ex() {
     rate-mirrors "${_rate_mirrors_flags[@]}"
     _exitcode=$?
     if [[ "${_exitcode}" -eq 0 ]]; then
-        cat "${mirrorlist_path}" > "${mirrorlist_path}-backup"
+        if [ -f "${mirrorlist_path}" ]; then
+            cat "${mirrorlist_path}" > "${mirrorlist_path}-backup"
+        fi
         cat "${TMPFILE}" > "${mirrorlist_path}"
         msg "Done [${name}] ${mirrorlist_path}"
     else
