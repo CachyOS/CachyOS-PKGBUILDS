@@ -97,9 +97,10 @@ rate_mirror_ex() {
     rate-mirrors "${_rate_mirrors_flags[@]}"
     _exitcode=$?
     if [[ "${_exitcode}" -eq 0 ]]; then
-        if [ -f "${mirrorlist_path}" ]; then
-            cat "${mirrorlist_path}" > "${mirrorlist_path}-backup"
+        if [ ! -f "${mirrorlist_path}" ]; then
+            die "${mirrorlist_path} doesn't exist! You must install "${mirrorlist_path##*/}". Run sudo pacman -S ${mirrorlist_path##*/}" 
         fi
+        cat "${mirrorlist_path}" > "${mirrorlist_path}-backup"
         cat "${TMPFILE}" > "${mirrorlist_path}"
         msg "Done [${name}] ${mirrorlist_path}"
     else
