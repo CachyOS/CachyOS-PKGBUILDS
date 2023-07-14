@@ -1,0 +1,36 @@
+pkgbase = chwd
+	pkgdesc = CachyOS Hardware Detection Tool
+	pkgver = 1.0.1
+	pkgrel = 1
+	url = https://github.com/cachyos/chwd
+	arch = x86_64
+	groups = cachyos
+	license = GPL3
+	makedepends = git
+	makedepends = cargo
+	makedepends = mold
+	makedepends = clang
+	makedepends = llvm
+	depends = gcc-libs
+	depends = pciutils
+	depends = lua
+	source = git+https://github.com/cachyos/chwd.git#commit=561844470b20ebb43f6a8ad7889d6c15c1ff7001
+	source = git+https://github.com/cachyos/chwd-db.git
+	sha256sums = SKIP
+	sha256sums = SKIP
+
+pkgname = chwd
+	depends = gcc-libs
+	depends = pciutils
+	depends = lua
+	depends = chwd-db
+	depends = pacman
+	provides = mhwd-cachyos
+	conflicts = mhwd-cachyos
+	replaces = mhwd-cachyos
+
+pkgname = chwd-db
+	pkgdesc = Profiles we use at CachyOS :)
+	provides = mhwd-db-cachyos
+	conflicts = mhwd-db-cachyos
+	replaces = mhwd-db-cachyos
