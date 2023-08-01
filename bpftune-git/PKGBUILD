@@ -1,7 +1,7 @@
 # Maintainer: Kirill Fries-Raevskiy <exocarnivore@gmail.com>
 _pkgbase="bpftune"
 pkgname="$_pkgbase-git"
-pkgver=r433.161d0a9
+pkgver=r464.f2b5ba7
 pkgrel=1
 pkgdesc="BPF/tracing tools for auto-tuning Linux"
 arch=("x86_64")
@@ -16,9 +16,11 @@ conflicts=("$_pkgbase")
 #backup=()
 options=('strip')
 #install=
-source=('git+https://github.com/oracle-samples/bpftune')
+source=('git+https://github.com/oracle-samples/bpftune'
+		'fix-makefile.patch')
 #noextract=()
-sha256sums=('SKIP')
+sha256sums=('SKIP'
+            'e565afc2bc7bda439b49a73c5bc9719662684ee06d3bababcc2a7496b4723882')
 
 CC=clang
 
@@ -29,6 +31,7 @@ pkgver() {
 
 prepare() {
     cd "$srcdir/$_pkgbase"
+    patch -Np1 < ../fix-makefile.patch
     sed -i 's/\/lib64/\/lib/' include/bpftune/libbpftune.h
     sed -i 's/\/lib64/\/lib/g' src/Makefile
     sed -i 's/\/sbin/\/bin/g' src/Makefile
@@ -38,6 +41,8 @@ prepare() {
 
 build() {
     cd "$srcdir/$_pkgbase"
+    export CFLAGS="-march=x86-64 -mtune=generic"
+    export CXXLAGS="-march=x86-64 -mtune=generic"
     make -j1 || true
     make
 }
