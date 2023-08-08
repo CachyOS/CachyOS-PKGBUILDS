@@ -10,7 +10,7 @@ _staging=false
 pkgname=pacman
 pkgver=6.0.2
 _pkgver=6.0.2
-pkgrel=18
+pkgrel=19
 pkgdesc="A library-based package manager with dependency support. CachyOS fork."
 arch=('x86_64')
 url="https://www.archlinux.org/pacman/"
@@ -28,7 +28,7 @@ options=('strip')
 #              'B8151B117037781095514CA7BBDFFC92306B1121') # Andrew Gregory (pacman) <andrew@archlinux.org>
 _commit="821d677fbc7933e05999915054bcb7c3f6b28146"
 if $_staging; then
-    _commit="54799037e6a7941aff790f5000f7cef109494c0f"
+    _commit="6ee94b52f8788f248cddaf658ab6ad5c2bccff9d"
     makedepends+=('cmake' 'rust' 'clang')
     depends+=('sqlite')
 fi
@@ -51,7 +51,6 @@ sha256sums=('SKIP'
 
 if $_staging; then
     source+=(78cd453.patch)
-    sha256sums+=('1c799911d81098ff06bab8cac1a84da3cc10a902e6a40b5849ffb130c36850c3')
 fi
 
 prepare() {
