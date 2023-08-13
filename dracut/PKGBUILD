@@ -3,7 +3,7 @@
 
 pkgname=dracut
 pkgver=059
-pkgrel=3.1
+pkgrel=3.2
 pkgdesc="An event driven initramfs infrastructure"
 arch=('x86_64')
 url="https://dracut.wiki.kernel.org"
@@ -47,8 +47,15 @@ validpgpkeys=(
 
 prepare() {
   cd "$srcdir/${pkgname}-${pkgver}"
-  patch -Np1 < ../dracut-systemd-253.patch
-  patch -Np1 < ../dracut-systemd-254-uki.patch
+
+  local src
+  for src in "${source[@]}"; do
+    src="${src%%::*}"
+    src="${src##*/}"
+    [[ $src = *.patch ]] || continue
+    echo "Applying patch $src..."
+    patch -Np1 < "../$src"
+  done
 }
 
 build() {
