@@ -3,7 +3,7 @@
 
 _pkgname="hyprland"
 pkgname="${_pkgname}-git"
-pkgver=0.26.0.r2981.10fd75c8
+pkgver=0.28.0.r3227.7e8a2120
 pkgrel=1
 pkgdesc='a highly customizable dynamic tiling Wayland compositor'
 arch=(x86_64 aarch64)
@@ -54,10 +54,13 @@ makedepends=(
   vulkan-headers
   xorgproto
 )
-source=("${_pkgname}::git+https://github.com/hyprwm/Hyprland.git")
+source=("${_pkgname}::git+https://github.com/hyprwm/Hyprland.git"
+        fix-nvidia-screenshot.patch
+)
 conflicts=("${_pkgname}")
 provides=('hyprland')
-sha256sums=('SKIP')
+sha256sums=('SKIP'
+            '2a32fb3f928d32b1ba326eb475b949229a3e56cf503d10cb0828ac76485540c0')
 
 pkgver() {
   cd "${srcdir}/${_pkgname}"
@@ -69,6 +72,8 @@ pkgver() {
 build() {
   cd "${srcdir}/${_pkgname}"
   git submodule update --init
+
+  patch -Np1 < ../fix-nvidia-screenshot.patch
 
   # With those flags set Hyprland does crash
   export CFLAGS=${CFLAGS/-Wp,-D_GLIBCXX_ASSERTIONS}
