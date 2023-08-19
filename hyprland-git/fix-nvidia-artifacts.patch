@@ -1,0 +1,37 @@
+diff --git a/subprojects/wlroots/render/gles2/renderer.c b/subprojects/wlroots/render/gles2/renderer.c
+index a185d844..59faabd8 100644
+--- a/subprojects/wlroots/render/gles2/renderer.c
++++ b/subprojects/wlroots/render/gles2/renderer.c
+@@ -38,6 +38,18 @@ static const GLfloat verts[] = {
+ static const struct wlr_renderer_impl renderer_impl;
+ static const struct wlr_render_timer_impl render_timer_impl;
+ 
++static bool is_nvidia_card = false;
++static bool nv_initialized = false;
++
++static bool get_nvidia_check(void) {
++	if (!nv_initialized) {
++		is_nvidia_card = (access("/sys/module/nvidia", F_OK) != -1);
++		nv_initialized = true;
++	}
++
++	return is_nvidia_card;
++}
++
+ bool wlr_renderer_is_gles2(struct wlr_renderer *wlr_renderer) {
+ 	return wlr_renderer->impl == &renderer_impl;
+ }
+@@ -176,7 +188,12 @@ static bool gles2_bind_buffer(struct wlr_renderer *wlr_renderer,
+ 		assert(wlr_egl_is_current(renderer->egl));
+ 
+ 		push_gles2_debug(renderer);
+-		glFlush();
++
++		if (get_nvidia_check()) {
++			glFinish();
++		} else {
++			glFlush();
++		}
+ 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+ 		pop_gles2_debug(renderer);
+ 
