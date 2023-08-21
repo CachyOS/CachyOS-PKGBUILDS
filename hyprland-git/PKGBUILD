@@ -3,7 +3,7 @@
 
 _pkgname="hyprland"
 pkgname="${_pkgname}-git"
-pkgver=0.28.0.r3232.942ee943
+pkgver=0.28.0.r3234.fff118fa
 pkgrel=1
 pkgdesc='a highly customizable dynamic tiling Wayland compositor'
 arch=(x86_64 aarch64)
@@ -78,7 +78,7 @@ build() {
   git submodule update --init
 
   patch -Np1 < ../fix-nvidia-screenshot.patch
-  patch -Np1 < ../fix-nvidia-artifacts.patch
+  #patch -Np1 < ../fix-nvidia-artifacts.patch
   patch -Np1 < ../runtime-xwayland-disable.patch
 
   # With those flags set Hyprland does crash
