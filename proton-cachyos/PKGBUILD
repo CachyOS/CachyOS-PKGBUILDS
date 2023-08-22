@@ -10,7 +10,7 @@ _commit=
 pkgver=8.0
 # pkgver=${_srctag//-/.}
 _geckover=2.47.3
-_monover=8.0.0
+_monover=8.0.1
 pkgrel=8
 pkgdesc="Compatibility tool for Steam Play based on Wine and additional components, experimental branch with extra CachyOS flavour"
 url="https://github.com/ValveSoftware/Proton"
@@ -118,6 +118,7 @@ source=(
     0003-AUR-Remove-kaldi-openfst-vosk-api-modules-because-of.patch
     0004-AUR-Copy-DLL-dependencies-of-32bit-libvkd3d-dlls-int.patch
     fix_hwnd_changes_meaning.patch
+    amd-fsr.patch
 )
 noextract=(
     wine-gecko-${_geckover}-{x86,x86_64}.tar.xz
@@ -249,7 +250,6 @@ prepare() {
         patch -Np1 -i "$srcdir"/server-Enable-link-time-optimization.patch
         echo "Wine: FSR"
         patch -Np1 -i "$srcdir"/amd-fsr.patch
-        patch -Np1 -i "$srcdir"/invert-fsr-logic.patch
     popd
 
     # Remove repos from srcdir to save space
@@ -384,11 +384,13 @@ sha256sums=('SKIP'
             'SKIP'
             '08d318f3dd6440a8a777cf044ccab039b0d9c8809991d2180eb3c9f903135db3'
             '0beac419c20ee2e68a1227b6e3fa8d59fec0274ed5e82d0da38613184716ef75'
-            '14c7d76780b79dc62d8ed9d1759e7adcfa332bb2406e2e694dee7b2128cc7a77'
-            'fa7eab04f1af62a9f7b1d2624dea7c91d32555fff405b05c78af6d274671cbca'
-            '00c5c8373fcef43c01bc5071cb28b2e2797b4938b9eff3f5c357414addd1d061'
+            '83f65c9292137a740c4b8ea730b61cee0dbbb82e4eb3607590ba2f4377827464'
+            '3e3b81b6249e91badd546b352c89feda4603a8c83da8fa288704cdb2de2170c1'
+            '53ff13da62fc1456213c5a35ad5e5c7363b018c7fde1163b3a6c7566ae2218e2'
             '369193510b9309fc9cb80fc204220599583677a59976c7f434c2a33871b0cbe1'
-            'b73f14ad1d95f27f64afa2ac5e396c970573c1e58f55510f728853d14d24d4ab'
-            'd4fa0959491f2bcb44728943588423fae15f53d5079bcd905a7bb563b81ec79e'
-            '20824bb565fefcad4aa978c54e0f8b9d9d17b7b52fb03fc87943150de148f06f')
+            'bee746109950c4590e573789d7ea8692091ce9bfabc34194b8dac124503e6ab6'
+            'f299cea8da3662147300f4ab658c15cd252acf463f5b76904ccd0b66274ad90f'
+            '20824bb565fefcad4aa978c54e0f8b9d9d17b7b52fb03fc87943150de148f06f'
+            '4d35c6988b2ea04bd775f948ffae87612ab5931a2f40b72be5fc20a992de66ce'
+            'b600fd3577a124138c23e0d252bb100bba8eac4d008da8c9acbea2372eee00ca')
 
