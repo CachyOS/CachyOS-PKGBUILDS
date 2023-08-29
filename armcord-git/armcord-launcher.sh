@@ -1,6 +1,6 @@
 #!/bin/sh
 
-electron=/usr/lib/electron26/electron
+electron=/usr/lib/electron27/electron
 
 CONFIG=${XDG_CONFIG_HOME:-~/.config}
 FLAGS="$CONFIG/armcord-flags.conf"

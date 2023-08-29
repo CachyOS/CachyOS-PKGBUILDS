@@ -4,15 +4,15 @@
 
 pkgname=armcord-git
 pkgdesc="ArmCord dev build using the system electron. ArmCord is a custom client designed to enhance your Discord experience while keeping everything lightweight"
-pkgver=r977.bcb54b4
+pkgver=r978.447300d
 pkgrel=1
 
 arch=("x86_64")
-url="https://github.com/ArmCord/ArmCord"
+url="https://github.com/NextWork123/ArmCord"
 license=("custom:OSL-3.0")
 
 makedepends=("git" "nodejs" "npm")
-depends=("electron26-bin")  # Use electron26-bin instead of electron
+depends=("electron27-bin")  # Use electron26-bin instead of electron
 optdepends=(
   'libnotify: Notifications'
   'xdg-utils: Open links, files, etc'
@@ -31,8 +31,8 @@ source=(
 )
 sha256sums=('SKIP'
             'a964b66a4829eb2fe86a0fa4841a67a9fd3264dfea960aa4cacf2a64c0200d93'
-            '4641036d93004de59bf6115fdc0e05baea23246759a11a37113f396bf72d127c'
-            '7a07b934a281292476b8bfa6ff96fed60c528d7f03b371211ac58b2848c17657')
+            '8d7c4386a2709e323361b1b21dcabe57c9724f3a957ad4d8456142a3dfa7d62b'
+            '238b65f6f9dc841b37327fc3611e70e871cb5cb6fdced9bab4c8ceb34052600e')
 
 pkgver() {
 	cd "$pkgname"
@@ -41,7 +41,7 @@ pkgver() {
 
 build() {
   cd "$pkgname"
-  npx pnpm install --frozen-lockfile --ignore-scripts
+  npx pnpm install --ignore-scripts
   npm run packageQuick --optimize_for_size
 }
 
