@@ -5,17 +5,17 @@
 _optimize=${_optimize-y}
 
 pkgname=proton-cachyos
-_srctag=8.0-20230817
+_srctag=8.0-20230830c
 _commit=
 pkgver=8.0
 # pkgver=${_srctag//-/.}
 _geckover=2.47.3
 _monover=8.0.1
-pkgrel=8
+pkgrel=9
 pkgdesc="Compatibility tool for Steam Play based on Wine and additional components, experimental branch with extra CachyOS flavour"
 url="https://github.com/ValveSoftware/Proton"
 arch=(x86_64 x86_64_v3)
-options=(!staticlibs !lto emptydirs !debug)
+options=(!staticlibs !lto !debug emptydirs)
 license=('custom')
 
 depends=(
@@ -34,6 +34,8 @@ depends=(
   'sdl2>=2.0.16'   'lib32-sdl2>=2.0.16'
   libsoup          lib32-libsoup
   libgudev         lib32-libgudev
+  blas             lib32-blas
+  lapack           lib32-lapack
   desktop-file-utils
   python
   steam-native-runtime
@@ -79,7 +81,6 @@ optdepends=(
   gst-plugins-base-libs lib32-gst-plugins-base-libs
   vulkan-icd-loader     lib32-vulkan-icd-loader
   libgphoto2
-  dosbox
 )
 
 makedepends=(${makedepends[@]} ${depends[@]})
@@ -87,29 +88,6 @@ provides=('proton')
 install=${pkgname}.install
 source=(
     proton::git+https://github.com/ValveSoftware/Proton.git#tag=experimental-${_srctag}
-    wine-valve::git+https://github.com/ValveSoftware/wine.git
-    dxvk-valve::git+https://github.com/ValveSoftware/dxvk.git
-    openvr::git+https://github.com/ValveSoftware/openvr.git
-    liberation-fonts::git+https://github.com/liberationfonts/liberation-fonts.git
-    gstreamer::git+https://gitlab.freedesktop.org/gstreamer/gstreamer.git
-    gst-plugins-base::git+https://gitlab.freedesktop.org/gstreamer/gst-plugins-base.git
-    gst-plugins-good::git+https://gitlab.freedesktop.org/gstreamer/gst-plugins-good.git
-    gst-orc::git+https://gitlab.freedesktop.org/gstreamer/orc.git
-    vkd3d-proton::git+https://github.com/HansKristian-Work/vkd3d-proton.git
-    OpenXR-SDK::git+https://github.com/KhronosGroup/OpenXR-SDK.git
-    dxvk-nvapi::git+https://github.com/jp7677/dxvk-nvapi.git
-    vkd3d-valve::git+https://github.com/ValveSoftware/vkd3d.git
-    Vulkan-Headers::git+https://github.com/KhronosGroup/Vulkan-Headers.git
-    SPIRV-Headers::git+https://github.com/KhronosGroup/SPIRV-Headers.git
-    Vulkan-Loader::git+https://github.com/KhronosGroup/Vulkan-Loader.git
-    glslang::git+https://github.com/KhronosGroup/glslang.git
-    gst-libav::git+https://gitlab.freedesktop.org/gstreamer/gst-libav.git
-    ffmpeg::git+https://git.ffmpeg.org/ffmpeg.git
-    dav1d::git+https://code.videolan.org/videolan/dav1d.git
-    gst-plugins-rs::git+https://gitlab.freedesktop.org/gstreamer/gst-plugins-rs.git
-    dxil-spirv::git+https://github.com/HansKristian-Work/dxil-spirv.git
-    graphene::git+https://github.com/ebassi/graphene.git
-    libdisplay-info-dxvk::git+https://gitlab.freedesktop.org/JoshuaAshton/libdisplay-info.git
     https://dl.winehq.org/wine/wine-gecko/${_geckover}/wine-gecko-${_geckover}-x86{,_64}.tar.xz
     https://github.com/madewokherd/wine-mono/releases/download/wine-mono-${_monover}/wine-mono-${_monover}-x86.tar.xz
     0001-AUR-Pkgbuild-changes.patch
@@ -117,6 +95,7 @@ source=(
     server-Enable-link-time-optimization.patch
     0003-AUR-Remove-kaldi-openfst-vosk-api-modules-because-of.patch
     0004-AUR-Copy-DLL-dependencies-of-32bit-libvkd3d-dlls-int.patch
+    0005-AUR-Strip-binaries-early.patch
     fix_hwnd_changes_meaning.patch
     amd-fsr.patch
 )
@@ -170,96 +149,37 @@ prepare() {
     mv "$srcdir"/wine-gecko-${_geckover}-x86{,_64}.tar.xz contrib/
     mv "$srcdir"/wine-mono-${_monover}-x86.tar.xz contrib/
 
-    _submodules=(
-        wine-valve::wine
-        dxvk-valve::dxvk
-        openvr
-        liberation-fonts::fonts/liberation-fonts
-        gstreamer
-        gst-plugins-base
-        gst-plugins-good
-        gst-orc
-        vkd3d-proton
-        OpenXR-SDK
-        dxvk-nvapi
-        vkd3d-valve::vkd3d
-        Vulkan-Headers
-        SPIRV-Headers
-        Vulkan-Loader
-        glslang
-        gst-libav
-        ffmpeg
-        dav1d
-        gst-plugins-rs
-        graphene
-    )
+    # Explicitly set origin URL for submodules using relative paths
+    git remote set-url origin https://github.com/ValveSoftware/Proton.git
+    git submodule update --init --filter=tree:0 --recursive
 
-    for submodule in "${_submodules[@]}"; do
-        git submodule init "${submodule#*::}"
-        git submodule set-url "${submodule#*::}" "$srcdir"/"${submodule%::*}"
-        git -c protocol.file.allow=always submodule update "${submodule#*::}"
-    done
+    # Fix bindgen issue with llvm 16 by pulling in newer versions
+    pushd dav1d; git checkout 1.2.1; popd
+    pushd gst-plugins-rs; git checkout 0.11.0; popd
+    sed 's/libgstrsdav1d.so/libgstdav1d.so/g' -i Makefile.in
 
-    pushd dxvk
-        git submodule init include/{vulkan,spirv}
-        git submodule set-url include/vulkan "$srcdir/Vulkan-Headers"
-        git submodule set-url include/spirv "$srcdir/SPIRV-Headers"
-        git -c protocol.file.allow=always submodule update include/{vulkan,spirv}
-
-        git submodule init subprojects/libdisplay-info
-        git submodule set-url subprojects/libdisplay-info "$srcdir/libdisplay-info-dxvk"
-        git -c protocol.file.allow=always submodule update subprojects/libdisplay-info
-    popd
-
-    pushd vkd3d-proton
-        for submodule in subprojects/{dxil-spirv,Vulkan-Headers,SPIRV-Headers}; do
-            git submodule init "${submodule}"
-            git submodule set-url "${submodule}" "$srcdir"/"${submodule#*/}"
-            git -c protocol.file.allow=always submodule update "${submodule}"
-        done
-        pushd subprojects/dxil-spirv
-            git submodule init third_party/spirv-headers
-            git submodule set-url third_party/spirv-headers "$srcdir"/SPIRV-Headers
-            git -c protocol.file.allow=always submodule update third_party/spirv-headers
-        popd
-    popd
-
-    pushd dxvk-nvapi
-        git submodule init external/Vulkan-Headers
-        git submodule set-url external/Vulkan-Headers "$srcdir"/Vulkan-Headers
-        git -c protocol.file.allow=always submodule update external/Vulkan-Headers
-    popd
-
-    for submodule in gst-plugins-rs media-converter; do
-    pushd $submodule
+    for rustlib in gst-plugins-rs media-converter; do
+    pushd $rustlib
         export RUSTUP_TOOLCHAIN=stable
         export CARGO_HOME="${SRCDEST}"/proton-cargo
+        cargo update
         cargo fetch --locked --target "i686-unknown-linux-gnu"
         cargo fetch --locked --target "x86_64-unknown-linux-gnu"
     popd
     done
 
     patch -p1 -i "$srcdir"/0001-AUR-Pkgbuild-changes.patch
-    patch -p1 -i "$srcdir"/0002-AUR-Do-not-update-cargo-crates.patch
-    patch -p1 -i "$srcdir"/0003-AUR-Remove-kaldi-openfst-vosk-api-modules-because-of.patch
+    #patch -p1 -i "$srcdir"/0002-AUR-Do-not-update-cargo-crates.patch
+    #patch -p1 -i "$srcdir"/0003-AUR-Remove-kaldi-openfst-vosk-api-modules-because-of.patch
     patch -p1 -i "$srcdir"/0004-AUR-Copy-DLL-dependencies-of-32bit-libvkd3d-dlls-int.patch
+    patch -p1 -i "$srcdir"/0005-AUR-Strip-binaries-early.patch
     patch -p1 -i "$srcdir"/fix_hwnd_changes_meaning.patch
 
-    pushd wine
-        echo "Wine: Enable LTO for wineserver"
-        patch -Np1 -i "$srcdir"/server-Enable-link-time-optimization.patch
-        echo "Wine: FSR"
-        patch -Np1 -i "$srcdir"/amd-fsr.patch
-    popd
-
-    # Remove repos from srcdir to save space
-    for submodule in "${_submodules[@]}"; do
-        rm -rf "$srcdir"/"${submodule%::*}"
-    done
-    rm -rf "$srcdir"/dxil-spirv
-    rm -rf "$srcdir"/Vulkan-Headers
-    rm -rf "$srcdir"/SPIRV-Headers
-    rm -rf "$srcdir"/libdisplay-info-dxvk
+    cd wine
+    echo "Wine: Enable LTO for wineserver"
+    patch -Np1 -i "$srcdir"/server-Enable-link-time-optimization.patch
+    echo "Wine: FSR"
+    patch -Np1 -i "$srcdir"/amd-fsr.patch
 }
 
 build() {
@@ -317,6 +237,9 @@ build() {
 package() {
     cd build
 
+    # Delete the intermediate build directories to free space (mostly for my github actions)
+    rm -rf dst-* obj-* src-* pfx-*
+
     local _compatdir="$pkgdir/usr/share/steam/compatibilitytools.d"
     mkdir -p "$_compatdir/${pkgname}"
     rsync --delete -arx dist/* "$_compatdir/${pkgname}"
@@ -359,38 +282,16 @@ package() {
 }
 
 sha256sums=('SKIP'
-            'SKIP'
-            'SKIP'
-            'SKIP'
-            'SKIP'
-            'SKIP'
-            'SKIP'
-            'SKIP'
-            'SKIP'
-            'SKIP'
-            'SKIP'
-            'SKIP'
-            'SKIP'
-            'SKIP'
-            'SKIP'
-            'SKIP'
-            'SKIP'
-            'SKIP'
-            'SKIP'
-            'SKIP'
-            'SKIP'
-            'SKIP'
-            'SKIP'
-            'SKIP'
             '08d318f3dd6440a8a777cf044ccab039b0d9c8809991d2180eb3c9f903135db3'
             '0beac419c20ee2e68a1227b6e3fa8d59fec0274ed5e82d0da38613184716ef75'
             '83f65c9292137a740c4b8ea730b61cee0dbbb82e4eb3607590ba2f4377827464'
-            '3e3b81b6249e91badd546b352c89feda4603a8c83da8fa288704cdb2de2170c1'
-            '53ff13da62fc1456213c5a35ad5e5c7363b018c7fde1163b3a6c7566ae2218e2'
+            '0b7a0f56f66f3f90c651c8011d9a41ce31ee593e6ce1d496bb0857dd343d2e4f'
+            '53949057523edeacd612b77fc18c38922117327ac5f57c20eb10634c8416df85'
             '369193510b9309fc9cb80fc204220599583677a59976c7f434c2a33871b0cbe1'
-            'bee746109950c4590e573789d7ea8692091ce9bfabc34194b8dac124503e6ab6'
-            'f299cea8da3662147300f4ab658c15cd252acf463f5b76904ccd0b66274ad90f'
+            '4e0a4d1012a6ddd0111753c9aea45e37fd49a54077b98fe31a7fa4f2ebe85c72'
+            '7ac3e8d18027bf5f7215475f9ec653344b8d375b2f0de6b3966189887085e16d'
+            '6cbfaf3107d4d5503da2cb925f25dceeb583b0bf5b75cd80b9995478e1b1767c'
             '20824bb565fefcad4aa978c54e0f8b9d9d17b7b52fb03fc87943150de148f06f'
-            '4d35c6988b2ea04bd775f948ffae87612ab5931a2f40b72be5fc20a992de66ce'
-            'b600fd3577a124138c23e0d252bb100bba8eac4d008da8c9acbea2372eee00ca')
+            '4d35c6988b2ea04bd775f948ffae87612ab5931a2f40b72be5fc20a992de66ce')
+# Optional patches
 
