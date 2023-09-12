@@ -20,7 +20,7 @@
 pkgbase=kodi
 pkgname=('kodi' 'kodi-eventclients' 'kodi-tools-texturepacker' 'kodi-dev')
 pkgver=20.2
-pkgrel=4
+pkgrel=3
 arch=('x86_64')
 url="https://kodi.tv"
 license=('GPL2')
@@ -67,6 +67,7 @@ source=(
   'cheat-sse-build.patch'
   'https://github.com/xbmc/xbmc/commit/35be40daa39965a9ea5b3569eb7d515e6a14da5d.patch'  # flatbuffers 23.3.3
   'kodi-fmt-10.patch::https://patch-diff.githubusercontent.com/raw/xbmc/xbmc/pull/23453.patch'
+  '0001-ffmpeg-fix-build-with-binutils-update.patch'  # binutils >=2.41
 )
 noextract=(
   "$pkgbase-libdvdcss-$_libdvdcss_version.tar.gz"
@@ -88,7 +89,9 @@ sha512sums=('ddeaa626f324817f6d038fd1eaeb851d0006156fa9ef96ef475932ec50c64cbdcc7
             '4066c94f2473c7ea16917d29a613e16f840a329089c88e0bdbdb999aef3442ba00abfd2aa92266fa9c067e399dc88e6f0ccac40dc151378857e665638e78bbf0'
             '3069feb5db40288beb5b112b285186162a704f0fdd3cf67a17fd4eeea015f2cfcfbb455b7aa7c3d79d00fd095a3fd11cffc7b121dce94d99c3b06a509a8977d2'
             '91409cc66959a30f2d0dbf8d28e47dd2acbac560efb8961550c5928ae8546a32d1f156f8e55f073f953b114230117ec96c224212d28c1c1d752540c836c9ae1a'
-            'c05888d1ad11f9a33a578ddd2fdb705ccd385178f93f68c6af66d9361a16664f2efec7e92c3bdc2c5c93a979e973e6448ffd2b26dab6d120e1ce8a5ceb2bd948')
+            'c05888d1ad11f9a33a578ddd2fdb705ccd385178f93f68c6af66d9361a16664f2efec7e92c3bdc2c5c93a979e973e6448ffd2b26dab6d120e1ce8a5ceb2bd948'
+            '6b9cd3cf786c1e68c0a613a1f1794d2b4015cc92f032af7fbbdefe84559ee240650149c737a85cdcaa5f0eadf812dc55511ec3fdb738aff35960c8c07e8bac20'
+            '6de9e7673022e74428a55ca1e761bdb70e0b6432faa3dae7a2306c197bc52616bffdc138073496c51aebee537079cfd768845f233d688eeea5440dfb5ba163ec')
 
 prepare() {
   [[ -d kodi-build ]] && rm -rf kodi-build
@@ -101,9 +104,10 @@ prepare() {
   [[ "$_sse_workaround" -eq 1 ]] && patch -p1 -i "$srcdir/cheat-sse-build.patch"
   # flatbuffers 23.3.3
   patch -p1 -i "$srcdir/35be40daa39965a9ea5b3569eb7d515e6a14da5d.patch"
-
   # fix build with fmt 10
-  patch -p1 -i ../kodi-fmt-10.patch
+  patch -p1 -i "$srcdir/kodi-fmt-10.patch"
+  # fix build with binutils >=2.41
+  patch -p1 -i "$srcdir/0001-ffmpeg-fix-build-with-binutils-update.patch"
 }
 
 build() {
