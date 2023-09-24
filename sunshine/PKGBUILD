@@ -1,27 +1,36 @@
 # Edit on github: https://github.com/LizardByte/Sunshine/tree/nightly/packaging/linux/aur/PKGBUILD
 # Reference: https://wiki.archlinux.org/title/PKGBUILD
 
-pkgname='sunshine'
-pkgver=0.18.4
-pkgrel=1
-pkgdesc="Sunshine is a self-hosted game stream host for Moonlight."
-arch=('x86_64' 'aarch64')
+pkgname=sunshine
+pkgver=0.20.0
+pkgrel=3
+pkgdesc="A self-hosted GameStream host for Moonlight."
+arch=('x86_64')
 url=https://app.lizardbyte.dev
 license=('GPL3')
+install=sunshine.install
 
-depends=('avahi' 'boost-libs' 'curl' 'libevdev' 'libmfx' 'libpulse' 'libva' 'libvdpau' 'libx11' 'libxcb' 'libxfixes' 'libxrandr' 'libxtst' 'numactl' 'openssl' 'opus' 'udev')
+depends=('avahi' 'boost-libs' 'curl' 'libappindicator-gtk3' 'libevdev' 'libmfx' 'libpulse' 'libva' 'libvdpau' 'libx11' 'libxcb' 'libxfixes' 'libxrandr' 'libxtst' 'numactl' 'openssl' 'opus' 'udev')
 makedepends=('boost' 'cmake' 'git' 'make' 'nodejs' 'npm')
 optdepends=('cuda: NvFBC capture support'
             'libcap'
             'libdrm')
 
-provides=('sunshine')
+provides=()
+conflicts=()
 
-source=("$pkgname::git+https://github.com/LizardByte/Sunshine.git#commit=0dfbcfdbc4a996fc6431387fd227525e7ec57684")
+source=("$pkgname::git+https://github.com/LizardByte/Sunshine.git#tag=v${pkgver}")
 sha256sums=('SKIP')
 
 prepare() {
     cd "$pkgname"
+    # Skip submodules that we don't want
+    git rm -f third-party/ffmpeg-windows-x86_64
+    git rm -f third-party/ffmpeg-macos-x86_64
+    git rm -f third-party/ffmpeg-macos-aarch64
+    git rm -f third-party/ViGEmClient
+    git rm -f third-party/ffmpeg-linux-aarch64
+
     git submodule update --recursive --init
 }
 
