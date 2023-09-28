@@ -1,0 +1,38 @@
+# Maintainer: Piotr Gorski <lucjan.lucjanov@gmail.com>
+
+pkgname=pak-gui-git
+pkgver=1.0.0.r260.g44bf07c
+pkgrel=1
+pkgdesc="Pacman wrapper with GUI"
+arch=('x86_64')
+url='https://github.com/CachyOS/pak-gui'
+license=('GPL')
+depends=('pacman-contrib' 'pak-git' 'kdesu' 'kwidgetsaddons'
+         'ksshaskpass' 'qt5-base' 'qt5-charts' 'kcoreaddons'
+         'kcrash' 'kdbusaddons' 'ki18n' 'kxmlgui' 'knotifications')
+makedepends=('extra-cmake-modules' 'kdoctools' 'git')
+optdepends=('devtools: download sources from Arch Linux repositories'
+            'git: download sources from POLAUR'
+            'auracle-git: AUR support'
+            'reflector: for mirrorlist'
+            'gcovr: tests')
+provides=('pak-gui')
+conflicts=('pak-gui')
+source=('git+https://github.com/CachyOS/pak-gui')
+sha1sums=('SKIP')
+
+pkgver() {
+  cd pak-gui
+  _ver="$(cat CMakeLists.txt | grep -m3 -e MAJOR -e MINOR -e PATCH | grep -o "[[:digit:]]*" | paste -sd'.')"
+  echo "${_ver}.r$(git rev-list --count HEAD).g$(git rev-parse --short HEAD)"
+}
+
+build() {
+  cmake -B build -S pak-gui \
+    -DRUN_TESTS=OFF
+  cmake --build build
+}
+
+package() {
+  DESTDIR="$pkgdir" cmake --install build
+}
