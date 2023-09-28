@@ -1,0 +1,59 @@
+# Maintainer: nycko123 <nycko123 at gmail dot com>
+# Maintainer: Piotr Gorski <lucjan.lucjanov@gmail.com>
+# Contributor: pavbaranov <pavbaranov at gmail dot com>
+
+# You had to install all optdepends for full functionality of this script
+
+pkgname=pak-git
+epoch=1
+pkgver=5.5.3.r10.g390528f
+pkgrel=1
+pkgdesc="Simple pacman and AUR frontend, POLAUR helper"
+arch=('any')
+url="https://gitlab.com/nycko123/pak"
+license=('GPL')
+depends=('bash' 'git' 'curl' 'jq' 'pacman-contrib' 'man-db')
+optdepends=("devtools: to download PKGBUILDs of official packages"
+            "auracle-git: (AUR) to manage AUR packages"
+            "namcap: to validate built packages"
+            "reflector: to keep mirrorlist up to date"
+            "subversion: to check upstream for updated -svn packages"
+            "fzf: to display all data about installed packages"
+            "downgrade: (AUR) to downgrade packages"
+            "libnotify: to display desktop notifications")
+backup=(etc/xdg/pak.conf)
+conflicts=(pak)
+ 
+source=("git+https://gitlab.com/nycko123/pak.git")
+ 
+sha256sums=('SKIP')
+
+pkgver() {
+ cd "${pkgname%-*}"
+ git describe --long | sed 's/\([^-]*-g\)/r\1/;s/-/./g'
+}
+ 
+package(){
+ install -Dm755 "$srcdir/${pkgname%-*}/${pkgname%-*}" "$pkgdir/usr/bin/${pkgname%-*}"
+ # configuration
+ install -Dm644 "$srcdir/${pkgname%-*}/pak.conf" "$pkgdir/etc/xdg/pak.conf"
+ # translations
+ install -Dm644 "$srcdir/${pkgname%-*}/locale/pl.mo" "$pkgdir/usr/share/locale/pl/LC_MESSAGES/pak.mo"
+ # man pages
+ install -Dm644 "$srcdir/${pkgname%-*}/man/pak.8.gz" "$pkgdir/usr/share/man/man8/pak.8.gz"
+ install -Dm644 "$srcdir/${pkgname%-*}/man/pak.conf.5.gz" "$pkgdir/usr/share/man/man5/pak.conf.5.gz"
+ install -Dm644 "$srcdir/${pkgname%-*}/man/pl/pak.8.gz" "$pkgdir/usr/share/man/pl/man8/pak.8.gz"
+ install -Dm644 "$srcdir/${pkgname%-*}/man/pl/pak.conf.5.gz" "$pkgdir/usr/share/man/pl/man5/pak.conf.5.gz"
+ # bash autocompletions
+ install -Dm644 "$srcdir/${pkgname%-*}/completion/pak.bash" "$pkgdir/usr/share/bash-completion/completions/pak"
+ # zsh autocompletions
+ install -Dm644 "$srcdir/${pkgname%-*}/completion/pak.zsh" "$pkgdir/usr/share/zsh/site-functions/_pak"
+ # checkupdates systemd --user service + timer + pacman's hook
+ install -Dm644 "$srcdir/${pkgname%-*}/systemd-services/pak-checkupdates.service" "$pkgdir/usr/lib/systemd/user/pak-checkupdates.service"
+ install -Dm644 "$srcdir/${pkgname%-*}/systemd-services/pak-checkupdates.timer" "$pkgdir/usr/lib/systemd/user/pak-checkupdates.timer"
+ #install -Dm644 "$srcdir/${pkgname%-*}/systemd-services/pak-checkupdates.hook" "$pkgdir/usr/share/libalpm/hooks/pak-checkupdates.hook"
+ # auracle-git systemd --user service + timer + pacman's hook
+ install -Dm644 "$srcdir/${pkgname%-*}/systemd-services/pak-auracle.service" "$pkgdir/usr/lib/systemd/user/pak-auracle.service"
+ install -Dm644 "$srcdir/${pkgname%-*}/systemd-services/pak-auracle.timer" "$pkgdir/usr/lib/systemd/user/pak-auracle.timer"
+ #install -Dm644 "$srcdir/${pkgname%-*}/systemd-services/pak-auracle.hook" "$pkgdir/usr/share/libalpm/hooks/pak-auracle.hook"
+}
