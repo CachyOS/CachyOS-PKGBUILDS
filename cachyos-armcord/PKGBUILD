@@ -28,7 +28,7 @@ pkgver() {
 build() {
   cd "$srcdir/$pkgname"
 
-  npx pnpm install --ignore-scripts
+  npx pnpm install --frozen-lockfile --ignore-scripts
   npm install electron@beta
   npm run build && electron-builder --linux pacman
 
