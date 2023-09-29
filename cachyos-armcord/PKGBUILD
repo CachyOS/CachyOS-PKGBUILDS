@@ -3,12 +3,12 @@
 
 pkgname=cachyos-armcord
 pkgdesc="ArmCord fork by CachyOS and maintained by nextwork, custom client designed to enhance your Discord experience while keeping everything lightweight."
-pkgver=r993.d675a8c
+pkgver=r1003.bbe3118
 pkgrel=1
 arch=("x86_64")
 url="https://github.com/NextWork123/ArmCord"
 license=("custom:OSL-3.0")
-makedepends=("git" "nodejs" "npm" "libxcrypt-compat")
+makedepends=("git" "nodejs" "npm" "libxcrypt-compat" "electron-builder")
 optdepends=(
   'libnotify: Notifications'
   'xdg-utils: Open links, files, etc'
@@ -28,7 +28,7 @@ pkgver() {
 build() {
   cd "$srcdir/$pkgname"
 
-  npx pnpm install --frozen-lockfile --ignore-scripts
+  npx pnpm install --ignore-scripts
   npm install electron@beta
   npm run build && electron-builder --linux pacman
 
