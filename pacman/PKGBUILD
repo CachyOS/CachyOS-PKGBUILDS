@@ -69,11 +69,14 @@ prepare() {
 build() {
   cd "${pkgname}"
 
+if $_staging; then
   export CFLAGS+=" -fno-semantic-interposition -flto=thin"
   export CXXLAGS+=" -fno-semantic-interposition -flto=thin"
   export RUSTFLAGS+=" -Cembed-bitcode -Clinker-plugin-lto -Clinker=clang -C link-arg=-flto=thin"
   export CC=clang
   export CXX=clang++
+fi
+
   meson --prefix=/usr \
         --buildtype=plain \
         -Ddoc=enabled \
@@ -88,22 +91,28 @@ build() {
 check() {
   cd "${pkgname}"
 
+if $_staging; then
   export CFLAGS+=" -fno-semantic-interposition -flto=thin"
   export CXXLAGS+=" -fno-semantic-interposition -flto=thin"
   export RUSTFLAGS+=" -Cembed-bitcode -Clinker-plugin-lto -Clinker=clang -C link-arg=-flto=thin"
   export CC=clang
   export CXX=clang++
+fi
+
   meson test -C build
 }
 
 package() {
   cd "${pkgname}"
 
+if $_staging; then
   export CFLAGS+=" -fno-semantic-interposition -flto=thin"
   export CXXLAGS+=" -fno-semantic-interposition -flto=thin"
   export RUSTFLAGS+=" -Cembed-bitcode -Clinker-plugin-lto -Clinker=clang -C link-arg=-flto=thin"
   export CC=clang
   export CXX=clang++
+fi
+
   DESTDIR="$pkgdir" meson install -C build
 
   # install Arch specific stuff
