@@ -1,6 +1,6 @@
 pkgbase = glibc
 	pkgver = 2.38
-	pkgrel = 6
+	pkgrel = 7
 	url = https://www.gnu.org/software/libc
 	arch = x86_64
 	license = GPL
@@ -11,7 +11,7 @@ pkgbase = glibc
 	makedepends = python
 	options = staticlibs
 	options = !lto
-	source = git+https://sourceware.org/git/glibc.git#commit=0e1ef6779a90bc0f8a05bc367796df2793deecaa
+	source = git+https://sourceware.org/git/glibc.git#commit=750a45a783906a19591fb8ff6b7841470f1f5701
 	source = locale.gen.txt
 	source = locale-gen
 	source = lib32-glibc.conf
@@ -45,3 +45,7 @@ pkgname = lib32-glibc
 	options = staticlibs
 	options = !lto
 	options = !emptydirs
+
+pkgname = glibc-locales
+	pkgdesc = Pregenerated locales for GNU C Library
+	depends = glibc=2.38
