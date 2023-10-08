@@ -6,7 +6,7 @@
 
 pkgname=ffmpeg
 pkgver=6.0
-pkgrel=9
+pkgrel=12
 epoch=2
 pkgdesc='Complete solution to record, convert and stream audio and video'
 arch=(x86_64)
@@ -33,7 +33,6 @@ depends=(
   libgl
   libiec61883
   libjxl.so
-  libmfx
   libmodplug
   libopenmpt.so
   libpulse
@@ -62,6 +61,7 @@ depends=(
   libxvidcore.so
   libzimg.so
   ocl-icd
+  onevpl
   opencore-amr
   openjpeg2
   opus
@@ -89,7 +89,8 @@ makedepends=(
 )
 optdepends=(
   'avisynthplus: AviSynthPlus support'
-  'intel-media-sdk: Intel QuickSync support'
+  'intel-media-sdk: Intel QuickSync support (legacy)'
+  'onevpl-intel-gpu: Intel QuickSync support'
   'ladspa: LADSPA filters'
   'nvidia-utils: Nvidia NVDEC/NVENC support'
 )
@@ -121,7 +122,6 @@ prepare() {
   git cherry-pick -n effadce6c756247ea8bae32dc13bb3e6f464f0eb
   # FS#77813: fix playing ogg files with mplayer
   git cherry-pick -n cbcc817353a019da4332ad43deb7bbc4e695d02a
-
   patch -Np1 -i ../add-av_stream_get_first_dts-for-chromium.patch # https://crbug.com/1251779
 }
 
@@ -131,11 +131,13 @@ pkgver() {
 }
 
 build() {
-  cd ffmpeg
+
 
   export CFLAGS+=" -march=x86-64-v3 -mtune=haswell -Ofast -fno-semantic-interposition"
   export CXXLAGS+=" -march=x86-64-v3 -mtune=haswell -Ofast -fno-semantic-interposition"
 
+
+  cd ffmpeg
   ./configure \
     --prefix=/usr \
     --disable-debug \
@@ -162,7 +164,6 @@ build() {
     --enable-libiec61883 \
     --enable-libjack \
     --enable-libjxl \
-    --enable-libmfx \
     --enable-libmodplug \
     --enable-libmp3lame \
     --enable-libopencore_amrnb \
@@ -183,6 +184,7 @@ build() {
     --enable-libvidstab \
     --enable-libvmaf \
     --enable-libvorbis \
+    --enable-libvpl \
     --enable-libvpx \
     --enable-libwebp \
     --enable-libx264 \
