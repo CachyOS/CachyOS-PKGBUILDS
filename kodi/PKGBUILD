@@ -20,13 +20,13 @@
 pkgbase=kodi
 pkgname=('kodi' 'kodi-eventclients' 'kodi-tools-texturepacker' 'kodi-dev')
 pkgver=20.2
-pkgrel=3
+pkgrel=5
 arch=('x86_64')
 url="https://kodi.tv"
 license=('GPL2')
 makedepends=(
   'afpfs-ng' 'bluez-libs' 'cmake' 'curl' 'dav1d' 'doxygen' 'git' 'glew'
-  'gperf' 'hicolor-icon-theme' 'java-runtime' 'fmt' 'libaacs' 'libass'
+  'gperf' 'hicolor-icon-theme' 'java-runtime<21' 'fmt' 'libaacs' 'libass'
   'libbluray' 'libcdio' 'libcec' 'libgl' 'mariadb-libs' 'libmicrohttpd'
   'libmodplug' 'libmpeg2' 'libnfs' 'libplist' 'libpulse' 'libva'
   'libva-vdpau-driver' 'libxrandr' 'libxslt' 'lirc' 'lzo' 'mesa' 'nasm'
@@ -113,6 +113,10 @@ prepare() {
 build() {
   cd "$srcdir/kodi-build"
 
+  # Asserts
+  CFLAGS=${CFLAGS/-Wp,-D_GLIBCXX_ASSERTIONS}
+  CXXFLAGS=${CXXFLAGS/-Wp,-D_GLIBCXX_ASSERTIONS}
+
   _cmake_common_args=(
     -DCMAKE_BUILD_TYPE=Release
     -DCMAKE_INSTALL_PREFIX=/usr
@@ -154,10 +158,6 @@ build() {
     -DUDFREAD_URL="$srcdir/$pkgbase-libudfread-$_libudfread_version.tar.gz"
     -DAPP_RENDER_SYSTEM=gl
   )
-
-  # Asserts
-  CFLAGS=${CFLAGS/-Wp,-D_GLIBCXX_ASSERTIONS}
-  CXXFLAGS=${CXXFLAGS/-Wp,-D_GLIBCXX_ASSERTIONS}
 
   # https://github.com/google/flatbuffers/issues/7404
   CXXFLAGS+=' -Wno-error=restrict'
