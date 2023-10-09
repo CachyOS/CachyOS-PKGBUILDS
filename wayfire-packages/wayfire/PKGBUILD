@@ -18,7 +18,8 @@ build() {
   cd "${pkgname}-${pkgver}"
   _cpuCount=$(grep -c -w ^processor /proc/cpuinfo)
 
-  arch-meson -Duse_system_wfconfig=enabled \
+  arch-meson --auto-features=disabled \
+             -Duse_system_wfconfig=enabled \
              -Duse_system_wlroots=enabled \
              -Dxwayland=enabled \
              build
