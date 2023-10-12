@@ -5,13 +5,13 @@
 _optimize=${_optimize-y}
 
 pkgname=proton-cachyos
-_srctag=8.0-20230929
+_srctag=8.0-20231011
 _commit=
 pkgver=8.0
 # pkgver=${_srctag//-/.}
 _geckover=2.47.3
 _monover=8.0.1
-pkgrel=11
+pkgrel=12
 pkgdesc="Compatibility tool for Steam Play based on Wine and additional components, experimental branch with extra CachyOS flavour"
 url="https://github.com/ValveSoftware/Proton"
 arch=(x86_64 x86_64_v3)
@@ -98,6 +98,7 @@ source=(
     0005-AUR-Strip-binaries-early.patch
     0006-AUR-Fix-hwnd-redefinition.patch
     amd-fsr.patch
+    optimization.patch
 )
 noextract=(
     wine-gecko-${_geckover}-{x86,x86_64}.tar.xz
@@ -169,6 +170,7 @@ prepare() {
     patch -p1 -i "$srcdir"/0004-AUR-Copy-DLL-dependencies-of-32bit-libvkd3d-dlls-int.patch
     patch -p1 -i "$srcdir"/0005-AUR-Strip-binaries-early.patch
     patch -p1 -i "$srcdir"/0006-AUR-Fix-hwnd-redefinition.patch
+    patch -p1 -i "$srcdir"/optimization.patch
 
     cd wine
     echo "Wine: Enable LTO for wineserver"
@@ -287,6 +289,7 @@ sha256sums=('SKIP'
             'af91463247f9d125ca871e6862edfcff49b13a30d2e062cf244e82e38c2e3bc7'
             '69bf69bdf483675e484d673e1332fa6e94de1dca5ce5b3e5eb59f5d665b9c501'
             '04bc88110e7bf275fde46fbfc8f5d794245be4e9dfe7ee6bdd8f2cbca82c4bcc'
-            '4d35c6988b2ea04bd775f948ffae87612ab5931a2f40b72be5fc20a992de66ce')
+            '4d35c6988b2ea04bd775f948ffae87612ab5931a2f40b72be5fc20a992de66ce'
+            '2f30e393b5e6c371a68ad6b5b6693d35412d30ba7e3963bc65a650c9c29ff569')
 # Optional patches
 
