@@ -3,7 +3,7 @@
 
 _pkgname="hyprland"
 pkgname="${_pkgname}-git"
-pkgver=0.28.0.r3234.fff118fa
+pkgver=0.31.0.r3519.38670856
 pkgrel=1
 pkgdesc='a highly customizable dynamic tiling Wayland compositor'
 arch=(x86_64 aarch64)
@@ -85,7 +85,6 @@ build() {
   export CFLAGS=${CFLAGS/-Wp,-D_GLIBCXX_ASSERTIONS}
   export CXXFLAGS=${CXXFLAGS/-Wp,-D_GLIBCXX_ASSERTIONS}
 
-  make fixwlr
   sed -i -e '/^release:/{n;s/-D/-DCMAKE_SKIP_RPATH=ON -D/}' Makefile
 
   cd "${srcdir}/${_pkgname}/subprojects/wlroots"
@@ -150,5 +149,5 @@ package() {
     install -Dm0644 -t "$pkgdir/usr/share/wayland-sessions" "example/$_pkgname.desktop"
     install -Dm0644 -t "$pkgdir/usr/share/$pkgname" "example/$_pkgname.conf"
     install -Dm0644 -t "$pkgdir/usr/share/licenses/$pkgname/" LICENSE
-    install -Dm0755 -t "$pkgdir/usr/lib" "$srcdir/tmpwlr/lib/libwlroots.so.12032"
+    install -Dm0755 -t "$pkgdir/usr/lib" "$srcdir/hyprland/subprojects/wlroots/build/libwlroots.so.12032"
 }
