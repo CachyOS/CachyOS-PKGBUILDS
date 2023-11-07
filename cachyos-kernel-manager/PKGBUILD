@@ -10,11 +10,19 @@ license=(GPLv3)
 depends=('qt5-base' 'polkit')
 makedepends=('cmake' 'ninja' 'git' 'python' 'polkit-qt5' 'qt5-tools')
 groups=('cachyos')
-source=("kernel-manager-$pkgver.tar.gz::$url/archive/v$pkgver.tar.gz")
-sha256sums=('58320b187b5f0e9c97259e95ae42cfbf11e73b8f480b6483b8cec11c51f62a71')
+source=("kernel-manager-$pkgver.tar.gz::$url/archive/v$pkgver.tar.gz"
+        fix-installed-db.patch)
+sha256sums=('58320b187b5f0e9c97259e95ae42cfbf11e73b8f480b6483b8cec11c51f62a71'
+            '53ce682cef148ff8f969d55de994e04d85ffe7007772bdcfccb7d8cc95723609')
 provides=('cachyos-kernel-manager')
 conflicts=('cachyos-kernel-manager')
 options=(strip)
+
+prepare() {
+  cd ${srcdir}/kernel-manager-${pkgver}
+
+  patch -Np1 -i ../fix-installed-db.patch
+}
 
 build() {
   cd ${srcdir}/kernel-manager-${pkgver}
