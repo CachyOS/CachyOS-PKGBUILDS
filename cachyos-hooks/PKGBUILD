@@ -3,7 +3,7 @@
 
 pkgname=cachyos-hooks
 pkgver="$(date +%Y.%m)"
-pkgrel=1
+pkgrel=3
 pkgdesc='Cachy OS Pacman Hooks'
 groups=('cachyos')
 depends=('libnotify')
@@ -22,7 +22,7 @@ package() {
   install -Dm644 os-release.hook                  "$hooks/os-release.hook"
   install -Dm644 ${pkgname}.hook                  "$hooks/${pkgname}.hook"
   install -Dm644 cachyos-reboot-required.hook     "$hooks/cachyos-reboot-required.hook"
-
+  install -Dm644 cachyos-nvidia.hook              "$hooks/cachyos-nvidia.hook"
   install -Dm755 cachyos-reboot-required          "$bin/cachyos-reboot-required"
   install -Dm755 cachyos-check-reboot-required    "$bin/cachyos-check-reboot-required"
   install -Dm755 ${pkgname}-runner                "$bin/${pkgname}-runner"
