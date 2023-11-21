@@ -5,13 +5,13 @@
 _optimize=${_optimize-y}
 
 pkgname=proton-cachyos
-_srctag=8.0-20231019
+_srctag=8.0-20231114c
 _commit=
 pkgver=8.0
 # pkgver=${_srctag//-/.}
 _geckover=2.47.3
-_monover=8.0.1
-pkgrel=13
+_monover=8.1.0
+pkgrel=15
 pkgdesc="Compatibility tool for Steam Play based on Wine and additional components, experimental branch with extra CachyOS flavour"
 url="https://github.com/ValveSoftware/Proton"
 arch=(x86_64 x86_64_v3)
@@ -99,6 +99,10 @@ source=(
     0006-AUR-Fix-hwnd-redefinition.patch
     amd-fsr.patch
     optimization.patch
+    dxvk-reflex.patch
+    nvapi-reflex.patch
+    vkd3d-reflex.patch
+    wine-reflex.patch
 )
 noextract=(
     wine-gecko-${_geckover}-{x86,x86_64}.tar.xz
@@ -166,17 +170,38 @@ prepare() {
 
     patch -p1 -i "$srcdir"/0001-AUR-Pkgbuild-changes.patch
     #patch -p1 -i "$srcdir"/0002-AUR-Do-not-update-cargo-crates.patch
-    #patch -p1 -i "$srcdir"/0003-AUR-Remove-kaldi-openfst-vosk-api-modules-because-of.patch
+    patch -p1 -i "$srcdir"/0003-AUR-Remove-kaldi-openfst-vosk-api-modules-because-of.patch
     patch -p1 -i "$srcdir"/0004-AUR-Copy-DLL-dependencies-of-32bit-libvkd3d-dlls-int.patch
     patch -p1 -i "$srcdir"/0005-AUR-Strip-binaries-early.patch
     patch -p1 -i "$srcdir"/0006-AUR-Fix-hwnd-redefinition.patch
     patch -p1 -i "$srcdir"/optimization.patch
 
-    cd wine
+    cd $srcdir/wine
     echo "Wine: Enable LTO for wineserver"
     patch -Np1 -i "$srcdir"/server-Enable-link-time-optimization.patch
     echo "Wine: FSR"
     patch -Np1 -i "$srcdir"/amd-fsr.patch
+    echo "Wine: Enable Reflex"
+    patch -Np1 -i "$srcdir"/wine-reflex.patch
+
+    cd $srcdir/dxvk
+    echo "dxvk: Enable Reflex"
+    patch -Np1 -i "$srcdir"/dxvk-reflex.patch
+
+    echo "dxvk-nvapi: Enable Reflex"
+    cd $srcdir/dxvk-nvapi
+    patch -Np1 -i "$srcdir"/nvapi-reflex.patch
+
+    echo "vkd3d-proton: Enable-Reflex"
+    cd $srcdir/vkd3d-proton
+    patch -Np1 -i "$srcdir"/vkd3d-reflex.patch
+
+    echo "Update Vulkan Headers for dxvk"
+    cd $srcdir/dxvk/include/vulkan
+    git checkout bbe0f575ebd6098369f0ac6c6a43532732ed0ba6
+    echo "Update Vulkan Headers for vkd3d-proton"
+    cd $srcdir/proton/vkd3d-proton/subprojects/Vulkan-Headers
+    git checkout bbe0f575ebd6098369f0ac6c6a43532732ed0ba6
 }
 
 build() {
