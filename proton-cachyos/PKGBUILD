@@ -176,7 +176,7 @@ prepare() {
     patch -p1 -i "$srcdir"/0006-AUR-Fix-hwnd-redefinition.patch
     patch -p1 -i "$srcdir"/optimization.patch
 
-    cd $srcdir/wine
+    cd $srcdir/proton/wine
     echo "Wine: Enable LTO for wineserver"
     patch -Np1 -i "$srcdir"/server-Enable-link-time-optimization.patch
     echo "Wine: FSR"
@@ -184,24 +184,24 @@ prepare() {
     echo "Wine: Enable Reflex"
     patch -Np1 -i "$srcdir"/wine-reflex.patch
 
-    cd $srcdir/dxvk
+    cd $srcdir/proton/dxvk
     echo "dxvk: Enable Reflex"
     patch -Np1 -i "$srcdir"/dxvk-reflex.patch
 
     echo "dxvk-nvapi: Enable Reflex"
-    cd $srcdir/dxvk-nvapi
+    cd $srcdir/proton/dxvk-nvapi
     patch -Np1 -i "$srcdir"/nvapi-reflex.patch
 
     echo "vkd3d-proton: Enable-Reflex"
-    cd $srcdir/vkd3d-proton
+    cd $srcdir/proton/vkd3d-proton
     patch -Np1 -i "$srcdir"/vkd3d-reflex.patch
 
-    echo "Update Vulkan Headers for dxvk"
-    cd $srcdir/dxvk/include/vulkan
+    cd $srcdir/proton/dxvk/include/vulkan
     git checkout bbe0f575ebd6098369f0ac6c6a43532732ed0ba6
     echo "Update Vulkan Headers for vkd3d-proton"
     cd $srcdir/proton/vkd3d-proton/subprojects/Vulkan-Headers
     git checkout bbe0f575ebd6098369f0ac6c6a43532732ed0ba6
+
 }
 
 build() {
