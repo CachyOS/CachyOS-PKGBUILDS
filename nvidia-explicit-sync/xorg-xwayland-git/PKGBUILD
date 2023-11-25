@@ -1,0 +1,67 @@
+# Maintainer: Antonin Décimo <antonin dot decimo at gmail dot com>
+# Contributor: AndyRTR <andyrtr@archlinux.org>
+
+pkgname=xorg-xwayland
+pkgver=23.2.2
+pkgrel=2
+arch=('x86_64')
+license=('custom')
+groups=('xorg')
+url="https://xorg.freedesktop.org"
+pkgdesc="Run X clients under Wayland (git version)"
+depends=('nettle' 'libepoxy' 'systemd-libs' 'libxfont2' 
+         'pixman' 'xorg-server-common' 'libxcvt' 'mesa'
+         'libglvnd' 'libxau' 'wayland' 'libdrm' 'libtirpc'
+         'libxshmfence' 'glibc')
+makedepends=('meson' 'xorgproto' 'xtrans' 'libxkbfile' 'dbus'
+             'xorg-font-util' 'wayland-protocols' 'mesa-libgl'
+             'systemd' 'egl-wayland')
+source=("xserver::git+https://gitlab.freedesktop.org/xorg/xserver.git"
+        "https://gitlab.freedesktop.org/xorg/xserver/-/merge_requests/967.patch")
+sha256sums=('SKIP')
+provides=('xorg-server-xwayland')
+conflicts=('xorg-server-xwayland')
+replaces=('xorg-server-xwayland')
+
+prepare() {
+	cd xserver
+	local branch=origin/xwayland-23.2
+	# Add Explicit GPU Synchronization for DRI3, Present, and Xwayland
+	# https://gitlab.freedesktop.org/xorg/xserver/-/merge_requests/967
+	patch -Np1 < ../967.patch
+}
+build() {
+  arch-meson xserver build \
+    -D ipv6=true \
+    -D xvfb=false \
+    -D xnest=false \
+    -D xcsecurity=true \
+    -D xorg=false \
+    -D xephyr=false \
+    -D xwayland=true \
+    -D xwayland_eglstream=true \
+    -D xwin=false \
+    -D xquartz=false \
+    -D glamor=true \
+    -D udev=true \
+    -D systemd_logind=true \
+    -D suid_wrapper=true \
+    -D xkb_dir=/usr/share/X11/xkb \
+    -D xkb_output_dir=/var/lib/xkb
+
+  # Print config
+  meson configure build
+  ninja -C build
+}
+
+package() {
+
+  DESTDIR="${pkgdir}" ninja -C build install
+  # xorg-server-common file /usr/lib/xorg/protocol.txt
+  rm "${pkgdir}"/usr/lib/xorg/protocol.txt
+  rmdir "${pkgdir}"/usr/lib/xorg
+  rm "${pkgdir}"/usr/share/man/man1/Xserver.1
+
+  # license
+  install -m644 -Dt "${pkgdir}/usr/share/licenses/${pkgname}" xserver/COPYING
+}
