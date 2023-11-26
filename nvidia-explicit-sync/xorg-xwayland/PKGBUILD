@@ -9,43 +9,47 @@ license=('custom')
 groups=('xorg')
 url="https://xorg.freedesktop.org"
 pkgdesc="Run X clients under Wayland (git version)"
-depends=('nettle' 'libepoxy' 'systemd-libs' 'libxfont2' 
+depends=('nettle' 'libepoxy' 'systemd-libs' 'libxfont2'
          'pixman' 'xorg-server-common' 'libxcvt' 'mesa'
          'libglvnd' 'libxau' 'wayland' 'libdrm' 'libtirpc'
          'libxshmfence' 'glibc')
 makedepends=('meson' 'xorgproto' 'xtrans' 'libxkbfile' 'dbus'
              'xorg-font-util' 'wayland-protocols' 'mesa-libgl'
              'systemd' 'egl-wayland')
-source=("xserver::git+https://gitlab.freedesktop.org/xorg/xserver.git"
-        "https://gitlab.freedesktop.org/xorg/xserver/-/merge_requests/967.patch")
-sha256sums=('SKIP')
+source=(https://xorg.freedesktop.org/archive/individual/xserver/xwayland-$pkgver.tar.xz{,.sig}
+        "https://gitlab.freedesktop.org/xorg/xserver/-/merge_requests/967.patch"
+        "xf86Module.h::https://gitlab.freedesktop.org/xorg/xserver/-/raw/24c5d8f17e2afd7d4e9626ba7cdcfbab53b2fdc0/hw/xfree86/common/xf86Module.h")
+sha256sums=('9f7c0938d2a41e941ffa04f99c35e5db2bcd3eec034afe8d35d5c810a22eb0a8'
+            'SKIP'
+            'b08e36b798647c733428d5e5c254057646b04e030f3db34ba87f1968a12ed9af'
+            '01011be86f706aba20623191befc353ce9f730f9bcde7966b17c112007b5a11f')
 provides=('xorg-server-xwayland')
 conflicts=('xorg-server-xwayland')
 replaces=('xorg-server-xwayland')
 
+#validpgpkeys=('B09FAF35BE914521980951145A81AF8E6ADBB200') # "Michel Daenzer <michel@daenzer.net>"
+validpgpkeys=('67DC86F2623FC5FD4BB5225D14706DBE1E4B4540') # "Olivier Fourdan <fourdan@xfce.org>"
+validpgpkeys+=('3C2C43D9447D5938EF4551EBE23B7E70B467F0BF') # Peter Hutterer (Who-T) <office@who-t.net>
+
 prepare() {
-	cd xserver
-	local branch=origin/xwayland-23.2
-	# Add Explicit GPU Synchronization for DRI3, Present, and Xwayland
-	# https://gitlab.freedesktop.org/xorg/xserver/-/merge_requests/967
-	patch -Np1 < ../967.patch
+  cd "xwayland-$pkgver"
+
+  mkdir -p hw/xfree86/common
+  cp ../xf86Module.h hw/xfree86/common/
+
+  # Add Explicit GPU Synchronization for DRI3, Present, and Xwayland
+  # https://gitlab.freedesktop.org/xorg/xserver/-/merge_requests/967
+  patch -Np1 < ../967.patch
 }
 build() {
-  arch-meson xserver build \
+  arch-meson "xwayland-$pkgver" build \
     -D ipv6=true \
     -D xvfb=false \
-    -D xnest=false \
+    -D xdmcp=false \
     -D xcsecurity=true \
-    -D xorg=false \
-    -D xephyr=false \
-    -D xwayland=true \
+    -D dri3=true \
     -D xwayland_eglstream=true \
-    -D xwin=false \
-    -D xquartz=false \
     -D glamor=true \
-    -D udev=true \
-    -D systemd_logind=true \
-    -D suid_wrapper=true \
     -D xkb_dir=/usr/share/X11/xkb \
     -D xkb_output_dir=/var/lib/xkb
 
@@ -63,5 +67,5 @@ package() {
   rm "${pkgdir}"/usr/share/man/man1/Xserver.1
 
   # license
-  install -m644 -Dt "${pkgdir}/usr/share/licenses/${pkgname}" xserver/COPYING
+  install -m644 -Dt "${pkgdir}/usr/share/licenses/${pkgname}" xwayland-$pkgver/COPYING
 }
