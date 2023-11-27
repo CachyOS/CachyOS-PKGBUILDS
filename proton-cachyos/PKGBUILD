@@ -100,6 +100,7 @@ source=(
     amd-fsr.patch
     optimization.patch
     dxvk-reflex.patch
+    dxvk-reflex-lockfix.patch
     nvapi-reflex.patch
     vkd3d-reflex.patch
     wine-reflex.patch
@@ -187,7 +188,7 @@ prepare() {
     cd $srcdir/proton/dxvk
     echo "dxvk: Enable Reflex"
     patch -Np1 -i "$srcdir"/dxvk-reflex.patch
-
+    patch -Np1 -i "$srcdir"/dxvk-reflex-lockfix.patch
     echo "dxvk-nvapi: Enable Reflex"
     cd $srcdir/proton/dxvk-nvapi
     patch -Np1 -i "$srcdir"/nvapi-reflex.patch

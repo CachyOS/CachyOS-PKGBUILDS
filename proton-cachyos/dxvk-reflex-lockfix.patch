@@ -1,0 +1,21 @@
+diff --git a/src/dxvk/dxvk_presenter.cpp b/src/dxvk/dxvk_presenter.cpp
+index 9f7c6a0d..0092dea0 100644
+--- a/src/dxvk/dxvk_presenter.cpp
++++ b/src/dxvk/dxvk_presenter.cpp
+@@ -57,7 +57,6 @@ namespace dxvk {
+ 
+ 
+   VkResult Presenter::acquireNextImage(PresenterSync& sync, uint32_t& index) {
+-    std::lock_guard<dxvk::mutex> lock(m_lowLatencyMutex);
+     sync = m_semaphores.at(m_frameIndex);
+ 
+     // Don't acquire more than one image at a time
+@@ -78,8 +77,6 @@ namespace dxvk {
+   VkResult Presenter::presentImage(
+           VkPresentModeKHR  mode,
+           uint64_t          frameId) {
+-    std::lock_guard<dxvk::mutex> lock(m_lowLatencyMutex);
+-
+     PresenterSync sync = m_semaphores.at(m_frameIndex);
+ 
+     VkPresentIdKHR presentId = { VK_STRUCTURE_TYPE_PRESENT_ID_KHR };
