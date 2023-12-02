@@ -1,4 +1,4 @@
-From dd574726b5c94824c7f0ee847aaf677f04892503 Mon Sep 17 00:00:00 2001
+From 189c87cbc3e9fd3732028d950dc5623df7103a57 Mon Sep 17 00:00:00 2001
 From: Eric Sullivan <esullivan@nvidia.com>
 Date: Thu, 7 Sep 2023 09:27:14 -0700
 Subject: [PATCH] vkd3d: Add support for VK_NV_low_latency2
@@ -24,7 +24,7 @@ interfaces.
  create mode 100644 libs/vkd3d/command_queue_vkd3d_ext.c
 
 diff --git a/include/meson.build b/include/meson.build
-index c58579e9d2..e6ef1767df 100644
+index c58579e9..e6ef1767 100644
 --- a/include/meson.build
 +++ b/include/meson.build
 @@ -12,6 +12,7 @@ vkd3d_idl = [
@@ -37,7 +37,7 @@ index c58579e9d2..e6ef1767df 100644
  ]
 diff --git a/include/vkd3d_command_queue_vkd3d_ext.idl b/include/vkd3d_command_queue_vkd3d_ext.idl
 new file mode 100644
-index 0000000000..3c69f00a64
+index 00000000..3c69f00a
 --- /dev/null
 +++ b/include/vkd3d_command_queue_vkd3d_ext.idl
 @@ -0,0 +1,30 @@
@@ -72,7 +72,7 @@ index 0000000000..3c69f00a64
 +    HRESULT NotifyOutOfBandCommandQueue(D3D12_OUT_OF_BAND_CQ_TYPE type);
 +}
 diff --git a/include/vkd3d_device_vkd3d_ext.idl b/include/vkd3d_device_vkd3d_ext.idl
-index 3e615d76a1..4a21ba763e 100644
+index 3e615d76..4a21ba76 100644
 --- a/include/vkd3d_device_vkd3d_ext.idl
 +++ b/include/vkd3d_device_vkd3d_ext.idl
 @@ -54,3 +54,18 @@ interface ID3D12DXVKInteropDevice : IUnknown
@@ -95,7 +95,7 @@ index 3e615d76a1..4a21ba763e 100644
 +    HRESULT GetLatencyInfo(D3D12_LATENCY_RESULTS *latency_results);
 +}
 diff --git a/include/vkd3d_vk_includes.h b/include/vkd3d_vk_includes.h
-index c43e018935..020596130a 100644
+index c43e0189..02059613 100644
 --- a/include/vkd3d_vk_includes.h
 +++ b/include/vkd3d_vk_includes.h
 @@ -41,9 +41,16 @@ typedef enum VkImageLayout VkImageLayout;
@@ -148,10 +148,10 @@ index c43e018935..020596130a 100644
  #endif  // __VKD3D_VK_INCLUDES_H
  
 diff --git a/libs/vkd3d/command.c b/libs/vkd3d/command.c
-index 3d0ebaa6ff..171920ac2c 100644
+index a041bcf8..7789dd98 100644
 --- a/libs/vkd3d/command.c
 +++ b/libs/vkd3d/command.c
-@@ -14301,12 +14301,14 @@ static struct d3d12_command_list *d3d12_command_list_from_iface(ID3D12CommandLis
+@@ -15367,12 +15367,14 @@ static struct d3d12_command_list *d3d12_command_list_from_iface(ID3D12CommandLis
  }
  
  /* ID3D12CommandQueue */
@@ -167,7 +167,7 @@ index 3d0ebaa6ff..171920ac2c 100644
          REFIID riid, void **object)
  {
      TRACE("iface %p, riid %s, object %p.\n", iface, debugstr_guid(riid), object);
-@@ -14325,6 +14327,14 @@ static HRESULT STDMETHODCALLTYPE d3d12_command_queue_QueryInterface(ID3D12Comman
+@@ -15391,6 +15393,14 @@ static HRESULT STDMETHODCALLTYPE d3d12_command_queue_QueryInterface(ID3D12Comman
          return S_OK;
      }
  
@@ -182,7 +182,7 @@ index 3d0ebaa6ff..171920ac2c 100644
      if (IsEqualGUID(riid, &IID_IDXGIVkSwapChainFactory))
      {
          struct d3d12_command_queue *command_queue = impl_from_ID3D12CommandQueue(iface);
-@@ -14339,7 +14349,7 @@ static HRESULT STDMETHODCALLTYPE d3d12_command_queue_QueryInterface(ID3D12Comman
+@@ -15405,7 +15415,7 @@ static HRESULT STDMETHODCALLTYPE d3d12_command_queue_QueryInterface(ID3D12Comman
      return E_NOINTERFACE;
  }
  
@@ -191,7 +191,7 @@ index 3d0ebaa6ff..171920ac2c 100644
  {
      struct d3d12_command_queue *command_queue = impl_from_ID3D12CommandQueue(iface);
      ULONG refcount = InterlockedIncrement(&command_queue->refcount);
-@@ -14349,7 +14359,7 @@ static ULONG STDMETHODCALLTYPE d3d12_command_queue_AddRef(ID3D12CommandQueue *if
+@@ -15415,7 +15425,7 @@ static ULONG STDMETHODCALLTYPE d3d12_command_queue_AddRef(ID3D12CommandQueue *if
      return refcount;
  }
  
@@ -200,15 +200,15 @@ index 3d0ebaa6ff..171920ac2c 100644
  {
      struct d3d12_command_queue *command_queue = impl_from_ID3D12CommandQueue(iface);
      ULONG refcount = InterlockedDecrement(&command_queue->refcount);
-@@ -14823,6 +14833,7 @@ static void STDMETHODCALLTYPE d3d12_command_queue_ExecuteCommandLists(ID3D12Comm
+@@ -15901,6 +15911,7 @@ static void STDMETHODCALLTYPE d3d12_command_queue_ExecuteCommandLists(ID3D12Comm
      sub.execute.cmd_count = num_command_buffers;
-     sub.execute.outstanding_submissions_counters = outstanding;
-     sub.execute.outstanding_submissions_counter_count = command_list_count;
+     sub.execute.command_allocators = allocators;
+     sub.execute.num_command_allocators = command_list_count;
 +    sub.execute.frame_id = command_queue->device->frame_markers.render;
  #ifdef VKD3D_ENABLE_BREADCRUMBS
      sub.execute.breadcrumb_indices = breadcrumb_indices;
      sub.execute.breadcrumb_indices_count = breadcrumb_indices ? command_list_count : 0;
-@@ -14985,6 +14996,8 @@ static D3D12_COMMAND_QUEUE_DESC * STDMETHODCALLTYPE d3d12_command_queue_GetDesc(
+@@ -16063,6 +16074,8 @@ static D3D12_COMMAND_QUEUE_DESC * STDMETHODCALLTYPE d3d12_command_queue_GetDesc(
      return desc;
  }
  
@@ -217,10 +217,10 @@ index 3d0ebaa6ff..171920ac2c 100644
  static CONST_VTBL struct ID3D12CommandQueueVtbl d3d12_command_queue_vtbl =
  {
      /* IUnknown methods */
-@@ -15492,13 +15505,15 @@ static void d3d12_command_queue_execute(struct d3d12_command_queue *command_queu
+@@ -16570,13 +16583,15 @@ static void d3d12_command_queue_execute(struct d3d12_command_queue *command_queu
          const VkCommandBufferSubmitInfo *transition_cmd,
          const VkSemaphoreSubmitInfo *transition_semaphore,
-         LONG **submission_counters, size_t num_submission_counters,
+         struct d3d12_command_allocator **command_allocators, size_t num_command_allocators,
 -        bool debug_capture, bool split_submissions)
 +        uint64_t frame_id, bool debug_capture,
 +        bool split_submissions)
@@ -234,7 +234,7 @@ index 3d0ebaa6ff..171920ac2c 100644
      uint32_t num_submits;
      VkQueue vk_queue;
      unsigned int i;
-@@ -15578,6 +15593,18 @@ static void d3d12_command_queue_execute(struct d3d12_command_queue *command_queu
+@@ -16656,6 +16671,18 @@ static void d3d12_command_queue_execute(struct d3d12_command_queue *command_queu
          num_submits += 2;
      }
  
@@ -253,10 +253,10 @@ index 3d0ebaa6ff..171920ac2c 100644
  #ifdef VKD3D_ENABLE_RENDERDOC
      /* For each submission we have marked to be captured, we will first need to filter it
       * based on VKD3D_AUTO_CAPTURE_COUNTS.
-@@ -16078,7 +16105,9 @@ static void *d3d12_command_queue_submission_worker_main(void *userdata)
+@@ -17156,7 +17183,9 @@ static void *d3d12_command_queue_submission_worker_main(void *userdata)
                      &transition_cmd, &transition_semaphore,
-                     submission.execute.outstanding_submissions_counters,
-                     submission.execute.outstanding_submissions_counter_count,
+                     submission.execute.command_allocators,
+                     submission.execute.num_command_allocators,
 -                    submission.execute.debug_capture, submission.execute.split_submission);
 +                    submission.execute.frame_id,
 +                    submission.execute.debug_capture,
@@ -264,7 +264,7 @@ index 3d0ebaa6ff..171920ac2c 100644
  
              /* command_queue_execute takes ownership of the outstanding_submission_counters allocation.
               * The atomic counters are decremented when the submission is observed to be freed.
-@@ -16140,6 +16169,7 @@ static HRESULT d3d12_command_queue_init(struct d3d12_command_queue *queue,
+@@ -17218,6 +17247,7 @@ static HRESULT d3d12_command_queue_init(struct d3d12_command_queue *queue,
      int rc;
  
      queue->ID3D12CommandQueue_iface.lpVtbl = &d3d12_command_queue_vtbl;
@@ -272,7 +272,7 @@ index 3d0ebaa6ff..171920ac2c 100644
      queue->refcount = 1;
  
      queue->desc = *desc;
-@@ -16268,6 +16298,7 @@ void vkd3d_enqueue_initial_transition(ID3D12CommandQueue *queue, ID3D12Resource
+@@ -17346,6 +17376,7 @@ void vkd3d_enqueue_initial_transition(ID3D12CommandQueue *queue, ID3D12Resource
  
      memset(&sub, 0, sizeof(sub));
      sub.type = VKD3D_SUBMISSION_EXECUTE;
@@ -282,7 +282,7 @@ index 3d0ebaa6ff..171920ac2c 100644
      sub.execute.transitions[0].type = VKD3D_INITIAL_TRANSITION_TYPE_RESOURCE;
 diff --git a/libs/vkd3d/command_queue_vkd3d_ext.c b/libs/vkd3d/command_queue_vkd3d_ext.c
 new file mode 100644
-index 0000000000..0fba03b058
+index 00000000..0fba03b0
 --- /dev/null
 +++ b/libs/vkd3d/command_queue_vkd3d_ext.c
 @@ -0,0 +1,100 @@
@@ -387,10 +387,10 @@ index 0000000000..0fba03b058
 +};
 +
 diff --git a/libs/vkd3d/device.c b/libs/vkd3d/device.c
-index fcf408aa2b..5d27bbaa18 100644
+index c7a1054f..6fe95d48 100644
 --- a/libs/vkd3d/device.c
 +++ b/libs/vkd3d/device.c
-@@ -116,6 +116,7 @@ static const struct vkd3d_optional_extension_info optional_device_extensions[] =
+@@ -121,6 +121,7 @@ static const struct vkd3d_optional_extension_info optional_device_extensions[] =
      VK_EXTENSION(NV_SHADER_SUBGROUP_PARTITIONED, NV_shader_subgroup_partitioned),
      VK_EXTENSION(NV_MEMORY_DECOMPRESSION, NV_memory_decompression),
      VK_EXTENSION(NV_DEVICE_GENERATED_COMMANDS_COMPUTE, NV_device_generated_commands_compute),
@@ -398,7 +398,7 @@ index fcf408aa2b..5d27bbaa18 100644
      /* VALVE extensions */
      VK_EXTENSION(VALVE_MUTABLE_DESCRIPTOR_TYPE, VALVE_mutable_descriptor_type),
      VK_EXTENSION(VALVE_DESCRIPTOR_SET_HOST_MAPPING, VALVE_descriptor_set_host_mapping),
-@@ -3096,8 +3097,9 @@ void d3d12_device_return_query_pool(struct d3d12_device *device, const struct vk
+@@ -3194,8 +3195,9 @@ void d3d12_device_return_query_pool(struct d3d12_device *device, const struct vk
  }
  
  /* ID3D12Device */
@@ -409,7 +409,7 @@ index fcf408aa2b..5d27bbaa18 100644
  
  HRESULT STDMETHODCALLTYPE d3d12_device_QueryInterface(d3d12_device_iface *iface,
          REFIID riid, void **object)
-@@ -3144,6 +3146,14 @@ HRESULT STDMETHODCALLTYPE d3d12_device_QueryInterface(d3d12_device_iface *iface,
+@@ -3242,6 +3244,14 @@ HRESULT STDMETHODCALLTYPE d3d12_device_QueryInterface(d3d12_device_iface *iface,
          return S_OK;
      }
  
@@ -424,7 +424,7 @@ index fcf408aa2b..5d27bbaa18 100644
      WARN("%s not implemented, returning E_NOINTERFACE.\n", debugstr_guid(riid));
  
      *object = NULL;
-@@ -8005,6 +8015,7 @@ static void d3d12_device_replace_vtable(struct d3d12_device *device)
+@@ -8188,6 +8198,7 @@ static void d3d12_device_replace_vtable(struct d3d12_device *device)
  
  extern CONST_VTBL struct ID3D12DeviceExtVtbl d3d12_device_vkd3d_ext_vtbl;
  extern CONST_VTBL struct ID3D12DXVKInteropDeviceVtbl d3d12_dxvk_interop_device_vtbl;
@@ -432,7 +432,7 @@ index fcf408aa2b..5d27bbaa18 100644
  
  static void vkd3d_scratch_pool_init(struct d3d12_device *device)
  {
-@@ -8075,6 +8086,7 @@ static HRESULT d3d12_device_init(struct d3d12_device *device,
+@@ -8258,6 +8269,7 @@ static HRESULT d3d12_device_init(struct d3d12_device *device,
  
      device->ID3D12DeviceExt_iface.lpVtbl = &d3d12_device_vkd3d_ext_vtbl;
      device->ID3D12DXVKInteropDevice_iface.lpVtbl = &d3d12_dxvk_interop_device_vtbl;
@@ -441,7 +441,7 @@ index fcf408aa2b..5d27bbaa18 100644
      if ((rc = rwlock_init(&device->vertex_input_lock)))
      {
 diff --git a/libs/vkd3d/device_vkd3d_ext.c b/libs/vkd3d/device_vkd3d_ext.c
-index 5bb7eca840..cf10247488 100644
+index 5bb7eca8..cf102474 100644
 --- a/libs/vkd3d/device_vkd3d_ext.c
 +++ b/libs/vkd3d/device_vkd3d_ext.c
 @@ -20,18 +20,18 @@
@@ -686,10 +686,10 @@ index 5bb7eca840..cf10247488 100644
 +    d3d12_low_latency_device_GetLatencyInfo
 +};
 diff --git a/libs/vkd3d/meson.build b/libs/vkd3d/meson.build
-index 3692ceba9c..2120e7d52a 100644
+index 54955a89..3b551ce0 100644
 --- a/libs/vkd3d/meson.build
 +++ b/libs/vkd3d/meson.build
-@@ -41,6 +41,7 @@ vkd3d_src = [
+@@ -48,6 +48,7 @@ vkd3d_src = [
    'cache.c',
    'command.c',
    'command_list_vkd3d_ext.c',
@@ -698,7 +698,7 @@ index 3692ceba9c..2120e7d52a 100644
    'device_vkd3d_ext.c',
    'heap.c',
 diff --git a/libs/vkd3d/swapchain.c b/libs/vkd3d/swapchain.c
-index 27a55c8b5b..80eb558d08 100644
+index 99174040..627a3514 100644
 --- a/libs/vkd3d/swapchain.c
 +++ b/libs/vkd3d/swapchain.c
 @@ -58,6 +58,7 @@ struct dxgi_vk_swap_chain_present_request
@@ -852,7 +852,7 @@ index 27a55c8b5b..80eb558d08 100644
      /* When this is signalled, lets main thread know that it's safe to free user buffers.
       * Signal this just once on the outside since we might have retries, swap_interval > 1, etc, which complicates command buffer recycling. */
      dxgi_vk_swap_chain_present_signal_blit_semaphore(chain);
-@@ -2041,6 +2110,52 @@ static HRESULT dxgi_vk_swap_chain_init_waiter_thread(struct dxgi_vk_swap_chain *
+@@ -2045,6 +2114,52 @@ static HRESULT dxgi_vk_swap_chain_init_waiter_thread(struct dxgi_vk_swap_chain *
      return S_OK;
  }
  
@@ -905,7 +905,7 @@ index 27a55c8b5b..80eb558d08 100644
  static HRESULT dxgi_vk_swap_chain_init(struct dxgi_vk_swap_chain *chain, IDXGIVkSurfaceFactory *pFactory,
          const DXGI_SWAP_CHAIN_DESC1 *pDesc, struct d3d12_command_queue *queue)
  {
-@@ -2066,6 +2181,9 @@ static HRESULT dxgi_vk_swap_chain_init(struct dxgi_vk_swap_chain *chain, IDXGIVk
+@@ -2070,6 +2185,9 @@ static HRESULT dxgi_vk_swap_chain_init(struct dxgi_vk_swap_chain *chain, IDXGIVk
      if (FAILED(hr = dxgi_vk_swap_chain_init_waiter_thread(chain)))
          goto err;
  
@@ -915,7 +915,7 @@ index 27a55c8b5b..80eb558d08 100644
      ID3D12CommandQueue_AddRef(&queue->ID3D12CommandQueue_iface);
      return S_OK;
  
-@@ -2093,6 +2211,13 @@ static HRESULT STDMETHODCALLTYPE dxgi_vk_swap_chain_factory_CreateSwapChain(IDXG
+@@ -2097,6 +2215,13 @@ static HRESULT STDMETHODCALLTYPE dxgi_vk_swap_chain_factory_CreateSwapChain(IDXG
          return hr;
      }
  
@@ -929,7 +929,7 @@ index 27a55c8b5b..80eb558d08 100644
      *ppSwapchain = &chain->IDXGIVkSwapChain_iface;
      return S_OK;
  }
-@@ -2108,6 +2233,192 @@ static CONST_VTBL struct IDXGIVkSwapChainFactoryVtbl dxgi_vk_swap_chain_factory_
+@@ -2112,6 +2237,192 @@ static CONST_VTBL struct IDXGIVkSwapChainFactoryVtbl dxgi_vk_swap_chain_factory_
      dxgi_vk_swap_chain_factory_CreateSwapChain,
  };
  
@@ -1123,7 +1123,7 @@ index 27a55c8b5b..80eb558d08 100644
  {
      chain->IDXGIVkSwapChainFactory_iface.lpVtbl = &dxgi_vk_swap_chain_factory_vtbl;
 diff --git a/libs/vkd3d/vkd3d_private.h b/libs/vkd3d/vkd3d_private.h
-index 8c6a0ffd02..0c4929a258 100644
+index 124cd75a..16234e94 100644
 --- a/libs/vkd3d/vkd3d_private.h
 +++ b/libs/vkd3d/vkd3d_private.h
 @@ -37,6 +37,7 @@
@@ -1134,7 +1134,7 @@ index 8c6a0ffd02..0c4929a258 100644
  #include "vkd3d_device_vkd3d_ext.h"
  #include "vkd3d_string.h"
  #include "vkd3d_file_utils.h"
-@@ -166,6 +167,7 @@ struct vkd3d_vulkan_info
+@@ -169,6 +170,7 @@ struct vkd3d_vulkan_info
      bool NV_shader_subgroup_partitioned;
      bool NV_memory_decompression;
      bool NV_device_generated_commands_compute;
@@ -1142,15 +1142,15 @@ index 8c6a0ffd02..0c4929a258 100644
      /* VALVE extensions */
      bool VALVE_mutable_descriptor_type;
      bool VALVE_descriptor_set_host_mapping;
-@@ -2991,6 +2993,7 @@ struct d3d12_command_queue_submission_execute
-     LONG **outstanding_submissions_counters;
+@@ -3012,6 +3014,7 @@ struct d3d12_command_queue_submission_execute
+     struct d3d12_command_allocator **command_allocators;
      UINT cmd_count;
-     UINT outstanding_submissions_counter_count;
+     UINT num_command_allocators;
 +    uint64_t frame_id;
  
      struct vkd3d_initial_transition *transitions;
      size_t transition_count;
-@@ -3046,12 +3049,30 @@ struct dxgi_vk_swap_chain_factory
+@@ -3067,12 +3070,30 @@ struct dxgi_vk_swap_chain_factory
      struct d3d12_command_queue *queue;
  };
  
@@ -1182,7 +1182,7 @@ index 8c6a0ffd02..0c4929a258 100644
      LONG refcount;
  
      D3D12_COMMAND_QUEUE_DESC desc;
-@@ -4203,6 +4224,19 @@ struct vkd3d_cached_command_allocator
+@@ -4266,6 +4287,19 @@ struct vkd3d_cached_command_allocator
      uint32_t vk_family_index;
  };
  
@@ -1202,7 +1202,7 @@ index 8c6a0ffd02..0c4929a258 100644
  /* ID3D12Device */
  typedef ID3D12Device12 d3d12_device_iface;
  
-@@ -4215,6 +4249,9 @@ typedef ID3D12DeviceExt d3d12_device_vkd3d_ext_iface;
+@@ -4278,6 +4312,9 @@ typedef ID3D12DeviceExt d3d12_device_vkd3d_ext_iface;
  /* ID3D12DXVKInteropDevice */
  typedef ID3D12DXVKInteropDevice d3d12_dxvk_interop_device_iface;
  
@@ -1212,7 +1212,7 @@ index 8c6a0ffd02..0c4929a258 100644
  struct d3d12_device_scratch_pool
  {
      struct vkd3d_scratch_buffer scratch_buffers[VKD3D_MAX_SCRATCH_BUFFER_COUNT];
-@@ -4229,6 +4266,7 @@ struct d3d12_device
+@@ -4292,6 +4329,7 @@ struct d3d12_device
      d3d12_device_iface ID3D12Device_iface;
      d3d12_device_vkd3d_ext_iface ID3D12DeviceExt_iface;
      d3d12_dxvk_interop_device_iface ID3D12DXVKInteropDevice_iface;
@@ -1220,7 +1220,7 @@ index 8c6a0ffd02..0c4929a258 100644
      LONG refcount;
  
      VkDevice vk_device;
-@@ -4299,6 +4337,9 @@ struct d3d12_device
+@@ -4362,6 +4400,9 @@ struct d3d12_device
  #endif
      uint64_t shader_interface_key;
      uint32_t device_has_dgc_templates;
@@ -1230,7 +1230,7 @@ index 8c6a0ffd02..0c4929a258 100644
  };
  
  HRESULT d3d12_device_create(struct vkd3d_instance *instance,
-@@ -4521,6 +4562,31 @@ UINT d3d12_determine_shading_rate_image_tile_size(struct d3d12_device *device);
+@@ -4584,6 +4625,31 @@ UINT d3d12_determine_shading_rate_image_tile_size(struct d3d12_device *device);
  bool d3d12_device_supports_required_subgroup_size_for_stage(
          struct d3d12_device *device, VkShaderStageFlagBits stage);
  
@@ -1263,10 +1263,10 @@ index 8c6a0ffd02..0c4929a258 100644
  struct d3d_blob
  {
 diff --git a/libs/vkd3d/vulkan_procs.h b/libs/vkd3d/vulkan_procs.h
-index 983c06f884..f4bc39d9a6 100644
+index 6b32bca1..554d223a 100644
 --- a/libs/vkd3d/vulkan_procs.h
 +++ b/libs/vkd3d/vulkan_procs.h
-@@ -346,6 +346,13 @@ VK_DEVICE_EXT_PFN(vkSetDeviceMemoryPriorityEXT)
+@@ -347,6 +347,13 @@ VK_DEVICE_EXT_PFN(vkSetDeviceMemoryPriorityEXT)
  VK_DEVICE_EXT_PFN(vkCmdDecompressMemoryNV)
  VK_DEVICE_EXT_PFN(vkCmdDecompressMemoryIndirectCountNV)
  
@@ -1280,3 +1280,5 @@ index 983c06f884..f4bc39d9a6 100644
  #undef VK_INSTANCE_PFN
  #undef VK_INSTANCE_EXT_PFN
  #undef VK_DEVICE_PFN
+-- 
+2.43.0
