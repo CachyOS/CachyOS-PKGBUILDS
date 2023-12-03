@@ -3,7 +3,7 @@
 
 _pkgname="hyprland"
 pkgname="${_pkgname}-git"
-pkgver=0.31.0.r3519.38670856
+pkgver=0.32.3.r3746.59cb0e20
 pkgrel=1
 pkgdesc='a highly customizable dynamic tiling Wayland compositor'
 arch=(x86_64 aarch64)
@@ -55,15 +55,11 @@ makedepends=(
   xorgproto
 )
 source=("${_pkgname}::git+https://github.com/hyprwm/Hyprland.git"
-        fix-nvidia-screenshot.patch
-        fix-nvidia-artifacts.patch
         runtime-xwayland-disable.patch
 )
 conflicts=("${_pkgname}")
 provides=('hyprland')
 sha256sums=('SKIP'
-            '38e95d90877dbad4c3de2bcb200c22feafbceb42ace696b80dafe08a10c5f521'
-            '85b419ebec60460e85472cfdc30de492fd37228faeb059db8e265cb370d62bc7'
             '32d7be2b15ba0fc61e168d95fba6e567a2eb6968e904bb96af4c7612a129816d')
 
 pkgver() {
@@ -77,8 +73,6 @@ build() {
   cd "${srcdir}/${_pkgname}"
   git submodule update --init
 
-  patch -Np1 < ../fix-nvidia-screenshot.patch
-  #patch -Np1 < ../fix-nvidia-artifacts.patch
   patch -Np1 < ../runtime-xwayland-disable.patch
 
   # With those flags set Hyprland does crash
@@ -128,26 +122,26 @@ build() {
 }
 
 package() {
-    cd "${srcdir}/${_pkgname}"
-    mkdir -p "${pkgdir}/usr/share/wayland-sessions"
-    mkdir -p "${pkgdir}/usr/share/hyprland"
+  cd "${srcdir}/${_pkgname}"
+  mkdir -p "${pkgdir}/usr/share/wayland-sessions"
+  mkdir -p "${pkgdir}/usr/share/hyprland"
 
-    find src -name '*.hpp' -exec install -Dm0644 {} "$pkgdir/usr/include/hyprland/{}" \;
-    pushd subprojects/wlroots/include
-    find . -name '*.h' -exec install -Dm0644 {} "$pkgdir/usr/include/hyprland/wlroots/{}" \;
-    popd
-    pushd subprojects/wlroots/build/include
-    find . -name '*.h' -exec install -Dm0644 {} "$pkgdir/usr/include/hyprland/wlroots/{}" \;
-    popd
-    mkdir -p "$pkgdir/usr/include/hyprland/protocols"
-    cp protocols/*-protocol.h "$pkgdir/usr/include/hyprland/protocols"
+  find src -name '*.hpp' -exec install -Dm0644 {} "$pkgdir/usr/include/hyprland/{}" \;
+  pushd subprojects/wlroots/include
+  find . -name '*.h' -exec install -Dm0644 {} "$pkgdir/usr/include/hyprland/wlroots/{}" \;
+  popd
+  pushd subprojects/wlroots/build/include
+  find . -name '*.h' -exec install -Dm0644 {} "$pkgdir/usr/include/hyprland/wlroots/{}" \;
+  popd
+  mkdir -p "$pkgdir/usr/include/hyprland/protocols"
+  cp protocols/*-protocol.h "$pkgdir/usr/include/hyprland/protocols"
 
-    install -Dm0644 -t "$pkgdir/usr/share/pkgconfig" build/hyprland.pc
-    install -Dm0755 -t "$pkgdir/usr/bin" build/Hyprland
-    install -Dm0755 -t "$pkgdir/usr/bin" hyprctl/hyprctl
-    install -Dm0644 -t "$pkgdir/usr/share/$pkgname" assets/*.png
-    install -Dm0644 -t "$pkgdir/usr/share/wayland-sessions" "example/$_pkgname.desktop"
-    install -Dm0644 -t "$pkgdir/usr/share/$pkgname" "example/$_pkgname.conf"
-    install -Dm0644 -t "$pkgdir/usr/share/licenses/$pkgname/" LICENSE
-    install -Dm0755 -t "$pkgdir/usr/lib" "$srcdir/hyprland/subprojects/wlroots/build/libwlroots.so.12032"
+  install -Dm0644 -t "$pkgdir/usr/share/pkgconfig" build/hyprland.pc
+  install -Dm0755 -t "$pkgdir/usr/bin" build/Hyprland
+  install -Dm0755 -t "$pkgdir/usr/bin" hyprctl/hyprctl
+  install -Dm0644 -t "$pkgdir/usr/share/$pkgname" assets/*.png
+  install -Dm0644 -t "$pkgdir/usr/share/wayland-sessions" "example/$_pkgname.desktop"
+  install -Dm0644 -t "$pkgdir/usr/share/$pkgname" "example/$_pkgname.conf"
+  install -Dm0644 -t "$pkgdir/usr/share/licenses/$pkgname/" LICENSE
+  install -Dm0755 -t "$pkgdir/usr/lib" "$srcdir/hyprland/subprojects/wlroots/build/libwlroots.so.13032"
 }
