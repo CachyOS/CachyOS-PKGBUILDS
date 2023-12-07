@@ -3,7 +3,7 @@
 
 _pkgname="hyprland"
 pkgname="${_pkgname}-git"
-pkgver=0.32.3.r3746.59cb0e20
+pkgver=0.33.1.r3773.aa020a2a
 pkgrel=1
 pkgdesc='a highly customizable dynamic tiling Wayland compositor'
 arch=(x86_64 aarch64)
@@ -30,6 +30,7 @@ depends=(
   pixman
   polkit
   seatd
+  tomlplusplus
   systemd-libs
   vulkan-icd-loader
   vulkan-validation-layers
@@ -138,6 +139,7 @@ package() {
 
   install -Dm0644 -t "$pkgdir/usr/share/pkgconfig" build/hyprland.pc
   install -Dm0755 -t "$pkgdir/usr/bin" build/Hyprland
+  install -Dm0755 -t "$pkgdir/usr/bin" build/hyprpm/hyprpm
   install -Dm0755 -t "$pkgdir/usr/bin" hyprctl/hyprctl
   install -Dm0644 -t "$pkgdir/usr/share/$pkgname" assets/*.png
   install -Dm0644 -t "$pkgdir/usr/share/wayland-sessions" "example/$_pkgname.desktop"
