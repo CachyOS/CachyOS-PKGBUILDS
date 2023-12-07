@@ -1,7 +1,8 @@
 # Maintainer: Peter Jung ptr1337 <admin@ptr1337.dev>
+# Maintainer: Piotr Górski <lucjan.lucjanov@gmail.com>
 
 pkgname=scx-git
-pkgver=v0.1.0_9_g5751f1c
+pkgver=0.1.0.r9.g5751f1c
 pkgrel=1
 pkgdesc="sched_ext schedulers and tools"
 arch=(x86_64)
@@ -18,7 +19,7 @@ _reponame="scx"
 
 pkgver() {
     cd "$_reponame"
-    git describe --long --tags | sed "s/-/_/g"
+    git describe --long --tags | sed 's/^v//;s/\([^-]*-g\)/r\1/;s/-/./g'
 }
 
 prepare() {
