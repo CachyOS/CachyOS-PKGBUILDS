@@ -18,8 +18,26 @@ pkgdesc="Julia with Profile-Guided Optimization (PGO)"
 arch=('x86_64')
 url="http://julialang.org/"
 license=('MIT')  # Update if different
-depends=('julia' 'llvm' 'clang')  # Check for any additional dependencies
-makedepends=('git')
+depends=(blas64-openblas
+         fftw
+         libblastrampoline
+         libgit2
+         libunwind
+         libutf8proc
+         lld
+         llvm15-libs
+         mbedtls2
+         openlibm
+         p7zip
+         pcre2
+         suitesparse)
+makedepends=(cmake
+             gcc-fortran
+             libwhich
+             llvm15
+             patchelf
+             python)
+optdepends=('gnuplot: If using the Gaston Package from julia')
 source=(https://github.com/JuliaLang/julia/releases/download/v$pkgver/$pkgname-$pkgver-full.tar.gz{,.asc}
         julia-libunwind-1.6.patch
         julia-hardcoded-libs.patch
@@ -127,9 +145,6 @@ build() {
     export CXX=clang++
     
     cd "${srcdir}/${pkgname}-${pkgver}"
-    # try to create directory for pgo-lto, if it already exists, do nothing
-    #mkdir -p pgo-lto
-    echo $PWD
 
     # Perform the build steps
     cd pgo-lto
@@ -144,7 +159,6 @@ build() {
     export STAGE2=${srcdir}/${pkgname}-${pkgver}/pgo-lto/stage2.build
     mkdir -p $STAGE1
     mkdir -p $STAGE2
-
 
     _make O=pgo-lto/stage1.build configure
     _make O=pgo-lto/stage2.build configure
@@ -174,11 +188,10 @@ build() {
     # Run stage 1 profiling
     ./stage1.build/julia -O3 pgoing.jl
 
-
     # create PROFAW_FILES_LIST
-    # Build stage 2
     llvm-profdata merge -output=${PROFILE_FILE} ${PROFILE_DIR}/*.profraw
 
+    # Build stage 2
     export PGO_CFLAGS="-fprofile-use=${PROFILE_FILE}"
     export PGO_CXXFLAGS="-fprofile-use=${PROFILE_FILE}"
     export PGO_LDFLAGS="-fuse-ld=lld -flto=thin -fprofile-use=${PROFILE_FILE} -Wl,--icf=safe"
