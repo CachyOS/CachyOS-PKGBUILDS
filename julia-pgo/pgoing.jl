@@ -47,7 +47,7 @@ function main_with_loop(iterations::Int)
 end
 
 # Number of iterations
-num_iterations = 100  # Set this to a desired number of iterations
+num_iterations = 500  # Set this to a desired number of iterations
 
 # Run the main function with loop
 main_with_loop(num_iterations)
