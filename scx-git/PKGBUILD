@@ -10,21 +10,14 @@ url="https://github.com/sched-ext/scx"
 license=("GPL2")
 depends=('libbpf' 'bpf')
 makedepends=('git' 'python' 'meson' 'clang' 'llvm-libs' 'cargo')
-source=("scx::git+https://github.com/sched-ext/scx"
-		"scx-nest.patch::https://github.com/sched-ext/scx/commit/ca2184290865ae5a39634fe110f886c7979e009e.patch")
-sha256sums=('SKIP'
-            'e019a1eef801f3fa1ec60308334f6c96838d257d819412b9295a5dda1020446f')
+source=("scx::git+https://github.com/sched-ext/scx")
+sha256sums=('SKIP')
 options=(!lto)
 _reponame="scx"
 
 pkgver() {
     cd "$_reponame"
     git describe --long --tags | sed 's/^v//;s/\([^-]*-g\)/r\1/;s/-/./g'
-}
-
-prepare() {
-	cd $_reponame
-	patch -Np1 < $srcdir/scx-nest.patch
 }
 
 build() {
