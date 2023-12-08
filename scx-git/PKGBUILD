@@ -8,8 +8,8 @@ pkgdesc="sched_ext schedulers and tools"
 arch=(x86_64)
 url="https://github.com/sched-ext/scx"
 license=("GPL2")
-depends=('libbpf' 'bpf')
-makedepends=('git' 'python' 'meson' 'clang' 'llvm-libs' 'cargo')
+depends=('libbpf' 'bpf' 'libelf' 'zlib')
+makedepends=('git' 'python' 'meson' 'clang' 'llvm-libs' 'cargo' 'rust')
 source=("scx::git+https://github.com/sched-ext/scx")
 sha256sums=('SKIP')
 options=(!lto)
@@ -22,7 +22,6 @@ pkgver() {
 
 build() {
 	cd $_reponame
-	export LDFLAGS="-Wl,--as-needed -Wl,--no-undefined -Wl,-O1 -Wl,--start-group /usr/lib/libbpf.so -Wl,--end-group"
 	meson setup build -Dbuildtype=release
 	cd build
 	meson compile -v
