@@ -1,7 +1,8 @@
-# Maintainer: Bruno Ancona <bruno at powerball253 dot com>
+# Maintainer: Brett Cornwall <ainola@archlinux.org>
+# Maintainer: Maxim Baz <archlinux at maximbaz dot com>
 
 pkgname=waybar-hyprland
-pkgver=0.9.22
+pkgver=0.9.24
 pkgrel=2
 pkgdesc='Highly customizable Wayland bar for Sway and Wlroots based compositors, with workspaces support for Hyprland'
 arch=('x86_64')
@@ -47,18 +48,8 @@ backup=(
 optdepends=(
     'otf-font-awesome: Icons in the default configuration'
 )
-source=(
-    "$pkgname-$pkgver.tar.gz::https://github.com/Alexays/Waybar/archive/$pkgver.tar.gz"
-)
-source=("$pkgname-$pkgver.tar.gz::https://github.com/Alexays/Waybar/archive/$pkgver.tar.gz"
-         https://github.com/Alexays/Waybar/commit/e9b29613.patch)
-sha256sums=('61e8d934c178b9da8212162398d2be44c5606c92b9a3503526993bb204206c6b'
-            'b5dc01bb96ad7cbe1f9e0683e3276e3fee0aebb2d824aa97e7a36d765aa3f1e4')
-
-prepare() {
-    cd Waybar-$pkgver
-    patch -p1 -i ../e9b29613.patch # Fix build with fmt 10
-}
+source=("$pkgname-$pkgver.tar.gz::https://github.com/Alexays/Waybar/archive/$pkgver.tar.gz")
+b2sums=('15774a78f2f7bb85d497e7f80a968b775bb42d285d0950e8e384962c6b947ea895eea2b30c0aba7ca671595ce59acd65e66cf8b67f2478ecad7564de50e4bfe6')
 
 build() {
     cd "Waybar-$pkgver"
@@ -73,9 +64,14 @@ build() {
           --wrap-mode=nodownload \
           -Dexperimental=true \
           -Dcava=disabled \
-          -Dtests=disabled \
+          -Dtests=enabled \
           build
     ninja -C build
+}
+
+check() {
+    cd "Waybar-$pkgver"
+    meson test -C build --no-rebuild --suite waybar
 }
 
 package() {
