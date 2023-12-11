@@ -1,13 +1,14 @@
 # Maintainer: Haden Collins <collinshaden@gmail.com>
+
 pkgname='wlogout'
 pkgver=1.1.1
-pkgrel=3
-pkgdesc="Logout menu for wayland"
+pkgrel=4
+pkgdesc='Logout menu for wayland'
 arch=('x86_64')
-license=("MIT")
+license=('MIT')
 url="https://github.com/ArtsyMacaw/wlogout"
-depends=("gtk3" "gobject-introspection" "gtk-layer-shell")
-makedepends=("meson" "git" "scdoc")
+depends=('gtk3' 'gobject-introspection' 'gtk-layer-shell')
+makedepends=('meson' 'git' 'scdoc')
 optdepends=("swaylock: default buttons"
             "systemd: default buttons"
 )
@@ -19,12 +20,18 @@ sha256sums=('f9dcef7c907507f4027c1469086bd9b427969c1ce439767fe8cc8f234b294447'
             'SKIP')
 
 build() {
-    cd $srcdir
-    meson build --prefix /usr
-    ninja -C build
+  cd "${srcdir}"
+
+  arch-meson build
+  ninja -C build
 }
 
 package() {
-    DESTDIR="$pkgdir" ninja -C build install
-    install -Dm644 LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+  cd "${srcdir}/build"
+  DESTDIR="${pkgdir}" meson install
+
+  cd "${srcdir}"
+  install -Dm644 LICENSE "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE"
 }
+
+# vim:set sw=2 sts=2 et:

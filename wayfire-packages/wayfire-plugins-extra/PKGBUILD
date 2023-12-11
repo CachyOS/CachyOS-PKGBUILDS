@@ -2,14 +2,14 @@
 
 pkgname=wayfire-plugins-extra
 pkgver=0.8.0
-pkgrel=1
+pkgrel=2
 pkgdesc='Additional plugins for Wayfire'
 url=https://github.com/WayfireWM/wayfire-plugins-extra
 arch=(x86_64)
 license=(custom:MIT)
 conflicts=("${pkgname}-git")
-depends=('wayfire>=0.8' cairo glibmm wlroots iio-sensor-proxy)
-makedepends=(meson wayland-protocols ninja glm git cmake)
+depends=('wayfire>=0.8' 'cairo' 'glibmm' 'wlroots0.16' 'iio-sensor-proxy')
+makedepends=('meson' 'wayland-protocols' 'ninja' 'glm' 'git' 'cmake')
 _commit=5076dc1100071d8ed220e06a4723bde16ac864f7
 source=("https://github.com/WayfireWM/${pkgname}/releases/download/v${pkgver}/${pkgname}-${pkgver}.tar.xz"
         "fix-build.patch")
@@ -25,6 +25,7 @@ build () {
   cd "${srcdir}/$pkgname-$pkgver"
   _cpuCount=$(grep -c -w ^processor /proc/cpuinfo)
 
+  PKG_CONFIG_PATH=/usr/lib/wlroots0.16/pkgconfig \
   arch-meson build
   meson compile -C build --jobs $_cpuCount
 }

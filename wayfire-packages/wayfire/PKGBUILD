@@ -2,17 +2,20 @@
 
 pkgname=wayfire
 pkgver=0.8.0
-pkgrel=1
+pkgrel=5
 pkgdesc="3D wayland compositor"
 arch=('x86_64')
 url=https://wayfire.org
 license=(custom:MIT)
-depends=('cairo' 'pango' 'wf-config>=0.8' 'libjpeg' 'libinput' 'wlroots>=0.16' 'wlroots<0.17')
+depends=('cairo' 'pango' "wf-config>=${pkgver%.*}" 'libjpeg' 'libinput' 'wlroots0.16')
 makedepends=('meson' 'ninja' 'wayland-protocols' 'glm' 'cmake' 'doctest' 'doxygen' 'nlohmann-json' 'sed')
 conflicts=("${pkgname}-git")
 source=("https://github.com/WayfireWM/${pkgname}/releases/download/v${pkgver}/${pkgname}-${pkgver}.tar.xz")
 sha512sums=('fce6d4c81fa3675df1e656f8bf504f7fc9d1b7104687bcc6d669950582f46bd0ad084c6a487434077df029438243cd91cf6ec60dc7d584b40bfd7a4c8d069f53')
 options=(strip)
+
+# wlroots 0.17 compatible
+# https://github.com/WayfireWM/wayfire/commit/c48194e055219dcb3a603b59ca37f330a64cac12
 
 build() {
   cd "${pkgname}-${pkgver}"
@@ -20,6 +23,7 @@ build() {
 
   sed -i 's/if git.found()/if false/' meson.build
 
+  PKG_CONFIG_PATH=/usr/lib/wlroots0.16/pkgconfig \
   arch-meson --auto-features=disabled \
              -Duse_system_wfconfig=enabled \
              -Duse_system_wlroots=enabled \
