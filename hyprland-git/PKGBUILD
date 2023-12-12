@@ -127,7 +127,7 @@ package() {
   mkdir -p "${pkgdir}/usr/share/wayland-sessions"
   mkdir -p "${pkgdir}/usr/share/hyprland"
 
-  find src -name '*.hpp' -exec install -Dm0644 {} "$pkgdir/usr/include/hyprland/{}" \;
+  find src \( -name '*.h' -o -name '*.hpp' \) -exec install -Dm0644 {} "$pkgdir/usr/include/hyprland/{}" \;
   pushd subprojects/wlroots/include
   find . -name '*.h' -exec install -Dm0644 {} "$pkgdir/usr/include/hyprland/wlroots/{}" \;
   popd
@@ -138,9 +138,7 @@ package() {
   cp protocols/*-protocol.h "$pkgdir/usr/include/hyprland/protocols"
 
   install -Dm0644 -t "$pkgdir/usr/share/pkgconfig" build/hyprland.pc
-  install -Dm0755 -t "$pkgdir/usr/bin" build/Hyprland
-  install -Dm0755 -t "$pkgdir/usr/bin" build/hyprpm/hyprpm
-  install -Dm0755 -t "$pkgdir/usr/bin" hyprctl/hyprctl
+  install -Dm0755 -t "$pkgdir/usr/bin" build/Hyprland build/hyprpm/hyprpm hyprctl/hyprctl
   install -Dm0644 -t "$pkgdir/usr/share/$pkgname" assets/*.png
   install -Dm0644 -t "$pkgdir/usr/share/wayland-sessions" "example/$_pkgname.desktop"
   install -Dm0644 -t "$pkgdir/usr/share/$pkgname" "example/$_pkgname.conf"
