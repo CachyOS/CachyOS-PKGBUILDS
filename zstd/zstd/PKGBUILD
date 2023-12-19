@@ -63,10 +63,14 @@ build() {
     -DPGO_GENERATE=ON
   cmake --build build
 
+  build/programs/zstd -b19i1
   build/programs/zstd -b16i1
+  build/programs/zstd -b9i2
+  build/programs/zstd -b
+  build/programs/zstd -b7i2
+  build/programs/zstd -b5
 
-
-  # clean file
+  # clean files
   cmake --build build --target clean
 
   # Second build pass: Use profile
