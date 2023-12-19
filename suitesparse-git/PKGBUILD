@@ -1,0 +1,43 @@
+# Maintainer: Antonio Rojas <arojas@archlinux.org>
+# Contributor: Ronald van Haren <ronald.archlinux.org>
+# Git version: Laio Seman <laio@ieee.org>
+
+pkgname=suitesparse
+pkgver=7.4.0.beta4.r7.g69dd5c14c
+pkgrel=1
+pkgdesc='A collection of sparse matrix libraries'
+url='http://faculty.cse.tamu.edu/davis/suitesparse.html'
+arch=(x86_64)
+depends=(blas
+         gcc-libs
+         glibc
+         gmp
+         lapack
+         mpfr)
+makedepends=(cmake
+             gcc-fortran)
+replaces=('suitesparse64<7.1.0')
+license=(GPL)
+source=(git+https://github.com/DrTimothyAldenDavis/SuiteSparse/)
+sha256sums=('SKIP')
+options=('!strip')
+
+# get pkgver from git
+pkgver() {
+   cd "$srcdir/SuiteSparse"
+   git describe --long --tags | sed 's/^v//;s/\([^-]*-g\)/r\1/;s/-/./g'
+}
+
+
+build() {
+  cd SuiteSparse
+  CMAKE_OPTIONS="-DCMAKE_INSTALL_PREFIX=/usr \
+                 -DENABLE_CUDA=on \
+                 -DNSTATIC=ON" \
+  make -j$(nproc)
+}
+
+package() {
+  cd SuiteSparse
+  DESTDIR="$pkgdir" make install
+}
