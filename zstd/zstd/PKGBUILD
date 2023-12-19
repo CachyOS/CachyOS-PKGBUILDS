@@ -25,13 +25,31 @@ prepare() {
   # avoid error on tests without static libs, we use LD_LIBRARY_PATH
   sed '/build static library to build tests/d' -i build/cmake/CMakeLists.txt
   sed 's/libzstd_static/libzstd_shared/g' -i build/cmake/tests/CMakeLists.txt
+
+  # PGO Patch
+  echo '
+  # Apply PGO-specific flags
+  if(PGO_GENERATE)
+      target_compile_options(zstd PRIVATE "-fprofile-generate")
+      target_compile_options(zstd PRIVATE "-fprofile-dir=${CMAKE_CURRENT_BINARY_DIR}/pgo")
+      target_link_libraries(zstd "-lgcov")
+  endif()
+  
+  if(PGO_USE)
+      target_compile_options(zstd PRIVATE "-fprofile-use")
+      target_compile_options(zstd PRIVATE "-fprofile-dir=${CMAKE_CURRENT_BINARY_DIR}/pgo")
+      target_compile_options(zstd PRIVATE "-Werror=missing-profile")
+      target_compile_options(zstd PRIVATE "-Wno-error=coverage-mismatch")
+  endif()
+  ' >> build/cmake/programs/CMakeLists.txt
 }
 
 build() {
-  cd ${pkgname}-${pkgver}
+  cd "${pkgname}-${pkgver}"
   export CFLAGS+=' -ffat-lto-objects'
   export CXXFLAGS+=' -ffat-lto-objects'
 
+  # First build pass: Generate profile
   cmake -S build/cmake -B build -G Ninja \
     -DCMAKE_BUILD_TYPE=None \
     -DCMAKE_INSTALL_PREFIX=/usr \
@@ -41,9 +59,31 @@ build() {
     -DZSTD_BUILD_CONTRIB=ON \
     -DZSTD_BUILD_STATIC=OFF \
     -DZSTD_BUILD_TESTS=ON \
-    -DZSTD_PROGRAMS_LINK_SHARED=ON
+    -DZSTD_PROGRAMS_LINK_SHARED=ON \
+    -DPGO_GENERATE=ON
+  cmake --build build
+
+  build/programs/zstd -b16i1
+
+
+  # clean file
+  cmake --build build --target clean
+
+  # Second build pass: Use profile
+  cmake -S build/cmake -B build -G Ninja \
+    -DCMAKE_BUILD_TYPE=None \
+    -DCMAKE_INSTALL_PREFIX=/usr \
+    -DZSTD_ZLIB_SUPPORT=ON \
+    -DZSTD_LZMA_SUPPORT=ON \
+    -DZSTD_LZ4_SUPPORT=ON \
+    -DZSTD_BUILD_CONTRIB=ON \
+    -DZSTD_BUILD_STATIC=OFF \
+    -DZSTD_BUILD_TESTS=ON \
+    -DZSTD_PROGRAMS_LINK_SHARED=ON \
+    -DPGO_USE=ON
   cmake --build build
 }
+
 
 check() {
   cd ${pkgname}-${pkgver}
