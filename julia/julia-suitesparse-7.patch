@@ -1,5 +1,5 @@
---- a/src/solvers/cholmod.jl.orig    2022-11-11 07:24:15.860939080 +0000
-+++ b/src/solvers/cholmod.jl 2022-11-11 07:24:39.462357069 +0000
+--- a/usr/share/julia/stdlib/v1.10/SparseArrays/src/solvers/cholmod.jl    2022-11-11 07:24:15.860939080 +0000
++++ b/usr/share/julia/stdlib/v1.10/SparseArrays/src/solvers/cholmod.jl    2022-11-11 07:24:39.462357069 +0000
 @@ -194,21 +194,6 @@
                  from www.julialang.org, which ship with the correct
                  versions of all dependencies.
@@ -21,20 +21,3 @@
 -                """
          end
  
-         intsize = sizeof(SuiteSparse_long)
-@@ -232,15 +232,6 @@ function __init__()
-                  """
-         end
- 
--        # Register gc tracked allocator if CHOLMOD is new enough
--        if current_version >= v"3.0.0"
--            cnfg = cglobal((:SuiteSparse_config, :libsuitesparseconfig), Ptr{Cvoid})
--            unsafe_store!(cnfg, cglobal(:jl_malloc, Ptr{Cvoid}), 1)
--            unsafe_store!(cnfg, cglobal(:jl_calloc, Ptr{Cvoid}), 2)
--            unsafe_store!(cnfg, cglobal(:jl_realloc, Ptr{Cvoid}), 3)
--            unsafe_store!(cnfg, cglobal(:jl_free, Ptr{Cvoid}), 4)
--        end
--
-     catch ex
-         @error "Error during initialization of module CHOLMOD" exception=ex,catch_backtrace()
-     end
