@@ -41,7 +41,9 @@ source=(git+https://github.com/JuliaLang/julia.git
         julia-suitesparse-7.patch)
 optdepends=('gnuplot: If using the Gaston Package from julia')
 validpgpkeys=('3673DF529D9049477F76B37566E3C7DC03D6E495') # Julia (Binary signing key) <buildbot@julialang.org>
-
+sha256sums=('SKIP'
+            '2c61b21c347900b52b26555a0c35d5c88fd23e55efc809a58aa6bc66da1fc506'
+            '90e7f90053486bba26348cbc4f725958159ca5b6b1805124ccf050203dc2f468')
 
 _make() {
   local make_options=(
@@ -86,7 +88,6 @@ _make() {
 
   make "${make_options[@]}" "$@"
 }
-
 
 prepare() {
 
