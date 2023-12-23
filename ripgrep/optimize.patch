@@ -1,0 +1,19 @@
+--- a/Cargo.toml	2023-12-22 16:46:38.920297124 -0300
++++ b/Cargo.toml	2023-12-22 16:36:10.348290095 -0300
+@@ -72,7 +72,15 @@
+ pcre2 = ["grep/pcre2"]
+ 
+ [profile.release]
+-debug = 1
++opt-level = 3
++debug = "none"
++strip = "symbols"
++debug-assertions = false
++overflow-checks = false
++lto = "fat"
++panic = "abort"
++incremental = false
++codegen-units = 1
+ 
+ [profile.release-lto]
+ inherits = "release"
