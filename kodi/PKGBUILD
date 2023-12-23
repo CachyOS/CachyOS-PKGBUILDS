@@ -116,7 +116,7 @@ build() {
   # Asserts
   CFLAGS=${CFLAGS/-Wp,-D_GLIBCXX_ASSERTIONS}
   CXXFLAGS=${CXXFLAGS/-Wp,-D_GLIBCXX_ASSERTIONS}
-
+  export LDFLAGS="-Wl,-O1 -Wl,--sort-common -Wl,--as-needed -Wl,-z,relro -Wl,-z,now"
 
   _cmake_common_args=(
     -DCMAKE_BUILD_TYPE=Release
