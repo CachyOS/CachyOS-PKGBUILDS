@@ -44,7 +44,7 @@ build() {
   rm -f ${PGO_PROFILE_DIR}/*
 
   # run the benchmark
-  hyperfine --warmup 5 --min-runs 10 'target/release/rg -n "PM_RESUME" linux-6.6.8' --ignore-failure
+  hyperfine --warmup 5 --min-runs 50 'target/release/rg -n "PM_RESUME" linux-6.6.8' --ignore-failure
 
   # run the tests
   cargo test
