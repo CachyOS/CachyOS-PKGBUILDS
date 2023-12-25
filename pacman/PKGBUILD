@@ -79,8 +79,14 @@ if $_staging; then
   # get latest sqlite3 from arch repos
   # we need it for static linking
   vSQLITE3=$(curl -s 'https://archlinux.org/packages/search/json/?name=sqlite' | grep -oP '"pkgver":\s*"\K[^"]+' | head -n 1)
-  target_length=8
-  vSQLITE3=$(echo $vSQLITE3 | awk -F. -v len=$target_length '{printf "%d%02d%02d", $1, $2, $3; for(i=length($0)+1; i<=len; i++) printf "0"}')
+  # from sqlite website:
+  # The version is encoded so that filenames sort in order of increasing version number when viewed using "ls".
+  # For version 3.X.Y the filename encoding is 3XXYY00. For branch version 3.X.Y.Z, the encoding is 3XXYYZZ. 
+  vSQLITE3=$(echo $vSQLITE3 | awk -F. '{ 
+      if (NF == 3) { printf "%d%02d%02d00", $1, $2, $3 }
+      else if (NF == 4) { printf "%d%02d%02d%02d", $1, $2, $3, $4 }
+  }')
+  echo "Using sqlite3 version $vSQLITE3"
   wget https://www.sqlite.org/2023/sqlite-src-${vSQLITE3}.zip
   unzip -o sqlite-src-${vSQLITE3}.zip
   
