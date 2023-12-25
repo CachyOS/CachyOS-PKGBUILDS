@@ -77,23 +77,50 @@ build() {
 
 if $_staging; then
   export CFLAGS+=" -fno-semantic-interposition -flto=thin"
-  export CXXLAGS+=" -fno-semantic-interposition -flto=thin"
+  export CXXFLAGS+=" -fno-semantic-interposition -flto=thin"
   export RUSTFLAGS+=" -Cembed-bitcode -Clinker-plugin-lto -Clinker=clang -C link-arg=-flto=thin"
   export CC=clang
   export CXX=clang++
 
+  local _saved_cflags="${CFLAGS}"
+  local _saved_cppflags="${CPPFLAGS}"
+  local _saved_cxxflags="${CXXFLAGS}"
+
+  # this uses malloc_usable_size, which is incompatible with fortification level 3
+  export CFLAGS="${CFLAGS/_FORTIFY_SOURCE=3/_FORTIFY_SOURCE=2}"
+  export CXXFLAGS="${CXXFLAGS/_FORTIFY_SOURCE=3/_FORTIFY_SOURCE=2}"
+
+  export CPPFLAGS="$CPPFLAGS \
+        -DSQLITE_ENABLE_COLUMN_METADATA=1 \
+        -DSQLITE_ENABLE_UNLOCK_NOTIFY \
+        -DSQLITE_ENABLE_DBSTAT_VTAB=1 \
+        -DSQLITE_ENABLE_FTS3_TOKENIZER=1 \
+        -DSQLITE_ENABLE_FTS3_PARENTHESIS \
+        -DSQLITE_SECURE_DELETE \
+        -DSQLITE_ENABLE_STMTVTAB \
+        -DSQLITE_ENABLE_STAT4 \
+        -DSQLITE_MAX_VARIABLE_NUMBER=250000 \
+        -DSQLITE_MAX_EXPR_DEPTH=10000 \
+        -DSQLITE_ENABLE_MATH_FUNCTIONS"
+
   cd sqlite-src-${_sqlitever}
-  ./configure --prefix=/usr \
-	--enable-static \
-  --disable-shared \
-	--enable-fts3 \
-	--enable-fts4 \
-	--enable-fts5 \
-	--enable-rtree \
-	TCLLIBDIR=/usr/lib/sqlite$pkgver
+  ./configure --prefix="${srcdir}/${pkgname}"/tmp_sqlite  \
+        --disable-shared \
+	      --enable-fts3 \
+	      --enable-fts4 \
+	      --enable-fts5 \
+	      --enable-rtree \
+        --disable-tcl \
+        --enable-fast-install
+
   sed -i -e 's/ -shared / -Wl,-O1,--as-needed\0/g' libtool
   make
-  cp .libs/libsqlite3.a ../pacman/libsqlite3.a
+  make install
+
+
+  export CFLAGS="${_saved_cflags}"
+  export CPPFLAGS="${_saved_cppflags}"
+  export CXXFLAGS="${_saved_cxxflags}"
   cd ..
 fi
 
@@ -115,7 +142,7 @@ check() {
 
 if $_staging; then
   export CFLAGS+=" -fno-semantic-interposition -flto=thin"
-  export CXXLAGS+=" -fno-semantic-interposition -flto=thin"
+  export CXXFLAGS+=" -fno-semantic-interposition -flto=thin"
   export RUSTFLAGS+=" -Cembed-bitcode -Clinker-plugin-lto -Clinker=clang -C link-arg=-flto=thin"
   export CC=clang
   export CXX=clang++
@@ -129,7 +156,7 @@ package() {
 
 if $_staging; then
   export CFLAGS+=" -fno-semantic-interposition -flto=thin"
-  export CXXLAGS+=" -fno-semantic-interposition -flto=thin"
+  export CXXFLAGS+=" -fno-semantic-interposition -flto=thin"
   export RUSTFLAGS+=" -Cembed-bitcode -Clinker-plugin-lto -Clinker=clang -C link-arg=-flto=thin"
   export CC=clang
   export CXX=clang++
