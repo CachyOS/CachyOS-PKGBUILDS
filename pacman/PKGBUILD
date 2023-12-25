@@ -6,10 +6,16 @@
 # Maintainer: Piotr Gorski <piotrgorski@cachyos.org>
 # Maintainer: Peter Jung ptr1337 <admin@ptr1337.dev>
 
-_staging=false
+_staging=true
 pkgname=pacman
 pkgver=6.0.2
 _pkgver=6.0.2
+_sqlitever=$(curl -s 'https://archlinux.org/packages/search/json/?name=sqlite' | grep -oP '"pkgver":\s*"\K[^"]+' | head -n 1 | awk -F. '{ 
+    printf "%d%02d%02d", $1, $2, $3; 
+    if (NF == 4) { printf "%02d", $4 } 
+    else { printf "00" }
+}')
+
 pkgrel=22
 pkgdesc="A library-based package manager with dependency support. CachyOS fork."
 arch=('x86_64')
@@ -36,6 +42,7 @@ source=(
         git+https://github.com/CachyOS/pacman.git#commit=${_commit}
         "pacman.conf"
         "makepkg.conf"
+        "https://www.sqlite.org/2023/sqlite-src-${_sqlitever}.zip"
 #        pacman-always-create-directories-from-debugedit.patch::https://gitlab.archlinux.org/pacman/pacman/-/commit/efd0c24c07b86be014a4edb5a8ece021b87e3900.patch
 #        pacman-always-create-directories-from-debugedit-fixup.patch::https://gitlab.archlinux.org/pacman/pacman/-/commit/86981383a2f4380bda26311831be94cdc743649b.patch
 #        pacman-fix-unique-source-paths.patch::https://gitlab.archlinux.org/pacman/pacman/-/commit/478af273dfe24ded197ec54ae977ddc3719d74a0.patch
@@ -46,7 +53,10 @@ source=(
         )
 sha256sums=('SKIP'
             '47f4ba578b1a6a3291cb65a6f60ab8c4871ae45bbe93da308a595a447ed9ad9d'
-            '90f77e16fb4425cf62969203447aa2803f5eb550d6c4fe2dda2035656e25615d')
+            '90f77e16fb4425cf62969203447aa2803f5eb550d6c4fe2dda2035656e25615d'
+            '73187473feb74509357e8fa6cb9fd67153b2d010d00aeb2fddb6ceeb18abaf27'
+            '476d22a607103ff47f68ac74de9d90185c050445463279a6b51a70586a4ccbce'
+            '7d01939360d7e132a5cfd328a64649e7a8786fb5225d8a192fb8a4260173df3d')
 
 if $_staging; then
     source+=(78cd453.patch)
@@ -67,7 +77,6 @@ prepare() {
   done
 }
 build() {
-  cd "${pkgname}"
 
 if $_staging; then
   export CFLAGS+=" -fno-semantic-interposition -flto=thin"
@@ -76,21 +85,7 @@ if $_staging; then
   export CC=clang
   export CXX=clang++
 
-  # get latest sqlite3 from arch repos
-  # we need it for static linking
-  vSQLITE3=$(curl -s 'https://archlinux.org/packages/search/json/?name=sqlite' | grep -oP '"pkgver":\s*"\K[^"]+' | head -n 1)
-  # from sqlite website:
-  # The version is encoded so that filenames sort in order of increasing version number when viewed using "ls".
-  # For version 3.X.Y the filename encoding is 3XXYY00. For branch version 3.X.Y.Z, the encoding is 3XXYYZZ. 
-  vSQLITE3=$(echo $vSQLITE3 | awk -F. '{ 
-      if (NF == 3) { printf "%d%02d%02d00", $1, $2, $3 }
-      else if (NF == 4) { printf "%d%02d%02d%02d", $1, $2, $3, $4 }
-  }')
-  echo "Using sqlite3 version $vSQLITE3"
-  wget https://www.sqlite.org/2023/sqlite-src-${vSQLITE3}.zip
-  unzip -o sqlite-src-${vSQLITE3}.zip
-  
-  cd sqlite-src-${vSQLITE3}
+  cd sqlite-src-${_sqlitever}
   ./configure --prefix=/usr \
 	--enable-static \
   --disable-shared \
@@ -101,9 +96,11 @@ if $_staging; then
 	TCLLIBDIR=/usr/lib/sqlite$pkgver
   sed -i -e 's/ -shared / -Wl,-O1,--as-needed\0/g' libtool
   make
-  cp .libs/libsqlite3.a ../libsqlite3.a
+  cp .libs/libsqlite3.a ../pacman/libsqlite3.a
   cd ..
 fi
+
+  cd "${pkgname}"
 
   meson --prefix=/usr \
         --buildtype=plain \
