@@ -35,7 +35,7 @@ options=('strip')
 _commit="6956e5639c641704f8b482a7af08a9d6ffe93117"
 if $_staging; then
     _commit="15692ad4315c8e4b5e4786a1a760274a072f0201"
-    makedepends+=('cmake' 'rust' 'clang' 'tcl')
+    makedepends+=('cmake' 'rust' 'clang' 'llvm' 'tcl')
 fi
 source=(
 #       https://sources.archlinux.org/other/pacman/$pkgname-$_pkgver.tar.xz{,.sig}
@@ -76,11 +76,11 @@ prepare() {
 build() {
 
 if $_staging; then
-  export CFLAGS+=" -fno-semantic-interposition -flto=thin"
-  export CXXFLAGS+=" -fno-semantic-interposition -flto=thin"
-  export RUSTFLAGS+=" -Cembed-bitcode -Clinker-plugin-lto -Clinker=clang -C link-arg=-flto=thin"
+  export AR=llvm-ar
   export CC=clang
   export CXX=clang++
+  export NM=llvm-nm
+  export RANLIB=llvm-ranlib
 
   local _saved_cflags="${CFLAGS}"
   local _saved_cppflags="${CPPFLAGS}"
@@ -111,16 +111,22 @@ if $_staging; then
         --enable-fts5 \
         --enable-rtree \
         --disable-tcl \
+        --with-pic \
         --enable-fast-install
 
   sed -i -e 's/ -shared / -Wl,-O1,--as-needed\0/g' libtool
   make
   make install
 
-
   export CFLAGS="${_saved_cflags}"
   export CPPFLAGS="${_saved_cppflags}"
   export CXXFLAGS="${_saved_cxxflags}"
+
+  export CFLAGS+=" -fno-semantic-interposition -flto=thin"
+  export CXXFLAGS+=" -fno-semantic-interposition -flto=thin"
+  export RUSTFLAGS+=" -Cembed-bitcode -Clinker-plugin-lto -Clinker=clang -C link-arg=-flto=thin"
+  export LDFLAGS+=" -lm"
+
   cd ..
 fi
 
