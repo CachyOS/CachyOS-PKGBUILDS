@@ -6,7 +6,7 @@
 # Maintainer: Piotr Gorski <piotrgorski@cachyos.org>
 # Maintainer: Peter Jung ptr1337 <admin@ptr1337.dev>
 
-_staging=false
+_staging=true
 pkgname=pacman
 pkgver=6.0.2
 _pkgver=6.0.2
@@ -30,7 +30,6 @@ _commit="6956e5639c641704f8b482a7af08a9d6ffe93117"
 if $_staging; then
     _commit="15692ad4315c8e4b5e4786a1a760274a072f0201"
     makedepends+=('cmake' 'rust' 'clang')
-    depends+=('sqlite')
 fi
 source=(
 #       https://sources.archlinux.org/other/pacman/$pkgname-$_pkgver.tar.xz{,.sig}
@@ -47,23 +46,28 @@ source=(
         )
 sha256sums=('SKIP'
             '47f4ba578b1a6a3291cb65a6f60ab8c4871ae45bbe93da308a595a447ed9ad9d'
-            '90f77e16fb4425cf62969203447aa2803f5eb550d6c4fe2dda2035656e25615d')
+            '90f77e16fb4425cf62969203447aa2803f5eb550d6c4fe2dda2035656e25615d'
+            '21d9a0df2d168c3fda88ff7f88cae35de50ccbee48c9a3a17e57770e8c4615e8')
 
 if $_staging; then
     source+=(78cd453.patch)
+    source+=(libsqlite3.a)
+    source+=(static_sqlite.patch)
+    noextract=("libsqlite3.a")
 fi
 
 prepare() {
+  cp libsqlite3.a "${pkgname}"
   cd "${pkgname}"
   # we backport way too often in pacman
   # lets at least make it more convenient
   local src
   for src in "${source[@]}"; do
-    src="${src%%::*}"
-    src="${src##*/}"
-    [[ $src = *.patch ]] || continue
-    msg2 "Applying patch $src..."
-    patch -Np1 < "../$src"
+	  src="${src%%::*}"
+   	  src="${src##*/}"
+      [[ $src = *.patch ]] || continue
+      msg2 "Applying patch $src..."
+      patch -Np1 < "../$src"
   done
 }
 build() {

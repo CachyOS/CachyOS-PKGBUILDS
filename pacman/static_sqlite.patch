@@ -1,0 +1,25 @@
+--- a/meson.build	2023-12-24 19:11:10.170815966 +0000
++++ b/meson.build	2023-12-24 19:17:26.675500209 +0000
+@@ -13,6 +13,10 @@
+ libalpm_version = '13.0.2'
+ 
+ cc = meson.get_compiler('c')
++SQLITE3_LIBRARY_PATH = meson.source_root()
++message('SQLite3 library path: ' + SQLITE3_LIBRARY_PATH)
++
++libsqlite = cc.find_library('sqlite3', static: true, dirs: [SQLITE3_LIBRARY_PATH])
+ 
+ # commandline options
+ PREFIX = get_option('prefix')
+@@ -96,11 +100,6 @@
+   bsdtar_no_read_sparse = ''
+ endif
+ 
+-libsqlite = dependency('sqlite3',
+-                        version : '>=3.42.0',
+-                        static : get_option('buildstatic'))
+-conf.set('HAVE_LIBSQLITE', libsqlite.found())
+-
+ libcurl = dependency('libcurl',
+                      version : '>=7.55.0',
+                      required : get_option('curl'),
