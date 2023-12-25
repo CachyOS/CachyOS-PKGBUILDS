@@ -6,7 +6,7 @@
 # Maintainer: Piotr Gorski <piotrgorski@cachyos.org>
 # Maintainer: Peter Jung ptr1337 <admin@ptr1337.dev>
 
-_staging=true
+_staging=false
 pkgname=pacman
 pkgver=6.0.2
 _pkgver=6.0.2
@@ -17,7 +17,7 @@ url="https://www.archlinux.org/pacman/"
 license=('GPL')
 depends=('bash' 'glibc' 'libarchive' 'curl' 'gpgme' 'pacman-mirrorlist'
          'gettext' 'gawk' 'coreutils' 'gnupg' 'grep' 'debugedit')
-makedepends=('meson' 'asciidoc' 'doxygen' 'git')
+makedepends=('meson' 'asciidoc' 'doxygen' 'git' 'curl' 'unzip')
 checkdepends=('python' 'fakechroot')
 optdepends=('perl-locale-gettext: translation support in makepkg-template')
 provides=('libalpm.so')
@@ -46,28 +46,24 @@ source=(
         )
 sha256sums=('SKIP'
             '47f4ba578b1a6a3291cb65a6f60ab8c4871ae45bbe93da308a595a447ed9ad9d'
-            '90f77e16fb4425cf62969203447aa2803f5eb550d6c4fe2dda2035656e25615d'
-            '21d9a0df2d168c3fda88ff7f88cae35de50ccbee48c9a3a17e57770e8c4615e8')
+            '90f77e16fb4425cf62969203447aa2803f5eb550d6c4fe2dda2035656e25615d')
 
 if $_staging; then
     source+=(78cd453.patch)
-    source+=(libsqlite3.a)
     source+=(static_sqlite.patch)
-    noextract=("libsqlite3.a")
 fi
 
 prepare() {
-  cp libsqlite3.a "${pkgname}"
   cd "${pkgname}"
   # we backport way too often in pacman
   # lets at least make it more convenient
   local src
   for src in "${source[@]}"; do
-	  src="${src%%::*}"
-   	  src="${src##*/}"
-      [[ $src = *.patch ]] || continue
-      msg2 "Applying patch $src..."
-      patch -Np1 < "../$src"
+    src="${src%%::*}"
+    src="${src##*/}"
+    [[ $src = *.patch ]] || continue
+    msg2 "Applying patch $src..."
+    patch -Np1 < "../$src"
   done
 }
 build() {
@@ -79,6 +75,28 @@ if $_staging; then
   export RUSTFLAGS+=" -Cembed-bitcode -Clinker-plugin-lto -Clinker=clang -C link-arg=-flto=thin"
   export CC=clang
   export CXX=clang++
+
+  # get latest sqlite3 from arch repos
+  # we need it for static linking
+  vSQLITE3=$(curl -s 'https://archlinux.org/packages/search/json/?name=sqlite' | grep -oP '"pkgver":\s*"\K[^"]+' | head -n 1)
+  target_length=8
+  vSQLITE3=$(echo $vSQLITE3 | awk -F. -v len=$target_length '{printf "%d%02d%02d", $1, $2, $3; for(i=length($0)+1; i<=len; i++) printf "0"}')
+  wget https://www.sqlite.org/2023/sqlite-src-${vSQLITE3}.zip
+  unzip -o sqlite-src-${vSQLITE3}.zip
+  
+  cd sqlite-src-${vSQLITE3}
+  ./configure --prefix=/usr \
+	--enable-static \
+  --disable-shared \
+	--enable-fts3 \
+	--enable-fts4 \
+	--enable-fts5 \
+	--enable-rtree \
+	TCLLIBDIR=/usr/lib/sqlite$pkgver
+  sed -i -e 's/ -shared / -Wl,-O1,--as-needed\0/g' libtool
+  make
+  cp .libs/libsqlite3.a ../libsqlite3.a
+  cd ..
 fi
 
   meson --prefix=/usr \
