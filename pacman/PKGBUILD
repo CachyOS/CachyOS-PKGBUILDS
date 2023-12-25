@@ -23,7 +23,7 @@ url="https://www.archlinux.org/pacman/"
 license=('GPL')
 depends=('bash' 'glibc' 'libarchive' 'curl' 'gpgme' 'pacman-mirrorlist'
          'gettext' 'gawk' 'coreutils' 'gnupg' 'grep' 'debugedit')
-makedepends=('meson' 'asciidoc' 'doxygen' 'git' 'curl' 'unzip' 'tcl')
+makedepends=('meson' 'asciidoc' 'doxygen' 'git' 'curl' 'unzip')
 checkdepends=('python' 'fakechroot')
 optdepends=('perl-locale-gettext: translation support in makepkg-template')
 provides=('libalpm.so')
@@ -35,7 +35,7 @@ options=('strip')
 _commit="6956e5639c641704f8b482a7af08a9d6ffe93117"
 if $_staging; then
     _commit="15692ad4315c8e4b5e4786a1a760274a072f0201"
-    makedepends+=('cmake' 'rust' 'clang')
+    makedepends+=('cmake' 'rust' 'clang' 'tcl')
 fi
 source=(
 #       https://sources.archlinux.org/other/pacman/$pkgname-$_pkgver.tar.xz{,.sig}
