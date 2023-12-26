@@ -75,7 +75,7 @@ build() {
   # build sqlite
   cd sqlite-src-$_srcver
   ./configure --prefix=/usr \
-  --enable-shared \
+	--disable-static \
 	--enable-fts3 \
 	--enable-fts4 \
 	--enable-fts5 \
@@ -118,8 +118,7 @@ build() {
 
   make clean
   ./configure --prefix=/usr \
-  --enable-shared \
-  --enable-static \
+	--disable-static \
 	--enable-fts3 \
 	--enable-fts4 \
 	--enable-fts5 \
