@@ -12,8 +12,8 @@
 # using PGO-LTO script from https://github.com/JuliaLang/julia/pull/45641#issue-1268010204
 
 pkgname=julia
-pkgver=1.9.4
-pkgrel=2
+pkgver=1.10.0
+pkgrel=1
 pkgdesc="Julia with Profile-Guided Optimization (PGO)"
 arch=('x86_64')
 url="http://julialang.org/"
@@ -25,8 +25,8 @@ depends=(blas64-openblas
          libunwind
          libutf8proc
          lld
-         llvm15-libs
          mbedtls2
+         mbedtls
          openlibm
          p7zip
          pcre2
@@ -34,31 +34,16 @@ depends=(blas64-openblas
 makedepends=(cmake
              gcc-fortran
              libwhich
-             llvm15
              patchelf
              python)
-optdepends=('gnuplot: If using the Gaston Package from julia')
-source=(https://github.com/JuliaLang/julia/releases/download/v$pkgver/$pkgname-$pkgver-full.tar.gz{,.asc}
-        julia-libunwind-1.6.patch
+source=(https://github.com/JuliaLang/julia/releases/download/v${pkgver}/julia-${pkgver}-full.tar.gz
         julia-hardcoded-libs.patch
-        julia-libgit2-1.7.patch
-        julia-suitesparse-7.patch
-        959902f1.patch
-        e08e1444.patch
-        f11bfc6c.patch
-        21d4c2f1.patch)
-md5sums=('81b8445f1e08a4114344ed6faeeca42f'
-         'SKIP'
-         '2abac44b32b5178f94418962badc32ae'
-         '7bf7a9a668087986413c8f04d4b77e53'
-         '0a8a7bf0bca91fe5d8b89c6ca095da1c'
-         'bceea22db884602102f1dd3594c59f19'
-         '3b3c0ad194fd42115f0c6334eb7187e3'
-         '546dbad339d797e95502c37ddcb83757'
-         'd270a4d4c7f2793e53f58b5c66daa020'
-         '62eb8e4eccd35c2d0ffcfc8e1a590a81')
+        julia-suitesparse-7.patch)
+optdepends=('gnuplot: If using the Gaston Package from julia')
 validpgpkeys=('3673DF529D9049477F76B37566E3C7DC03D6E495') # Julia (Binary signing key) <buildbot@julialang.org>
-
+sha256sums=('SKIP'
+            '2c61b21c347900b52b26555a0c35d5c88fd23e55efc809a58aa6bc66da1fc506'
+            '90e7f90053486bba26348cbc4f725958159ca5b6b1805124ccf050203dc2f468')
 
 _make() {
   local make_options=(
@@ -66,10 +51,10 @@ _make() {
     bindir=/usr/bin
     sysconfdir=/etc
     libexecdir=/usr/lib
-    USE_BINARYBUILDER=0
+    #USE_BINARYBUILDER=0
     USE_SYSTEM_CSL=1
-    USE_SYSTEM_LLVM=1
-    USE_SYSTEM_LLD=1
+    #USE_SYSTEM_LLVM=1
+    #USE_SYSTEM_LLD=1
     USE_SYSTEM_LIBUNWIND=1
     USE_SYSTEM_PCRE=1
     USE_SYSTEM_BLAS=1
@@ -98,53 +83,31 @@ _make() {
     MARCH=x86-64
     VERBOSE=1
     JLDFLAGS="$LDFLAGS"
-    LLVM_CONFIG=llvm-config-15
+    #LLVM_CONFIG=llvm-config-15
   )
 
-  LD_LIBRARY_PATH="/usr/lib/mbedtls2" make "${make_options[@]}" "$@"
+  make "${make_options[@]}" "$@"
 }
-
 
 prepare() {
 
     # create a var to the current dir
     CURRENT_DIR=$(pwd)
-
     cd $pkgname-$pkgver
-
-    # Port to LLVM 15
-    patch -p1 -i ../e08e1444.patch
-    patch -p1 -i ../959902f1.patch
-    patch -p1 -i ../f11bfc6c.patch
-    patch -p1 -i ../21d4c2f1.patch
-    # libunwind 1.6 compatibility
-    patch -p1 -i ../julia-libunwind-1.6.patch
     # Don't hardcode library names
     patch -p1 -i ../julia-hardcoded-libs.patch
-    # Fix tests with libgit2 1.7
-    patch -p1 -i ../julia-libgit2-1.7.patch
-    # Fix warnings with suitesparse 7
-    cd stdlib/srccache
-    tar -xzf SparseArrays-37e6e58706a54c5a1b96a17cda7d3e8be8bcb190.tar.gz
-    patch -d JuliaSparse-SparseArrays.jl-37e6e58 -p1 < "$srcdir"/julia-suitesparse-7.patch
-    rm SparseArrays-37e6e58706a54c5a1b96a17cda7d3e8be8bcb190.tar.gz
-    tar -czf SparseArrays-37e6e58706a54c5a1b96a17cda7d3e8be8bcb190.tar.gz JuliaSparse-SparseArrays.jl-37e6e58
-    md5sum SparseArrays-37e6e58706a54c5a1b96a17cda7d3e8be8bcb190.tar.gz | cut -d ' ' -f 1 > ../../deps/checksums/SparseArrays-37e6e58706a54c5a1b96a17cda7d3e8be8bcb190.tar.gz/md5
-    sha512sum SparseArrays-37e6e58706a54c5a1b96a17cda7d3e8be8bcb190.tar.gz | cut -d ' ' -f 1 > ../../deps/checksums/SparseArrays-37e6e58706a54c5a1b96a17cda7d3e8be8bcb190.tar.gz/sha512
 
     # go back to the current dir
     cd $CURRENT_DIR
     mkdir -p ${srcdir}/${pkgname}-${pkgver}/pgo-lto
-    cp ../pgoing.jl ${srcdir}/${pkgname}-${pkgver}/pgo-lto
+    #cp ../pgoing.jl ${srcdir}/${pkgname}-${pkgver}/pgo-lto
 }
 
 
 build() {
-
-    export CC=clang
-    export CXX=clang++
-    
     cd "${srcdir}/${pkgname}-${pkgver}"
+    sed -i '/\$(eval \$(call symlink_system_library,LIBSUITESPARSE,libcholmod_cuda))/d' base/Makefile
+    sed -i '/\$(eval \$(call symlink_system_library,LIBSUITESPARSE,libspqr_cuda))/d' base/Makefile
 
     # Perform the build steps
     cd pgo-lto
@@ -155,11 +118,31 @@ build() {
     mkdir -p $PROFILE_DIR
 
     cd ..
+    export STAGE0=${srcdir}/${pkgname}-${pkgver}/pgo-lto/stage0.build
     export STAGE1=${srcdir}/${pkgname}-${pkgver}/pgo-lto/stage1.build
     export STAGE2=${srcdir}/${pkgname}-${pkgver}/pgo-lto/stage2.build
+    mkdir -p $STAGE0
     mkdir -p $STAGE1
     mkdir -p $STAGE2
 
+    export STAGE0_TOOLS=${STAGE0}/usr/tools
+    export LLVM_CXXFILT=${STAGE0_TOOLS}/llvm-cxxfilt
+    export LLVM_PROFDATA=${STAGE0_TOOLS}/llvm-profdata
+    export LLVM_OBJCOPY=${STAGE0_TOOLS}/llvm-objcopy
+
+    make O=pgo-lto/stage0.build configure
+    export USE_BINARYBUILDER_LLVM=1
+    make -C ${STAGE0}/deps install-clang install-llvm install-lld install-llvm-tools    
+    find -name 'libclang_rt.profile-*.a' -exec $LLVM_OBJCOPY --rename-section .ctors=.init_array --rename-section .dtors=.fini_array {} \;
+
+    export CC=${STAGE0_TOOLS}/clang
+    export CXX=${STAGE0_TOOLS}/clang++
+    export LD=${STAGE0_TOOLS}/ld.lld
+    export AR=${STAGE0_TOOLS}/llvm-ar
+    export RANLIB=${STAGE0_TOOLS}/llvm-ranlib
+
+    export USE_BINARYBUILDER_LLVM=0
+    export PATH=${STAGE0_TOOLS}:$PATH
     _make O=pgo-lto/stage1.build configure
     _make O=pgo-lto/stage2.build configure
 
@@ -168,7 +151,7 @@ build() {
     # Set PGO flags
     export PGO_CFLAGS="-fprofile-generate=${PROFILE_DIR} -Xclang -mllvm -Xclang -vp-counters-per-site=${COUNTERS_PER_SITE}"
     export PGO_CXXFLAGS="-fprofile-generate=${PROFILE_DIR} -Xclang -mllvm -Xclang -vp-counters-per-site=${COUNTERS_PER_SITE}"
-    export PGO_LDFLAGS="-fuse-ld=lld -flto=thin -fprofile-generate=${PROFILE_DIR}"
+    export PGO_LDFLAGS="-fuse-ld=${LD} -flto=thin -fprofile-generate=${PROFILE_DIR}"
 
     # backup original flags
     export CFLAGS_ORIG=$CFLAGS
@@ -179,27 +162,32 @@ build() {
     export CFLAGS="${CFLAGS} ${PGO_CFLAGS}"
     export CXXFLAGS="${CXXFLAGS} ${PGO_CXXFLAGS}"
     export LDFLAGS="${LDFLAGS} ${PGO_LDFLAGS}"
+    
     _make -C $STAGE1
     
     # Clean profile dir
     rm -rf $PROFILE_DIR
     mkdir -p $PROFILE_DIR
-    
+
     # Run stage 1 profiling
-    ./stage1.build/julia -O3 pgoing.jl
+    git clone https://github.com/JuliaLang/Microbenchmarks.git
+    cd Microbenchmarks
+    ../stage1.build/julia perf.jl
+    cd ..
 
     # create PROFAW_FILES_LIST
-    llvm-profdata merge -output=${PROFILE_FILE} ${PROFILE_DIR}/*.profraw
+    $LLVM_PROFDATA merge -output=${PROFILE_FILE} ${PROFILE_DIR}/*.profraw
 
     # Build stage 2
     export PGO_CFLAGS="-fprofile-use=${PROFILE_FILE}"
     export PGO_CXXFLAGS="-fprofile-use=${PROFILE_FILE}"
-    export PGO_LDFLAGS="-fuse-ld=lld -flto=thin -fprofile-use=${PROFILE_FILE} -Wl,--icf=safe"
+    export PGO_LDFLAGS="-fuse-ld=${LD} -flto=thin -fprofile-use=${PROFILE_FILE} -Wl,--icf=safe"
 
     export CFLAGS="${CFLAGS_ORIG} ${PGO_CFLAGS}"
     export CXXFLAGS="${CXXFLAGS_ORIG} ${PGO_CXXFLAGS}"
     export LDFLAGS="${LDFLAGS_ORIG} ${PGO_LDFLAGS}"
-
+    
+    export USE_BINARYBUILDER_LLVM=0
     _make -C $STAGE2
 }
 
@@ -208,10 +196,16 @@ package() {
 
   cd $pkgname-$pkgver/pgo-lto/stage2.build
   _make DESTDIR="$pkgdir" install
-
+  echo $PWD  
+  cd $pkgdir
+  echo $PWD
+  patch -p1 -i ../../julia-suitesparse-7.patch
   ln -sf /etc/ssl/cert.pem "$pkgdir"/usr/share/julia # Needed by some packages
 
   rm "$pkgdir"/usr/lib/julia/libccalltest.so.debug # Remove debug testing library
 }
 
 # vim:set ts=2 sw=2 et:
+sha256sums=('SKIP'
+            '79a7a73cf9fe304e7ae2d21b961ab3bc5dfeb39a9cb79bef6c3447108ffb2949'
+            '90e7f90053486bba26348cbc4f725958159ca5b6b1805124ccf050203dc2f468')
