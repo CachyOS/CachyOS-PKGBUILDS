@@ -27,6 +27,7 @@ sha256sums=('73187473feb74509357e8fa6cb9fd67153b2d010d00aeb2fddb6ceeb18abaf27'
             '55746d93b0df4b349c4aa4f09535746dac3530f9fd6de241c9f38e2c92e8ee97'
             '4e57d9ac979f1c9872e69799c2597eeef4c6ce7224f3ede0bf9dc8d217b1e65d'
             'SKIP')
+options=('!lto')
 
 prepare() {
   cd sqlite-src-$_srcver
@@ -42,7 +43,7 @@ build() {
   # this uses malloc_usable_size, which is incompatible with fortification level 3
   export CFLAGS="${CFLAGS/_FORTIFY_SOURCE=3/_FORTIFY_SOURCE=2}"
   export CXXFLAGS="${CXXFLAGS/_FORTIFY_SOURCE=3/_FORTIFY_SOURCE=2}"
-
+  
   export CPPFLAGS="$CPPFLAGS \
         -DSQLITE_ENABLE_COLUMN_METADATA=1 \
         -DSQLITE_ENABLE_UNLOCK_NOTIFY \
@@ -60,27 +61,43 @@ build() {
   export PGO_PROFILE_DIR=$PWD/pgo-data
   mkdir -p ${PGO_PROFILE_DIR}
 
-  #echo "PGO_PROFILE_DIR: ${PGO_PROFILE_DIR}"
-
+  export AR=llvm-ar
   export CC=clang
-  #export CXX=clang++
+  export CXX=clang++
+  export NM=llvm-nm
+  export RANLIB=llvm-ranlib
 
   export ORIG_CFLAGS="${CFLAGS}"
-  #export ORIG_CXXFLAGS="${CXXFLAGS}"
+  export ORIG_CXXFLAGS="${CXXFLAGS}"
 
+<<<<<<< HEAD
+  export CFLAGS+=" -fprofile-generate"
+  export CXXFLAGS+=" -fprofile-generate"
+=======
   export CFLAGS+=" -g -fprofile-generate"
   #export CXXFLAGS+=" -g -fprofile-instr-generate"
+>>>>>>> 9f1b1f49502cab8d656aae2fe8f38c477f1718d4
 
 
   # build sqlite
   cd sqlite-src-$_srcver
+  cd sqlite-src-$_srcver
   ./configure --prefix=/usr \
+<<<<<<< HEAD
+  --disable-static \
+  --enable-fts3 \
+  --enable-fts4 \
+  --enable-fts5 \
+  --enable-rtree \
+  TCLLIBDIR=/usr/lib/sqlite$pkgver
+=======
 	--disable-static \
 	--enable-fts3 \
 	--enable-fts4 \
 	--enable-fts5 \
 	--enable-rtree \
 	TCLLIBDIR=/usr/lib/sqlite$pkgver \
+>>>>>>> 9f1b1f49502cab8d656aae2fe8f38c477f1718d4
 
   sed -i -e 's/ -shared / -Wl,-O1,--as-needed\0/g' libtool
   make
@@ -93,8 +110,10 @@ build() {
   export ROOT_DIR=$PWD
   mv hits.csv ClickBench/sqlite/hits.csv
   cd ClickBench/sqlite
+  rm -rf mydb
   LLVM_PROFILE_FILE=${PGO_PROFILE_DIR}/_%m_%p.profraw $SQLITE_DIR/sqlite3 mydb < create.sql
-  LLVM_PROFILE_FILE=${PGO_PROFILE_DIR}/_%m_%p.profraw $SQLITE_DIR/sqlite3 sqlite3 mydb '.import --csv hits.csv hits'
+  head -n 5000000 hits.csv > sample.csv
+  LLVM_PROFILE_FILE=${PGO_PROFILE_DIR}/_%m_%p.profraw $SQLITE_DIR/sqlite3 mydb '.import --csv sample.csv hits'
   wc -c mydb
 
   TRIES=3
@@ -105,33 +124,37 @@ build() {
 
       echo "$query";
       for i in $(seq 1 $TRIES); do
-          LLVM_PROFILE_FILE=${PGO_PROFILE_DIR}/_%m_%p.profraw $SQLITE_DIR/sqlite3 sqlite3 mydb <<< "${query}"
+          LLVM_PROFILE_FILE=${PGO_PROFILE_DIR}/_%m_%p.profraw $SQLITE_DIR/sqlite3 mydb <<< "${query}"
       done;
   done;
 
-  cd $CURRENT_DIR
+
+  cd $SQLITE_DIR
+
   # merge the profile data
   llvm-profdata merge -o merged.profdata ${PGO_PROFILE_DIR}/*.profraw
 
-  export CFLAGS="${ORIG_CFLAGS} -fprofile-use=merged.profdata"
-  #export CXXFLAGS="${ORIG_CXXFLAGS} -fprofile-instr-use=/merged.profdata"
+  export CFLAGS="${ORIG_CFLAGS} -fprofile-use=merged.profdata -flto=thin"
+  export CXXFLAGS="${ORIG_CXXFLAGS} -fprofile-use=merged.profdata -flto=thin"
 
   make clean
   ./configure --prefix=/usr \
-  	--disable-static \
-  	--enable-fts3 \
-  	--enable-fts4 \
-  	--enable-fts5 \
-  	--enable-rtree \
-  	TCLLIBDIR=/usr/lib/sqlite$pkgver \
+	--disable-static \
+  --enable-fts3 \
+  --enable-fts4 \
+  --enable-fts5 \
+  --enable-rtree \
+  TCLLIBDIR=/usr/lib/sqlite$pkgver \
 
-  sed -i -e 's/ -shared / -Wl,-O1,--as-needed\0/g' libtool
+  sed -i -e 's/ -shared / -flto=thin -Wl,-O1,--as-needed\0/g' libtool
   make
+
   # build additional tools
-  make showdb showjournal showstat4 showwal sqldiff sqlite3_analyzer
+  make showdb showjournal showstat4 showwal sqldiff
 }
 
 package_sqlite() {
+  
 
  pkgdesc="A C library that implements an SQL database engine"
  depends=('readline' 'zlib' 'glibc')
@@ -151,27 +174,8 @@ package_sqlite() {
   install -D -m644 "${srcdir}"/license.txt "${pkgdir}"/usr/share/licenses/${pkgbase}/license.txt
 
   # split out tcl extension
-  mkdir "$srcdir"/tcl
+  mkdir -p "$srcdir"/tcl
   mv "$pkgdir"/usr/lib/sqlite* "$srcdir"/tcl
-}
-
-package_sqlite-tcl() {
-
- pkgdesc="sqlite Tcl Extension Architecture (TEA)"
- depends=('sqlite' 'glibc')
- provides=("sqlite3-tcl=$pkgver")
- replaces=("sqlite3-tcl")
-
-  install -m755 -d "${pkgdir}"/usr/lib
-  mv "$srcdir"/tcl/* "${pkgdir}"/usr/lib
-
-  # install manpage
-  install -m755 -d "${pkgdir}"/usr/share/man/mann
-  install -m644 "${srcdir}"/sqlite-src-$_srcver/autoconf/tea/doc/sqlite3.n "${pkgdir}"/usr/share/man/mann/
-
-  # link license
-  install -m755 -d "${pkgdir}"/usr/share/licenses
-  ln -sf /usr/share/licenses/${pkgbase} "${pkgdir}/usr/share/licenses/${pkgname}"
 }
 
 package_sqlite-analyzer() {
