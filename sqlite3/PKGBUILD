@@ -68,7 +68,7 @@ build() {
   export ORIG_CFLAGS="${CFLAGS}"
   #export ORIG_CXXFLAGS="${CXXFLAGS}"
 
-  export CFLAGS+=" -g -fprofile-instr-generate"
+  export CFLAGS+=" -g -fprofile-generate"
   #export CXXFLAGS+=" -g -fprofile-instr-generate"
 
 
@@ -113,17 +113,17 @@ build() {
   # merge the profile data
   llvm-profdata merge -o merged.profdata ${PGO_PROFILE_DIR}/*.profraw
 
-  export CFLAGS="${ORIG_CFLAGS} -fprofile-instr-use=merged.profdata"
+  export CFLAGS="${ORIG_CFLAGS} -fprofile-use=merged.profdata"
   #export CXXFLAGS="${ORIG_CXXFLAGS} -fprofile-instr-use=/merged.profdata"
 
   make clean
   ./configure --prefix=/usr \
-	--disable-static \
-	--enable-fts3 \
-	--enable-fts4 \
-	--enable-fts5 \
-	--enable-rtree \
-	TCLLIBDIR=/usr/lib/sqlite$pkgver \
+  	--disable-static \
+  	--enable-fts3 \
+  	--enable-fts4 \
+  	--enable-fts5 \
+  	--enable-rtree \
+  	TCLLIBDIR=/usr/lib/sqlite$pkgver \
 
   sed -i -e 's/ -shared / -Wl,-O1,--as-needed\0/g' libtool
   make
