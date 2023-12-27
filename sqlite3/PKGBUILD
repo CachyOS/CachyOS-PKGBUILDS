@@ -70,34 +70,19 @@ build() {
   export ORIG_CFLAGS="${CFLAGS}"
   export ORIG_CXXFLAGS="${CXXFLAGS}"
 
-<<<<<<< HEAD
   export CFLAGS+=" -fprofile-generate"
   export CXXFLAGS+=" -fprofile-generate"
-=======
-  export CFLAGS+=" -g -fprofile-generate"
-  #export CXXFLAGS+=" -g -fprofile-instr-generate"
->>>>>>> 9f1b1f49502cab8d656aae2fe8f38c477f1718d4
-
 
   # build sqlite
   cd sqlite-src-$_srcver
   cd sqlite-src-$_srcver
   ./configure --prefix=/usr \
-<<<<<<< HEAD
   --disable-static \
   --enable-fts3 \
   --enable-fts4 \
   --enable-fts5 \
   --enable-rtree \
   TCLLIBDIR=/usr/lib/sqlite$pkgver
-=======
-	--disable-static \
-	--enable-fts3 \
-	--enable-fts4 \
-	--enable-fts5 \
-	--enable-rtree \
-	TCLLIBDIR=/usr/lib/sqlite$pkgver \
->>>>>>> 9f1b1f49502cab8d656aae2fe8f38c477f1718d4
 
   sed -i -e 's/ -shared / -Wl,-O1,--as-needed\0/g' libtool
   make
