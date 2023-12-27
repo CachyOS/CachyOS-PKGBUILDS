@@ -36,7 +36,7 @@ makedepends=(cmake
              libwhich
              patchelf
              python)
-source=(git+https://github.com/JuliaLang/julia.git
+source=(https://github.com/JuliaLang/julia/releases/download/v${pkgver}/julia-${pkgver}-full.tar.gz
         julia-hardcoded-libs.patch
         julia-suitesparse-7.patch)
 optdepends=('gnuplot: If using the Gaston Package from julia')
@@ -93,9 +93,7 @@ prepare() {
 
     # create a var to the current dir
     CURRENT_DIR=$(pwd)
-    mv $pkgname $pkgname-$pkgver
     cd $pkgname-$pkgver
-	git checkout kc/1.10.0
     # Don't hardcode library names
     patch -p1 -i ../julia-hardcoded-libs.patch
 
