@@ -11,7 +11,6 @@
 # using PGO-LTO script from https://github.com/JuliaLang/julia/pull/45641#issue-1268010204
 
 pkgname=julia
-epoch=2
 pkgver=1.10.0
 pkgrel=2
 arch=(x86_64)
@@ -36,7 +35,9 @@ makedepends=(cmake
              libwhich
              llvm-julia
              patchelf
-             python)
+             python
+             clang
+             llvm)
 optdepends=('gnuplot: If using the Gaston Package from julia')
 source=(https://github.com/JuliaLang/julia/releases/download/v$pkgver/$pkgname-$pkgver-full.tar.gz{,.asc}
         c12e8515.patch
