@@ -1,0 +1,132 @@
+# Maintainer: Sébastien Luttringer
+# PGO build: Laio O. Seman <laio [at] ieee.org>
+
+pkgname=lz4
+epoch=1
+pkgver=1.9.4
+pkgrel=2
+pkgdesc='Extremely fast compression algorithm'
+arch=('x86_64')
+url='https://lz4.github.io/lz4/'
+license=('GPL2')
+makedepends=('git' 'cmake' 'ninja')
+checkdepends=('diffutils')
+depends=('glibc')
+source=("git+https://github.com/lz4/lz4.git#tag=v$pkgver"
+        'merged.profdata')
+sha256sums=('SKIP')
+
+# Function to generate data and compress-decompress it
+generate_and_process_data() {
+    echo "Generating data for $1 KB with compression level $2"
+    DATA_SIZE=$1
+    COMPRESSION_LEVEL=$2
+    FILENAME="data_${DATA_SIZE}_${COMPRESSION_LEVEL}.bin"
+    echo "Data size: $DATA_SIZE KB"
+    # Generate data
+    $DATASET_GENERATOR -g$1 > $FILENAME
+
+    echo "Compressing and decompressing data"
+    echo $FILENAME
+    # Compress
+    START_TIME=$(date +%s.%N)
+    LLVM_PROFILE_FILE=${PGO_PROFILE_DIR}/_%m_%p.profraw $LZ4_BIN -$COMPRESSION_LEVEL $FILENAME $FILENAME.lz4 > /dev/null 2>&1
+    END_TIME=$(date +%s.%N)
+    COMPRESS_TIME=$(echo "$END_TIME - $START_TIME" | bc)
+
+    echo "Decompressing data"
+    # Decompress
+    START_TIME=$(date +%s.%N)
+    LLVM_PROFILE_FILE=${PGO_PROFILE_DIR}/_%m_%p.profraw $LZ4_BIN -d $FILENAME.lz4 ${FILENAME}_uncompressed > /dev/null 2>&1
+    END_TIME=$(date +%s.%N)
+    DECOMPRESS_TIME=$(echo "$END_TIME - $START_TIME" | bc)
+
+    # Cleanup and log results
+    rm $FILENAME $FILENAME.lz4 ${FILENAME}_uncompressed
+    echo "$DATA_SIZE, $COMPRESSION_LEVEL, $COMPRESS_TIME, $DECOMPRESS_TIME" >> results.csv
+}
+
+build() {
+  export ROOT_DIR=$PWD
+  export CC=clang
+  export CXX=clang++
+
+  export CFLAGS_ORIG="$CFLAGS"
+  export CXXFLAGS_ORIG="$CXXFLAGS"
+
+  mkdir -p pgo
+
+  export PGO_PROFILE_DIR=$PWD/pgo
+  # Generate PGO binary
+  export CFLAGS="$CFLAGS -fprofile-generate"
+  export CXXFLAGS="$CXXFLAGS -fprofile-generate"
+
+  cmake -B build -S "$pkgname"/build/cmake \
+    -G Ninja \
+    -DCMAKE_BUILD_TYPE='None' \
+    -DCMAKE_INSTALL_PREFIX='/usr' \
+    -Wno-dev
+  cmake --build build
+
+  cd $pkgname/tests
+  #make datagen
+  export DATASET_GENERATOR=$PWD/datagen
+  cd $ROOT_DIR
+
+  export LZ4_BIN=$ROOT_DIR/build/lz4
+
+  # create data for 1MB, 10MB, 50MB
+  export DATA_SIZES=(1000000 10000000 50000000)
+
+  export COMPRESSION_LEVELS=(1 5 9) # 1 for fastest, 9 for best compression
+
+  echo "PGO data generation"
+  # Generate and process data for 100 times
+  for i in {1..100}; do
+      for SIZE in ${DATA_SIZES[@]}; do
+          for LEVEL in ${COMPRESSION_LEVELS[@]}; do
+              generate_and_process_data $SIZE $LEVEL
+          done
+      done
+  done
+
+  for SIZE in ${DATA_SIZES[@]}; do
+      for LEVEL in ${COMPRESSION_LEVELS[@]}; do
+          generate_and_process_data $SIZE $LEVEL
+      done
+  done
+
+  export CFLAGS="$CFLAGS_ORIG -fprofile-use=$PGO_PROFILE_DIR/merged.profdata"
+  export CXXFLAGS="$CXXFLAGS_ORIG -fprofile-use=$PGO_PROFILE_DIR/merged.profdata"
+
+  llvm-profdata merge -o merged.profdata ${PGO_PROFILE_DIR}/*.profraw
+
+  # clean everything
+  rm -rf build
+
+  cmake -B build -S "$pkgname"/build/cmake \
+    -G Ninja \
+    -DCMAKE_BUILD_TYPE='None' \
+    -DCMAKE_INSTALL_PREFIX='/usr' \
+    -Wno-dev
+  cmake --build build
+
+# Initialize results file
+echo "Data Size, Compression Level, Compress Time, Decompress Time" > results.csv
+
+
+}
+
+check() {
+  rm -f passwd.lz4
+  build/lz4 /etc/passwd passwd.lz4
+  build/lz4 -d passwd.lz4 passwd
+  diff -q /etc/passwd passwd
+  rm passwd
+}
+
+package() {
+  DESTDIR="$pkgdir" cmake --install build
+}
+
+# vim:set ts=2 sw=2 et:
