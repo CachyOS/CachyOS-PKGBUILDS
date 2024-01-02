@@ -1,0 +1,27 @@
+name: Update Cachy Files with Latest Releases
+
+on:
+  workflow_dispatch:
+
+jobs:
+  check-bump:
+
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: lseman/gitAPy
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.11
+      # You can test your matrix by printing the current Python version
+      - name: Run gitAPy
+        run: |
+          ls
+          export API_URL="https://api.github.com"
+          export TOKEN=${{ secrets.GITHUB_TOKEN }}
+          export API_VERSION="2022-11-28"
+          pip install -r requirements.txt
+          python -m spacy download en_core_web_sm
+          python gitapy.py cachy

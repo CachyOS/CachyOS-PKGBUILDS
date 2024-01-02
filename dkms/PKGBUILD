@@ -2,7 +2,7 @@
 # Contributor: Balwinder S "bsd" Dheeman (bdheeman AT gmail.com)
 
 pkgname=dkms
-pkgver=3.0.11
+pkgver=3.0.12
 pkgrel=2
 pkgdesc='Dynamic Kernel Modules System'
 arch=('any')
@@ -14,8 +14,7 @@ makedepends=('git')
 optdepends=('linux-headers: build modules against the Arch kernel'
             'linux-lts-headers: build modules against the LTS kernel'
             'linux-zen-headers: build modules against the ZEN kernel'
-            'linux-hardened-headers: build modules against the HARDENED kernel'
-            )
+            'linux-hardened-headers: build modules against the HARDENED kernel')
 backup=('etc/dkms/framework.conf')
 install=$pkgname.install
 source=("git+https://github.com/dell/dkms.git#tag=v$pkgver"
@@ -65,10 +64,9 @@ package() {
   # we install them outside of $pkgdir
   make \
     DESTDIR="$pkgdir" \
-    SBIN="$pkgdir/usr/bin" \
-    BASHDIR="$pkgdir/usr/share/bash-completion/completions" \
-    KCONF="$srcdir"/trash \
-    LIBDIR="$srcdir"/trash \
+    SBIN=/usr/bin \
+    KCONF=/../trash \
+    LIBDIR=/../trash \
     install
 }
 
