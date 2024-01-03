@@ -9,14 +9,14 @@ pkgdesc='Extremely fast compression algorithm'
 arch=('x86_64')
 url='https://lz4.github.io/lz4/'
 license=('GPL2')
-makedepends=('git' 'cmake' 'ninja')
+makedepends=('git' 'cmake' 'ninja', 'llvm', 'clang')
 checkdepends=('diffutils')
 depends=('glibc')
 source=("git+https://github.com/lz4/lz4.git#tag=v$pkgver")
 sha256sums=('SKIP')
 
 # Function to generate data and compress-decompress it
-generate_and_process_data() {
+local generate_and_process_data() {
     echo "Generating data for $1 KB with compression level $2"
     DATA_SIZE=$1
     COMPRESSION_LEVEL=$2
