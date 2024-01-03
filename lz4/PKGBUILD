@@ -16,7 +16,7 @@ source=("git+https://github.com/lz4/lz4.git#tag=v$pkgver")
 sha256sums=('SKIP')
 
 # Function to generate data and compress-decompress it
-local generate_and_process_data() {
+_generate_and_process_data() {
     echo "Generating data for $1 KB with compression level $2"
     DATA_SIZE=$1
     COMPRESSION_LEVEL=$2
@@ -84,14 +84,14 @@ build() {
   for i in {1..100}; do
       for SIZE in ${DATA_SIZES[@]}; do
           for LEVEL in ${COMPRESSION_LEVELS[@]}; do
-              generate_and_process_data $SIZE $LEVEL
+              _generate_and_process_data $SIZE $LEVEL
           done
       done
   done
 
   for SIZE in ${DATA_SIZES[@]}; do
       for LEVEL in ${COMPRESSION_LEVELS[@]}; do
-          generate_and_process_data $SIZE $LEVEL
+          _generate_and_process_data $SIZE $LEVEL
       done
   done
 
