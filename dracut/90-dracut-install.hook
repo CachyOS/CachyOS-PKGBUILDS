@@ -4,7 +4,17 @@ Operation = Install
 Operation = Upgrade
 Target = usr/lib/modules/*/vmlinuz
 Target = usr/lib/dracut/*
-Target = usr/lib/systemd/systemd
+Target = usr/lib/firmware/*
+Target = usr/src/*/dkms.conf
+
+[Trigger]
+Type = Package
+Operation = Install
+Operation = Upgrade
+Operation = Remove
+Target = amd-ucode
+Target = intel-ucode
+Target = systemd
 
 [Action]
 Description = Updating initramfs...
