@@ -1,0 +1,89 @@
+			     BASH PATCH REPORT
+			     =================
+
+Bash-Release:	5.2
+Patch-ID:	bash52-003
+
+Bug-Reported-by:	 D630 <d630@posteo.net>
+Bug-Reference-ID:	<cf8523d58ac75b9ffba9519faa175618@posteo.de>
+Bug-Reference-URL:	https://lists.gnu.org/archive/html/bug-bash/2022-10/msg00092.html
+
+Bug-Description:
+
+Command substitutions need to preserve newlines instead of replacing them
+with semicolons, especially in the presence of multiple here-documents.
+
+Patch (apply with `patch -p0'):
+
+*** ../bash-5.2-patched/print_cmd.c	2022-07-26 09:16:39.000000000 -0400
+--- print_cmd.c	2022-10-17 10:41:06.000000000 -0400
+***************
+*** 298,305 ****
+--- 298,307 ----
+  	      {
+  		char c = command->value.Connection->connector;
++ 		int was_newline;
+  
+  		s[0] = printing_comsub ? c : ';';
+  		s[1] = '\0';
+  
++ 		was_newline = deferred_heredocs == 0 && was_heredoc == 0 && c == '\n';
+  		if (deferred_heredocs == 0)
+  		  {
+***************
+*** 315,318 ****
+--- 317,322 ----
+  		if (inside_function_def)
+  		  cprintf ("\n");
++ 		else if (printing_comsub && c == '\n' && was_newline == 0)
++ 		  cprintf ("\n");	/* preserve newlines in comsubs but don't double them */
+  		else
+  		  {
+***************
+*** 1366,1370 ****
+      }
+    else
+!     newline ("}");
+  
+    dispose_command (cmdcopy);
+--- 1371,1379 ----
+      }
+    else
+!     {
+!       /* { */
+!       newline ("}");
+!       was_heredoc = 0;		/* not printing any here-documents now */
+!     }
+  
+    dispose_command (cmdcopy);
+***************
+*** 1443,1447 ****
+      }
+    else
+!     newline ("}");
+  
+    result = the_printed_command;
+--- 1452,1459 ----
+      }
+    else
+!     {	/* { */
+!       newline ("}");
+!       was_heredoc = 0;
+!     }
+  
+    result = the_printed_command;
+*** ../bash-5.2/patchlevel.h	2020-06-22 14:51:03.000000000 -0400
+--- patchlevel.h	2020-10-01 11:01:28.000000000 -0400
+***************
+*** 26,30 ****
+     looks for to find the patch level (for the sccs version string). */
+  
+! #define PATCHLEVEL 2
+  
+  #endif /* _PATCHLEVEL_H_ */
+--- 26,30 ----
+     looks for to find the patch level (for the sccs version string). */
+  
+! #define PATCHLEVEL 3
+  
+  #endif /* _PATCHLEVEL_H_ */

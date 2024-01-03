@@ -1,0 +1,119 @@
+			     BASH PATCH REPORT
+			     =================
+
+Bash-Release:	5.2
+Patch-ID:	bash52-014
+
+Bug-Reported-by:	Andreas Schwab <schwab@suse.de>
+Bug-Reference-ID:	<mvmv8opcbha.fsf@suse.de>
+Bug-Reference-URL:	https://lists.gnu.org/archive/html/bug-bash/2022-10/msg00076.html
+
+Bug-Description:
+
+Bash defers processing additional terminating signals when running the
+EXIT trap while exiting due to a terminating signal. This patch allows the
+new terminating signal to kill the shell immediately.
+
+Patch (apply with `patch -p0'):
+
+*** ../bash-5.2-patched/execute_cmd.c	2022-11-23 17:09:18.000000000 -0500
+--- execute_cmd.c	2022-11-28 10:36:08.000000000 -0500
+***************
+*** 3625,3628 ****
+--- 3649,3653 ----
+  
+  	  dispose_words (es);
++ 	  QUIT;
+  
+  	  if (match)
+*** ../bash-5.2-patched/sig.c	2021-11-04 14:15:31.000000000 -0400
+--- sig.c	2022-12-06 09:45:11.000000000 -0500
+***************
+*** 95,98 ****
+--- 95,99 ----
+  
+  static void initialize_shell_signals PARAMS((void));
++ static void kill_shell PARAMS((int));
+  
+  void
+***************
+*** 487,490 ****
+--- 495,500 ----
+  }
+  
++ static int handling_termsig = 0;
++ 
+  sighandler
+  termsig_sighandler (sig)
+***************
+*** 533,536 ****
+--- 543,554 ----
+      terminate_immediately = 1;
+  
++   /* If we are currently handling a terminating signal, we have a couple of
++      choices here. We can ignore this second terminating signal and let the
++      shell exit from the first one, or we can exit immediately by killing
++      the shell with this signal. This code implements the latter; to implement
++      the former, replace the kill_shell(sig) with return. */
++   if (handling_termsig)
++     kill_shell (sig);		/* just short-circuit now */
++ 
+    terminating_signal = sig;
+  
+***************
+*** 565,572 ****
+       int sig;
+  {
+-   static int handling_termsig = 0;
+-   int i, core;
+-   sigset_t mask;
+- 
+    /* Simple semaphore to keep this function from being executed multiple
+       times.  Since we no longer are running as a signal handler, we don't
+--- 585,588 ----
+***************
+*** 574,578 ****
+    if (handling_termsig)
+      return;
+!   handling_termsig = 1;
+    terminating_signal = 0;	/* keep macro from re-testing true. */
+  
+--- 590,595 ----
+    if (handling_termsig)
+      return;
+! 
+!   handling_termsig = terminating_signal;	/* for termsig_sighandler */
+    terminating_signal = 0;	/* keep macro from re-testing true. */
+  
+***************
+*** 614,617 ****
+--- 631,644 ----
+    run_exit_trap ();	/* XXX - run exit trap possibly in signal context? */
+  
++   kill_shell (sig);
++ }
++ 
++ static void
++ kill_shell (sig)
++      int sig;
++ {
++   int i, core;
++   sigset_t mask;
++ 
+    /* We don't change the set of blocked signals. If a user starts the shell
+       with a terminating signal blocked, we won't get here (and if by some
+*** ../bash-5.2/patchlevel.h	2020-06-22 14:51:03.000000000 -0400
+--- patchlevel.h	2020-10-01 11:01:28.000000000 -0400
+***************
+*** 26,30 ****
+     looks for to find the patch level (for the sccs version string). */
+  
+! #define PATCHLEVEL 13
+  
+  #endif /* _PATCHLEVEL_H_ */
+--- 26,30 ----
+     looks for to find the patch level (for the sccs version string). */
+  
+! #define PATCHLEVEL 14
+  
+  #endif /* _PATCHLEVEL_H_ */

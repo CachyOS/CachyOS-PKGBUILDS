@@ -1,0 +1,344 @@
+			     BASH PATCH REPORT
+			     =================
+
+Bash-Release:	5.2
+Patch-ID:	bash52-012
+
+Bug-Reported-by:	Kerin Millar <kfm@plushkava.net>
+Bug-Reference-ID:	<20221002095107.89561bc811e549b55644df11@plushkava.net>
+Bug-Reference-URL:	https://lists.gnu.org/archive/html/bug-bash/2022-10/msg00001.html
+
+Bug-Description:
+
+When running in bash compatibility mode, nested command substitutions can
+leave the `extglob' option enabled.
+
+Patch (apply with `patch -p0'):
+
+*** /fs1/chet/scratch/bash-5.2.12/builtins/shopt.def	2022-11-07 10:31:42.000000000 -0500
+--- builtins/shopt.def	2022-10-14 09:30:11.000000000 -0400
+***************
+*** 150,153 ****
+--- 150,158 ----
+  #endif
+  
++ #if defined (EXTENDED_GLOB)
++ int extglob_flag = EXTGLOB_DEFAULT;
++ static int shopt_set_extglob PARAMS((char *, int));
++ #endif
++ 
+  int expaliases_flag = 0;
+  static int shopt_set_expaliases PARAMS((char *, int));
+***************
+*** 207,211 ****
+  #endif
+  #if defined (EXTENDED_GLOB)
+!   { "extglob", &extended_glob, (shopt_set_func_t *)NULL },
+  #endif
+    { "extquote", &extended_quote, (shopt_set_func_t *)NULL },
+--- 212,216 ----
+  #endif
+  #if defined (EXTENDED_GLOB)
+!   { "extglob", &extglob_flag, shopt_set_extglob },
+  #endif
+    { "extquote", &extended_quote, (shopt_set_func_t *)NULL },
+***************
+*** 378,382 ****
+  
+  #if defined (EXTENDED_GLOB)
+!   extended_glob = EXTGLOB_DEFAULT;
+  #endif
+  
+--- 383,387 ----
+  
+  #if defined (EXTENDED_GLOB)
+!   extended_glob = extglob_flag = EXTGLOB_DEFAULT;
+  #endif
+  
+***************
+*** 644,647 ****
+--- 649,663 ----
+  }
+  
++ #if defined (EXTENDED_GLOB)
++ static int
++ shopt_set_extglob (option_name, mode)
++      char *option_name;
++      int mode;
++ {
++   extended_glob = extglob_flag;
++   return 0;
++ }
++ #endif
++ 
+  #if defined (READLINE)
+  static int
+*** /fs1/chet/scratch/bash-5.2.12/builtins/common.h	2022-11-07 10:31:42.000000000 -0500
+--- builtins/common.h	2022-10-14 09:29:25.000000000 -0400
+***************
+*** 258,261 ****
+--- 258,265 ----
+  #endif
+  
++ #if defined (EXTENDED_GLOB)
++ extern int extglob_flag;
++ #endif
++ 
+  extern int expaliases_flag;
+  
+*** /fs1/chet/scratch/bash-5.2.12/execute_cmd.c	2022-11-07 10:31:42.000000000 -0500
+--- execute_cmd.c	2022-11-02 16:32:12.000000000 -0400
+***************
+*** 3991,4001 ****
+  #endif /* COND_REGEXP */
+  	{
+- 	  int oe;
+- 	  oe = extended_glob;
+  	  extended_glob = 1;
+  	  result = binary_test (cond->op->word, arg1, arg2, TEST_PATMATCH|TEST_ARITHEXP|TEST_LOCALE)
+  				  ? EXECUTION_SUCCESS
+  				  : EXECUTION_FAILURE;
+! 	  extended_glob = oe;
+  	}
+        if (arg1 != nullstr)
+--- 4015,4023 ----
+  #endif /* COND_REGEXP */
+  	{
+  	  extended_glob = 1;
+  	  result = binary_test (cond->op->word, arg1, arg2, TEST_PATMATCH|TEST_ARITHEXP|TEST_LOCALE)
+  				  ? EXECUTION_SUCCESS
+  				  : EXECUTION_FAILURE;
+! 	  extended_glob = extglob_flag;
+  	}
+        if (arg1 != nullstr)
+*** /fs1/chet/scratch/bash-5.2.9/parse.y	2022-11-07 10:31:47.000000000 -0500
+--- parse.y	2022-11-14 11:27:22.000000000 -0500
+***************
+*** 126,130 ****
+  
+  #if defined (EXTENDED_GLOB)
+! extern int extended_glob;
+  #endif
+  
+--- 126,130 ----
+  
+  #if defined (EXTENDED_GLOB)
+! extern int extended_glob, extglob_flag;
+  #endif
+  
+***************
+*** 3305,3309 ****
+    /* Reset to global value of extended glob */
+    if (parser_state & (PST_EXTPAT|PST_CMDSUBST))
+!     extended_glob = global_extglob;
+  #endif
+    if (parser_state & (PST_CMDSUBST|PST_STRING))
+--- 3321,3325 ----
+    /* Reset to global value of extended glob */
+    if (parser_state & (PST_EXTPAT|PST_CMDSUBST))
+!     extended_glob = extglob_flag;
+  #endif
+    if (parser_state & (PST_CMDSUBST|PST_STRING))
+***************
+*** 4125,4132 ****
+  #if defined (EXTENDED_GLOB)
+    /* If (parser_state & PST_EXTPAT), we're parsing an extended pattern for a
+!      conditional command and have already set global_extglob appropriately. */
+    if (shell_compatibility_level <= 51 && was_extpat == 0)
+      {
+!       local_extglob = global_extglob = extended_glob;
+        extended_glob = 1;
+      }
+--- 4143,4150 ----
+  #if defined (EXTENDED_GLOB)
+    /* If (parser_state & PST_EXTPAT), we're parsing an extended pattern for a
+!      conditional command and have already set extended_glob appropriately. */
+    if (shell_compatibility_level <= 51 && was_extpat == 0)
+      {
+!       local_extglob = extended_glob;
+        extended_glob = 1;
+      }
+***************
+*** 4236,4240 ****
+    sh_parser_state_t ps;
+    sh_input_line_state_t ls;
+!   int orig_ind, nc, sflags, start_lineno;
+    char *ret, *ep, *ostring;
+  
+--- 4256,4260 ----
+    sh_parser_state_t ps;
+    sh_input_line_state_t ls;
+!   int orig_ind, nc, sflags, start_lineno, local_extglob;
+    char *ret, *ep, *ostring;
+  
+***************
+*** 4279,4283 ****
+    expand_aliases = 0;
+  #if defined (EXTENDED_GLOB)
+!   global_extglob = extended_glob;		/* for reset_parser() */
+  #endif
+  
+--- 4299,4303 ----
+    expand_aliases = 0;
+  #if defined (EXTENDED_GLOB)
+!   local_extglob = extended_glob;
+  #endif
+  
+***************
+*** 4297,4300 ****
+--- 4317,4323 ----
+    restore_parser_state (&ps);
+  
++ #if defined (EXTENDED_GLOB)
++   extended_glob = local_extglob;
++ #endif
+    token_to_read = 0;
+  
+***************
+*** 4732,4741 ****
+--- 4755,4768 ----
+  
+        /* rhs */
++ #if defined (EXTENDED_GLOB)
+        local_extglob = extended_glob;
+        if (parser_state & PST_EXTPAT)
+  	extended_glob = 1;
++ #endif
+        tok = read_token (READ);
++ #if defined (EXTENDED_GLOB)
+        if (parser_state & PST_EXTPAT)
+  	extended_glob = local_extglob;
++ #endif
+        parser_state &= ~(PST_REGEXP|PST_EXTPAT);
+  
+***************
+*** 4784,4788 ****
+    COND_COM *cexp;
+  
+-   global_extglob = extended_glob;
+    cexp = cond_expr ();
+    return (make_cond_command (cexp));
+--- 4811,4814 ----
+*** y.tab.c.save	2022-11-07 10:31:47.000000000 -0500
+--- y.tab.c	2022-11-18 15:58:03.000000000 -0500
+***************
+*** 176,180 ****
+  
+  #if defined (EXTENDED_GLOB)
+! extern int extended_glob;
+  #endif
+  
+--- 176,180 ----
+  
+  #if defined (EXTENDED_GLOB)
+! extern int extended_glob, extglob_flag;
+  #endif
+  
+***************
+*** 5616,5620 ****
+    /* Reset to global value of extended glob */
+    if (parser_state & (PST_EXTPAT|PST_CMDSUBST))
+!     extended_glob = global_extglob;
+  #endif
+    if (parser_state & (PST_CMDSUBST|PST_STRING))
+--- 5616,5620 ----
+    /* Reset to global value of extended glob */
+    if (parser_state & (PST_EXTPAT|PST_CMDSUBST))
+!     extended_glob = extglob_flag;
+  #endif
+    if (parser_state & (PST_CMDSUBST|PST_STRING))
+***************
+*** 6436,6443 ****
+  #if defined (EXTENDED_GLOB)
+    /* If (parser_state & PST_EXTPAT), we're parsing an extended pattern for a
+!      conditional command and have already set global_extglob appropriately. */
+    if (shell_compatibility_level <= 51 && was_extpat == 0)
+      {
+!       local_extglob = global_extglob = extended_glob;
+        extended_glob = 1;
+      }
+--- 6436,6443 ----
+  #if defined (EXTENDED_GLOB)
+    /* If (parser_state & PST_EXTPAT), we're parsing an extended pattern for a
+!      conditional command and have already set extended_glob appropriately. */
+    if (shell_compatibility_level <= 51 && was_extpat == 0)
+      {
+!       local_extglob = extended_glob;
+        extended_glob = 1;
+      }
+***************
+*** 6547,6551 ****
+    sh_parser_state_t ps;
+    sh_input_line_state_t ls;
+!   int orig_ind, nc, sflags, start_lineno;
+    char *ret, *ep, *ostring;
+  
+--- 6547,6551 ----
+    sh_parser_state_t ps;
+    sh_input_line_state_t ls;
+!   int orig_ind, nc, sflags, start_lineno, local_extglob;
+    char *ret, *ep, *ostring;
+  
+***************
+*** 6590,6594 ****
+    expand_aliases = 0;
+  #if defined (EXTENDED_GLOB)
+!   global_extglob = extended_glob;		/* for reset_parser() */
+  #endif
+  
+--- 6590,6594 ----
+    expand_aliases = 0;
+  #if defined (EXTENDED_GLOB)
+!   local_extglob = extended_glob;
+  #endif
+  
+***************
+*** 6608,6611 ****
+--- 6608,6614 ----
+    restore_parser_state (&ps);
+  
++ #if defined (EXTENDED_GLOB)
++   extended_glob = local_extglob;
++ #endif
+    token_to_read = 0;
+  
+***************
+*** 7043,7052 ****
+--- 7046,7059 ----
+  
+        /* rhs */
++ #if defined (EXTENDED_GLOB)
+        local_extglob = extended_glob;
+        if (parser_state & PST_EXTPAT)
+  	extended_glob = 1;
++ #endif
+        tok = read_token (READ);
++ #if defined (EXTENDED_GLOB)
+        if (parser_state & PST_EXTPAT)
+  	extended_glob = local_extglob;
++ #endif
+        parser_state &= ~(PST_REGEXP|PST_EXTPAT);
+  
+***************
+*** 7095,7099 ****
+    COND_COM *cexp;
+  
+-   global_extglob = extended_glob;
+    cexp = cond_expr ();
+    return (make_cond_command (cexp));
+--- 7102,7105 ----
+*** ../bash-5.2/patchlevel.h	2020-06-22 14:51:03.000000000 -0400
+--- patchlevel.h	2020-10-01 11:01:28.000000000 -0400
+***************
+*** 26,30 ****
+     looks for to find the patch level (for the sccs version string). */
+  
+! #define PATCHLEVEL 11
+  
+  #endif /* _PATCHLEVEL_H_ */
+--- 26,30 ----
+     looks for to find the patch level (for the sccs version string). */
+  
+! #define PATCHLEVEL 12
+  
+  #endif /* _PATCHLEVEL_H_ */

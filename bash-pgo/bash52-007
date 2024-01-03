@@ -1,0 +1,262 @@
+			     BASH PATCH REPORT
+			     =================
+
+Bash-Release:	5.2
+Patch-ID:	bash52-007
+
+Bug-Reported-by:	Bruce Jerrick
+Bug-Reference-ID:
+Bug-Reference-URL:	https://bugzilla.redhat.com/show_bug.cgi?id=2134307
+
+Bug-Description:
+
+This patch fixes several problems with alias expansion inside command
+substitutions when in POSIX mode.
+
+Patch (apply with `patch -p0'):
+
+*** /fs1/chet/scratch/bash-5.2.6/parse.y	2022-11-02 10:36:54.000000000 -0400
+--- parse.y	2022-10-24 10:53:26.000000000 -0400
+***************
+*** 3613,3616 ****
+--- 3614,3618 ----
+  #define P_ARRAYSUB	0x0020	/* parsing a [...] array subscript for assignment */
+  #define P_DOLBRACE	0x0040	/* parsing a ${...} construct */
++ #define P_ARITH		0x0080	/* parsing a $(( )) arithmetic expansion */
+  
+  /* Lexical state while parsing a grouping construct or $(...). */
+***************
+*** 3911,3914 ****
+--- 3914,3920 ----
+  	  else if ((flags & (P_ARRAYSUB|P_DOLBRACE)) && (tflags & LEX_WASDOL) && (ch == '(' || ch == '{' || ch == '['))	/* ) } ] */
+  	    goto parse_dollar_word;
++ 	  else if ((flags & P_ARITH) && (tflags & LEX_WASDOL) && ch == '(') /*)*/
++ 	    /* $() inside $(( ))/$[ ] */
++ 	    goto parse_dollar_word;
+  #if defined (PROCESS_SUBSTITUTION)
+  	  /* XXX - technically this should only be recognized at the start of
+***************
+*** 3941,3945 ****
+  	    nestret = parse_matched_pair (0, '{', '}', &nestlen, P_FIRSTCLOSE|P_DOLBRACE|rflags);
+  	  else if (ch == '[')		/* ] */
+! 	    nestret = parse_matched_pair (0, '[', ']', &nestlen, rflags);
+  
+  	  CHECK_NESTRET_ERROR ();
+--- 3947,3951 ----
+  	    nestret = parse_matched_pair (0, '{', '}', &nestlen, P_FIRSTCLOSE|P_DOLBRACE|rflags);
+  	  else if (ch == '[')		/* ] */
+! 	    nestret = parse_matched_pair (0, '[', ']', &nestlen, rflags|P_ARITH);
+  
+  	  CHECK_NESTRET_ERROR ();
+***************
+*** 4080,4084 ****
+        shell_ungetc (peekc);
+        if (peekc == '(')		/*)*/
+! 	return (parse_matched_pair (qc, open, close, lenp, 0));
+      }
+  
+--- 4086,4090 ----
+        shell_ungetc (peekc);
+        if (peekc == '(')		/*)*/
+! 	return (parse_matched_pair (qc, open, close, lenp, P_ARITH));
+      }
+  
+***************
+*** 4501,4505 ****
+  
+    exp_lineno = line_number;
+!   ttok = parse_matched_pair (0, '(', ')', &ttoklen, 0);
+    rval = 1;
+    if (ttok == &matched_pair_error)
+--- 4512,4516 ----
+  
+    exp_lineno = line_number;
+!   ttok = parse_matched_pair (0, '(', ')', &ttoklen, P_ARITH);
+    rval = 1;
+    if (ttok == &matched_pair_error)
+***************
+*** 5016,5020 ****
+  		}
+  	      else
+! 		ttok = parse_matched_pair (cd, '[', ']', &ttoklen, 0);
+  	      if (ttok == &matched_pair_error)
+  		return -1;		/* Bail immediately. */
+--- 5030,5034 ----
+  		}
+  	      else
+! 		ttok = parse_matched_pair (cd, '[', ']', &ttoklen, P_ARITH);
+  	      if (ttok == &matched_pair_error)
+  		return -1;		/* Bail immediately. */
+*** ../bash-5.2.6/y.tab.c	2022-11-02 10:36:54.000000000 -0400
+--- y.tab.c	2022-11-02 10:55:58.000000000 -0400
+***************
+*** 5924,5927 ****
+--- 5924,5928 ----
+  #define P_ARRAYSUB	0x0020	/* parsing a [...] array subscript for assignment */
+  #define P_DOLBRACE	0x0040	/* parsing a ${...} construct */
++ #define P_ARITH		0x0080	/* parsing a $(( )) arithmetic expansion */
+  
+  /* Lexical state while parsing a grouping construct or $(...). */
+***************
+*** 6222,6225 ****
+--- 6223,6229 ----
+  	  else if ((flags & (P_ARRAYSUB|P_DOLBRACE)) && (tflags & LEX_WASDOL) && (ch == '(' || ch == '{' || ch == '['))	/* ) } ] */
+  	    goto parse_dollar_word;
++ 	  else if ((flags & P_ARITH) && (tflags & LEX_WASDOL) && ch == '(') /*)*/
++ 	    /* $() inside $(( ))/$[ ] */
++ 	    goto parse_dollar_word;
+  #if defined (PROCESS_SUBSTITUTION)
+  	  /* XXX - technically this should only be recognized at the start of
+***************
+*** 6252,6256 ****
+  	    nestret = parse_matched_pair (0, '{', '}', &nestlen, P_FIRSTCLOSE|P_DOLBRACE|rflags);
+  	  else if (ch == '[')		/* ] */
+! 	    nestret = parse_matched_pair (0, '[', ']', &nestlen, rflags);
+  
+  	  CHECK_NESTRET_ERROR ();
+--- 6256,6260 ----
+  	    nestret = parse_matched_pair (0, '{', '}', &nestlen, P_FIRSTCLOSE|P_DOLBRACE|rflags);
+  	  else if (ch == '[')		/* ] */
+! 	    nestret = parse_matched_pair (0, '[', ']', &nestlen, rflags|P_ARITH);
+  
+  	  CHECK_NESTRET_ERROR ();
+***************
+*** 6391,6395 ****
+        shell_ungetc (peekc);
+        if (peekc == '(')		/*)*/
+! 	return (parse_matched_pair (qc, open, close, lenp, 0));
+      }
+  
+--- 6395,6399 ----
+        shell_ungetc (peekc);
+        if (peekc == '(')		/*)*/
+! 	return (parse_matched_pair (qc, open, close, lenp, P_ARITH));
+      }
+  
+***************
+*** 6812,6816 ****
+  
+    exp_lineno = line_number;
+!   ttok = parse_matched_pair (0, '(', ')', &ttoklen, 0);
+    rval = 1;
+    if (ttok == &matched_pair_error)
+--- 6816,6820 ----
+  
+    exp_lineno = line_number;
+!   ttok = parse_matched_pair (0, '(', ')', &ttoklen, P_ARITH);
+    rval = 1;
+    if (ttok == &matched_pair_error)
+***************
+*** 7327,7331 ****
+  		}
+  	      else
+! 		ttok = parse_matched_pair (cd, '[', ']', &ttoklen, 0);
+  	      if (ttok == &matched_pair_error)
+  		return -1;		/* Bail immediately. */
+--- 7331,7335 ----
+  		}
+  	      else
+! 		ttok = parse_matched_pair (cd, '[', ']', &ttoklen, P_ARITH);
+  	      if (ttok == &matched_pair_error)
+  		return -1;		/* Bail immediately. */
+*** /fs1/chet/scratch/bash-5.2.6/builtins/evalstring.c	2022-07-18 14:46:56.000000000 -0400
+--- builtins/evalstring.c	2022-10-18 10:57:51.000000000 -0400
+***************
+*** 432,435 ****
+--- 432,437 ----
+        if (parse_command () == 0)
+  	{
++ 	  int local_expalias, local_alflag;
++ 
+  	  if ((flags & SEVAL_PARSEONLY) || (interactive_shell == 0 && read_but_dont_execute))
+  	    {
+***************
+*** 508,511 ****
+--- 510,526 ----
+  #endif /* ONESHOT */
+  
++ 	      /* We play tricks in the parser and command_substitute() turning
++ 		 expand_aliases on and off depending on which parsing pass and
++ 		 whether or not we're in posix mode. This only matters for
++ 		 parsing, and we let the higher layers deal with that. We just
++ 		 want to ensure that expand_aliases is set to the appropriate
++ 		 global value when we go to execute this command, so we save
++ 		 and restore it around the execution (we don't restore it if
++ 		 the global value of the flag (expaliases_flag) changes). */
++ 	      local_expalias = expand_aliases;
++ 	      local_alflag = expaliases_flag;
++ 	      if (subshell_environment & SUBSHELL_COMSUB)
++ 		expand_aliases = expaliases_flag;
++ 
+  	      /* See if this is a candidate for $( <file ). */
+  	      if (startup_state == 2 &&
+***************
+*** 525,528 ****
+--- 540,547 ----
+  	      discard_unwind_frame ("pe_dispose");
+  
++ 	      /* If the global value didn't change, we restore what we had. */
++ 	      if ((subshell_environment & SUBSHELL_COMSUB) && local_alflag == expaliases_flag)
++ 		expand_aliases = local_expalias;
++ 
+  	      if (flags & SEVAL_ONECMD)
+  		{
+*** /fs1/chet/scratch/bash-5.2.6/command.h	2021-04-30 15:43:15.000000000 -0400
+--- command.h	2022-10-18 11:44:31.000000000 -0400
+***************
+*** 115,118 ****
+--- 115,119 ----
+  #define PF_EXPANDRHS	0x20	/* same as W_EXPANDRHS */
+  #define PF_ALLINDS	0x40	/* array, act as if [@] was supplied */
++ #define PF_BACKQUOTE	0x80	/* differentiate `` from $() for command_substitute */
+  
+  /* Possible values for subshell_environment */
+*** /fs1/chet/scratch/bash-5.2.6/subst.c	2022-11-02 10:28:10.000000000 -0400
+--- subst.c	2022-10-20 12:41:07.000000000 -0400
+***************
+*** 7124,7129 ****
+  
+        /* We want to expand aliases on this pass if we are not in posix mode
+! 	 for backwards compatibility. */
+!       if (expand_aliases)
+          expand_aliases = posixly_correct == 0;
+  
+--- 7133,7142 ----
+  
+        /* We want to expand aliases on this pass if we are not in posix mode
+! 	 for backwards compatibility. parse_and_execute() takes care of
+! 	 setting expand_aliases back to the global value when executing the
+! 	 parsed string. We only do this for $(...) command substitution,
+! 	 since that is what parse_comsub handles; `` comsubs are processed
+! 	 using parse.y:parse_matched_pair(). */
+!       if (expand_aliases && (flags & PF_BACKQUOTE) == 0)
+          expand_aliases = posixly_correct == 0;
+  
+***************
+*** 11293,11297 ****
+  	      {
+  		de_backslash (temp);
+! 		tword = command_substitute (temp, quoted, 0);
+  		temp1 = tword ? tword->word : (char *)NULL;
+  		if (tword)
+--- 11306,11310 ----
+  	      {
+  		de_backslash (temp);
+! 		tword = command_substitute (temp, quoted, PF_BACKQUOTE);
+  		temp1 = tword ? tword->word : (char *)NULL;
+  		if (tword)
+*** ../bash-5.2/patchlevel.h	2020-06-22 14:51:03.000000000 -0400
+--- patchlevel.h	2020-10-01 11:01:28.000000000 -0400
+***************
+*** 26,30 ****
+     looks for to find the patch level (for the sccs version string). */
+  
+! #define PATCHLEVEL 6
+  
+  #endif /* _PATCHLEVEL_H_ */
+--- 26,30 ----
+     looks for to find the patch level (for the sccs version string). */
+  
+! #define PATCHLEVEL 7
+  
+  #endif /* _PATCHLEVEL_H_ */

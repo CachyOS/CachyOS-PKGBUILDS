@@ -1,0 +1,58 @@
+			     BASH PATCH REPORT
+			     =================
+
+Bash-Release:	5.2
+Patch-ID:	bash52-008
+
+Bug-Reported-by:	Glenn Jackman <glenn.jackman@gmail.com>
+Bug-Reference-ID:	<CAFC8ewQDx7hzNJzveuJ5o4FWo=ij7MzckiJVN_6NXjp504QZeg@mail.gmail.com>
+Bug-Reference-URL:	https://lists.gnu.org/archive/html/bug-bash/2022-10/msg00095.html
+
+Bug-Description:
+
+Array subscript expansion can inappropriately quote brackets if the expression
+contains < or >.
+
+Patch (apply with `patch -p0'):
+
+*** ../bash-20221015/subst.c	2022-10-18 10:47:33.000000000 -0500
+--- subst.c	2022-10-20 11:41:07.000000000 -0500
+***************
+*** 3820,3823 ****
+--- 3820,3827 ----
+  #endif
+  
++ /* We don't perform process substitution in arithmetic expressions, so don't
++    bother checking for it. */
++ #define ARITH_EXP_CHAR(s) (s == '$' || s == '`' || s == CTLESC || s == '~')
++ 
+  /* If there are any characters in STRING that require full expansion,
+     then call FUNC to expand STRING; otherwise just perform quote
+***************
+*** 4029,4033 ****
+    while (string[i])
+      {
+!       if (EXP_CHAR (string[i]))
+  	break;
+        else if (string[i] == '\'' || string[i] == '\\' || string[i] == '"')
+--- 4033,4037 ----
+    while (string[i])
+      {
+!       if (ARITH_EXP_CHAR (string[i]))
+  	break;
+        else if (string[i] == '\'' || string[i] == '\\' || string[i] == '"')
+*** ../bash-5.2/patchlevel.h	2020-06-22 14:51:03.000000000 -0400
+--- patchlevel.h	2020-10-01 11:01:28.000000000 -0400
+***************
+*** 26,30 ****
+     looks for to find the patch level (for the sccs version string). */
+  
+! #define PATCHLEVEL 7
+  
+  #endif /* _PATCHLEVEL_H_ */
+--- 26,30 ----
+     looks for to find the patch level (for the sccs version string). */
+  
+! #define PATCHLEVEL 8
+  
+  #endif /* _PATCHLEVEL_H_ */
