@@ -1,6 +1,6 @@
-commit ced2b49a2df3db6cef05b33260f5988234f2292e
+commit 8a6a58a3d160b32f9d83e8462413a35b559efe42
 Author: Jean-Luc Mackail <fuzzyquils@scrapyard.link>
-Date:   Wed Jan 3 20:37:13 2024 +1000
+Date:   Thu Jan 4 11:56:25 2024 +1000
 
     server: add an object operation to retrieve a fast synchronization object.
     
@@ -557,7 +557,7 @@ index fa9eab47214..9263031b3af 100644
      job_destroy                    /* destroy */
  };
 diff --git a/server/protocol.def b/server/protocol.def
-index cef5a16decb..aa8be9e3b78 100644
+index 9589aacfbbc..d02af29a4f8 100644
 --- a/server/protocol.def
 +++ b/server/protocol.def
 @@ -3989,3 +3989,14 @@ enum fsync_type
@@ -576,10 +576,10 @@ index cef5a16decb..aa8be9e3b78 100644
 +    FAST_SYNC_QUEUE,
 +};
 diff --git a/server/queue.c b/server/queue.c
-index 084416e3776..700887c39b3 100644
+index f51263ed692..ab4ca4bc343 100644
 --- a/server/queue.c
 +++ b/server/queue.c
-@@ -190,6 +190,7 @@ static const struct object_ops msg_queue_ops =
+@@ -189,6 +189,7 @@ static const struct object_ops msg_queue_ops =
      NULL,                      /* unlink_name */
      no_open_file,              /* open_file */
      no_kernel_obj_list,        /* get_kernel_obj_list */
@@ -587,7 +587,7 @@ index 084416e3776..700887c39b3 100644
      no_close_handle,           /* close_handle */
      msg_queue_destroy          /* destroy */
  };
-@@ -229,6 +230,7 @@ static const struct object_ops thread_input_ops =
+@@ -228,6 +229,7 @@ static const struct object_ops thread_input_ops =
      NULL,                         /* unlink_name */
      no_open_file,                 /* open_file */
      no_kernel_obj_list,           /* get_kernel_obj_list */
@@ -748,7 +748,7 @@ index 6ab8848230f..bd50992e2c0 100644
      token_destroy              /* destroy */
  };
 diff --git a/server/window.c b/server/window.c
-index 7220fd65e53..51444a35428 100644
+index 302aa2e6071..5ed140f4ac5 100644
 --- a/server/window.c
 +++ b/server/window.c
 @@ -121,6 +121,7 @@ static const struct object_ops window_ops =
@@ -760,10 +760,10 @@ index 7220fd65e53..51444a35428 100644
      window_destroy            /* destroy */
  };
 diff --git a/server/winstation.c b/server/winstation.c
-index 57668f0a025..bb4595b8993 100644
+index 53613592a82..0760afb6496 100644
 --- a/server/winstation.c
 +++ b/server/winstation.c
-@@ -90,6 +90,7 @@ static const struct object_ops winstation_ops =
+@@ -89,6 +89,7 @@ static const struct object_ops winstation_ops =
      default_unlink_name,          /* unlink_name */
      no_open_file,                 /* open_file */
      no_kernel_obj_list,           /* get_kernel_obj_list */
@@ -771,7 +771,7 @@ index 57668f0a025..bb4595b8993 100644
      winstation_close_handle,      /* close_handle */
      winstation_destroy            /* destroy */
  };
-@@ -132,6 +133,7 @@ static const struct object_ops desktop_ops =
+@@ -131,6 +132,7 @@ static const struct object_ops desktop_ops =
      default_unlink_name,          /* unlink_name */
      no_open_file,                 /* open_file */
      no_kernel_obj_list,           /* get_kernel_obj_list */
@@ -779,9 +779,9 @@ index 57668f0a025..bb4595b8993 100644
      desktop_close_handle,         /* close_handle */
      desktop_destroy               /* destroy */
  };
-commit c98f1af4dc3b2e6fc28ea377c5b6fbbbe3ea959f
+commit 626df99ed7551a96c3b1295461c9066d452a6082
 Author: Jean-Luc Mackail <fuzzyquils@scrapyard.link>
-Date:   Wed Jan 3 14:27:20 2024 +1000
+Date:   Thu Jan 4 11:57:43 2024 +1000
 
     server: Create fast synchronization objects for events.
     
@@ -803,10 +803,10 @@ Date:   Wed Jan 3 14:27:20 2024 +1000
     application order.
 
 diff --git a/configure.ac b/configure.ac
-index f2dfbb2f2b4..9766be2728d 100644
+index 0d37ab24923..d7b77cab896 100644
 --- a/configure.ac
 +++ b/configure.ac
-@@ -432,6 +432,7 @@ AC_CHECK_HEADERS(\
+@@ -431,6 +431,7 @@ AC_CHECK_HEADERS(\
  	linux/serial.h \
  	linux/types.h \
  	linux/ucdrom.h \
@@ -1287,9 +1287,9 @@ index 5d722f80874..19b834b19c9 100644
  extern struct fast_sync *no_get_fast_sync ( struct object *obj );
  
  /* serial functions */
-commit 51ea7ba329d96f136da99fbecc181d4647c484ac
+commit a16b3415359e079a1d89baf37c367e6a5ee058e9
 Author: Jean-Luc Mackail <fuzzyquils@scrapyard.link>
-Date:   Wed Jan 3 14:40:41 2024 +1000
+Date:   Thu Jan 4 11:58:38 2024 +1000
 
     server: Create fast synchronization objects for semaphores.
     
@@ -1411,9 +1411,9 @@ index 156bc1dcd55..077376e15d4 100644
  /* create a semaphore */
  DECL_HANDLER(create_semaphore)
  {
-commit 882db35438e402c09359dfcf85439a8de731a796
+commit 7a3ae77c270855ae93f51ac2597669caa74329d2
 Author: Jean-Luc Mackail <fuzzyquils@scrapyard.link>
-Date:   Wed Jan 3 21:02:04 2024 +1000
+Date:   Thu Jan 4 11:59:22 2024 +1000
 
     server: Create fast synchronization objects for mutexes.
     
@@ -1572,9 +1572,9 @@ index b903d632198..7d490b28c7a 100644
      if (do_fsync())
          fsync_abandon_mutexes( thread );
      if (do_esync())
-commit 26260ea7cdcb18861f1b29f25cd32b22a619e7f7
+commit 24c56ec79b26472cb8fae1ef95233fc1f7b549e8
 Author: Jean-Luc Mackail <fuzzyquils@scrapyard.link>
-Date:   Wed Jan 3 20:41:57 2024 +1000
+Date:   Thu Jan 4 11:59:57 2024 +1000
 
     server: Create fast synchronization objects for completion ports.
     
@@ -1671,9 +1671,9 @@ index 1dbce63d045..475e60fe55c 100644
  
          if (!completion_wait_signaled( &wait->obj, NULL ))
          {
-commit 9afa2e9f6ff57e857fb09533ae945ae696a417a8
+commit dfa974228148ba80d1cb7ac8a4cc2a9a513e9863
 Author: Jean-Luc Mackail <fuzzyquils@scrapyard.link>
-Date:   Wed Jan 3 15:45:43 2024 +1000
+Date:   Thu Jan 4 12:00:37 2024 +1000
 
     server: Create fast synchronization objects for consoles.
     
@@ -1865,9 +1865,9 @@ index 4dc74d3cb01..b17e78adbfe 100644
      }
  
      if (req->read)
-commit c35ac7beff3682993761e18b25c5bd5872c9abda
+commit ef4412e3506440018c9698cb6433871cbf1b7025
 Author: Jean-Luc Mackail <fuzzyquils@scrapyard.link>
-Date:   Wed Jan 3 15:52:42 2024 +1000
+Date:   Thu Jan 4 12:01:09 2024 +1000
 
     server: Create fast synchronization objects for console servers.
     
@@ -1972,9 +1972,9 @@ index b17e78adbfe..d2dab94de16 100644
  
      release_object( server );
  }
-commit 14b56a2aab0b8b678759f9a721f0c05c6a97e204
+commit 80d2051d71c5c95c3ce180f11db43af83bc93faa
 Author: Jean-Luc Mackail <fuzzyquils@scrapyard.link>
-Date:   Wed Jan 3 15:58:12 2024 +1000
+Date:   Thu Jan 4 12:01:50 2024 +1000
 
     server: Create fast synchronization objects for debug objects.
     
@@ -2072,9 +2072,9 @@ index fe123b0d60e..1abd7db57a6 100644
      }
      else
      {
-commit c170e6f2254984c4217881ec556258bc7ca0cca2
+commit 3c882bd880ee9024154d31ff1c459196760576ed
 Author: Jean-Luc Mackail <fuzzyquils@scrapyard.link>
-Date:   Wed Jan 3 16:09:24 2024 +1000
+Date:   Thu Jan 4 12:02:47 2024 +1000
 
     server: Create fast synchronization objects for device managers.
     
@@ -2182,9 +2182,9 @@ index a5d30941258..8d281e57b16 100644
                  /* we already own the object if it's only on manager queue */
                  if (irp->file) grab_object( irp );
                  manager->current_call = irp;
-commit 2cff9d1e0a0559b4ce6ff80d6f94604a73b9d7d4
+commit b4838d0d6e50a9f4c4ec582c91641bbb05f86193
 Author: Jean-Luc Mackail <fuzzyquils@scrapyard.link>
-Date:   Wed Jan 3 16:28:44 2024 +1000
+Date:   Thu Jan 4 12:03:45 2024 +1000
 
     server: Create fast synchronization objects for keyed events.
     
@@ -2254,9 +2254,9 @@ index 0625c35a470..00dab332403 100644
  /* create an event */
  DECL_HANDLER(create_event)
  {
-commit 1164591276fcc636551292e525ddef6948c4831b
+commit 4bad6dc45f224e86f0a6dd77e98f22a6ce2a07dc
 Author: Jean-Luc Mackail <fuzzyquils@scrapyard.link>
-Date:   Wed Jan 3 16:33:25 2024 +1000
+Date:   Thu Jan 4 12:04:23 2024 +1000
 
     server: Create fast synchronization objects for processes.
     
@@ -2338,9 +2338,9 @@ index 7d7a1f3bfcf..4dc216e9498 100644
      struct cpu_topology_override cpu_override; /* Overridden CPUs to host CPUs mapping. */
      unsigned char   wine_cpu_id_from_host[64]; /* Host to overridden CPU mapping. */
  };
-commit b3fd061906b41f8357ce3596955d112a04680e3b
+commit 28b16b0a08cbf23101134b9838647d03ac7620a7
 Author: Jean-Luc Mackail <fuzzyquils@scrapyard.link>
-Date:   Wed Jan 3 16:37:33 2024 +1000
+Date:   Thu Jan 4 12:04:52 2024 +1000
 
     server: Create fast synchronization objects for jobs.
     
@@ -2412,9 +2412,9 @@ index 8c086297f59..8dab996d382 100644
  }
  
  static void job_dump( struct object *obj, int verbose )
-commit 60669885318b157fbe481d1994c85faa818d69db
+commit 0fe9eca3a1e59d8809367bc149fbd04448527368
 Author: Jean-Luc Mackail <fuzzyquils@scrapyard.link>
-Date:   Wed Jan 3 17:04:51 2024 +1000
+Date:   Thu Jan 4 12:05:52 2024 +1000
 
     server: Create fast synchronization objects for message queues.
     
@@ -2423,10 +2423,10 @@ Date:   Wed Jan 3 17:04:51 2024 +1000
     Proton Experimental 8.0 port: Jean-Luc Mackail
 
 diff --git a/server/queue.c b/server/queue.c
-index 700887c39b3..97e86d36596 100644
+index ab4ca4bc343..989afffbb0b 100644
 --- a/server/queue.c
 +++ b/server/queue.c
-@@ -137,6 +137,7 @@ struct msg_queue
+@@ -136,6 +136,7 @@ struct msg_queue
      struct thread_input   *input;           /* thread input descriptor */
      struct hook_table     *hooks;           /* hook table */
      timeout_t              last_get_msg;    /* time of last get message call */
@@ -2434,7 +2434,7 @@ index 700887c39b3..97e86d36596 100644
      int                    keystate_lock;   /* owns an input keystate lock */
      int                    esync_fd;        /* esync file descriptor (signalled on message) */
      int                    esync_in_msgwait; /* our thread is currently waiting on us */
-@@ -162,6 +163,7 @@ static int msg_queue_signaled( struct object *obj, struct wait_queue_entry *entr
+@@ -161,6 +162,7 @@ static int msg_queue_signaled( struct object *obj, struct wait_queue_entry *entr
  static int msg_queue_get_esync_fd( struct object *obj, enum esync_type *type );
  static unsigned int msg_queue_get_fsync_idx( struct object *obj, enum fsync_type *type );
  static void msg_queue_satisfied( struct object *obj, struct wait_queue_entry *entry );
@@ -2442,7 +2442,7 @@ index 700887c39b3..97e86d36596 100644
  static void msg_queue_destroy( struct object *obj );
  static void msg_queue_poll_event( struct fd *fd, int event );
  static void thread_input_dump( struct object *obj, int verbose );
-@@ -190,7 +192,7 @@ static const struct object_ops msg_queue_ops =
+@@ -189,7 +191,7 @@ static const struct object_ops msg_queue_ops =
      NULL,                      /* unlink_name */
      no_open_file,              /* open_file */
      no_kernel_obj_list,        /* get_kernel_obj_list */
@@ -2451,7 +2451,7 @@ index 700887c39b3..97e86d36596 100644
      no_close_handle,           /* close_handle */
      msg_queue_destroy          /* destroy */
  };
-@@ -370,6 +372,7 @@ static struct msg_queue *create_msg_queue( struct thread *thread, struct thread_
+@@ -369,6 +371,7 @@ static struct msg_queue *create_msg_queue( struct thread *thread, struct thread_
          queue->input           = (struct thread_input *)grab_object( input );
          queue->hooks           = NULL;
          queue->last_get_msg    = current_time;
@@ -2459,7 +2459,7 @@ index 700887c39b3..97e86d36596 100644
          queue->keystate_lock   = 0;
          queue->esync_fd        = -1;
          queue->esync_in_msgwait = 0;
-@@ -690,7 +693,11 @@ static inline void set_queue_bits( struct msg_queue *queue, unsigned int bits )
+@@ -619,7 +622,11 @@ static inline void set_queue_bits( struct msg_queue *queue, unsigned int bits )
      queue->shared->changed_bits = queue->changed_bits;
      SHARED_WRITE_END( &queue->shared->seq );
  
@@ -2472,7 +2472,7 @@ index 700887c39b3..97e86d36596 100644
  }
  
  /* clear some queue bits */
-@@ -704,6 +711,9 @@ static inline void clear_queue_bits( struct msg_queue *queue, unsigned int bits
+@@ -633,6 +640,9 @@ static inline void clear_queue_bits( struct msg_queue *queue, unsigned int bits
          queue->keystate_lock = 0;
      }
  
@@ -2482,7 +2482,7 @@ index 700887c39b3..97e86d36596 100644
      if (do_fsync() && !is_signaled( queue ))
          fsync_clear( &queue->obj );
  
-@@ -1316,6 +1326,7 @@ static void msg_queue_satisfied( struct object *obj, struct wait_queue_entry *en
+@@ -1216,6 +1226,7 @@ static void msg_queue_satisfied( struct object *obj, struct wait_queue_entry *en
      struct msg_queue *queue = (struct msg_queue *)obj;
      queue->wake_mask = 0;
      queue->changed_mask = 0;
@@ -2490,7 +2490,7 @@ index 700887c39b3..97e86d36596 100644
  
      SHARED_WRITE_BEGIN( &queue->shared->seq );
      queue->shared->wake_mask = queue->wake_mask;
-@@ -1323,6 +1334,16 @@ static void msg_queue_satisfied( struct object *obj, struct wait_queue_entry *en
+@@ -1223,6 +1234,16 @@ static void msg_queue_satisfied( struct object *obj, struct wait_queue_entry *en
      SHARED_WRITE_END( &queue->shared->seq );
  }
  
@@ -2507,7 +2507,7 @@ index 700887c39b3..97e86d36596 100644
  static void cleanup_msg_queue( struct msg_queue *queue )
  {
      struct list *ptr;
-@@ -1361,6 +1382,7 @@ static void cleanup_msg_queue( struct msg_queue *queue )
+@@ -1261,6 +1282,7 @@ static void cleanup_msg_queue( struct msg_queue *queue )
      release_object( queue->input );
      if (queue->hooks) release_object( queue->hooks );
      if (queue->fd) release_object( queue->fd );
@@ -2515,7 +2515,7 @@ index 700887c39b3..97e86d36596 100644
      if (do_esync()) close( queue->esync_fd );
      queue->destroyed = 1;
  }
-@@ -1390,6 +1412,7 @@ static void msg_queue_poll_event( struct fd *fd, int event )
+@@ -1290,6 +1312,7 @@ static void msg_queue_poll_event( struct fd *fd, int event )
      if (event & (POLLERR | POLLHUP)) set_fd_events( fd, -1 );
      else set_fd_events( queue->fd, 0 );
      wake_up( &queue->obj, 0 );
@@ -2523,7 +2523,7 @@ index 700887c39b3..97e86d36596 100644
  }
  
  static void thread_input_dump( struct object *obj, int verbose )
-@@ -2901,14 +2924,21 @@ DECL_HANDLER(set_queue_mask)
+@@ -2803,14 +2826,21 @@ DECL_HANDLER(set_queue_mask)
              if (req->skip_wait)
              {
                  queue->wake_mask = queue->changed_mask = 0;
@@ -2546,7 +2546,7 @@ index 700887c39b3..97e86d36596 100644
          if (do_fsync() && !is_signaled( queue ))
              fsync_clear( &queue->obj );
  
-@@ -2928,6 +2958,9 @@ DECL_HANDLER(get_queue_status)
+@@ -2830,6 +2860,9 @@ DECL_HANDLER(get_queue_status)
          reply->changed_bits = queue->changed_bits;
          queue->changed_bits &= ~req->clear_bits;
  
@@ -2556,7 +2556,7 @@ index 700887c39b3..97e86d36596 100644
          if (do_fsync() && !is_signaled( queue ))
              fsync_clear( &queue->obj );
  
-@@ -3116,6 +3149,9 @@ DECL_HANDLER(get_message)
+@@ -3018,6 +3051,9 @@ DECL_HANDLER(get_message)
      if (filter & QS_INPUT) queue->changed_bits &= ~QS_INPUT;
      if (filter & QS_PAINT) queue->changed_bits &= ~QS_PAINT;
  
@@ -2566,7 +2566,7 @@ index 700887c39b3..97e86d36596 100644
      SHARED_WRITE_BEGIN( &queue->shared->seq );
      queue->shared->changed_bits = queue->changed_bits;
      SHARED_WRITE_END( &queue->shared->seq );
-@@ -3174,6 +3210,8 @@ DECL_HANDLER(get_message)
+@@ -3076,6 +3112,8 @@ DECL_HANDLER(get_message)
      queue->wake_mask = req->wake_mask;
      queue->changed_mask = req->changed_mask;
  
@@ -2575,9 +2575,9 @@ index 700887c39b3..97e86d36596 100644
      SHARED_WRITE_BEGIN( &queue->shared->seq );
      queue->shared->wake_mask = queue->wake_mask;
      queue->shared->changed_mask = queue->changed_mask;
-commit cbb9873f7eb372a414fad9b9e57e1608f58904c1
+commit 275df87f57ae2a15bf6b3255a17a5a1d35172b64
 Author: Jean-Luc Mackail <fuzzyquils@scrapyard.link>
-Date:   Wed Jan 3 17:09:10 2024 +1000
+Date:   Thu Jan 4 12:06:34 2024 +1000
 
     server: Create fast synchronization objects for threads.
     
@@ -2659,9 +2659,9 @@ index 067fea940cf..2f89edd122f 100644
      struct object         *locked_completion; /* completion port wait object successfully waited by the thread */
      struct object         *queue_shared_mapping; /* thread queue shared memory mapping */
      volatile struct queue_shared_memory *queue_shared;  /* thread queue shared memory ptr */
-commit 96274446ba6431ee2b19f2c3a65c946aa2aec4ab
+commit b8e2f5573e0038df00e2db12fcb528a35f98d219
 Author: Jean-Luc Mackail <fuzzyquils@scrapyard.link>
-Date:   Wed Jan 3 17:19:51 2024 +1000
+Date:   Thu Jan 4 12:07:01 2024 +1000
 
     server: Create fast synchronization objects for timers.
     
@@ -2751,9 +2751,9 @@ index 4de4787de0d..94720dd8a8c 100644
  }
  
  /* create a timer */
-commit 741451288f4c974588ae5b2a7a9245691319db6f
+commit d64fbfede6b0b8e3e8bcb138b94c0cd91c059054
 Author: Jean-Luc Mackail <fuzzyquils@scrapyard.link>
-Date:   Wed Jan 3 17:31:31 2024 +1000
+Date:   Thu Jan 4 12:08:44 2024 +1000
 
     server: Create fast synchronization objects for fd-based objects.
     
@@ -2974,9 +2974,9 @@ index 8d6f7ceae9b..39ba452000e 100644
      sock_close_handle,            /* close_handle */
      sock_destroy                  /* destroy */
  };
-commit 15f96679a6d3f2ab0cbc36feb80385d6e28190f0
+commit 8da3d3d88ea14de4efb1a323bbb701b66f71f358
 Author: Jean-Luc Mackail <fuzzyquils@scrapyard.link>
-Date:   Wed Jan 3 17:34:59 2024 +1000
+Date:   Thu Jan 4 12:09:28 2024 +1000
 
     server: Add a request to retrieve the fast synchronization device.
     
@@ -3017,7 +3017,7 @@ index 0825ba94f7e..6d2c3b13054 100644
 +    }
 +}
 diff --git a/server/protocol.def b/server/protocol.def
-index aa8be9e3b78..36120eeb820 100644
+index d02af29a4f8..edcb49f2e6a 100644
 --- a/server/protocol.def
 +++ b/server/protocol.def
 @@ -4000,3 +4000,9 @@ enum fast_sync_type
@@ -3030,9 +3030,9 @@ index aa8be9e3b78..36120eeb820 100644
 +@REPLY
 +    obj_handle_t handle;          /* handle to the device */
 +@END
-commit 078fd407afdb372a0a0633b7f1c0c106fdd0903e
+commit cad4da08ee45b9304db63672b1a4885dca84e9a5
 Author: Jean-Luc Mackail <fuzzyquils@scrapyard.link>
-Date:   Wed Jan 3 17:39:06 2024 +1000
+Date:   Thu Jan 4 12:10:03 2024 +1000
 
     server: Add a request to retrieve the fast synchronization object from a handle.
     
@@ -3073,7 +3073,7 @@ index 6d2c3b13054..1d7d5ddff52 100644
 +    }
 +}
 diff --git a/server/protocol.def b/server/protocol.def
-index 36120eeb820..ee01c617650 100644
+index edcb49f2e6a..594836c45b4 100644
 --- a/server/protocol.def
 +++ b/server/protocol.def
 @@ -4006,3 +4006,13 @@ enum fast_sync_type
@@ -3090,9 +3090,9 @@ index 36120eeb820..ee01c617650 100644
 +    int          type;            /* object type */
 +    unsigned int access;          /* handle access rights */
 +@END
-commit 149f58090c650f7b07659ee02c97abf022345fbe
+commit 9656959305005f9c6468d4f07ae7e36975e38a93
 Author: Jean-Luc Mackail <fuzzyquils@scrapyard.link>
-Date:   Wed Jan 3 17:43:04 2024 +1000
+Date:   Thu Jan 4 12:10:41 2024 +1000
 
     server: Introduce fast_select_queue and fast_unselect_queue requests.
     
@@ -3101,7 +3101,7 @@ Date:   Wed Jan 3 17:43:04 2024 +1000
     Proton Experimental 8.0 port: Jean-Luc Mackail
 
 diff --git a/server/protocol.def b/server/protocol.def
-index ee01c617650..064ce4725bd 100644
+index 594836c45b4..2b7c1eb343a 100644
 --- a/server/protocol.def
 +++ b/server/protocol.def
 @@ -4016,3 +4016,15 @@ enum fast_sync_type
@@ -3121,10 +3121,10 @@ index ee01c617650..064ce4725bd 100644
 +    int          signaled;        /* was the queue signaled? */
 +@END
 diff --git a/server/queue.c b/server/queue.c
-index 97e86d36596..422e6e2e0f8 100644
+index 989afffbb0b..d764db0503a 100644
 --- a/server/queue.c
 +++ b/server/queue.c
-@@ -138,6 +138,7 @@ struct msg_queue
+@@ -137,6 +137,7 @@ struct msg_queue
      struct hook_table     *hooks;           /* hook table */
      timeout_t              last_get_msg;    /* time of last get message call */
      struct fast_sync      *fast_sync;       /* fast synchronization object */
@@ -3132,7 +3132,7 @@ index 97e86d36596..422e6e2e0f8 100644
      int                    keystate_lock;   /* owns an input keystate lock */
      int                    esync_fd;        /* esync file descriptor (signalled on message) */
      int                    esync_in_msgwait; /* our thread is currently waiting on us */
-@@ -373,6 +374,7 @@ static struct msg_queue *create_msg_queue( struct thread *thread, struct thread_
+@@ -372,6 +373,7 @@ static struct msg_queue *create_msg_queue( struct thread *thread, struct thread_
          queue->hooks           = NULL;
          queue->last_get_msg    = current_time;
          queue->fast_sync       = NULL;
@@ -3140,7 +3140,7 @@ index 97e86d36596..422e6e2e0f8 100644
          queue->keystate_lock   = 0;
          queue->esync_fd        = -1;
          queue->esync_in_msgwait = 0;
-@@ -1246,6 +1248,9 @@ static int is_queue_hung( struct msg_queue *queue )
+@@ -1146,6 +1148,9 @@ static int is_queue_hung( struct msg_queue *queue )
              return 0;  /* thread is waiting on queue -> not hung */
      }
  
@@ -3150,7 +3150,7 @@ index 97e86d36596..422e6e2e0f8 100644
      if (do_fsync() && queue->fsync_in_msgwait)
          return 0;   /* thread is waiting on queue in absentia -> not hung */
  
-@@ -3985,3 +3990,56 @@ DECL_HANDLER(fsync_msgwait)
+@@ -3890,3 +3895,56 @@ DECL_HANDLER(fsync_msgwait)
      if (queue->fd)
          set_fd_events( queue->fd, req->in_msgwait ? POLLIN : 0 );
  }
@@ -3207,9 +3207,9 @@ index 97e86d36596..422e6e2e0f8 100644
 +
 +    release_object( queue );
 +}
-commit 50a42464209dd1c644a046cdabebe7ece2d902a4
+commit 2efb475d6b1d0e0e7cbf1f01e854135989d87bf7
 Author: Jean-Luc Mackail <fuzzyquils@scrapyard.link>
-Date:   Wed Jan 3 17:48:30 2024 +1000
+Date:   Thu Jan 4 12:14:33 2024 +1000
 
     server: Allow creating an event object for client-side user APC signaling.
     
@@ -3218,7 +3218,7 @@ Date:   Wed Jan 3 17:48:30 2024 +1000
     Proton Experimental 8.0 port: Jean-Luc Mackail
 
 diff --git a/server/protocol.def b/server/protocol.def
-index 064ce4725bd..eef0e4d143b 100644
+index 2b7c1eb343a..66050f68b86 100644
 --- a/server/protocol.def
 +++ b/server/protocol.def
 @@ -4028,3 +4028,9 @@ enum fast_sync_type
@@ -3232,7 +3232,7 @@ index 064ce4725bd..eef0e4d143b 100644
 +    obj_handle_t handle;          /* handle to the event */
 +@END
 diff --git a/server/thread.c b/server/thread.c
-index 7494a485adb..0c3c00aa881 100644
+index 7494a485adb..1cacbd0ea25 100644
 --- a/server/thread.c
 +++ b/server/thread.c
 @@ -298,6 +298,7 @@ static inline void init_thread_structure( struct thread *thread )
@@ -3270,7 +3270,17 @@ index 7494a485adb..0c3c00aa881 100644
          return;
      }
  }
-@@ -2313,3 +2320,12 @@ DECL_HANDLER(get_next_thread)
+@@ -1474,6 +1481,9 @@ static struct thread_apc *thread_dequeue_apc( struct thread *thread, int system
+     {
+         apc = LIST_ENTRY( ptr, struct thread_apc, entry );
+         list_remove( ptr );
++
++        if (list_empty( &thread->user_apc ) && thread->fast_alert_event)
++            reset_event( thread->fast_alert_event );
+     }
+ 
+     if (do_fsync() && list_empty( &thread->system_apc ) && list_empty( &thread->user_apc ))
+@@ -2313,3 +2323,12 @@ DECL_HANDLER(get_next_thread)
      set_error( STATUS_NO_MORE_ENTRIES );
      release_object( process );
  }
@@ -3295,9 +3305,9 @@ index 2f89edd122f..a4242c2fb3a 100644
      struct object         *locked_completion; /* completion port wait object successfully waited by the thread */
      struct object         *queue_shared_mapping; /* thread queue shared memory mapping */
      volatile struct queue_shared_memory *queue_shared;  /* thread queue shared memory ptr */
-commit 69460fd9fb61e6c9188e3972e441572269702a74
+commit 94827120daec579b7f9ccf651b865ad1efb95adc
 Author: Jean-Luc Mackail <fuzzyquils@scrapyard.link>
-Date:   Wed Jan 3 17:54:40 2024 +1000
+Date:   Thu Jan 4 12:15:53 2024 +1000
 
     ntdll: Introduce a helper to wait on an internal server handle.
     
@@ -3332,10 +3342,10 @@ index 3e3c24c702c..4163e626c7c 100644
      {
          req->info = wine_server_obj_handle( process_info );
 diff --git a/dlls/ntdll/unix/server.c b/dlls/ntdll/unix/server.c
-index c45a4af0fdd..bdb4318309c 100644
+index 0658185c2e1..61408e09857 100644
 --- a/dlls/ntdll/unix/server.c
 +++ b/dlls/ntdll/unix/server.c
-@@ -718,6 +718,20 @@ unsigned int server_wait( const select_op_t *select_op, data_size_t size, UINT f
+@@ -709,6 +709,20 @@ unsigned int server_wait( const select_op_t *select_op, data_size_t size, UINT f
      return ret;
  }
  
@@ -3356,7 +3366,7 @@ index c45a4af0fdd..bdb4318309c 100644
  
  /***********************************************************************
   *              NtContinue  (NTDLL.@)
-@@ -780,7 +794,7 @@ unsigned int server_queue_process_apc( HANDLE process, const apc_call_t *call, a
+@@ -771,7 +785,7 @@ unsigned int server_queue_process_apc( HANDLE process, const apc_call_t *call, a
          }
          else
          {
@@ -3379,10 +3389,10 @@ index 4c9101d9faa..e8bdaea4291 100644
          SERVER_START_REQ( get_thread_context )
          {
 diff --git a/dlls/ntdll/unix/unix_private.h b/dlls/ntdll/unix/unix_private.h
-index 2d978a16655..72b563792d4 100644
+index 47a21bd93bd..46cc5f1391a 100644
 --- a/dlls/ntdll/unix/unix_private.h
 +++ b/dlls/ntdll/unix/unix_private.h
-@@ -183,6 +183,8 @@ extern unsigned int server_select( const select_op_t *select_op, data_size_t siz
+@@ -182,6 +182,8 @@ extern unsigned int server_select( const select_op_t *select_op, data_size_t siz
                                     timeout_t abs_timeout, context_t *context, user_apc_t *user_apc ) DECLSPEC_HIDDEN;
  extern unsigned int server_wait( const select_op_t *select_op, data_size_t size, UINT flags,
                                   const LARGE_INTEGER *timeout ) DECLSPEC_HIDDEN;
@@ -3391,7 +3401,7 @@ index 2d978a16655..72b563792d4 100644
  extern unsigned int server_queue_process_apc( HANDLE process, const apc_call_t *call,
                                                apc_result_t *result ) DECLSPEC_HIDDEN;
  extern int server_get_unix_fd( HANDLE handle, unsigned int wanted_access, int *unix_fd,
-@@ -385,7 +387,7 @@ static inline async_data_t server_async( HANDLE handle, struct async_fileio *use
+@@ -384,7 +386,7 @@ static inline async_data_t server_async( HANDLE handle, struct async_fileio *use
  
  static inline NTSTATUS wait_async( HANDLE handle, BOOL alertable )
  {
@@ -3400,9 +3410,9 @@ index 2d978a16655..72b563792d4 100644
  }
  
  static inline BOOL in_wow64_call(void)
-commit c69ce68b386289031fd3dd3b85c1a87a31d45edb
+commit 51959d24780c29f83af2b397673f1bb658e20f08
 Author: Jean-Luc Mackail <fuzzyquils@scrapyard.link>
-Date:   Wed Jan 3 18:03:37 2024 +1000
+Date:   Thu Jan 4 12:16:30 2024 +1000
 
     ntdll: Add some traces to synchronization methods.
     
@@ -3629,9 +3639,9 @@ index 62a8d9d3171..d6703289f08 100644
      if (!handle) handle = keyed_event;
      if ((ULONG_PTR)key & 1) return STATUS_INVALID_PARAMETER_1;
      if (alertable) flags |= SELECT_ALERTABLE;
-commit 084e3e24d5106e0afa226c3568a05e65ae46cbe5
+commit a2a6cfe5a144cbcd8866594f0722900e2e22c351
 Author: Jean-Luc Mackail <fuzzyquils@scrapyard.link>
-Date:   Wed Jan 3 18:29:10 2024 +1000
+Date:   Thu Jan 4 12:17:08 2024 +1000
 
     ntdll: Use fast synchronization objects.
     
@@ -4517,7 +4527,7 @@ index d6703289f08..b008f21896d 100644
      select_op.signal_and_wait.op = SELECT_SIGNAL_AND_WAIT;
      select_op.signal_and_wait.wait = wine_server_obj_handle( wait );
 diff --git a/dlls/ntdll/unix/unix_private.h b/dlls/ntdll/unix/unix_private.h
-index 72b563792d4..9c1de69eed4 100644
+index 46cc5f1391a..036f335a000 100644
 --- a/dlls/ntdll/unix/unix_private.h
 +++ b/dlls/ntdll/unix/unix_private.h
 @@ -68,6 +68,7 @@ struct ntdll_thread_data
@@ -4528,9 +4538,9 @@ index 72b563792d4..9c1de69eed4 100644
  };
  
  C_ASSERT( sizeof(struct ntdll_thread_data) <= sizeof(((TEB *)0)->GdiTebBatch) );
-commit dc7205dec83d4fd277e9d38171e86891f1598867
+commit a1fb8ee031eeb1089e37d1c7c1be0d304f8cc933
 Author: Jean-Luc Mackail <fuzzyquils@scrapyard.link>
-Date:   Wed Jan 3 18:31:14 2024 +1000
+Date:   Thu Jan 4 12:17:49 2024 +1000
 
     ntdll: Use server_wait_for_object() when waiting on only the queue object.
     
@@ -4560,9 +4570,9 @@ index b008f21896d..8b19ec3ce53 100644
      if (queue) select_queue( queue );
  
      ret = linux_wait_objs( device, count, objs, wait_any, alertable, timeout );
-commit a4b0c351e48dbdeeeffe258b48e4731be8a5fa05
+commit 5399a4b6019b0f9e2a37568046d2cc0391a284d8
 Author: Jean-Luc Mackail <fuzzyquils@scrapyard.link>
-Date:   Wed Jan 3 18:42:01 2024 +1000
+Date:   Thu Jan 4 12:18:37 2024 +1000
 
     ntdll: Cache fast synchronization objects.
     
@@ -4571,10 +4581,10 @@ Date:   Wed Jan 3 18:42:01 2024 +1000
     Proton Experimental 8.0 port: Jean-Luc Mackail
 
 diff --git a/dlls/ntdll/unix/server.c b/dlls/ntdll/unix/server.c
-index bdb4318309c..90a03cf15c3 100644
+index 61408e09857..d961660b89a 100644
 --- a/dlls/ntdll/unix/server.c
 +++ b/dlls/ntdll/unix/server.c
-@@ -1719,12 +1719,17 @@ NTSTATUS WINAPI NtDuplicateObject( HANDLE source_process, HANDLE source, HANDLE
+@@ -1710,12 +1710,17 @@ NTSTATUS WINAPI NtDuplicateObject( HANDLE source_process, HANDLE source, HANDLE
          return result.dup_handle.status;
      }
  
@@ -4592,7 +4602,7 @@ index bdb4318309c..90a03cf15c3 100644
  
      SERVER_START_REQ( dup_handle )
      {
-@@ -1780,12 +1785,16 @@ NTSTATUS WINAPI NtClose( HANDLE handle )
+@@ -1771,12 +1776,16 @@ NTSTATUS WINAPI NtClose( HANDLE handle )
      if (HandleToLong( handle ) >= ~5 && HandleToLong( handle ) <= ~0)
          return STATUS_SUCCESS;
  
@@ -4859,10 +4869,10 @@ index 8b19ec3ce53..51b399f09be 100644
  {
      struct winesync_sem_args args = {0};
 diff --git a/dlls/ntdll/unix/unix_private.h b/dlls/ntdll/unix/unix_private.h
-index 9c1de69eed4..fabbe9c6995 100644
+index 036f335a000..b002693b788 100644
 --- a/dlls/ntdll/unix/unix_private.h
 +++ b/dlls/ntdll/unix/unix_private.h
-@@ -177,6 +177,8 @@ extern NTSTATUS load_main_exe( const WCHAR *name, const char *unix_name, const W
+@@ -176,6 +176,8 @@ extern NTSTATUS load_main_exe( const WCHAR *name, const char *unix_name, const W
  extern NTSTATUS load_start_exe( WCHAR **image, void **module ) DECLSPEC_HIDDEN;
  extern void start_server( BOOL debug ) DECLSPEC_HIDDEN;
  
@@ -4871,7 +4881,7 @@ index 9c1de69eed4..fabbe9c6995 100644
  extern unsigned int server_call_unlocked( void *req_ptr ) DECLSPEC_HIDDEN;
  extern void server_enter_uninterrupted_section( pthread_mutex_t *mutex, sigset_t *sigset ) DECLSPEC_HIDDEN;
  extern void server_leave_uninterrupted_section( pthread_mutex_t *mutex, sigset_t *sigset ) DECLSPEC_HIDDEN;
-@@ -311,6 +313,8 @@ extern struct cpu_topology_override *get_cpu_topology_override(void) DECLSPEC_HI
+@@ -310,6 +312,8 @@ extern struct cpu_topology_override *get_cpu_topology_override(void) DECLSPEC_HI
  
  extern void dbg_init(void) DECLSPEC_HIDDEN;
  
@@ -4880,9 +4890,9 @@ index 9c1de69eed4..fabbe9c6995 100644
  extern NTSTATUS call_user_apc_dispatcher( CONTEXT *context_ptr, ULONG_PTR arg1, ULONG_PTR arg2, ULONG_PTR arg3,
                                            PNTAPCFUNC func, NTSTATUS status ) DECLSPEC_HIDDEN;
  extern NTSTATUS call_user_exception_dispatcher( EXCEPTION_RECORD *rec, CONTEXT *context ) DECLSPEC_HIDDEN;
-commit f5a92fdc204970a312447e875f8398c0dddca770
+commit 05fdb2d7736f52e7b9efa02d62bd73dbfcd3862a
 Author: Jean-Luc Mackail <fuzzyquils@scrapyard.link>
-Date:   Wed Jan 3 18:59:26 2024 +1000
+Date:   Thu Jan 4 12:19:24 2024 +1000
 
     server: Allow disabling fast synchronization support.
     
@@ -5000,9 +5010,9 @@ index 898e9af202d..67313ea315f 100644
  
      if (debug_level) fprintf( stderr, "wineserver: starting (pid=%ld)\n", (long) getpid() );
      set_current_time();
-commit c2d1d8e42de204332d4523984156ab0b5389c9c3
+commit 551f7c19bab9a08e74a4709f58be6e4d8fdbc7da
 Author: Jean-Luc Mackail <fuzzyquils@scrapyard.link>
-Date:   Wed Jan 3 19:02:37 2024 +1000
+Date:   Thu Jan 4 12:20:13 2024 +1000
 
     server: Add a message to signal that fast synchronization is indeed active.
     
@@ -5071,9 +5081,9 @@ index fbe312e74f1..2fbc99d45aa 100644
  
      if ((obj = get_handle_obj( current->process, req->handle, 0, NULL )))
      {
-commit bd05cbc9aff88bddf2e2b78658dd86658374cf64
+commit cff36a55eadcdfab46eb896dbaa6a67afa4a9f48
 Author: Jean-Luc Mackail <fuzzyquils@scrapyard.link>
-Date:   Wed Jan 3 19:11:31 2024 +1000
+Date:   Thu Jan 4 12:20:54 2024 +1000
 
     make_req
     
@@ -5082,10 +5092,10 @@ Date:   Wed Jan 3 19:11:31 2024 +1000
     Proton Experimental 8.0 port: Jean-Luc Mackail
 
 diff --git a/include/wine/server_protocol.h b/include/wine/server_protocol.h
-index 2c8189b79cf..0acb0e11c7c 100644
+index 472c0ea709d..0fe498203b5 100644
 --- a/include/wine/server_protocol.h
 +++ b/include/wine/server_protocol.h
-@@ -5502,6 +5502,87 @@ struct get_next_thread_reply
+@@ -5503,6 +5503,87 @@ struct get_next_thread_reply
      char __pad_12[4];
  };
  
@@ -5173,7 +5183,7 @@ index 2c8189b79cf..0acb0e11c7c 100644
  
  enum request
  {
-@@ -5783,6 +5864,11 @@ enum request
+@@ -5784,6 +5865,11 @@ enum request
      REQ_suspend_process,
      REQ_resume_process,
      REQ_get_next_thread,
@@ -5185,7 +5195,7 @@ index 2c8189b79cf..0acb0e11c7c 100644
      REQ_NB_REQUESTS
  };
  
-@@ -6068,6 +6154,11 @@ union generic_request
+@@ -6069,6 +6155,11 @@ union generic_request
      struct suspend_process_request suspend_process_request;
      struct resume_process_request resume_process_request;
      struct get_next_thread_request get_next_thread_request;
@@ -5197,7 +5207,7 @@ index 2c8189b79cf..0acb0e11c7c 100644
  };
  union generic_reply
  {
-@@ -6351,11 +6442,16 @@ union generic_reply
+@@ -6352,11 +6443,16 @@ union generic_reply
      struct suspend_process_reply suspend_process_reply;
      struct resume_process_reply resume_process_reply;
      struct get_next_thread_reply get_next_thread_reply;
@@ -5216,7 +5226,7 @@ index 2c8189b79cf..0acb0e11c7c 100644
  /* ### protocol_version end ### */
  
 diff --git a/server/request.h b/server/request.h
-index 3443ee93c17..f2484691184 100644
+index 089af79e199..78888391201 100644
 --- a/server/request.h
 +++ b/server/request.h
 @@ -397,6 +397,11 @@ DECL_HANDLER(terminate_job);
@@ -5243,7 +5253,7 @@ index 3443ee93c17..f2484691184 100644
  };
  
  C_ASSERT( sizeof(abstime_t) == 8 );
-@@ -2271,6 +2281,24 @@ C_ASSERT( FIELD_OFFSET(struct get_next_thread_request, flags) == 28 );
+@@ -2272,6 +2282,24 @@ C_ASSERT( FIELD_OFFSET(struct get_next_thread_request, flags) == 28 );
  C_ASSERT( sizeof(struct get_next_thread_request) == 32 );
  C_ASSERT( FIELD_OFFSET(struct get_next_thread_reply, handle) == 8 );
  C_ASSERT( sizeof(struct get_next_thread_reply) == 16 );
@@ -5269,10 +5279,10 @@ index 3443ee93c17..f2484691184 100644
  #endif  /* WANT_REQUEST_HANDLERS */
  
 diff --git a/server/trace.c b/server/trace.c
-index a360b4706ce..2a1f2564137 100644
+index b749c54a900..7aef9b10d92 100644
 --- a/server/trace.c
 +++ b/server/trace.c
-@@ -4530,6 +4530,49 @@ static void dump_get_next_thread_reply( const struct get_next_thread_reply *req
+@@ -4531,6 +4531,49 @@ static void dump_get_next_thread_reply( const struct get_next_thread_reply *req
      fprintf( stderr, " handle=%04x", req->handle );
  }
  
@@ -5322,7 +5332,7 @@ index a360b4706ce..2a1f2564137 100644
  static const dump_func req_dumpers[REQ_NB_REQUESTS] = {
      (dump_func)dump_new_process_request,
      (dump_func)dump_get_new_process_info_request,
-@@ -4809,6 +4852,11 @@ static const dump_func req_dumpers[REQ_NB_REQUESTS] = {
+@@ -4810,6 +4853,11 @@ static const dump_func req_dumpers[REQ_NB_REQUESTS] = {
      (dump_func)dump_suspend_process_request,
      (dump_func)dump_resume_process_request,
      (dump_func)dump_get_next_thread_request,
@@ -5334,7 +5344,7 @@ index a360b4706ce..2a1f2564137 100644
  };
  
  static const dump_func reply_dumpers[REQ_NB_REQUESTS] = {
-@@ -5090,6 +5138,11 @@ static const dump_func reply_dumpers[REQ_NB_REQUESTS] = {
+@@ -5091,6 +5139,11 @@ static const dump_func reply_dumpers[REQ_NB_REQUESTS] = {
      NULL,
      NULL,
      (dump_func)dump_get_next_thread_reply,
@@ -5346,7 +5356,7 @@ index a360b4706ce..2a1f2564137 100644
  };
  
  static const char * const req_names[REQ_NB_REQUESTS] = {
-@@ -5371,6 +5424,11 @@ static const char * const req_names[REQ_NB_REQUESTS] = {
+@@ -5372,6 +5425,11 @@ static const char * const req_names[REQ_NB_REQUESTS] = {
      "suspend_process",
      "resume_process",
      "get_next_thread",
