@@ -1,0 +1,293 @@
+			     BASH PATCH REPORT
+			     =================
+
+Bash-Release:	5.2
+Patch-ID:	bash52-006
+
+Bug-Reported-by:	feng xiangjun <fengxj325@gmail.com>
+Bug-Reference-ID:	<CAHH2t87LrCmO=gdyWOmGn5WJt7EucL+iOXzrry34OETe50S6uA@mail.gmail.com>
+Bug-Reference-URL:	https://lists.gnu.org/archive/html/bug-bash/2022-10/msg00089.html
+
+Bug-Description:
+
+In interactive shells, interrupting the shell while entering a command
+substitution can inhibit alias expansion.
+
+Patch (apply with `patch -p0'):
+
+*** ../bash-5.2-patched/parse.y	2022-10-08 13:10:06.000000000 -0400
+--- parse.y	2022-10-14 10:03:19.000000000 -0400
+***************
+*** 3307,3310 ****
+--- 3307,3312 ----
+      extended_glob = global_extglob;
+  #endif
++   if (parser_state & (PST_CMDSUBST|PST_STRING))
++     expand_aliases = expaliases_flag;
+  
+    parser_state = 0;
+***************
+*** 4389,4392 ****
+--- 4391,4395 ----
+      parser_state |= PST_NOERROR;
+  
++   parser_state |= PST_STRING;
+    expand_aliases = 0;
+  
+***************
+*** 6402,6406 ****
+        parser_state &= ~PST_NOEXPAND;	/* parse_comsub sentinel */
+        /* State flags we want to set for this run through the tokenizer. */
+!       parser_state |= PST_COMPASSIGN|PST_REPARSE;
+      }
+  
+--- 6405,6409 ----
+        parser_state &= ~PST_NOEXPAND;	/* parse_comsub sentinel */
+        /* State flags we want to set for this run through the tokenizer. */
+!       parser_state |= PST_COMPASSIGN|PST_REPARSE|PST_STRING;
+      }
+  
+*** ../bash-20221007/parser.h	2022-08-30 11:39:56.000000000 -0400
+--- parser.h	2022-10-14 09:56:18.000000000 -0400
+***************
+*** 51,54 ****
+--- 51,55 ----
+  #define PST_NOEXPAND	0x400000	/* don't expand anything in read_token_word; for command substitution */
+  #define PST_NOERROR	0x800000	/* don't print error messages in yyerror */
++ #define PST_STRING	0x1000000	/* parsing a string to a command or word list */
+  
+  /* Definition of the delimiter stack.  Needed by parse.y and bashhist.c. */
+*** ../bash-20221007/builtins/shopt.def	2022-10-07 10:25:55.000000000 -0400
+--- builtins/shopt.def	2022-10-14 09:30:11.000000000 -0400
+***************
+*** 150,153 ****
+--- 150,156 ----
+  #endif
+  
++ int expaliases_flag = 0;
++ static int shopt_set_expaliases PARAMS((char *, int));
++ 
+  static int shopt_set_debug_mode PARAMS((char *, int));
+  
+***************
+*** 199,203 ****
+    { "dotglob", &glob_dot_filenames, (shopt_set_func_t *)NULL },
+    { "execfail", &no_exit_on_failed_exec, (shopt_set_func_t *)NULL },
+!   { "expand_aliases", &expand_aliases, (shopt_set_func_t *)NULL },
+  #if defined (DEBUGGER)
+    { "extdebug", &debugging_mode, shopt_set_debug_mode },
+--- 202,206 ----
+    { "dotglob", &glob_dot_filenames, (shopt_set_func_t *)NULL },
+    { "execfail", &no_exit_on_failed_exec, (shopt_set_func_t *)NULL },
+!   { "expand_aliases", &expaliases_flag, shopt_set_expaliases },
+  #if defined (DEBUGGER)
+    { "extdebug", &debugging_mode, shopt_set_debug_mode },
+***************
+*** 351,355 ****
+    allow_null_glob_expansion = glob_dot_filenames = 0;
+    no_exit_on_failed_exec = 0;
+!   expand_aliases = 0;
+    extended_quote = 1;
+    fail_glob_expansion = 0;
+--- 354,358 ----
+    allow_null_glob_expansion = glob_dot_filenames = 0;
+    no_exit_on_failed_exec = 0;
+!   expand_aliases = expaliases_flag = 0;
+    extended_quote = 1;
+    fail_glob_expansion = 0;
+***************
+*** 632,635 ****
+--- 635,647 ----
+  }
+  
++ static int
++ shopt_set_expaliases (option_name, mode)
++      char *option_name;
++      int mode;
++ {
++   expand_aliases = expaliases_flag;
++   return 0;
++ }
++ 
+  #if defined (READLINE)
+  static int
+*** ../bash-20221007/builtins/common.h	2022-10-07 10:10:17.000000000 -0400
+--- builtins/common.h	2022-10-14 09:29:25.000000000 -0400
+***************
+*** 258,261 ****
+--- 258,263 ----
+  #endif
+  
++ extern int expaliases_flag;
++ 
+  /* variables from source.def */
+  extern int source_searches_cwd;
+*** ../bash-20221007/execute_cmd.c	2022-10-10 10:48:54.000000000 -0400
+--- execute_cmd.c	2022-10-14 09:32:24.000000000 -0400
+***************
+*** 1537,1541 ****
+  	 aliases. */
+        if (ois != interactive_shell)
+! 	expand_aliases = 0;
+      }
+  
+--- 1537,1541 ----
+  	 aliases. */
+        if (ois != interactive_shell)
+! 	expand_aliases = expaliases_flag = 0;
+      }
+  
+*** ../bash-20221007/general.c	2021-11-04 14:12:38.000000000 -0400
+--- general.c	2022-10-14 09:34:24.000000000 -0400
+***************
+*** 92,96 ****
+    &interactive_comments,
+    &source_uses_path,
+!   &expand_aliases,
+    &inherit_errexit,
+    &print_shift_error,
+--- 92,96 ----
+    &interactive_comments,
+    &source_uses_path,
+!   &expaliases_flag,
+    &inherit_errexit,
+    &print_shift_error,
+***************
+*** 107,111 ****
+    if (on != 0)
+      {
+!       interactive_comments = source_uses_path = expand_aliases = 1;
+        inherit_errexit = 1;
+        source_searches_cwd = 0;
+--- 107,112 ----
+    if (on != 0)
+      {
+!       interactive_comments = source_uses_path = 1;
+!       expand_aliases = expaliases_flag = 1;
+        inherit_errexit = 1;
+        source_searches_cwd = 0;
+***************
+*** 117,120 ****
+--- 118,122 ----
+      {
+        set_posix_options (saved_posix_vars);
++       expand_aliases = expaliases_flag;
+        free (saved_posix_vars);
+        saved_posix_vars = 0;
+***************
+*** 123,127 ****
+      {
+        source_searches_cwd = 1;
+!       expand_aliases = interactive_shell;
+        print_shift_error = 0;
+      }
+--- 125,129 ----
+      {
+        source_searches_cwd = 1;
+!       expand_aliases = expaliases_flag = interactive_shell;	/* XXX */
+        print_shift_error = 0;
+      }
+
+*** ../bash-5.2-patched/shell.c	2022-03-04 15:13:00.000000000 -0500
+--- shell.c	2022-10-14 09:36:19.000000000 -0400
+***************
+*** 1845,1850 ****
+  init_interactive ()
+  {
+!   expand_aliases = interactive_shell = startup_state = 1;
+!   interactive = 1;
+  #if defined (HISTORY)
+    if (enable_history_list == -1)
+--- 1845,1850 ----
+  init_interactive ()
+  {
+!   expand_aliases = expaliases_flag = 1;
+!   interactive_shell = startup_state = interactive = 1;
+  #if defined (HISTORY)
+    if (enable_history_list == -1)
+***************
+*** 1866,1870 ****
+  #endif /* HISTORY */
+    interactive_shell = startup_state = interactive = 0;
+!   expand_aliases = posixly_correct;	/* XXX - was 0 not posixly_correct */
+    no_line_editing = 1;
+  #if defined (JOB_CONTROL)
+--- 1866,1870 ----
+  #endif /* HISTORY */
+    interactive_shell = startup_state = interactive = 0;
+!   expand_aliases = expaliases_flag = posixly_correct;	/* XXX - was 0 not posixly_correct */
+    no_line_editing = 1;
+  #if defined (JOB_CONTROL)
+***************
+*** 1883,1887 ****
+  #endif
+    init_noninteractive ();
+!   expand_aliases = interactive_shell = startup_state = 1;
+  #if defined (HISTORY)
+    remember_on_history = enable_history_list;	/* XXX */
+--- 1883,1887 ----
+  #endif
+    init_noninteractive ();
+!   expand_aliases = expaliases_flag = interactive_shell = startup_state = 1;
+  #if defined (HISTORY)
+    remember_on_history = enable_history_list;	/* XXX */
+***************
+*** 2026,2030 ****
+    forced_interactive = interactive_shell = 0;
+    subshell_environment = running_in_background = 0;
+!   expand_aliases = 0;
+    bash_argv_initialized = 0;
+  
+--- 2026,2030 ----
+    forced_interactive = interactive_shell = 0;
+    subshell_environment = running_in_background = 0;
+!   expand_aliases = expaliases_flag = 0;
+    bash_argv_initialized = 0;
+  
+*** ../bash-5.2-patched/y.tab.c	2022-09-23 10:18:27.000000000 -0400
+--- y.tab.c	2022-10-14 14:57:26.000000000 -0400
+***************
+*** 5618,5621 ****
+--- 5618,5623 ----
+      extended_glob = global_extglob;
+  #endif
++   if (parser_state & (PST_CMDSUBST|PST_STRING))
++     expand_aliases = expaliases_flag;
+  
+    parser_state = 0;
+***************
+*** 6700,6703 ****
+--- 6702,6706 ----
+      parser_state |= PST_NOERROR;
+  
++   parser_state |= PST_STRING;
+    expand_aliases = 0;
+  
+***************
+*** 8713,8717 ****
+        parser_state &= ~PST_NOEXPAND;	/* parse_comsub sentinel */
+        /* State flags we want to set for this run through the tokenizer. */
+!       parser_state |= PST_COMPASSIGN|PST_REPARSE;
+      }
+  
+--- 8716,8720 ----
+        parser_state &= ~PST_NOEXPAND;	/* parse_comsub sentinel */
+        /* State flags we want to set for this run through the tokenizer. */
+!       parser_state |= PST_COMPASSIGN|PST_REPARSE|PST_STRING;
+      }
+  
+*** ../bash-5.2/patchlevel.h	2020-06-22 14:51:03.000000000 -0400
+--- patchlevel.h	2020-10-01 11:01:28.000000000 -0400
+***************
+*** 26,30 ****
+     looks for to find the patch level (for the sccs version string). */
+  
+! #define PATCHLEVEL 5
+  
+  #endif /* _PATCHLEVEL_H_ */
+--- 26,30 ----
+     looks for to find the patch level (for the sccs version string). */
+  
+! #define PATCHLEVEL 6
+  
+  #endif /* _PATCHLEVEL_H_ */

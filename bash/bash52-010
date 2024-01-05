@@ -1,0 +1,71 @@
+			     BASH PATCH REPORT
+			     =================
+
+Bash-Release:	5.2
+Patch-ID:	bash52-010
+
+Bug-Reported-by:	larsh@apache.org
+Bug-Reference-ID:
+Bug-Reference-URL:	https://savannah.gnu.org/support/?110744
+
+Bug-Description:
+
+Bash-5.2 checks the first 128 characters of an executable file that execve()
+refuses to execute to see whether it's a binary file before trying to
+execute it as a shell script. This defeats some previously-supported use
+cases like "self-executing" jar files or "self-uncompressing" scripts.
+
+Patch (apply with `patch -p0'):
+
+*** ../bash-5.2-patched/general.c	2022-11-07 10:31:42.000000000 -0500
+--- general.c	2022-11-18 14:48:45.000000000 -0500
+***************
+*** 684,687 ****
+--- 684,688 ----
+  {
+    register int i;
++   int nline;
+    unsigned char c;
+  
+***************
+*** 690,702 ****
+  
+    /* Generally we check the first line for NULs. If the first line looks like
+!      a `#!' interpreter specifier, we just look for NULs anywhere in the
+!      buffer. */
+!   if (sample[0] == '#' && sample[1] == '!')
+!     return (memchr (sample, '\0', sample_len) != NULL);
+  
+    for (i = 0; i < sample_len; i++)
+      {
+        c = sample[i];
+!       if (c == '\n')
+  	return (0);
+        if (c == '\0')
+--- 691,701 ----
+  
+    /* Generally we check the first line for NULs. If the first line looks like
+!      a `#!' interpreter specifier, we look for NULs in the first two lines. */
+!   nline = (sample[0] == '#' && sample[1] == '!') ? 2 : 1;
+  
+    for (i = 0; i < sample_len; i++)
+      {
+        c = sample[i];
+!       if (c == '\n' && --nline == 0)
+  	return (0);
+        if (c == '\0')
+*** ../bash-5.2/patchlevel.h	2020-06-22 14:51:03.000000000 -0400
+--- patchlevel.h	2020-10-01 11:01:28.000000000 -0400
+***************
+*** 26,30 ****
+     looks for to find the patch level (for the sccs version string). */
+  
+! #define PATCHLEVEL 9
+  
+  #endif /* _PATCHLEVEL_H_ */
+--- 26,30 ----
+     looks for to find the patch level (for the sccs version string). */
+  
+! #define PATCHLEVEL 10
+  
+  #endif /* _PATCHLEVEL_H_ */

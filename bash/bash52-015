@@ -1,0 +1,216 @@
+			     BASH PATCH REPORT
+			     =================
+
+Bash-Release:	5.2
+Patch-ID:	bash52-015
+
+Bug-Reported-by:	Frode Nordahl <frode.nordahl@canonical.com>
+Bug-Reference-ID:	<20221119070714.351759-1-frode.nordahl@canonical.com>
+Bug-Reference-URL:	https://lists.gnu.org/archive/html/bug-bash/2022-11/msg00078.html
+
+Bug-Description:
+
+There are several cases where bash is too aggressive when optimizing out forks
+in subshells. For example, `eval' and traps should never be optimized.
+
+Patch (apply with `patch -p0'):
+
+*** ../bash-5.2-patched/builtins/common.h	2022-11-23 17:09:18.000000000 -0500
+--- builtins/common.h	2022-11-19 18:03:59.000000000 -0500
+***************
+*** 52,55 ****
+--- 52,56 ----
+  #define SEVAL_ONECMD	0x100		/* only allow a single command */
+  #define SEVAL_NOHISTEXP	0x200		/* inhibit history expansion */
++ #define SEVAL_NOOPTIMIZE 0x400		/* don't try to set optimization flags */
+  
+  /* Flags for describe_command, shared between type.def and command.def */
+*** ../bash-5.2-patched/builtins/evalstring.c	2022-11-05 17:27:44.000000000 -0400
+--- builtins/evalstring.c	2022-11-19 18:23:21.000000000 -0500
+***************
+*** 133,138 ****
+        (command->value.Connection->connector == AND_AND || command->value.Connection->connector == OR_OR || command->value.Connection->connector == ';') &&
+        (command->value.Connection->second->flags & CMD_TRY_OPTIMIZING) &&
+!       ((startup_state == 2 && should_suppress_fork (command->value.Connection->second)) ||
+!        ((subshell_environment & SUBSHELL_PAREN) && should_optimize_fork (command->value.Connection->second, 0))))
+      {
+        command->value.Connection->second->flags |= CMD_NO_FORK;
+--- 133,138 ----
+        (command->value.Connection->connector == AND_AND || command->value.Connection->connector == OR_OR || command->value.Connection->connector == ';') &&
+        (command->value.Connection->second->flags & CMD_TRY_OPTIMIZING) &&
+!       (should_suppress_fork (command->value.Connection->second) ||
+!       ((subshell_environment & SUBSHELL_PAREN) && should_optimize_fork (command->value.Connection->second, 0))))
+      {
+        command->value.Connection->second->flags |= CMD_NO_FORK;
+***************
+*** 291,294 ****
+--- 291,295 ----
+     	(flags & SEVAL_RESETLINE) -> reset line_number to 1
+     	(flags & SEVAL_NOHISTEXP) -> history_expansion_inhibited -> 1
++    	(flags & SEVAL_NOOPTIMIZE) -> don't try to turn on optimizing flags
+  */
+  
+***************
+*** 503,507 ****
+  		 series of connection commands is
+  		 command->value.Connection->second. */
+! 	      else if (command->type == cm_connection && can_optimize_connection (command))
+  		{
+  		  command->value.Connection->second->flags |= CMD_TRY_OPTIMIZING;
+--- 504,510 ----
+  		 series of connection commands is
+  		 command->value.Connection->second. */
+! 	      else if (command->type == cm_connection &&
+! 		       (flags & SEVAL_NOOPTIMIZE) == 0 &&
+! 		       can_optimize_connection (command))
+  		{
+  		  command->value.Connection->second->flags |= CMD_TRY_OPTIMIZING;
+*** ../bash-5.2-patched/builtins/eval.def	2016-01-25 13:28:37.000000000 -0500
+--- builtins/eval.def	2022-11-19 18:04:25.000000000 -0500
+***************
+*** 54,57 ****
+    list = loptend;	/* skip over possible `--' */
+  
+!   return (list ? evalstring (string_list (list), "eval", SEVAL_NOHIST) : EXECUTION_SUCCESS);
+  }
+--- 54,57 ----
+    list = loptend;	/* skip over possible `--' */
+  
+!   return (list ? evalstring (string_list (list), "eval", SEVAL_NOHIST|SEVAL_NOOPTIMIZE) : EXECUTION_SUCCESS);
+  }
+*** ../bash-5.2-patched/trap.c	2022-08-10 08:59:45.000000000 -0400
+--- trap.c	2022-12-12 10:57:51.000000000 -0500
+***************
+*** 305,308 ****
+--- 305,309 ----
+    volatile int save_return_catch_flag, function_code;
+    procenv_t save_return_catch;
++   char *trap_command, *old_trap;
+  #if defined (ARRAY_VARS)
+    ARRAY *ps;
+***************
+*** 420,423 ****
+--- 421,427 ----
+  	  else
+  	    {
++ 	      old_trap = trap_list[sig];
++ 	      trap_command = savestring (old_trap);
++ 
+  	      save_parser_state (&pstate);
+  	      save_subst_varlist = subst_assign_varlist;
+***************
+*** 442,446 ****
+  
+  	      if (function_code == 0)
+! 		x = parse_and_execute (savestring (trap_list[sig]), "trap", SEVAL_NONINT|SEVAL_NOHIST|SEVAL_RESETLINE);
+  	      else
+  		{
+--- 446,451 ----
+  
+  	      if (function_code == 0)
+! 	        /* XXX is x always last_command_exit_value? */
+! 		x = parse_and_execute (trap_command, "trap", SEVAL_NONINT|SEVAL_NOHIST|SEVAL_RESETLINE|SEVAL_NOOPTIMIZE);
+  	      else
+  		{
+***************
+*** 1003,1007 ****
+  	{
+  	  reset_parser ();
+! 	  parse_and_execute (trap_command, "exit trap", SEVAL_NONINT|SEVAL_NOHIST|SEVAL_RESETLINE);
+  	}
+        else if (code == ERREXIT)
+--- 1008,1012 ----
+  	{
+  	  reset_parser ();
+! 	  parse_and_execute (trap_command, "exit trap", SEVAL_NONINT|SEVAL_NOHIST|SEVAL_RESETLINE|SEVAL_NOOPTIMIZE);
+  	}
+        else if (code == ERREXIT)
+***************
+*** 1110,1114 ****
+  	}
+  
+!       flags = SEVAL_NONINT|SEVAL_NOHIST;
+        if (sig != DEBUG_TRAP && sig != RETURN_TRAP && sig != ERROR_TRAP)
+  	flags |= SEVAL_RESETLINE;
+--- 1115,1119 ----
+  	}
+  
+!       flags = SEVAL_NONINT|SEVAL_NOHIST|SEVAL_NOOPTIMIZE;
+        if (sig != DEBUG_TRAP && sig != RETURN_TRAP && sig != ERROR_TRAP)
+  	flags |= SEVAL_RESETLINE;
+*** ../bash-5.2-patched/parse.y	2022-11-23 17:09:18.000000000 -0500
+--- parse.y	2022-11-19 18:15:34.000000000 -0500
+***************
+*** 2828,2832 ****
+      last_lastarg = savestring (last_lastarg);
+  
+!   parse_and_execute (savestring (command), vname, SEVAL_NONINT|SEVAL_NOHIST);
+  
+    restore_parser_state (&ps);
+--- 2844,2848 ----
+      last_lastarg = savestring (last_lastarg);
+  
+!   parse_and_execute (savestring (command), vname, SEVAL_NONINT|SEVAL_NOHIST|SEVAL_NOOPTIMIZE);
+  
+    restore_parser_state (&ps);
+*** ../bash-5.2-patched/jobs.c	2022-07-18 10:19:56.000000000 -0400
+--- jobs.c	2022-11-19 18:10:24.000000000 -0500
+***************
+*** 4221,4225 ****
+    for (i = 0; i < nchild; i++)
+      {
+!       parse_and_execute (savestring (trap_command), "trap", SEVAL_NOHIST|SEVAL_RESETLINE);
+      }
+  
+--- 4243,4247 ----
+    for (i = 0; i < nchild; i++)
+      {
+!       parse_and_execute (savestring (trap_command), "trap", SEVAL_NOHIST|SEVAL_RESETLINE|SEVAL_NOOPTIMIZE);
+      }
+  
+*** ../bash-5.2-patched/y.tab.c	2022-11-23 17:09:18.000000000 -0500
+--- y.tab.c	2022-11-23 17:21:17.000000000 -0500
+***************
+*** 5139,5143 ****
+      last_lastarg = savestring (last_lastarg);
+  
+!   parse_and_execute (savestring (command), vname, SEVAL_NONINT|SEVAL_NOHIST);
+  
+    restore_parser_state (&ps);
+--- 5154,5158 ----
+      last_lastarg = savestring (last_lastarg);
+  
+!   parse_and_execute (savestring (command), vname, SEVAL_NONINT|SEVAL_NOHIST|SEVAL_NOOPTIMIZE);
+  
+    restore_parser_state (&ps);
+*** ../bash-5.2-patched/execute_cmd.c	2022-11-05 17:27:41.000000000 -0400
+--- execute_cmd.c	2022-11-22 17:09:38.000000000 -0500
+***************
+*** 1655,1659 ****
+       and set CMD_TRY_OPTIMIZING for simple commands on the right side of an
+       and-or or `;' list to test for optimizing forks when they are executed. */
+!   if (user_subshell && command->type == cm_subshell)
+      optimize_subshell_command (command->value.Subshell->command);
+  
+--- 1665,1670 ----
+       and set CMD_TRY_OPTIMIZING for simple commands on the right side of an
+       and-or or `;' list to test for optimizing forks when they are executed. */
+!   if (user_subshell && command->type == cm_subshell &&
+!       (command->flags & (CMD_TIME_PIPELINE|CMD_INVERT_RETURN)) == 0)
+      optimize_subshell_command (command->value.Subshell->command);
+  
+*** ../bash-5.2/patchlevel.h	2020-06-22 14:51:03.000000000 -0400
+--- patchlevel.h	2020-10-01 11:01:28.000000000 -0400
+***************
+*** 26,30 ****
+     looks for to find the patch level (for the sccs version string). */
+  
+! #define PATCHLEVEL 14
+  
+  #endif /* _PATCHLEVEL_H_ */
+--- 26,30 ----
+     looks for to find the patch level (for the sccs version string). */
+  
+! #define PATCHLEVEL 15
+  
+  #endif /* _PATCHLEVEL_H_ */

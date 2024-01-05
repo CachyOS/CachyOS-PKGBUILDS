@@ -1,0 +1,70 @@
+			     BASH PATCH REPORT
+			     =================
+
+Bash-Release:	5.2
+Patch-ID:	bash52-004
+
+Bug-Reported-by:	Antoine <bug-bash@glitchimini.net>
+Bug-Reference-ID:	<8bd59753-05ff-9b09-2337-2c7f52ded650@glitchimini.net>
+Bug-Reference-URL:	https://lists.gnu.org/archive/html/bug-bash/2022-10/msg00022.html
+
+Bug-Description:
+
+Bash needs to keep better track of nested brace expansions to avoid problems
+with quoting and POSIX semantics.
+
+Patch (apply with `patch -p0'):
+
+*** ../bash-5.2-patched/subst.c	2022-10-05 10:22:02.000000000 -0400
+--- subst.c	2022-10-06 15:19:08.000000000 -0400
+***************
+*** 1799,1802 ****
+--- 1804,1810 ----
+  }
+  
++ #define PARAMEXPNEST_MAX	32	// for now
++ static int dbstate[PARAMEXPNEST_MAX];
++ 
+  /* Extract a parameter expansion expression within ${ and } from STRING.
+     Obey the Posix.2 rules for finding the ending `}': count braces while
+***************
+*** 1829,1832 ****
+--- 1837,1842 ----
+      return (extract_heredoc_dolbrace_string (string, sindex, quoted, flags));
+  
++   dbstate[0] = dolbrace_state;
++ 
+    pass_character = 0;
+    nesting_level = 1;
+***************
+*** 1853,1856 ****
+--- 1863,1868 ----
+        if (string[i] == '$' && string[i+1] == LBRACE)
+  	{
++ 	  if (nesting_level < PARAMEXPNEST_MAX)
++ 	    dbstate[nesting_level] = dolbrace_state;
+  	  nesting_level++;
+  	  i += 2;
+***************
+*** 1865,1868 ****
+--- 1877,1881 ----
+  	  if (nesting_level == 0)
+  	    break;
++ 	  dolbrace_state = (nesting_level < PARAMEXPNEST_MAX) ? dbstate[nesting_level] : dbstate[0];	/* Guess using initial state */
+  	  i++;
+  	  continue;
+*** ../bash-5.2/patchlevel.h	2020-06-22 14:51:03.000000000 -0400
+--- patchlevel.h	2020-10-01 11:01:28.000000000 -0400
+***************
+*** 26,30 ****
+     looks for to find the patch level (for the sccs version string). */
+  
+! #define PATCHLEVEL 3
+  
+  #endif /* _PATCHLEVEL_H_ */
+--- 26,30 ----
+     looks for to find the patch level (for the sccs version string). */
+  
+! #define PATCHLEVEL 4
+  
+  #endif /* _PATCHLEVEL_H_ */
