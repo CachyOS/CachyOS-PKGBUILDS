@@ -17,32 +17,32 @@ sha256sums=('SKIP')
 
 # Function to generate data and compress-decompress it
 _generate_and_process_data() {
-    echo "Generating data for $1 KB with compression level $2"
-    _DATA_SIZE=$1
-    _COMPRESSION_LEVEL=$2
-    _FILENAME="data_${_DATA_SIZE}_${_COMPRESSION_LEVEL}.bin"
-    echo "Data size: $_DATA_SIZE KB"
-    # Generate data
-    $_DATASET_GENERATOR -g$1 > $_FILENAME
+  echo "Generating data for $1 KB with compression level $2"
+  local _data_size=$1
+  local _compression_level=$2
+  local _filename="data_${_data_size}_${_compression_level}.bin"
+  echo "Data size: $_data_size KB"
+  # Generate data
+  $_dataset_generator -g$_data_size > $_filename
 
-    echo "Compressing and decompressing data"
-    echo $_FILENAME
-    # Compress
-    _START_TIME=$(date +%s.%N)
-    LLVM_PROFILE_FILE=${PGO_PROFILE_DIR}/_%m_%p.profraw $LZ4_BIN -$_COMPRESSION_LEVEL $_FILENAME $_FILENAME.lz4 > /dev/null 2>&1
-    _END_TIME=$(date +%s.%N)
-    _COMPRESS_TIME=$(echo "$_END_TIME - $_START_TIME" | bc)
+  echo "Compressing and decompressing data"
+  echo $_filename
+  # Compress
+  local _start_time=$(date +%s.%N)
+  LLVM_PROFILE_FILE=${PGO_PROFILE_DIR}/_%m_%p.profraw $LZ4_BIN -$_compression_level $_filename $_filename.lz4 > /dev/null 2>&1
+  local _end_time=$(date +%s.%N)
+  local _compress_time=$(echo "$_end_time - $_start_time" | bc)
 
-    echo "Decompressing data"
-    # Decompress
-    _START_TIME=$(date +%s.%N)
-    LLVM_PROFILE_FILE=${PGO_PROFILE_DIR}/_%m_%p.profraw $LZ4_BIN -d $_FILENAME.lz4 ${_FILENAME}_uncompressed > /dev/null 2>&1
-    _END_TIME=$(date +%s.%N)
-    _DECOMPRESS_TIME=$(echo "$_END_TIME - $_START_TIME" | bc)
+  echo "Decompressing data"
+  # Decompress
+  _start_time=$(date +%s.%N)
+  LLVM_PROFILE_FILE=${PGO_PROFILE_DIR}/_%m_%p.profraw $LZ4_BIN -d $_filename.lz4 ${_filename}_uncompressed > /dev/null 2>&1
+  _end_time=$(date +%s.%N)
+  local _decompress_time=$(echo "$_end_time - $_start_time" | bc)
 
-    # Cleanup and log results
-    rm $_FILENAME $_FILENAME.lz4 ${_FILENAME}_uncompressed
-    echo "$_DATA_SIZE, $_COMPRESSION_LEVEL, $_COMPRESS_TIME, $_DECOMPRESS_TIME" >> results.csv
+  # Cleanup and log results
+  rm $_filename $_filename.lz4 ${_filename}_uncompressed
+  echo "$_data_size, $_compression_level, $_compress_time, $_decompress_time" >> results.csv
 }
 
 build() {
