@@ -1,0 +1,59 @@
+# Maintainer: Pierre Schmitz <pierre@archlinux.de>
+# Contributor: François Charette <firmicus@gmx.net>
+# PGO Version: Laio Seman <laio [at] ieee.org>
+
+pkgname=xz
+pkgver=5.4.5
+pkgrel=2
+pkgdesc='Library and command line tools for XZ and LZMA compressed files'
+arch=('x86_64')
+url='https://tukaani.org/xz/'
+license=('GPL' 'LGPL' 'custom')
+depends=('sh')
+provides=('liblzma.so')
+validpgpkeys=('3690C240CE51B4670D30AD1C38EE757D69184620'  # Lasse Collin <lasse.collin@tukaani.org>
+              '22D465F2B4C173803B20C6DE59FCF207FEA7F445') # Jia Tan <jiat0218@gmail.com>
+source=("https://tukaani.org/${pkgname}/${pkgname}-${pkgver}.tar.gz"{,.sig})
+sha256sums=('135c90b934aee8fbc0d467de87a05cb70d627da36abe518c357a873709e5b7d6'
+            'SKIP')
+sha512sums=('91f8f548c915de0ed79cee13ce0336b51c1cebf2eb142fa1efecfd07771c662c99cad3730540fcb712057ab274130e13b87960f6b4c62f0bd9477f27a303fb2b'
+            'SKIP')
+
+build() {
+  cd "${srcdir}/${pkgname}-${pkgver}"
+  export CFLAGS="${CFLAGS} -fprofile-generate -fprofile-update=atomic -fprofile-partial-training"
+
+  ./configure \
+    --prefix=/usr \
+    --disable-rpath
+  make
+
+  make -k check
+
+  make clean
+  export CFLAGS="${CFLAGS//-fprofile-generate/}"
+  export CFLAGS="${CFLAGS//-fprofile-update=atomic/}"
+  export CFLAGS="${CFLAGS} -fprofile-use"
+
+  ./configure \
+    --prefix=/usr \
+    --disable-rpath
+  make
+
+}
+
+check() {
+  cd "${srcdir}/${pkgname}-${pkgver}"
+
+  make check
+}
+
+package() {
+  cd "${srcdir}/${pkgname}-${pkgver}"
+
+  make DESTDIR="${pkgdir}" install
+
+  install -d -m0755 "${pkgdir}/usr/share/licenses/xz/"
+  ln -sf /usr/share/doc/xz/COPYING "${pkgdir}/usr/share/licenses/xz/"
+  ln -sf /usr/share/licenses/common/GPL2/license.txt "${pkgdir}/usr/share/doc/xz/COPYING.GPLv2"
+}
