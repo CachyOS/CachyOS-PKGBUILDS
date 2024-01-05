@@ -31,7 +31,7 @@ sha256sums=('73187473feb74509357e8fa6cb9fd67153b2d010d00aeb2fddb6ceeb18abaf27'
 options=('!lto')
 
 prepare() {
-  cd sqlite-src-$_srcver
+  cd "sqlite-src-$_srcver"
 
   # patch taken from Fedora
   # https://src.fedoraproject.org/rpms/sqlite/blob/master/f/sqlite.spec
@@ -60,8 +60,8 @@ build() {
         -DSQLITE_ENABLE_MATH_FUNCTIONS"
 
   # define PGO_PROFILE_DIR to use a custom directory for the profile data
-  export PGO_PROFILE_DIR=$PWD/pgo-data
-  mkdir -p ${PGO_PROFILE_DIR}
+  export PGO_PROFILE_DIR="$PWD/pgo-data"
+  mkdir -p "${PGO_PROFILE_DIR}"
 
   export AR=llvm-ar
   export CC=clang
@@ -76,31 +76,31 @@ build() {
   export CXXFLAGS+=" -fprofile-generate"
 
   # build sqlite
-  cd sqlite-src-$_srcver
+  cd "sqlite-src-$_srcver"
   ./configure --prefix=/usr \
-  --disable-static \
-  --enable-fts3 \
-  --enable-fts4 \
-  --enable-fts5 \
-  --enable-rtree \
-  TCLLIBDIR=/usr/lib/sqlite$pkgver
+    --disable-static \
+    --enable-fts3 \
+    --enable-fts4 \
+    --enable-fts5 \
+    --enable-rtree \
+    TCLLIBDIR="/usr/lib/sqlite$pkgver"
 
   sed -i -e 's/ -shared / -Wl,-O1,--as-needed\0/g' libtool
   make
-  
-  export SQLITE_DIR=$PWD
+
+  export SQLITE_DIR="$PWD"
 
   # preparing PGO data
   # using ClickHouse ClickBench scripts
   cd ..
-  export ROOT_DIR=$PWD
+  export ROOT_DIR="$PWD"
   mv hits.csv ClickBench/sqlite/hits.csv
   cd ClickBench/sqlite
   rm -rf mydb
   sed -i '/REGEXP_REPLACE/d' queries.sql
-  LLVM_PROFILE_FILE=${PGO_PROFILE_DIR}/_%m_%p.profraw $SQLITE_DIR/sqlite3 mydb < create.sql
+  LLVM_PROFILE_FILE="${PGO_PROFILE_DIR}/_%m_%p.profraw" "$SQLITE_DIR/sqlite3" mydb < create.sql
   head -n 5000000 hits.csv > sample.csv
-  LLVM_PROFILE_FILE=${PGO_PROFILE_DIR}/_%m_%p.profraw $SQLITE_DIR/sqlite3 mydb '.import --csv sample.csv hits'
+  LLVM_PROFILE_FILE="${PGO_PROFILE_DIR}/_%m_%p.profraw" "$SQLITE_DIR/sqlite3" mydb '.import --csv sample.csv hits'
   wc -c mydb
 
   TRIES=3
@@ -108,28 +108,28 @@ build() {
   cat queries.sql | while read query; do
       sync
       echo "$query";
-      for i in $(seq 1 $TRIES); do
-          LLVM_PROFILE_FILE=${PGO_PROFILE_DIR}/_%m_%p.profraw $SQLITE_DIR/sqlite3 mydb <<< "${query}"
+      for i in "$(seq 1 $TRIES)"; do
+          LLVM_PROFILE_FILE="${PGO_PROFILE_DIR}/_%m_%p.profraw" "$SQLITE_DIR/sqlite3" mydb <<< "${query}"
       done;
   done;
 
 
-  cd $SQLITE_DIR
+  cd "$SQLITE_DIR"
 
   # merge the profile data
-  llvm-profdata merge -o merged.profdata ${PGO_PROFILE_DIR}/*.profraw
+  llvm-profdata merge -o merged.profdata "${PGO_PROFILE_DIR}"/*.profraw
 
   export CFLAGS="${ORIG_CFLAGS} -fprofile-use=merged.profdata -flto=thin"
   export CXXFLAGS="${ORIG_CXXFLAGS} -fprofile-use=merged.profdata -flto=thin"
 
   make clean
   ./configure --prefix=/usr \
-	--disable-static \
-  --enable-fts3 \
-  --enable-fts4 \
-  --enable-fts5 \
-  --enable-rtree \
-  TCLLIBDIR=/usr/lib/sqlite$pkgver \
+    --disable-static \
+    --enable-fts3 \
+    --enable-fts4 \
+    --enable-fts5 \
+    --enable-rtree \
+    TCLLIBDIR="/usr/lib/sqlite$pkgver"
 
   sed -i -e 's/ -shared / -flto=thin -Wl,-O1,--as-needed\0/g' libtool
   make
@@ -139,14 +139,12 @@ build() {
 }
 
 package_sqlite() {
-  
+  pkgdesc="A C library that implements an SQL database engine"
+  depends=('readline' 'zlib' 'glibc')
+  provides=("sqlite3=$pkgver" 'libsqlite3.so')
+  replaces=("sqlite3")
 
- pkgdesc="A C library that implements an SQL database engine"
- depends=('readline' 'zlib' 'glibc')
- provides=("sqlite3=$pkgver" 'libsqlite3.so')
- replaces=("sqlite3")
-
-  cd sqlite-src-$_srcver
+  cd "sqlite-src-$_srcver"
   make DESTDIR="${pkgdir}" install
 
   install -m755 showdb showjournal showstat4 showwal sqldiff "${pkgdir}"/usr/bin/
@@ -164,11 +162,10 @@ package_sqlite() {
 }
 
 package_sqlite-tcl() {
-
- pkgdesc="sqlite Tcl Extension Architecture (TEA)"
- depends=('sqlite' 'glibc')
- provides=("sqlite3-tcl=$pkgver")
- replaces=("sqlite3-tcl")
+  pkgdesc="sqlite Tcl Extension Architecture (TEA)"
+  depends=('sqlite' 'glibc')
+  provides=("sqlite3-tcl=$pkgver")
+  replaces=("sqlite3-tcl")
 
   install -m755 -d "${pkgdir}"/usr/lib
   mv "$srcdir"/tcl/* "${pkgdir}"/usr/lib
@@ -184,43 +181,39 @@ package_sqlite-tcl() {
 
 
 package_sqlite-analyzer() {
+  pkgdesc="An analysis program for sqlite3 database files"
+  depends=('sqlite' 'tcl' 'glibc')
 
- pkgdesc="An analysis program for sqlite3 database files"
- depends=('sqlite' 'tcl' 'glibc')
-
-  cd sqlite-src-$_srcver
+  cd "sqlite-src-$_srcver"
   install -m755 -d "${pkgdir}"/usr/bin
   install -m755 sqlite3_analyzer "${pkgdir}"/usr/bin/
 }
 
 package_lemon() {
+  # https://www.sqlite.org/lemon.html
+  pkgdesc="A parser generator"
+  depends=('glibc')
 
- # https://www.sqlite.org/lemon.html
- pkgdesc="A parser generator"
- depends=('glibc')
-
-  cd sqlite-src-$_srcver
+  cd "sqlite-src-$_srcver"
   # ELF file ('usr/bin/lemon') lacks FULL RELRO, check LDFLAGS. - no fix found so far
   install -Dm755 lemon ${pkgdir}/usr/bin/lemon
   install -Dm644 lempar.c ${pkgdir}/usr/share/lemon/lempar.c
-  
+
   mkdir -p "${pkgdir}"/usr/share/doc/${pkgname}
   cp ../sqlite-doc-${_docver}/lemon.html  "${pkgdir}"/usr/share/doc/${pkgname}/
   install -m755 -d "${pkgdir}"/usr/share/licenses
   ln -sf /usr/share/licenses/${pkgbase} "${pkgdir}/usr/share/licenses/${pkgname}"
-
 }
 
 package_sqlite-doc() {
+  pkgdesc="most of the static HTML files that comprise this website, including all of the SQL Syntax and the C/C++ interface specs and other miscellaneous documentation"
+  #arch=('any') - not yet supported
+  provides=("sqlite3-doc=$pkgver")
+  replaces=("sqlite3-doc")
 
- pkgdesc="most of the static HTML files that comprise this website, including all of the SQL Syntax and the C/C++ interface specs and other miscellaneous documentation"
- #arch=('any') - not yet supported
- provides=("sqlite3-doc=$pkgver")
- replaces=("sqlite3-doc")
-
-  cd sqlite-doc-${_docver}
+  cd "sqlite-doc-${_docver}"
   mkdir -p "${pkgdir}"/usr/share/doc/${pkgbase}
   cp -R *  "${pkgdir}"/usr/share/doc/${pkgbase}/
-  
+
   rm "${pkgdir}"/usr/share/doc/${pkgbase}/lemon.html
 }
