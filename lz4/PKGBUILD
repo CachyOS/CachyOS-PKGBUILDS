@@ -4,7 +4,7 @@
 pkgname=lz4
 epoch=1
 pkgver=1.9.4
-pkgrel=2
+pkgrel=3
 pkgdesc='Extremely fast compression algorithm'
 arch=('x86_64')
 url='https://lz4.github.io/lz4/'
@@ -18,40 +18,37 @@ sha256sums=('SKIP')
 # Function to generate data and compress-decompress it
 _generate_and_process_data() {
     echo "Generating data for $1 KB with compression level $2"
-    DATA_SIZE=$1
-    COMPRESSION_LEVEL=$2
-    FILENAME="data_${DATA_SIZE}_${COMPRESSION_LEVEL}.bin"
-    echo "Data size: $DATA_SIZE KB"
+    _DATA_SIZE=$1
+    _COMPRESSION_LEVEL=$2
+    _FILENAME="data_${_DATA_SIZE}_${_COMPRESSION_LEVEL}.bin"
+    echo "Data size: $_DATA_SIZE KB"
     # Generate data
-    $DATASET_GENERATOR -g$1 > $FILENAME
+    $_DATASET_GENERATOR -g$1 > $_FILENAME
 
     echo "Compressing and decompressing data"
-    echo $FILENAME
+    echo $_FILENAME
     # Compress
-    START_TIME=$(date +%s.%N)
-    LLVM_PROFILE_FILE=${PGO_PROFILE_DIR}/_%m_%p.profraw $LZ4_BIN -$COMPRESSION_LEVEL $FILENAME $FILENAME.lz4 > /dev/null 2>&1
-    END_TIME=$(date +%s.%N)
-    COMPRESS_TIME=$(echo "$END_TIME - $START_TIME" | bc)
+    _START_TIME=$(date +%s.%N)
+    LLVM_PROFILE_FILE=${PGO_PROFILE_DIR}/_%m_%p.profraw $LZ4_BIN -$_COMPRESSION_LEVEL $_FILENAME $_FILENAME.lz4 > /dev/null 2>&1
+    _END_TIME=$(date +%s.%N)
+    _COMPRESS_TIME=$(echo "$_END_TIME - $_START_TIME" | bc)
 
     echo "Decompressing data"
     # Decompress
-    START_TIME=$(date +%s.%N)
-    LLVM_PROFILE_FILE=${PGO_PROFILE_DIR}/_%m_%p.profraw $LZ4_BIN -d $FILENAME.lz4 ${FILENAME}_uncompressed > /dev/null 2>&1
-    END_TIME=$(date +%s.%N)
-    DECOMPRESS_TIME=$(echo "$END_TIME - $START_TIME" | bc)
+    _START_TIME=$(date +%s.%N)
+    LLVM_PROFILE_FILE=${PGO_PROFILE_DIR}/_%m_%p.profraw $LZ4_BIN -d $_FILENAME.lz4 ${_FILENAME}_uncompressed > /dev/null 2>&1
+    _END_TIME=$(date +%s.%N)
+    _DECOMPRESS_TIME=$(echo "$_END_TIME - $_START_TIME" | bc)
 
     # Cleanup and log results
-    rm $FILENAME $FILENAME.lz4 ${FILENAME}_uncompressed
-    echo "$DATA_SIZE, $COMPRESSION_LEVEL, $COMPRESS_TIME, $DECOMPRESS_TIME" >> results.csv
+    rm $_FILENAME $_FILENAME.lz4 ${_FILENAME}_uncompressed
+    echo "$_DATA_SIZE, $_COMPRESSION_LEVEL, $_COMPRESS_TIME, $_DECOMPRESS_TIME" >> results.csv
 }
 
 build() {
   export ROOT_DIR=$PWD
   export CC=clang
   export CXX=clang++
-
-  export CFLAGS_ORIG="$CFLAGS"
-  export CXXFLAGS_ORIG="$CXXFLAGS"
 
   mkdir -p pgo
 
@@ -95,8 +92,8 @@ build() {
       done
   done
 
-  export CFLAGS="$CFLAGS_ORIG -fprofile-use=$PGO_PROFILE_DIR/merged.profdata"
-  export CXXFLAGS="$CXXFLAGS_ORIG -fprofile-use=$PGO_PROFILE_DIR/merged.profdata"
+    export CFLAGS="${CFLAGS//-fprofile-generate/} -fprofile-use=$PGO_PROFILE_DIR/merged.profdata"
+    export CXXFLAGS="${CXXFLAGS//-fprofile-generate/} -fprofile-use=$PGO_PROFILE_DIR/merged.profdata"
 
   llvm-profdata merge -o merged.profdata ${PGO_PROFILE_DIR}/*.profraw
 
