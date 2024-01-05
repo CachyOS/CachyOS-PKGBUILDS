@@ -12,7 +12,7 @@ _securityver=9
 _updatever=8
 pkgver=${_majorver}.${_minorver}.${_securityver}.u${_updatever}
 #pkgver=${_majorver}.u${_updatever}
-pkgrel=3
+pkgrel=4
 _git_tag=jdk-${_majorver}.${_minorver}.${_securityver}+${_updatever}
 #_git_tag=jdk-${_majorver}+${_updatever}
 arch=('x86_64')
@@ -21,7 +21,7 @@ license=('custom')
 makedepends=('java-environment=17' 'cpio' 'unzip' 'zip' 'libelf' 'libcups' 'libx11'
              'libxrender' 'libxtst' 'libxt' 'libxext' 'libxrandr' 'alsa-lib' 'pandoc'
              'graphviz' 'freetype2' 'libjpeg-turbo' 'giflib' 'libpng' 'lcms2'
-             'libnet' 'bash' 'harfbuzz' 'gcc-libs' 'glibc')
+             'libnet' 'bash' 'harfbuzz' 'gcc-libs' 'glibc' 'llvm' 'clang' 'lld')
 # To use LTO we should pass --with-jvm-features=link-time-opt flag instead of
 # options=(lto) to avoid some build errors.
 # See: https://bugs.gentoo.org/833097
@@ -95,6 +95,7 @@ build() {
     --with-zlib=system \
     --with-harfbuzz=system \
     --with-jvm-features=zgc,link-time-opt \
+    --with-toolchain-type=clang \
     --with-native-debug-symbols=internal \
     --enable-unlimited-crypto \
     --disable-warnings-as-errors \
