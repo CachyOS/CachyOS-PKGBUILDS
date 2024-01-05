@@ -9,7 +9,7 @@ pkgdesc='Extremely fast compression algorithm'
 arch=('x86_64')
 url='https://lz4.github.io/lz4/'
 license=('GPL2')
-makedepends=('git' 'cmake' 'ninja', 'llvm' 'clang')
+makedepends=('git' 'cmake' 'ninja' 'llvm' 'clang')
 checkdepends=('diffutils')
 depends=('glibc')
 source=("git+https://github.com/lz4/lz4.git#tag=v$pkgver")
@@ -64,7 +64,7 @@ build() {
   cmake --build build
 
   cd $pkgname/tests
-  #make datagen
+  make datagen
   export DATASET_GENERATOR=$PWD/datagen
   cd $ROOT_DIR
 
@@ -94,7 +94,7 @@ build() {
     export CFLAGS="${CFLAGS//-fprofile-generate/} -fprofile-use=$PGO_PROFILE_DIR/merged.profdata"
     export CXXFLAGS="${CXXFLAGS//-fprofile-generate/} -fprofile-use=$PGO_PROFILE_DIR/merged.profdata"
 
-  llvm-profdata merge -o merged.profdata ${PGO_PROFILE_DIR}/*.profraw
+  llvm-profdata merge -o $PGO_PROFILE_DIR/merged.profdata ${PGO_PROFILE_DIR}/*.profraw
 
   # clean everything
   rm -rf build
