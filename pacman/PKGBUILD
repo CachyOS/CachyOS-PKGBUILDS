@@ -16,26 +16,26 @@ _sqlitever=$(curl -s 'https://archlinux.org/packages/search/json/?name=sqlite' |
     else { printf "00" }
 }')
 
-pkgrel=22
+pkgrel=23
 pkgdesc="A library-based package manager with dependency support. CachyOS fork."
 arch=('x86_64')
 url="https://www.archlinux.org/pacman/"
 license=('GPL')
 depends=('bash' 'glibc' 'libarchive' 'curl' 'gpgme' 'pacman-mirrorlist'
          'gettext' 'gawk' 'coreutils' 'gnupg' 'grep' 'debugedit')
-makedepends=('meson' 'asciidoc' 'doxygen' 'git' 'curl' 'unzip')
+makedepends=('meson' 'asciidoc' 'doxygen' 'git' 'curl' 'unzip'
+             'cmake' 'rust' 'clang' 'llvm' 'tcl')
 checkdepends=('python' 'fakechroot')
 optdepends=('perl-locale-gettext: translation support in makepkg-template')
 provides=('libalpm.so')
 backup=(etc/pacman.conf
         etc/makepkg.conf)
-options=('strip')
+options=('strip') #'!lto' -- should we put no lto here??
 #validpgpkeys=('6645B0A8C7005E78DB1D7864F99FFE0FEAE999BD'  # Allan McRae <allan@archlinux.org>
 #              'B8151B117037781095514CA7BBDFFC92306B1121') # Andrew Gregory (pacman) <andrew@archlinux.org>
-_commit="6956e5639c641704f8b482a7af08a9d6ffe93117"
+_commit="f3bb7e381bc45e815753874be03877dab02eeb9e"
 if $_staging; then
-    _commit="01c494efe02df61a1c463b89632890888782b22b"
-    makedepends+=('cmake' 'rust' 'clang' 'llvm' 'tcl')
+    _commit="52dda3d4b18fccb73a3a7273a52d75f076e90fbe"
 fi
 source=(
 #       https://sources.archlinux.org/other/pacman/$pkgname-$_pkgver.tar.xz{,.sig}
@@ -49,6 +49,8 @@ source=(
 #        "0001-add-support-for-x86_64_v-2-3-4-autodetection.patch"
 #        "0001-Revert-pacman-key-Don-t-check-gpg-s-trustdb-after-ea.patch"
 #        "0001-add-information-about-origin-db.patch"
+        static_sqlite.patch
+        "https://www.sqlite.org/2023/sqlite-src-${_sqlitever}.zip"
         )
 sha256sums=('SKIP'
             '47f4ba578b1a6a3291cb65a6f60ab8c4871ae45bbe93da308a595a447ed9ad9d'
@@ -56,8 +58,6 @@ sha256sums=('SKIP'
 
 if $_staging; then
     source+=(78cd453.patch)
-    source+=(static_sqlite.patch)
-    source+=("https://www.sqlite.org/2023/sqlite-src-${_sqlitever}.zip")
 fi
 
 prepare() {
@@ -73,9 +73,8 @@ prepare() {
     patch -Np1 < "../$src"
   done
 }
-build() {
 
-if $_staging; then
+build() {
   export AR=llvm-ar
   export CC=clang
   export CXX=clang++
@@ -128,7 +127,6 @@ if $_staging; then
   export LDFLAGS+=" -lm"
 
   cd ..
-fi
 
   cd "${pkgname}"
 
@@ -146,13 +144,11 @@ fi
 check() {
   cd "${pkgname}"
 
-if $_staging; then
   export CFLAGS+=" -fno-semantic-interposition -flto=thin"
   export CXXFLAGS+=" -fno-semantic-interposition -flto=thin"
   export RUSTFLAGS+=" -Cembed-bitcode -Clinker-plugin-lto -Clinker=clang -C link-arg=-flto=thin"
   export CC=clang
   export CXX=clang++
-fi
 
   meson test -C build
 }
@@ -160,13 +156,11 @@ fi
 package() {
   cd "${pkgname}"
 
-if $_staging; then
   export CFLAGS+=" -fno-semantic-interposition -flto=thin"
   export CXXFLAGS+=" -fno-semantic-interposition -flto=thin"
   export RUSTFLAGS+=" -Cembed-bitcode -Clinker-plugin-lto -Clinker=clang -C link-arg=-flto=thin"
   export CC=clang
   export CXX=clang++
-fi
 
   DESTDIR="$pkgdir" meson install -C build
 
