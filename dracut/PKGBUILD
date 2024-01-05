@@ -1,5 +1,6 @@
 # Maintainer: Piotr Gorski <lucjan.lucjanov@gmail.com>
 # Maintainer: Giancarlo Razzolini <grazzolini@archlinux.org>
+# Contributor: SoulHarsh007 <admin@soulharsh007.dev>
 
 pkgname=dracut
 pkgver=059
@@ -9,40 +10,39 @@ arch=('x86_64')
 url="https://dracut.wiki.kernel.org"
 license=('GPL')
 depends=('bash' 'coreutils' 'cpio' 'filesystem' 'findutils' 'grep' 'gzip'
-         'kmod' 'pkgconf' 'procps-ng' 'sed' 'systemd' 'util-linux' 'xz')
+  'kmod' 'pkgconf' 'procps-ng' 'sed' 'systemd' 'util-linux' 'xz' 'binutils')
 makedepends=('asciidoc' 'bash-completion' 'git')
-optdepends=('binutils: --uefi option support'
-            'elfutils: strip binaries to reduce initramfs size'
-            'multipath-tools: dmraid dracut module support'
-            'pigz: faster gzip compression'
-            'sbsigntools: uefi_secureboot_cert/key configuration option support')
+optdepends=('elfutils: strip binaries to reduce initramfs size'
+  'multipath-tools: dmraid dracut module support'
+  'pigz: faster gzip compression'
+  'sbsigntools: uefi_secureboot_cert/key configuration option support')
 provides=('initramfs')
-backup=('etc/dracut.conf')
+backup=('etc/dracut.conf' 'etc/dracut-cachyos.conf')
 source=("https://github.com/dracutdevs/$pkgname/archive/$pkgver/$pkgname-$pkgver.tar.gz"
-        "dracut-rebuild"
-        "dracut-install"
-        "dracut-remove"
-        "90-dracut-install.hook"
-        "60-dracut-remove.hook"
-        "dracut-cachyos.conf"
-        "snapshot-overlay.sh"
-        "module-setup.sh"
-        "dracut-systemd-253.patch"
-        "dracut-systemd-254-uki.patch::https://github.com/dracutdevs/dracut/commit/f32e95bcadbc5158843530407adc1e7b700561b1.patch"
-        "dracut-systemd-255-systemd-executor.patch::https://github.com/dracutdevs/dracut/pull/2535/commits/62fd8ebe4776dbb60ca04a865c2d160e45d65e91.patch")
+  "dracut-rebuild"
+  "dracut-install"
+  "dracut-remove"
+  "90-dracut-install.hook"
+  "60-dracut-remove.hook"
+  "dracut-cachyos.conf"
+  "snapshot-overlay.sh"
+  "module-setup.sh"
+  "dracut-systemd-253.patch"
+  "dracut-systemd-254-uki.patch::https://github.com/dracutdevs/dracut/commit/f32e95bcadbc5158843530407adc1e7b700561b1.patch"
+  "dracut-systemd-255-systemd-executor.patch::https://github.com/dracutdevs/dracut/pull/2535/commits/62fd8ebe4776dbb60ca04a865c2d160e45d65e91.patch")
 
 sha512sums=('196bc8bf18703c72bffb51a7e0493719c58173ad2da7d121eb42f9a8de47e953af36d109214dc4a10b2dc2d3bd19e844f7f51c2bdec087e064ea11f75124032d'
-            '6457ce228e78e1d7f07eafec6f37484264004e53e170b357093d2a92c024588bc28a4c4664539e7ca42a6e6838f156ca7cb047f3b8c927228d6ead2a43786d2f'
-            '52c2953466d6ed94736abca20132006b094d6f611cf525537b8173f378f0260e00fe3dae80e84fa9d6fb6b17ed5954ecb7eab1379de104ff2a6748b8411d699d'
-            '5a229de02609091534788280108d1ec8440779760d3ba7813776647e5f153637e9115b5dc0f57500c2aca3a40e4b8b9eb9df231366230fb4d13b245b519ba74c'
-            '2591bffab70e7e91f4ff776fe740ac28bbf7b8a87b02773a6f408110aa5ad0a56d2436934ddb7ab5d4aad1b82f324480736f45b93baa6efa1c14da7465a1420c'
-            'b84677cc05865d1571723658f2661cb749acf9039133b95893c2cfddc30070f885e8cd047aaa5dbc04dd3d8f9f6a4aa6573ac916c70edfd1daab4ecc5c582980'
-            'aaad69c74caa94915c05618af70ce10ef75e71ef38b8e4b4ddcc4f3a741debf6005c647c65e733cf415f69dab9a5b3632f1c2dbb16c7b1014ae930ce5cba16c4'
-            'cd755060b6a2c534f8ee5ec9d1fff18ee71250db1ab4105fc9df4c28e1634fad031944b94790da8b29f296e013631bd61731423c1f847e95b1bd415a7a5ca4a5'
-            '461231a756b6bc250fb973a5b4b6fbc0b2d6f8dae0dbc89a37bab17745dcfe38d9ae6cfe58bd4b9c4661e5f0024577ad9e4aa1d3c16169e7a83744da4b9068a5'
-            'dfbef5ee06fd0f7b51bfd3571eb284272d7694754eaf232cf1a14f3b2f95a67c87098fabf6d88068ef7e235e717bec26024a3b342c5dba940b8600799cef0791'
-            '8d232afccf84e24348c0e13d8eb34bcf670ca98a8e6a1e17cd4e861b8c036db1431ad8d8cb3942fb7645489d450dc2dbb91d54c18275796be26aae3ec53db557'
-            '9940448b4a83c9a837a916557b413b4523097554175420e554e039baa0395a387634bdf4486c212b930942a32e4f336b65e3d6624517b3e134b010a614fbcb41')
+  '6457ce228e78e1d7f07eafec6f37484264004e53e170b357093d2a92c024588bc28a4c4664539e7ca42a6e6838f156ca7cb047f3b8c927228d6ead2a43786d2f'
+  'f298693ee1a637329b1a38c746151c2ae8d2ae431f894c3001f55d812a2a20a68907ffa0b04ba748c18a2898cc30e0f49e75d0d13c7dd453129304f3cfd4621e'
+  'd687dd7951ffabe696a2f6b5f27d8446173c61f5c744f447065045c702c24c0bd89eb610c6a3ec0f56c5afb8aeff2199a1c2bfd7926f0a5f817e0f53c3c92529'
+  '2591bffab70e7e91f4ff776fe740ac28bbf7b8a87b02773a6f408110aa5ad0a56d2436934ddb7ab5d4aad1b82f324480736f45b93baa6efa1c14da7465a1420c'
+  'b84677cc05865d1571723658f2661cb749acf9039133b95893c2cfddc30070f885e8cd047aaa5dbc04dd3d8f9f6a4aa6573ac916c70edfd1daab4ecc5c582980'
+  '3fb23adbf462d655638a6a5a3083b464150b05b088e9139fceda500ba7560a29eb90d0e4dab896a257264fc6e72ec537a0519ad4e4e25e4c44b2dc3263cb5a52'
+  'cd755060b6a2c534f8ee5ec9d1fff18ee71250db1ab4105fc9df4c28e1634fad031944b94790da8b29f296e013631bd61731423c1f847e95b1bd415a7a5ca4a5'
+  '461231a756b6bc250fb973a5b4b6fbc0b2d6f8dae0dbc89a37bab17745dcfe38d9ae6cfe58bd4b9c4661e5f0024577ad9e4aa1d3c16169e7a83744da4b9068a5'
+  'dfbef5ee06fd0f7b51bfd3571eb284272d7694754eaf232cf1a14f3b2f95a67c87098fabf6d88068ef7e235e717bec26024a3b342c5dba940b8600799cef0791'
+  '8d232afccf84e24348c0e13d8eb34bcf670ca98a8e6a1e17cd4e861b8c036db1431ad8d8cb3942fb7645489d450dc2dbb91d54c18275796be26aae3ec53db557'
+  '9940448b4a83c9a837a916557b413b4523097554175420e554e039baa0395a387634bdf4486c212b930942a32e4f336b65e3d6624517b3e134b010a614fbcb41')
 validpgpkeys=(
   '7F3D64824AC0B6B8009E50504BC0896FB5693595' # Harald Hoyer <harald@redhat.com>
 )
@@ -56,13 +56,13 @@ prepare() {
     src="${src##*/}"
     [[ $src = *.patch ]] || continue
     echo "Applying patch $src..."
-    patch -Np1 < "../$src"
+    patch -Np1 <"../$src"
   done
 }
 
 build() {
   local prefix=/usr sysconfdir=/etc
-  
+
   cd "$srcdir/${pkgname}-${pkgver}"
 
   ./configure \
@@ -77,13 +77,13 @@ build() {
 package() {
   cd "$srcdir/${pkgname}-${pkgver}"
 
- DESTDIR="$pkgdir" make install
+  DESTDIR="$pkgdir" make install
   install -Dm644 "${srcdir}/90-dracut-install.hook" "${pkgdir}/usr/share/libalpm/hooks/90-dracut-install.hook"
-  install -Dm644 "${srcdir}/60-dracut-remove.hook"  "${pkgdir}/usr/share/libalpm/hooks/60-dracut-remove.hook"
-  install -Dm755 "${srcdir}/dracut-install"         "${pkgdir}/usr/share/libalpm/scripts/dracut-install"
-  install -Dm755 "${srcdir}/dracut-remove"          "${pkgdir}/usr/share/libalpm/scripts/dracut-remove"
-  install -Dm755 "${srcdir}/dracut-rebuild"         "${pkgdir}/usr/bin/dracut-rebuild"
-  install -Dm644 "${srcdir}/dracut-cachyos.conf"    "${pkgdir}/etc/dracut-cachyos.conf"
-  install -Dm755 "${srcdir}/snapshot-overlay.sh"    "${pkgdir}/usr/lib/dracut/modules.d/91btrfs-snapshot-overlay/snapshot-overlay.sh"
-  install -Dm755 "${srcdir}/module-setup.sh"        "${pkgdir}/usr/lib/dracut/modules.d/91btrfs-snapshot-overlay/module-setup.sh"
+  install -Dm644 "${srcdir}/60-dracut-remove.hook" "${pkgdir}/usr/share/libalpm/hooks/60-dracut-remove.hook"
+  install -Dm755 "${srcdir}/dracut-install" "${pkgdir}/usr/share/libalpm/scripts/dracut-install"
+  install -Dm755 "${srcdir}/dracut-remove" "${pkgdir}/usr/share/libalpm/scripts/dracut-remove"
+  install -Dm755 "${srcdir}/dracut-rebuild" "${pkgdir}/usr/bin/dracut-rebuild"
+  install -Dm644 "${srcdir}/dracut-cachyos.conf" "${pkgdir}/etc/dracut-cachyos.conf"
+  install -Dm755 "${srcdir}/snapshot-overlay.sh" "${pkgdir}/usr/lib/dracut/modules.d/91btrfs-snapshot-overlay/snapshot-overlay.sh"
+  install -Dm755 "${srcdir}/module-setup.sh" "${pkgdir}/usr/lib/dracut/modules.d/91btrfs-snapshot-overlay/module-setup.sh"
 }
