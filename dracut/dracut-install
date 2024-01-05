@@ -3,7 +3,7 @@
 all=0
 lines=()
 # Read the optional config file for automation
-[[ -f /etc/cachyos-dracut.conf ]] && source /etc/cachyos-dracut.conf
+[[ -f /etc/dracut-cachyos.conf ]] && source /etc/dracut-cachyos.conf
 
 while read -r line; do
 	if [[ "${line}" != */vmlinuz ]]; then
@@ -36,8 +36,13 @@ for line in "${lines[@]}"; do
 	echo ":: Building initramfs for ${pkgbase} (${kver})"
 	dracut --force --hostonly --no-hostonly-cmdline${DRACUT_EXTRA_PARAMS} /boot/initramfs-${pkgbase}.img "${kver}"
 
-        if [[ ${NO_DRACUT_FALLBACK} != "true" ]] ; then
+	if [[ ${NO_DRACUT_FALLBACK} != "true" ]]; then
 		echo ":: Building fallback initramfs for ${pkgbase} (${kver})"
 		dracut --force --no-hostonly${DRACUT_EXTRA_PARAMS} "/boot/initramfs-${pkgbase}-fallback.img" "${kver}"
+	fi
+
+	if [[ ${BUILD_UKI} == "true" ]]; then
+		echo ":: Building UKI for ${pkgbase} (${kver})"
+		dracut --hostonly --uefi${DRACUT_EXTRA_PARAMS} "/boot/EFI/Linux/${pkgbase}.efi" --kver "$kver" --force
 	fi
 done
