@@ -36,7 +36,7 @@ prepare() {
 build() {
     cd "${srcdir}/Python-${pkgver}"
 
-    endianness=$(python -c "import sys; print('little' if sys.byteorder == 'little' else 'big')")
+    endianness=$(python -c "import sys; print(sys.byteorder)")
 
     # Set the ax_cv_c_float_words_bigendian variable based on the Python output
     if [ "$endianness" == "little" ]; then
