@@ -36,7 +36,12 @@ prepare() {
 build() {
     cd "${srcdir}/Python-${pkgver}"
 
-    endianness=$(python -c "import sys; print(sys.byteorder)")
+    local endianness=$(echo -n I | od -to2 | head -n1 | cut -f2 -d " " | cut -c6) 
+    if [ "$endianness" == "1" ]; then
+        export ax_cv_c_float_words_bigendian=no
+    else
+        export ax_cv_c_float_words_bigendian=yes
+    fi
 
     # Set the ax_cv_c_float_words_bigendian variable based on the Python output
     if [ "$endianness" == "little" ]; then
