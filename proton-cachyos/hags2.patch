@@ -1,0 +1,89 @@
+commit 078cdc32a3c1c7cf95f213159d4a97b98b04789b
+Author: Krzysztof Bogacki <krzysztof.bogacki@leancode.pl>
+Date:   Tue Dec 19 23:57:14 2023 +0100
+
+    win32u: Allow faking HAGS in QueryAdapterInfo.
+
+diff --git a/dlls/win32u/driver.c b/dlls/win32u/driver.c
+index 3f7b9e4..2bc7c37 100644
+--- a/dlls/win32u/driver.c
++++ b/dlls/win32u/driver.c
+@@ -1691,16 +1691,49 @@ NTSTATUS WINAPI NtGdiDdDDIDestroyDevice( const D3DKMT_DESTROYDEVICE *desc )
+     return status;
+ }
+ 
++static BOOL check_hags_enabled( void )
++{
++    const char *winehags = getenv( "WINEHAGS" );
++    return winehags && *winehags != '0';
++}
++
+ /******************************************************************************
+  *           NtGdiDdDDIQueryAdapterInfo    (win32u.@)
+  */
+ NTSTATUS WINAPI NtGdiDdDDIQueryAdapterInfo( D3DKMT_QUERYADAPTERINFO *desc )
+ {
++    D3DKMT_WDDM_2_7_CAPS *d3dkmt_wddm_2_7_caps;
++
+     if (!desc)
+         return STATUS_INVALID_PARAMETER;
+ 
+-    FIXME("desc %p, type %d stub\n", desc, desc->Type);
+-    return STATUS_NOT_IMPLEMENTED;
++    TRACE("desc %p, type %d\n", desc, desc->Type);
++
++    switch (desc->Type)
++    {
++        case KMTQAITYPE_WDDM_2_7_CAPS:
++            if (!desc->pPrivateDriverData || desc->PrivateDriverDataSize != sizeof(D3DKMT_WDDM_2_7_CAPS))
++                return STATUS_INVALID_PARAMETER;
++
++            d3dkmt_wddm_2_7_caps = desc->pPrivateDriverData;
++            d3dkmt_wddm_2_7_caps->HwSchSupported = 1;
++            d3dkmt_wddm_2_7_caps->HwSchEnabled = 0;
++            d3dkmt_wddm_2_7_caps->HwSchEnabledByDefault = 0;
++            d3dkmt_wddm_2_7_caps->IndependentVidPnVSyncControl = 0;
++
++            if (check_hags_enabled())
++            {
++                d3dkmt_wddm_2_7_caps->HwSchEnabled = 1;
++                d3dkmt_wddm_2_7_caps->HwSchEnabledByDefault = 1;
++            }
++            break;
++
++        default:
++            FIXME("type %d not supported\n", desc->Type);
++            return STATUS_NOT_IMPLEMENTED;
++    }
++
++    return STATUS_SUCCESS;
+ }
+ 
+ /******************************************************************************
+diff --git a/include/ddk/d3dkmthk.h b/include/ddk/d3dkmthk.h
+index 918a4ad..4b2c5a7 100644
+--- a/include/ddk/d3dkmthk.h
++++ b/include/ddk/d3dkmthk.h
+@@ -773,6 +773,22 @@ typedef struct _D3DKMT_ENUMADAPTERS2
+   D3DKMT_ADAPTERINFO *pAdapters;
+ } D3DKMT_ENUMADAPTERS2;
+ 
++typedef struct _D3DKMT_WDDM_2_7_CAPS
++{
++  union
++  {
++    struct
++    {
++      UINT HwSchSupported               :  1;
++      UINT HwSchEnabled                 :  1;
++      UINT HwSchEnabledByDefault        :  1;
++      UINT IndependentVidPnVSyncControl :  1;
++      UINT Reserved                     : 28;
++    };
++    UINT Value;
++  };
++} D3DKMT_WDDM_2_7_CAPS;
++
+ #ifdef __cplusplus
+ extern "C"
+ {
