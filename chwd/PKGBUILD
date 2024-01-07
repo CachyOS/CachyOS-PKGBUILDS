@@ -3,7 +3,7 @@
 
 pkgname=chwd
 pkgver=1.3.0
-pkgrel=3
+pkgrel=4
 pkgdesc="CachyOS Hardware Detection Tool"
 arch=(x86_64)
 url="https://github.com/cachyos/chwd"
@@ -12,6 +12,7 @@ depends=('gcc-libs' 'pciutils' 'lua' 'pacman')
 makedepends=('git' 'cargo' 'mold' 'clang' 'llvm')
 provides=('chwd-db')
 replaces=('chwd-db')
+conflicts=('chwd-db')
 groups=('cachyos')
 source=("chwd-$pkgver.tar.gz::$url/archive/$pkgver.tar.gz")
 sha256sums=('dbbf8aee2a0428279d28666382e7ccc59fb4d1c3f17ab9b36786dd9c0a3de396')
