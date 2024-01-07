@@ -13,7 +13,7 @@ pkgver=8.0
 # pkgver=${_srctag//-/.}
 _geckover=2.47.4
 _monover=8.1.0
-pkgrel=20
+pkgrel=19
 pkgdesc="Compatibility tool for Steam Play based on Wine and additional components, experimental branch with extra CachyOS flavour"
 url="https://github.com/ValveSoftware/Proton"
 arch=(x86_64 x86_64_v3)
@@ -110,8 +110,6 @@ source=(
     vkd3d-reflex.patch
     wine-reflex.patch
     fastsync.patch
-    hags1.patch
-    hags2.patch
 )
 noextract=(
     wine-gecko-${_geckover}-{x86,x86_64}.tar.xz
@@ -194,9 +192,6 @@ prepare() {
     patch -Np1 -i "$srcdir"/wine-reflex.patch
     echo "Wine: Enable Fastsync/NTSync"
     patch -Np1 -i "$srcdir"/fastsync.patch
-    echo "Wine: Patch Hags for DLSS to FSR3 FG Mod"
-    patch -Np1 -i "$srcdir"/hags1.patch
-    patch -Np1 -i "$srcdir"/hags2.patch
 
     cd $srcdir/proton/dxvk
     echo "dxvk: Enable Reflex"
@@ -322,8 +317,6 @@ sha256sums=('SKIP'
             '80322501d28cc3f288fe206e4e943b5b8a579993f15227ad4f7ce5d879af0d54'
             'cda9aee7a4cb76a4c85705ccc9c06df0c0e982080111eb884246abfa97d1253a'
             '08af47c4597b9cb5e7984eb7e273d03ba7c205eb4a72f4f91329e5e1d60e90a7'
-            '23e35740995ada449865b0b5129e8177e995d28842a924be4562e65d6513bafd'
-            '843880cecd180d29a26758902bb02c7ccef160727296ecaa7f86a1a94e7040bb'
-            '225d25a05638a7b6d35aa3874ecb0e5a99830d4fe2ad3870e745bd8abba415de')
+            'd1c279642df2f27cf32843753fe6fbef09a95b21fcc83106c06ec3003a168491')
 # Optional patches
 
