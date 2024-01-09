@@ -1,72 +1,45 @@
+# Maintainer: Peter Jung ptr1337 <admin@ptr1337.dev>
 
-
-pkgname=('llvm-bolt')
-pkgver=18.0.0_r479950.002f42241080
+pkgname=llvm-bolt
+pkgver=17.0.6
 pkgrel=1
-arch=('x86_64')
-url="https://llvm.org/"
+pkgdesc='a post-link optimizer developed to speed up large applications'
+url="https://github.com/llvm/llvm-project/tree/main/bolt"
 license=('custom:Apache 2.0 with LLVM Exception')
-makedepends=('git' 'jemalloc')
-source=("llvm-project::git+https://github.com/llvm/llvm-project.git"
-        "llvm-config.h")
-b2sums=('SKIP'
-            '75e743dea28b280943b3cc7f8bbb871b57d110a7f2b9da2e6845c1c36bf170dd883fca54e463f5f49e0c3effe07fbd0db0f8cf5a12a2469d3f792af21a73fcdd')
-options=('staticlibs')
+arch=('x86_64')
+makedepends=('clang' 'cmake' 'ninja' 'llvm')
+options=(!lto)
+source=("https://github.com/llvm/llvm-project/releases/download/llvmorg-$pkgver/llvm-project-$pkgver.src.tar.xz"{,.sig})
+sha512sums=('6d85bf749e0d77553cc215cbfa61cec4ac4f4f652847f56f946b6a892a99a5ea40b6ab8b39a9708a035001f007986941ccf17e4635260a8b0c1fa59e78d41e30'
+            'SKIP')
+validpgpkeys=('474E22316ABF4785A88C6E8EA2C794A986419D8A') # Tom Stellard <tstellar@redhat.com>
 
-_python_optimize() {
-  python -m compileall "$@"
-  python -O -m compileall "$@"
-  python -OO -m compileall "$@"
-}
-
-pkgver() {
-    cd llvm-project/llvm
-
-    # This will almost match the output of `llvm-config --version` when the
-    # LLVM_APPEND_VC_REV cmake flag is turned on. The only difference is
-    # dash being replaced with underscore because of Pacman requirements.
-    local _pkgver=$(awk -F 'MAJOR |MINOR |PATCH |)' \
-            'BEGIN { ORS="." ; i=0 } \
-             /set\(LLVM_VERSION_/ { print $2 ; i++ ; if (i==2) ORS="" } \
-             END { print "\n" }' \
-             CMakeLists.txt)_r$(git rev-list --count HEAD).$(git rev-parse --short HEAD)
-    echo "$_pkgver"
+prepare() {
+  mkdir -p build
 }
 
 build() {
-    
-    export CFLAGS+=" ${CPPFLAGS}"
-    export CXXFLAGS+=" ${CPPFLAGS}"
-    export CXXFLAGS+=" -stdlib=libstdc++"
-    cmake \
-        -B _build \
-        -S "$srcdir"/llvm-project/llvm  \
-        -G Ninja \
-        -D CMAKE_BUILD_TYPE=Release \
-        -D CMAKE_INSTALL_PREFIX=/usr \
-        -D LLVM_BINUTILS_INCDIR=/usr/include \
-        -D LLVM_VERSION_SUFFIX="" \
-        -D LLVM_HOST_TRIPLE=$CHOST \
-        -D LLVM_INSTALL_UTILS=OFF \
-        -D LLVM_BUILD_DOCS=OFF \
-        -D LLVM_TARGETS_TO_BUILD="X86;AArch64" \
-        -D LLVM_ENABLE_PROJECTS="bolt" \
-        -D LLVM_ENABLE_ASSERTIONS=ON \
-	    -D CMAKE_EXE_LINKER_FLAGS="-Wl,--push-state -Wl,-whole-archive -ljemalloc_pic -Wl,--pop-state -lpthread -lstdc++ -lm -ldl " \
-        -D LLVM_LIT_ARGS="-sv --ignore-fail" \
-        -Wno-dev
+  cd build
 
-    ninja -C _build $NINJAFLAGS bolt
+  cmake \
+    -G Ninja \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DCMAKE_INSTALL_PREFIX=/usr \
+    -DCMAKE_C_COMPILER=clang \
+    -DCMAKE_CXX_COMPILER=clang++ \
+    -DLLVM_INSTALL_UTILS=ON \
+    -DBUILD_SHARED_LIBS:BOOL=OFF \
+    -DLLVM_LINK_LLVM_DYLIB:BOOL=OFF \
+    -DLLVM_EXTERNAL_LIT=/usr/bin/lit \
+    -DLLVM_ENABLE_PROJECTS="bolt" \
+    -DLLVM_TARGETS_TO_BUILD="X86;AArch64" \
+    ../llvm-project-$pkgver.src/llvm
+  ninja bolt
 }
 
-package_llvm-bolt() {
-    pkgdesc="LLVM Bolt"
-    depends=()
-    provides=(llvm-bolt)
-    conflicts=()
-    
-    DESTDIR="$pkgdir" ninja -C _build $NINJAFLAGS install-bolt
-#    rm -rf "$pkgdir"/home
-
-    install -Dm644 "$srcdir"/llvm-project/bolt/LICENSE.TXT "$pkgdir"/usr/share/licenses/$pkgname/bolt-LICENSE
+check() {
+	ninja check-bolt
+}
+package () {
+  DESTDIR="$pkgdir" ninja -C build install-bolt
 }
