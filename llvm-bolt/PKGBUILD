@@ -4,9 +4,9 @@ pkgname=llvm-bolt
 pkgver=17.0.6
 pkgrel=1
 pkgdesc='a post-link optimizer developed to speed up large applications'
+arch=('x86_64')
 url="https://github.com/llvm/llvm-project/tree/main/bolt"
 license=('custom:Apache 2.0 with LLVM Exception')
-arch=('x86_64')
 makedepends=('clang' 'cmake' 'ninja' 'llvm')
 options=(!lto)
 source=("https://github.com/llvm/llvm-project/releases/download/llvmorg-$pkgver/llvm-project-$pkgver.src.tar.xz"{,.sig})
@@ -14,32 +14,30 @@ sha512sums=('6d85bf749e0d77553cc215cbfa61cec4ac4f4f652847f56f946b6a892a99a5ea40b
             'SKIP')
 validpgpkeys=('474E22316ABF4785A88C6E8EA2C794A986419D8A') # Tom Stellard <tstellar@redhat.com>
 
-prepare() {
-  mkdir -p build
-}
-
 build() {
-  cd build
-
-  cmake \
-    -G Ninja \
+  cmake -S "llvm-project-$pkgver.src/llvm" -Bbuild \
+    -GNinja \
     -DCMAKE_BUILD_TYPE=Release \
     -DCMAKE_INSTALL_PREFIX=/usr \
     -DCMAKE_C_COMPILER=clang \
     -DCMAKE_CXX_COMPILER=clang++ \
     -DLLVM_INSTALL_UTILS=ON \
-    -DBUILD_SHARED_LIBS:BOOL=OFF \
-    -DLLVM_LINK_LLVM_DYLIB:BOOL=OFF \
+    -DBUILD_SHARED_LIBS=OFF \
+    -DLLVM_LINK_LLVM_DYLIB=OFF \
     -DLLVM_EXTERNAL_LIT=/usr/bin/lit \
     -DLLVM_ENABLE_PROJECTS="bolt" \
-    -DLLVM_TARGETS_TO_BUILD="X86;AArch64" \
-    ../llvm-project-$pkgver.src/llvm
-  ninja bolt
+    -DLLVM_TARGETS_TO_BUILD="X86;AArch64"
+  # why do we need aarch64 here? we dont support it
+
+  ninja -C build bolt
 }
 
 check() {
-	ninja check-bolt
+  ninja -C build check-bolt
 }
+
 package () {
   DESTDIR="$pkgdir" ninja -C build install-bolt
 }
+
+# vim:set sw=2 sts=2 et:
