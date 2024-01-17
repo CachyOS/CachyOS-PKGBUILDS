@@ -13,7 +13,7 @@ pkgdesc="A C library that implements an SQL database engine"
 arch=('x86_64')
 license=('LicenseRef-Sqlite')
 url="https://www.sqlite.org/"
-makedepends=('tcl' 'readline' 'zlib')
+makedepends=('tcl' 'readline' 'zlib' 'clang' 'llvm' 'llvm-libs' 'lld')
 options=('!emptydirs')
 source=(https://www.sqlite.org/2024/sqlite-src-${_srcver}.zip
     https://www.sqlite.org/2024/sqlite-doc-${_docver}.zip
@@ -144,7 +144,6 @@ build() {
 }
 
 package_sqlite() {
-
   pkgdesc="A C library that implements an SQL database engine"
   depends=('readline' 'zlib' 'glibc')
   provides=("sqlite3=$pkgver" 'libsqlite3.so')
@@ -167,8 +166,24 @@ package_sqlite() {
   mv "$pkgdir"/usr/lib/sqlite* "$srcdir"/tcl
 }
 
-package_sqlite-analyzer() {
+package_sqlite-tcl() {
+  pkgdesc="sqlite Tcl Extension Architecture (TEA)"
+  depends=('sqlite' 'glibc')
+  provides=("sqlite3-tcl=$pkgver")
+  replaces=("sqlite3-tcl")
+ 
+  install -m755 -d "${pkgdir}"/usr/lib
+  mv "$srcdir"/tcl/* "${pkgdir}"/usr/lib
 
+  # install manpage
+  install -m755 -d "${pkgdir}"/usr/share/man/mann
+  install -m644 "${srcdir}"/sqlite-src-$_srcver/autoconf/tea/doc/sqlite3.n "${pkgdir}"/usr/share/man/mann/
+
+  # license
+  install -D -m644 "${srcdir}"/license.txt "${pkgdir}"/usr/share/licenses/${pkgname}/license.txt
+}
+
+package_sqlite-analyzer() {
   pkgdesc="An analysis program for sqlite3 database files"
   depends=('sqlite' 'tcl' 'glibc')
 
@@ -181,7 +196,6 @@ package_sqlite-analyzer() {
 }
 
 package_lemon() {
-
   # https://www.sqlite.org/lemon.html
   pkgdesc="A parser generator"
   depends=('glibc')
@@ -198,7 +212,6 @@ package_lemon() {
 }
 
 package_sqlite-doc() {
-
   pkgdesc="most of the static HTML files that comprise this website, including all of the SQL Syntax and the C/C++ interface specs and other miscellaneous documentation"
   #arch=('any') - not yet supported
   provides=("sqlite3-doc=$pkgver")
