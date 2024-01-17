@@ -48,6 +48,7 @@ pgo_profiler() {
 
   cd ClickBench/sqlite
   rm -rf mydb
+  sed -i '/REGEXP_REPLACE/d' queries.sql
   LLVM_PROFILE_FILE=${PGO_PROFILE_DIR}/_%m_%p.profraw $SQLITE_DIR/sqlite3 mydb <create.sql
   head -n 5000000 hits.csv >sample.csv
   LLVM_PROFILE_FILE=${PGO_PROFILE_DIR}/_%m_%p.profraw $SQLITE_DIR/sqlite3 mydb '.import --csv sample.csv hits'
