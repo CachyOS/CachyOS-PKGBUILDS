@@ -16,21 +16,21 @@ url="https://www.sqlite.org/"
 makedepends=('tcl' 'readline' 'zlib' 'clang' 'llvm' 'llvm-libs' 'lld')
 options=('!emptydirs')
 source=(https://www.sqlite.org/2024/sqlite-src-${_srcver}.zip
-    https://www.sqlite.org/2024/sqlite-doc-${_docver}.zip
-    sqlite-lemon-system-template.patch
-    license.txt
-    git+https://github.com/ClickHouse/ClickBench.git
-    https://datasets.clickhouse.com/hits_compatible/hits.csv.gz)
+        https://www.sqlite.org/2024/sqlite-doc-${_docver}.zip
+        sqlite-lemon-system-template.patch
+        license.txt
+        git+https://github.com/ClickHouse/ClickBench.git
+        https://datasets.clickhouse.com/hits_compatible/hits.csv.gz)
 # upstream now switched to sha3sums - currently not supported by makepkg
 sha256sums=('14dc2db487e8563ce286a38949042cb1e87ca66d872d5ea43c76391004941fe2'
-    'c2fb268ef41cfb1270b54511c19ae3164fc18d0a893c1b143dd2655e00c00104'
-    '55746d93b0df4b349c4aa4f09535746dac3530f9fd6de241c9f38e2c92e8ee97'
-    '4e57d9ac979f1c9872e69799c2597eeef4c6ce7224f3ede0bf9dc8d217b1e65d'
-    'SKIP')
+            'c2fb268ef41cfb1270b54511c19ae3164fc18d0a893c1b143dd2655e00c00104'
+            '55746d93b0df4b349c4aa4f09535746dac3530f9fd6de241c9f38e2c92e8ee97'
+            '4e57d9ac979f1c9872e69799c2597eeef4c6ce7224f3ede0bf9dc8d217b1e65d'
+            'SKIP')
 options=('!lto')
 
 prepare() {
-  cd sqlite-src-$_srcver
+  cd "sqlite-src-$_srcver"
 
   # patch taken from Fedora
   # https://src.fedoraproject.org/rpms/sqlite/blob/master/f/sqlite.spec
@@ -85,8 +85,8 @@ build() {
         -DSQLITE_ENABLE_MATH_FUNCTIONS"
 
   # define PGO_PROFILE_DIR to use a custom directory for the profile data
-  export PGO_PROFILE_DIR=$PWD/pgo-data
-  mkdir -p ${PGO_PROFILE_DIR}
+  export PGO_PROFILE_DIR="$PWD/pgo-data"
+  mkdir -p "${PGO_PROFILE_DIR}"
 
   export AR=llvm-ar
   export CC=clang
@@ -94,47 +94,48 @@ build() {
   export NM=llvm-nm
   export RANLIB=llvm-ranlib
 
-  export CFLAGS+="$CFLAGS -fprofile-generate"
-  export CXXFLAGS+="$CXXFLAGS -fprofile-generate"
+  export ORIG_CFLAGS="${CFLAGS}"
+  export ORIG_CXXFLAGS="${CXXFLAGS}"
+
+  export CFLAGS+=" -fprofile-generate"
+  export CXXFLAGS+=" -fprofile-generate"
 
   # build sqlite
-  cd sqlite-src-$_srcver
-  cd sqlite-src-$_srcver
+  cd "sqlite-src-$_srcver"
   ./configure --prefix=/usr \
-      --disable-static \
-      --enable-fts3 \
-      --enable-fts4 \
-      --enable-fts5 \
-      --enable-rtree \
-      TCLLIBDIR=/usr/lib/sqlite$pkgver
+    --disable-static \
+    --enable-fts3 \
+    --enable-fts4 \
+    --enable-fts5 \
+    --enable-rtree \
+    TCLLIBDIR="/usr/lib/sqlite$pkgver"
 
   sed -i -e 's/ -shared / -Wl,-O1,--as-needed\0/g' libtool
   make
 
-  export SQLITE_DIR=$PWD
+  export SQLITE_DIR="$PWD"
   cd ..
-  export ROOT_DIR=$PWD
+  export ROOT_DIR="$PWD"
 
   # run the profiler
   pgo_profiler
 
-  cd $SQLITE_DIR
+  cd "$SQLITE_DIR"
 
   # merge the profile data
-  llvm-profdata merge -o merged.profdata ${PGO_PROFILE_DIR}/*.profraw
+  llvm-profdata merge -o merged.profdata "${PGO_PROFILE_DIR}"/*.profraw
 
-  export CFLAGS="${CFLAGS//-fprofile-generate/} -fprofile-use=merged.profdata -flto=thin"
-  export CXXFLAGS="${CXXFLAGS//-fprofile-generate/} -fprofile-use=merged.profdata -flto=thin"
+  export CFLAGS="${ORIG_CFLAGS} -fprofile-use=merged.profdata -flto=thin"
+  export CXXFLAGS="${ORIG_CXXFLAGS} -fprofile-use=merged.profdata -flto=thin"
 
   make clean
   ./configure --prefix=/usr \
-      --enable-shared \
-      --enable-static \
-      --enable-fts3 \
-      --enable-fts4 \
-      --enable-fts5 \
-      --enable-rtree \
-      TCLLIBDIR=/usr/lib/sqlite$pkgve
+    --disable-static \
+    --enable-fts3 \
+    --enable-fts4 \
+    --enable-fts5 \
+    --enable-rtree \
+    TCLLIBDIR="/usr/lib/sqlite$pkgver"
 
   sed -i -e 's/ -shared / -flto=thin -Wl,-O1,--as-needed\0/g' libtool
   make
@@ -149,7 +150,7 @@ package_sqlite() {
   provides=("sqlite3=$pkgver" 'libsqlite3.so')
   replaces=("sqlite3")
 
-  cd sqlite-src-$_srcver
+  cd "sqlite-src-$_srcver"
   make DESTDIR="${pkgdir}" install
 
   install -m755 showdb showjournal showstat4 showwal sqldiff "${pkgdir}"/usr/bin/
@@ -200,7 +201,7 @@ package_lemon() {
   pkgdesc="A parser generator"
   depends=('glibc')
 
-  cd sqlite-src-$_srcver
+  cd "sqlite-src-$_srcver"
   # ELF file ('usr/bin/lemon') lacks FULL RELRO, check LDFLAGS. - no fix found so far
   install -Dm755 lemon ${pkgdir}/usr/bin/lemon
   install -Dm644 lempar.c ${pkgdir}/usr/share/lemon/lempar.c
@@ -217,7 +218,7 @@ package_sqlite-doc() {
   provides=("sqlite3-doc=$pkgver")
   replaces=("sqlite3-doc")
 
-  cd sqlite-doc-${_docver}
+  cd "sqlite-doc-${_docver}"
   mkdir -p "${pkgdir}"/usr/share/doc/${pkgbase}
   cp -R * "${pkgdir}"/usr/share/doc/${pkgbase}/
 
