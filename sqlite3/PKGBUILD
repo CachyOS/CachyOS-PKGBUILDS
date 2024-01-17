@@ -8,7 +8,7 @@ _srcver=3450000
 _docver=${_srcver}
 #_docver=3440000
 pkgver=3.45.0
-pkgrel=1
+pkgrel=2
 pkgdesc="A C library that implements an SQL database engine"
 arch=('x86_64')
 license=('LicenseRef-Sqlite')
@@ -30,49 +30,48 @@ sha256sums=('14dc2db487e8563ce286a38949042cb1e87ca66d872d5ea43c76391004941fe2'
 options=('!lto')
 
 prepare() {
-    cd sqlite-src-$_srcver
+  cd sqlite-src-$_srcver
 
-    # patch taken from Fedora
-    # https://src.fedoraproject.org/rpms/sqlite/blob/master/f/sqlite.spec
-    patch -Np1 -i ../sqlite-lemon-system-template.patch
+  # patch taken from Fedora
+  # https://src.fedoraproject.org/rpms/sqlite/blob/master/f/sqlite.spec
+  patch -Np1 -i ../sqlite-lemon-system-template.patch
 
-    #autoreconf -vfi
+  #autoreconf -vfi
 }
 
 pgo_profiler() {
-    # preparing PGO data
-    # using ClickHouse ClickBench scripts
+  # preparing PGO data
+  # using ClickHouse ClickBench scripts
 
-    cd $ROOT_DIR
-    mv hits.csv ClickBench/sqlite/hits.csv
+  cd $ROOT_DIR
+  mv hits.csv ClickBench/sqlite/hits.csv
 
-    cd ClickBench/sqlite
-    rm -rf mydb
-    LLVM_PROFILE_FILE=${PGO_PROFILE_DIR}/_%m_%p.profraw $SQLITE_DIR/sqlite3 mydb <create.sql
-    head -n 5000000 hits.csv >sample.csv
-    LLVM_PROFILE_FILE=${PGO_PROFILE_DIR}/_%m_%p.profraw $SQLITE_DIR/sqlite3 mydb '.import --csv sample.csv hits'
-    wc -c mydb
+  cd ClickBench/sqlite
+  rm -rf mydb
+  LLVM_PROFILE_FILE=${PGO_PROFILE_DIR}/_%m_%p.profraw $SQLITE_DIR/sqlite3 mydb <create.sql
+  head -n 5000000 hits.csv >sample.csv
+  LLVM_PROFILE_FILE=${PGO_PROFILE_DIR}/_%m_%p.profraw $SQLITE_DIR/sqlite3 mydb '.import --csv sample.csv hits'
+  wc -c mydb
 
-    TRIES=3
+  TRIES=3
 
-    cat queries.sql | while read query; do
-        sync
-        echo 3 | sudo tee /proc/sys/vm/drop_caches
+  cat queries.sql | while read query; do
+      sync
+      echo 3 | sudo tee /proc/sys/vm/drop_caches
 
-        echo "$query"
-        for i in $(seq 1 $TRIES); do
-            LLVM_PROFILE_FILE=${PGO_PROFILE_DIR}/_%m_%p.profraw $SQLITE_DIR/sqlite3 mydb <<<"${query}"
-        done
-    done
-
+      echo "$query"
+      for i in $(seq 1 $TRIES); do
+          LLVM_PROFILE_FILE=${PGO_PROFILE_DIR}/_%m_%p.profraw $SQLITE_DIR/sqlite3 mydb <<<"${query}"
+      done
+  done
 }
 
 build() {
-    # this uses malloc_usable_size, which is incompatible with fortification level 3
-    export CFLAGS="${CFLAGS/_FORTIFY_SOURCE=3/_FORTIFY_SOURCE=2}"
-    export CXXFLAGS="${CXXFLAGS/_FORTIFY_SOURCE=3/_FORTIFY_SOURCE=2}"
+  # this uses malloc_usable_size, which is incompatible with fortification level 3
+  export CFLAGS="${CFLAGS/_FORTIFY_SOURCE=3/_FORTIFY_SOURCE=2}"
+  export CXXFLAGS="${CXXFLAGS/_FORTIFY_SOURCE=3/_FORTIFY_SOURCE=2}"
 
-    export CPPFLAGS="$CPPFLAGS \
+  export CPPFLAGS="$CPPFLAGS \
         -DSQLITE_ENABLE_COLUMN_METADATA=1 \
         -DSQLITE_ENABLE_UNLOCK_NOTIFY \
         -DSQLITE_ENABLE_DBSTAT_VTAB=1 \
@@ -85,132 +84,132 @@ build() {
         -DSQLITE_MAX_EXPR_DEPTH=10000 \
         -DSQLITE_ENABLE_MATH_FUNCTIONS"
 
-    # define PGO_PROFILE_DIR to use a custom directory for the profile data
-    export PGO_PROFILE_DIR=$PWD/pgo-data
-    mkdir -p ${PGO_PROFILE_DIR}
+  # define PGO_PROFILE_DIR to use a custom directory for the profile data
+  export PGO_PROFILE_DIR=$PWD/pgo-data
+  mkdir -p ${PGO_PROFILE_DIR}
 
-    export AR=llvm-ar
-    export CC=clang
-    export CXX=clang++
-    export NM=llvm-nm
-    export RANLIB=llvm-ranlib
+  export AR=llvm-ar
+  export CC=clang
+  export CXX=clang++
+  export NM=llvm-nm
+  export RANLIB=llvm-ranlib
 
-    export CFLAGS+="$CFLAGS -fprofile-generate"
-    export CXXFLAGS+="$CXXFLAGS -fprofile-generate"
+  export CFLAGS+="$CFLAGS -fprofile-generate"
+  export CXXFLAGS+="$CXXFLAGS -fprofile-generate"
 
-    # build sqlite
-    cd sqlite-src-$_srcver
-    cd sqlite-src-$_srcver
-    ./configure --prefix=/usr \
-        --disable-static \
-        --enable-fts3 \
-        --enable-fts4 \
-        --enable-fts5 \
-        --enable-rtree \
-        TCLLIBDIR=/usr/lib/sqlite$pkgver
+  # build sqlite
+  cd sqlite-src-$_srcver
+  cd sqlite-src-$_srcver
+  ./configure --prefix=/usr \
+      --disable-static \
+      --enable-fts3 \
+      --enable-fts4 \
+      --enable-fts5 \
+      --enable-rtree \
+      TCLLIBDIR=/usr/lib/sqlite$pkgver
 
-    sed -i -e 's/ -shared / -Wl,-O1,--as-needed\0/g' libtool
-    make
+  sed -i -e 's/ -shared / -Wl,-O1,--as-needed\0/g' libtool
+  make
 
-    export SQLITE_DIR=$PWD
-    cd ..
-    export ROOT_DIR=$PWD
+  export SQLITE_DIR=$PWD
+  cd ..
+  export ROOT_DIR=$PWD
 
-    # run the profiler
-    pgo_profiler
+  # run the profiler
+  pgo_profiler
 
-    cd $SQLITE_DIR
+  cd $SQLITE_DIR
 
-    # merge the profile data
-    llvm-profdata merge -o merged.profdata ${PGO_PROFILE_DIR}/*.profraw
+  # merge the profile data
+  llvm-profdata merge -o merged.profdata ${PGO_PROFILE_DIR}/*.profraw
 
-    export CFLAGS="${CFLAGS//-fprofile-generate/} -fprofile-use=merged.profdata -flto=thin"
-    export CXXFLAGS="${CXXFLAGS//-fprofile-generate/} -fprofile-use=merged.profdata -flto=thin"
+  export CFLAGS="${CFLAGS//-fprofile-generate/} -fprofile-use=merged.profdata -flto=thin"
+  export CXXFLAGS="${CXXFLAGS//-fprofile-generate/} -fprofile-use=merged.profdata -flto=thin"
 
-    make clean
-    ./configure --prefix=/usr \
-        --enable-shared \
-        --enable-static \
-        --enable-fts3 \
-        --enable-fts4 \
-        --enable-fts5 \
-        --enable-rtree \
-        TCLLIBDIR=/usr/lib/sqlite$pkgve
+  make clean
+  ./configure --prefix=/usr \
+      --enable-shared \
+      --enable-static \
+      --enable-fts3 \
+      --enable-fts4 \
+      --enable-fts5 \
+      --enable-rtree \
+      TCLLIBDIR=/usr/lib/sqlite$pkgve
 
-    sed -i -e 's/ -shared / -flto=thin -Wl,-O1,--as-needed\0/g' libtool
-    make
+  sed -i -e 's/ -shared / -flto=thin -Wl,-O1,--as-needed\0/g' libtool
+  make
 
-    # build additional tools
-    make showdb showjournal showstat4 showwal sqldiff sqlite3_analyzer
+  # build additional tools
+  make showdb showjournal showstat4 showwal sqldiff sqlite3_analyzer
 }
 
 package_sqlite() {
 
-    pkgdesc="A C library that implements an SQL database engine"
-    depends=('readline' 'zlib' 'glibc')
-    provides=("sqlite3=$pkgver" 'libsqlite3.so')
-    replaces=("sqlite3")
+  pkgdesc="A C library that implements an SQL database engine"
+  depends=('readline' 'zlib' 'glibc')
+  provides=("sqlite3=$pkgver" 'libsqlite3.so')
+  replaces=("sqlite3")
 
-    cd sqlite-src-$_srcver
-    make DESTDIR="${pkgdir}" install
+  cd sqlite-src-$_srcver
+  make DESTDIR="${pkgdir}" install
 
-    install -m755 showdb showjournal showstat4 showwal sqldiff "${pkgdir}"/usr/bin/
+  install -m755 showdb showjournal showstat4 showwal sqldiff "${pkgdir}"/usr/bin/
 
-    # install manpage
-    install -m755 -d "${pkgdir}"/usr/share/man/man1
-    install -m644 sqlite3.1 "${pkgdir}"/usr/share/man/man1/
+  # install manpage
+  install -m755 -d "${pkgdir}"/usr/share/man/man1
+  install -m644 sqlite3.1 "${pkgdir}"/usr/share/man/man1/
 
-    # license - no linking required because pkgbase=pkgname
-    install -D -m644 "${srcdir}"/license.txt "${pkgdir}"/usr/share/licenses/${pkgbase}/license.txt
+  # license
+  install -D -m644 "${srcdir}"/license.txt "${pkgdir}"/usr/share/licenses/${pkgname}/license.txt
 
-    # split out tcl extension
-    mkdir -p "$srcdir"/tcl
-    mv "$pkgdir"/usr/lib/sqlite* "$srcdir"/tcl
+  # split out tcl extension
+  mkdir "$srcdir"/tcl
+  mv "$pkgdir"/usr/lib/sqlite* "$srcdir"/tcl
 }
 
 package_sqlite-analyzer() {
 
-    pkgdesc="An analysis program for sqlite3 database files"
-    depends=('sqlite' 'tcl' 'glibc')
+  pkgdesc="An analysis program for sqlite3 database files"
+  depends=('sqlite' 'tcl' 'glibc')
 
-    cd sqlite-src-$_srcver
-    install -m755 -d "${pkgdir}"/usr/bin
-    install -m755 sqlite3_analyzer "${pkgdir}"/usr/bin/
+  cd sqlite-src-$_srcver
+  install -m755 -d "${pkgdir}"/usr/bin
+  install -m755 sqlite3_analyzer "${pkgdir}"/usr/bin/
 
-    install -D -m644 "${srcdir}"/license.txt "${pkgdir}"/usr/share/licenses/${pkgname}/license.txt
-
+  # license
+  install -D -m644 "${srcdir}"/license.txt "${pkgdir}"/usr/share/licenses/${pkgname}/license.txt
 }
 
 package_lemon() {
 
-    # https://www.sqlite.org/lemon.html
-    pkgdesc="A parser generator"
-    depends=('glibc')
+  # https://www.sqlite.org/lemon.html
+  pkgdesc="A parser generator"
+  depends=('glibc')
 
-    cd sqlite-src-$_srcver
-    # ELF file ('usr/bin/lemon') lacks FULL RELRO, check LDFLAGS. - no fix found so far
-    install -Dm755 lemon ${pkgdir}/usr/bin/lemon
-    install -Dm644 lempar.c ${pkgdir}/usr/share/lemon/lempar.c
+  cd sqlite-src-$_srcver
+  # ELF file ('usr/bin/lemon') lacks FULL RELRO, check LDFLAGS. - no fix found so far
+  install -Dm755 lemon ${pkgdir}/usr/bin/lemon
+  install -Dm644 lempar.c ${pkgdir}/usr/share/lemon/lempar.c
 
-    mkdir -p "${pkgdir}"/usr/share/doc/${pkgname}
-    cp ../sqlite-doc-${_docver}/lemon.html "${pkgdir}"/usr/share/doc/${pkgname}/
-
-    install -D -m644 "${srcdir}"/license.txt "${pkgdir}"/usr/share/licenses/${pkgname}/license.txt
-
+  mkdir -p "${pkgdir}"/usr/share/doc/${pkgname}
+  cp ../sqlite-doc-${_docver}/lemon.html "${pkgdir}"/usr/share/doc/${pkgname}/
+  # license
+  install -D -m644 "${srcdir}"/license.txt "${pkgdir}"/usr/share/licenses/${pkgname}/license.txt
 }
 
 package_sqlite-doc() {
 
-    pkgdesc="most of the static HTML files that comprise this website, including all of the SQL Syntax and the C/C++ interface specs and other miscellaneous documentation"
-    #arch=('any') - not yet supported
-    provides=("sqlite3-doc=$pkgver")
-    replaces=("sqlite3-doc")
+  pkgdesc="most of the static HTML files that comprise this website, including all of the SQL Syntax and the C/C++ interface specs and other miscellaneous documentation"
+  #arch=('any') - not yet supported
+  provides=("sqlite3-doc=$pkgver")
+  replaces=("sqlite3-doc")
 
-    cd sqlite-doc-${_docver}
-    mkdir -p "${pkgdir}"/usr/share/doc/${pkgbase}
-    cp -R * "${pkgdir}"/usr/share/doc/${pkgbase}/
+  cd sqlite-doc-${_docver}
+  mkdir -p "${pkgdir}"/usr/share/doc/${pkgbase}
+  cp -R * "${pkgdir}"/usr/share/doc/${pkgbase}/
 
-    install -D -m644 "${srcdir}"/license.txt "${pkgdir}"/usr/share/licenses/${pkgname}/license.txt
+  # license
+  install -D -m644 "${srcdir}"/license.txt "${pkgdir}"/usr/share/licenses/${pkgname}/license.txt
 
-    rm "${pkgdir}"/usr/share/doc/${pkgbase}/lemon.html
+  rm "${pkgdir}"/usr/share/doc/${pkgbase}/lemon.html
 }
