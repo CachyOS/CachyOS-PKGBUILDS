@@ -1,4 +1,4 @@
-From 3e5a55345bb119e9ebc7b4c2d18870b4672f3fe4 Mon Sep 17 00:00:00 2001
+From 48d6bf23f4de780f6b96b13e13eafe94bdbed276 Mon Sep 17 00:00:00 2001
 From: Simon Ser <contact@emersion.fr>
 Date: Wed, 12 May 2021 12:08:24 +0200
 Subject: [PATCH 1/2] linux-drm-syncobj-v1: new protocol
@@ -41,7 +41,7 @@ index 00000000..a380b314
 +Simon Ser <contact@emersion.fr>
 diff --git a/staging/linux-drm-syncobj/linux-drm-syncobj-v1.xml b/staging/linux-drm-syncobj/linux-drm-syncobj-v1.xml
 new file mode 100644
-index 00000000..73264219
+index 00000000..810c98b4
 --- /dev/null
 +++ b/staging/linux-drm-syncobj/linux-drm-syncobj-v1.xml
 @@ -0,0 +1,229 @@
@@ -102,7 +102,7 @@ index 00000000..73264219
 +    only be done by creating a new major version of the extension.
 +  </description>
 +
-+  <interface name="wp_linux_drm_syncobj_v1" version="1">
++  <interface name="wp_linux_drm_syncobj_manager_v1" version="1">
 +    <description summary="global for providing explicit synchronization">
 +      This global is a factory interface, allowing clients to request
 +      explicit synchronization for buffers on a per-surface basis.
@@ -179,13 +179,13 @@ index 00000000..73264219
 +      any time.
 +
 +      Explicit synchronization is guaranteed to be supported for buffers
-+      created with any version of the linux-dmabuf protocol and for opaque EGL
-+      buffers described in EGL_WL_bind_wayland_display. Compositors are free to
-+      support explicit synchronization for additional buffer types.
++      created with any version of the linux-dmabuf protocol. Compositors are
++      free to support explicit synchronization for additional buffer types.
 +
 +      As long as the wp_linux_drm_syncobj_surface_v1 object is alive, the
 +      compositor may ignore implicit synchronization for buffers attached and
-+      committed to the wl_surface.
++      committed to the wl_surface. The delivery of wl_buffer.release events
++      for buffers attached to the surface becomes undefined.
 +    </description>
 +
 +    <request name="destroy" type="destructor">
@@ -244,9 +244,9 @@ index 00000000..73264219
 +        for the relevant commit.
 +
 +        Once the timeline point is signaled, and assuming the associated buffer
-+        is not pending release from other wl_surface.commit requests on other
-+        surfaces, no additional explicit or implicit synchronization is
-+        required to safely re-use the buffer.
++        is not pending release from other wl_surface.commit requests, no
++        additional explicit or implicit synchronization is required to safely
++        re-use the buffer.
 +
 +        The 64-bit unsigned value combined from point_hi and point_lo is the
 +        point value.
@@ -278,7 +278,7 @@ index 00000000..73264219
 GitLab
 
 
-From ec4e780899b53b771a5b1129e8d9d8a0a5ea932e Mon Sep 17 00:00:00 2001
+From dd5f95cf2951d46c3189a8a9612b4f6cbc51ed0e Mon Sep 17 00:00:00 2001
 From: Simon Ser <contact@emersion.fr>
 Date: Mon, 16 Oct 2023 10:47:28 +0200
 Subject: [PATCH 2/2] linux-explicit-synchronization-v1: add linux-drm-syncobj

@@ -2,8 +2,8 @@
 # Contributor: AndyRTR <andyrtr@archlinux.org>
 
 pkgname=xorg-xwayland
-pkgver=23.2.3
-pkgrel=3
+pkgver=23.2.4
+pkgrel=2
 arch=('x86_64')
 license=('custom')
 groups=('xorg')
@@ -18,11 +18,13 @@ makedepends=('meson' 'xorgproto' 'xtrans' 'libxkbfile' 'dbus'
              'systemd' 'egl-wayland')
 source=(https://xorg.freedesktop.org/archive/individual/xserver/xwayland-$pkgver.tar.xz{,.sig}
         "https://gitlab.freedesktop.org/xorg/xserver/-/merge_requests/967.patch"
-        "xf86Module.h::https://gitlab.freedesktop.org/xorg/xserver/-/raw/24c5d8f17e2afd7d4e9626ba7cdcfbab53b2fdc0/hw/xfree86/common/xf86Module.h")
-sha256sums=('eb9d9aa7232c47412c8835ec15a97c575f03563726c787754ff0c019bd07e302'
+        "xf86Module.h::https://gitlab.freedesktop.org/xorg/xserver/-/raw/24c5d8f17e2afd7d4e9626ba7cdcfbab53b2fdc0/hw/xfree86/common/xf86Module.h"
+        "upstream.patch")
+sha256sums=('a99e159b6d0d33098b3b6ab22a88bfcece23c8b9d0ca72c535c55dcb0681b46b'
             'SKIP'
-            '3dfd7be7364df493c85ac8fa12c86362a7aa53244503e3718c73cbf0331835f7'
-            '01011be86f706aba20623191befc353ce9f730f9bcde7966b17c112007b5a11f')
+            'e3b39f8cec0f98e149e1242074763a947b01f277b86ea1737d8bae9fcba8d7a6'
+            '01011be86f706aba20623191befc353ce9f730f9bcde7966b17c112007b5a11f'
+            '2e112b742df7d524c202066685a1eca0ab67412cc6886b1bfe3a455ab79a171a')
 provides=('xorg-server-xwayland')
 conflicts=('xorg-server-xwayland')
 replaces=('xorg-server-xwayland')
@@ -36,6 +38,9 @@ prepare() {
 
   mkdir -p hw/xfree86/common
   cp ../xf86Module.h hw/xfree86/common/
+
+  # Add upstream patches to not conflict with the newest explicit sync
+  patch -Np1 < ../upstream.patch
 
   # Add Explicit GPU Synchronization for DRI3, Present, and Xwayland
   # https://gitlab.freedesktop.org/xorg/xserver/-/merge_requests/967

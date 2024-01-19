@@ -1,0 +1,1209 @@
+From 114f060de5b08f439dcc238e1a63c00f5c5e4c23 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Michel=20D=C3=A4nzer?= <mdaenzer@redhat.com>
+Date: Thu, 21 Dec 2023 12:06:07 +0100
+Subject: [PATCH 02/18] xwayland: Make copy_pixmap_area return void
+
+GetScratchGC can't really fail without a bug elsewhere. Just FatalError
+in that case, so we'd get a bug report if it ever happens, instead of
+trying to limp along.
+---
+ hw/xwayland/xwayland-window-buffers.c | 53 ++++++++++++---------------
+ 1 file changed, 23 insertions(+), 30 deletions(-)
+
+diff --git a/hw/xwayland/xwayland-window-buffers.c b/hw/xwayland/xwayland-window-buffers.c
+index f7bb571bb..011656f0d 100644
+--- a/hw/xwayland/xwayland-window-buffers.c
++++ b/hw/xwayland/xwayland-window-buffers.c
+@@ -45,27 +45,24 @@ struct xwl_window_buffer {
+     struct xorg_list link_buffer;
+ };
+ 
+-static Bool
++static void
+ copy_pixmap_area(PixmapPtr src_pixmap, PixmapPtr dst_pixmap,
+                  int x, int y, int width, int height)
+ {
+     GCPtr pGC;
+     pGC = GetScratchGC(dst_pixmap->drawable.depth,
+                        dst_pixmap->drawable.pScreen);
+-    if (pGC) {
+-        ValidateGC(&dst_pixmap->drawable, pGC);
+-        (void) (*pGC->ops->CopyArea) (&src_pixmap->drawable,
+-                                      &dst_pixmap->drawable,
+-                                      pGC,
+-                                      x, y,
+-                                      width, height,
+-                                      x, y);
+-        FreeScratchGC(pGC);
+-
+-        return TRUE;
+-    }
+-
+-    return FALSE;
++    if (!pGC)
++        FatalError("GetScratchGC failed for depth %d", dst_pixmap->drawable.depth);
++
++    ValidateGC(&dst_pixmap->drawable, pGC);
++    (void) (*pGC->ops->CopyArea) (&src_pixmap->drawable,
++                                  &dst_pixmap->drawable,
++                                  pGC,
++                                  x, y,
++                                  width, height,
++                                  x, y);
++    FreeScratchGC(pGC);
+ }
+ 
+ static struct xwl_window_buffer *
+@@ -317,13 +314,12 @@ xwl_window_buffers_get_pixmap(struct xwl_window *xwl_window,
+         BoxPtr pBox = RegionRects(full_damage);
+         int nBox = RegionNumRects(full_damage);
+         while (nBox--) {
+-            if (!copy_pixmap_area(window_pixmap,
+-                                  xwl_window_buffer->pixmap,
+-                                  pBox->x1 + xwl_window->window->borderWidth,
+-                                  pBox->y1 + xwl_window->window->borderWidth,
+-                                  pBox->x2 - pBox->x1,
+-                                  pBox->y2 - pBox->y1))
+-                return window_pixmap;
++            copy_pixmap_area(window_pixmap,
++                             xwl_window_buffer->pixmap,
++                             pBox->x1 + xwl_window->window->borderWidth,
++                             pBox->y1 + xwl_window->window->borderWidth,
++                             pBox->x2 - pBox->x1,
++                             pBox->y2 - pBox->y1);
+ 
+             pBox++;
+         }
+@@ -345,14 +341,11 @@ xwl_window_buffers_get_pixmap(struct xwl_window *xwl_window,
+         if (!xwl_window_buffer->pixmap)
+             return window_pixmap;
+ 
+-        if (!copy_pixmap_area(window_pixmap,
+-                              xwl_window_buffer->pixmap,
+-                              0, 0,
+-                              window_pixmap->drawable.width,
+-                              window_pixmap->drawable.height)) {
+-            xwl_window_buffer_recycle(xwl_window_buffer);
+-            return window_pixmap;
+-        }
++        copy_pixmap_area(window_pixmap,
++                         xwl_window_buffer->pixmap,
++                         0, 0,
++                         window_pixmap->drawable.width,
++                         window_pixmap->drawable.height);
+     }
+ 
+     RegionEmpty(xwl_window_buffer->damage_region);
+-- 
+2.43.0
+
+From 2879032eccf6cca2b8132b8cebf6c285ee9f30f6 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Michel=20D=C3=A4nzer?= <mdaenzer@redhat.com>
+Date: Thu, 21 Dec 2023 12:29:35 +0100
+Subject: [PATCH 03/18] xwayland: Rename helper to
+ xwl_window_buffer_maybe_dispose
+
+To make it clearer that it doesn't always dispose of the
+xwl_window_buffer, only if the reference count drops to 0.
+---
+ hw/xwayland/xwayland-window-buffers.c | 12 ++++++------
+ 1 file changed, 6 insertions(+), 6 deletions(-)
+
+diff --git a/hw/xwayland/xwayland-window-buffers.c b/hw/xwayland/xwayland-window-buffers.c
+index 011656f0d..d2cf3c3fe 100644
+--- a/hw/xwayland/xwayland-window-buffers.c
++++ b/hw/xwayland/xwayland-window-buffers.c
+@@ -96,7 +96,7 @@ xwl_window_buffer_destroy_pixmap(struct xwl_window_buffer *xwl_window_buffer)
+ }
+ 
+ static Bool
+-xwl_window_buffer_dispose(struct xwl_window_buffer *xwl_window_buffer)
++xwl_window_buffer_maybe_dispose(struct xwl_window_buffer *xwl_window_buffer)
+ {
+     assert(xwl_window_buffer->refcnt > 0);
+ 
+@@ -169,7 +169,7 @@ xwl_window_buffer_timer_callback(OsTimerPtr timer, CARD32 time, void *arg)
+                                   &xwl_window->window_buffers_available,
+                                   link_buffer) {
+         if ((int64_t)(time - xwl_window_buffer->time) >= BUFFER_TIMEOUT)
+-            xwl_window_buffer_dispose(xwl_window_buffer);
++            xwl_window_buffer_maybe_dispose(xwl_window_buffer);
+     }
+ 
+     /* If there are still available buffers, re-arm the timer */
+@@ -196,7 +196,7 @@ xwl_window_buffer_release_callback(void *data)
+     /* Drop the reference on the buffer we took in get_pixmap. If that
+      * frees the window buffer, we're done.
+      */
+-    if (xwl_window_buffer_dispose(xwl_window_buffer))
++    if (xwl_window_buffer_maybe_dispose(xwl_window_buffer))
+         return;
+ 
+     if (xwl_window_buffer->recycle_on_release)
+@@ -243,7 +243,7 @@ xwl_window_buffers_recycle(struct xwl_window *xwl_window)
+     xorg_list_for_each_entry_safe(xwl_window_buffer, tmp,
+                                   &xwl_window->window_buffers_available,
+                                   link_buffer) {
+-        xwl_window_buffer_dispose(xwl_window_buffer);
++        xwl_window_buffer_maybe_dispose(xwl_window_buffer);
+     }
+ 
+     if (xwl_window->window_buffers_timer)
+@@ -270,14 +270,14 @@ xwl_window_buffers_dispose(struct xwl_window *xwl_window)
+                                   &xwl_window->window_buffers_available,
+                                   link_buffer) {
+         xorg_list_del(&xwl_window_buffer->link_buffer);
+-        xwl_window_buffer_dispose(xwl_window_buffer);
++        xwl_window_buffer_maybe_dispose(xwl_window_buffer);
+     }
+ 
+     xorg_list_for_each_entry_safe(xwl_window_buffer, tmp,
+                                   &xwl_window->window_buffers_unavailable,
+                                   link_buffer) {
+         xorg_list_del(&xwl_window_buffer->link_buffer);
+-        xwl_window_buffer_dispose(xwl_window_buffer);
++        xwl_window_buffer_maybe_dispose(xwl_window_buffer);
+     }
+ 
+     if (xwl_window->window_buffers_timer) {
+-- 
+2.43.0
+
+From 2b577c2e3bc2205b5b524068370ac195e9ef90d7 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Michel=20D=C3=A4nzer?= <mdaenzer@redhat.com>
+Date: Thu, 21 Dec 2023 12:25:28 +0100
+Subject: [PATCH 04/18] xwayland: Drop xwl_window_buffers_recycle
+
+Use xwl_window_buffers_dispose instead. The pixmaps will need to be
+re-created anyway, so keeping around the xwl_window_buffers doesn't
+buy much. And dropping this makes the next commit simpler.
+
+Also fold xwl_window_buffer_destroy_pixmap into its only remaining
+caller,  xwl_window_buffer_maybe_dispose.
+
+v2: (Olivier Fourdan)
+* Fix up indentation in xwl_window_set_window_pixmap
+* Leave xwl_window_buffer_destroy_pixmap helper
+---
+ hw/xwayland/xwayland-glamor.c         |  4 +--
+ hw/xwayland/xwayland-window-buffers.c | 43 ++-------------------------
+ hw/xwayland/xwayland-window-buffers.h |  1 -
+ hw/xwayland/xwayland-window.c         |  5 +++-
+ 4 files changed, 8 insertions(+), 45 deletions(-)
+
+diff --git a/hw/xwayland/xwayland-glamor.c b/hw/xwayland/xwayland-glamor.c
+index e962ccc15..33a6f3168 100644
+--- a/hw/xwayland/xwayland-glamor.c
++++ b/hw/xwayland/xwayland-glamor.c
+@@ -788,10 +788,10 @@ xwl_window_dmabuf_feedback_done(void *data,
+             xwl_window->window->drawable.id,
+             xwl_window->has_implicit_scanout_support ? "" : "not");
+ 
+-    /* If the linux-dmabuf v4 per-surface feedback changed, recycle the
++    /* If the linux-dmabuf v4 per-surface feedback changed, dispose of the
+      * window buffers so that they get re-created with appropriate parameters.
+      */
+-    xwl_window_buffers_recycle(xwl_window);
++    xwl_window_buffers_dispose(xwl_window);
+ }
+ 
+ static void
+diff --git a/hw/xwayland/xwayland-window-buffers.c b/hw/xwayland/xwayland-window-buffers.c
+index d2cf3c3fe..c3b35c459 100644
+--- a/hw/xwayland/xwayland-window-buffers.c
++++ b/hw/xwayland/xwayland-window-buffers.c
+@@ -39,7 +39,6 @@ struct xwl_window_buffer {
+     struct xwl_window *xwl_window;
+     PixmapPtr pixmap;
+     RegionPtr damage_region;
+-    Bool recycle_on_release;
+     int refcnt;
+     uint32_t time;
+     struct xorg_list link_buffer;
+@@ -114,16 +113,6 @@ xwl_window_buffer_maybe_dispose(struct xwl_window_buffer *xwl_window_buffer)
+     return TRUE;
+ }
+ 
+-static void
+-xwl_window_buffer_recycle(struct xwl_window_buffer *xwl_window_buffer)
+-{
+-    RegionEmpty(xwl_window_buffer->damage_region);
+-    xwl_window_buffer->recycle_on_release = FALSE;
+-
+-    if (xwl_window_buffer->pixmap)
+-        xwl_window_buffer_destroy_pixmap (xwl_window_buffer);
+-}
+-
+ static void
+ xwl_window_buffer_add_damage_region(struct xwl_window *xwl_window,
+                                     RegionPtr damage_region)
+@@ -199,9 +188,6 @@ xwl_window_buffer_release_callback(void *data)
+     if (xwl_window_buffer_maybe_dispose(xwl_window_buffer))
+         return;
+ 
+-    if (xwl_window_buffer->recycle_on_release)
+-        xwl_window_buffer_recycle(xwl_window_buffer);
+-
+     /* We append the buffers to the end of the list, as we pick the last
+      * entry again when looking for new available buffers, that means the
+      * least used buffers will remain at the beginning of the list so that
+@@ -234,29 +220,6 @@ xwl_window_buffers_init(struct xwl_window *xwl_window)
+     xorg_list_init(&xwl_window->window_buffers_unavailable);
+ }
+ 
+-void
+-xwl_window_buffers_recycle(struct xwl_window *xwl_window)
+-{
+-    struct xwl_window_buffer *xwl_window_buffer, *tmp;
+-
+-    /* Dispose available buffers */
+-    xorg_list_for_each_entry_safe(xwl_window_buffer, tmp,
+-                                  &xwl_window->window_buffers_available,
+-                                  link_buffer) {
+-        xwl_window_buffer_maybe_dispose(xwl_window_buffer);
+-    }
+-
+-    if (xwl_window->window_buffers_timer)
+-        TimerCancel(xwl_window->window_buffers_timer);
+-
+-    /* Mark the others for recycle on release */
+-    xorg_list_for_each_entry(xwl_window_buffer,
+-                             &xwl_window->window_buffers_unavailable,
+-                             link_buffer) {
+-        xwl_window_buffer->recycle_on_release = TRUE;
+-    }
+-}
+-
+ void
+ xwl_window_buffers_dispose(struct xwl_window *xwl_window)
+ {
+@@ -280,10 +243,8 @@ xwl_window_buffers_dispose(struct xwl_window *xwl_window)
+         xwl_window_buffer_maybe_dispose(xwl_window_buffer);
+     }
+ 
+-    if (xwl_window->window_buffers_timer) {
+-        TimerFree(xwl_window->window_buffers_timer);
+-        xwl_window->window_buffers_timer = 0;
+-    }
++    if (xwl_window->window_buffers_timer)
++        TimerCancel(xwl_window->window_buffers_timer);
+ }
+ 
+ PixmapPtr
+diff --git a/hw/xwayland/xwayland-window-buffers.h b/hw/xwayland/xwayland-window-buffers.h
+index 8031f24d5..585fa6df1 100644
+--- a/hw/xwayland/xwayland-window-buffers.h
++++ b/hw/xwayland/xwayland-window-buffers.h
+@@ -33,7 +33,6 @@
+ #include "regionstr.h"
+ 
+ void xwl_window_buffers_init(struct xwl_window *xwl_window);
+-void xwl_window_buffers_recycle(struct xwl_window *xwl_window);
+ void xwl_window_buffers_dispose(struct xwl_window *xwl_window);
+ PixmapPtr xwl_window_buffers_get_pixmap(struct xwl_window *xwl_window,
+                                         RegionPtr damage_region);
+diff --git a/hw/xwayland/xwayland-window.c b/hw/xwayland/xwayland-window.c
+index 4978f37c7..a6a4cf8f5 100644
+--- a/hw/xwayland/xwayland-window.c
++++ b/hw/xwayland/xwayland-window.c
+@@ -1192,6 +1192,9 @@ xwl_unrealize_window(WindowPtr window)
+ 
+     xwl_window_buffers_dispose(xwl_window);
+ 
++    if (xwl_window->window_buffers_timer)
++        TimerFree(xwl_window->window_buffers_timer);
++
+     if (xwl_window->frame_callback)
+         wl_callback_destroy(xwl_window->frame_callback);
+ 
+@@ -1229,7 +1232,7 @@ xwl_window_set_window_pixmap(WindowPtr window,
+ 
+     xwl_window = xwl_window_get(window);
+     if (xwl_window)
+-            xwl_window_buffers_recycle(xwl_window);
++        xwl_window_buffers_dispose(xwl_window);
+ }
+ 
+ Bool
+-- 
+2.43.0
+
+From 6779ec5bf67a4686ffed052bf85fcc42b99f9575 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Michel=20D=C3=A4nzer?= <mdaenzer@redhat.com>
+Date: Wed, 20 Dec 2023 15:04:36 +0100
+Subject: [PATCH 05/18] xwayland: Use window pixmap as a window buffer
+
+Assuming the same number of window buffers, this results in one less
+pixmap per toplevel window, saving pixmap storage.
+
+v2:
+* Preserve xwl_window_buffer_get_available behaviour (Olivier Fourdan)
+v3:
+* Leave RegionEmpty call where it was in xwl_window_buffers_get_pixmap,
+  so it takes effect for a newly allocated struct xwl_window_buffer.
+* Consolidate xwl_window_buffer->pixmap assignment in the same place.
+---
+ hw/xwayland/xwayland-glamor.c         |   5 +-
+ hw/xwayland/xwayland-window-buffers.c | 112 +++++++++++++++++++++-----
+ hw/xwayland/xwayland-window-buffers.h |   1 +
+ 3 files changed, 95 insertions(+), 23 deletions(-)
+
+diff --git a/hw/xwayland/xwayland-glamor.c b/hw/xwayland/xwayland-glamor.c
+index 33a6f3168..17fa20c80 100644
+--- a/hw/xwayland/xwayland-glamor.c
++++ b/hw/xwayland/xwayland-glamor.c
+@@ -788,10 +788,11 @@ xwl_window_dmabuf_feedback_done(void *data,
+             xwl_window->window->drawable.id,
+             xwl_window->has_implicit_scanout_support ? "" : "not");
+ 
+-    /* If the linux-dmabuf v4 per-surface feedback changed, dispose of the
+-     * window buffers so that they get re-created with appropriate parameters.
++    /* If the linux-dmabuf v4 per-surface feedback changed, make sure the
++     * window buffers get re-created with appropriate parameters.
+      */
+     xwl_window_buffers_dispose(xwl_window);
++    xwl_window_recycle_pixmap(xwl_window);
+ }
+ 
+ static void
+diff --git a/hw/xwayland/xwayland-window-buffers.c b/hw/xwayland/xwayland-window-buffers.c
+index c3b35c459..8bebd63a0 100644
+--- a/hw/xwayland/xwayland-window-buffers.c
++++ b/hw/xwayland/xwayland-window-buffers.c
+@@ -247,14 +247,92 @@ xwl_window_buffers_dispose(struct xwl_window *xwl_window)
+         TimerCancel(xwl_window->window_buffers_timer);
+ }
+ 
++struct pixmap_visit {
++    PixmapPtr old;
++    PixmapPtr new;
++};
++
++static int
++xwl_set_pixmap_visit_window(WindowPtr window, void *data)
++{
++    ScreenPtr screen = window->drawable.pScreen;
++    struct pixmap_visit *visit = data;
++
++    if (screen->GetWindowPixmap(window) == visit->old) {
++        screen->SetWindowPixmap(window, visit->new);
++        return WT_WALKCHILDREN;
++    }
++
++    return WT_DONTWALKCHILDREN;
++}
++
++static void
++xwl_window_set_pixmap(WindowPtr window, PixmapPtr pixmap)
++{
++    ScreenPtr screen = window->drawable.pScreen;
++    struct pixmap_visit visit;
++
++    visit.old = screen->GetWindowPixmap(window);
++    visit.new = pixmap;
++
++#ifdef COMPOSITE
++    pixmap->screen_x = visit.old->screen_x;
++    pixmap->screen_y = visit.old->screen_y;
++#endif
++
++    TraverseTree(window, xwl_set_pixmap_visit_window, &visit);
++}
++
++static PixmapPtr
++xwl_window_allocate_pixmap(struct xwl_window *xwl_window)
++{
++    ScreenPtr screen = xwl_window->xwl_screen->screen;
++    PixmapPtr window_pixmap;
++
++#ifdef XWL_HAS_GLAMOR
++    /* Try the xwayland/glamor direct hook first */
++    window_pixmap = xwl_glamor_create_pixmap_for_window(xwl_window);
++    if (window_pixmap)
++        return window_pixmap;
++#endif /* XWL_HAS_GLAMOR */
++
++    window_pixmap = screen->GetWindowPixmap(xwl_window->window);
++    return screen->CreatePixmap(screen,
++                                window_pixmap->drawable.width,
++                                window_pixmap->drawable.height,
++                                window_pixmap->drawable.depth,
++                                CREATE_PIXMAP_USAGE_BACKING_PIXMAP);
++}
++
++void
++xwl_window_recycle_pixmap(struct xwl_window *xwl_window)
++{
++    PixmapPtr window_pixmap, new_window_pixmap;
++    WindowPtr window;
++    ScreenPtr screen;
++
++    new_window_pixmap = xwl_window_allocate_pixmap(xwl_window);
++    if (!new_window_pixmap)
++        return;
++
++    window = xwl_window->window;
++    screen = window->drawable.pScreen;
++    window_pixmap = screen->GetWindowPixmap(window);
++    copy_pixmap_area(window_pixmap,
++                     new_window_pixmap,
++                     0, 0,
++                     window_pixmap->drawable.width,
++                     window_pixmap->drawable.height);
++    xwl_window_set_pixmap(xwl_window->window, new_window_pixmap);
++}
++
+ PixmapPtr
+ xwl_window_buffers_get_pixmap(struct xwl_window *xwl_window,
+                               RegionPtr damage_region)
+ {
+     struct xwl_screen *xwl_screen = xwl_window->xwl_screen;
+     struct xwl_window_buffer *xwl_window_buffer;
+-    PixmapPtr window_pixmap;
+-    RegionPtr full_damage;
++    PixmapPtr window_pixmap, new_window_pixmap;
+ 
+     window_pixmap = (*xwl_screen->screen->GetWindowPixmap) (xwl_window->window);
+ 
+@@ -269,14 +347,16 @@ xwl_window_buffers_get_pixmap(struct xwl_window *xwl_window,
+ 
+     xwl_window_buffer_add_damage_region(xwl_window, damage_region);
+ 
+-    full_damage = xwl_window_buffer->damage_region;
+-
+     if (xwl_window_buffer->pixmap) {
++        RegionPtr full_damage = xwl_window_buffer->damage_region;
+         BoxPtr pBox = RegionRects(full_damage);
+         int nBox = RegionNumRects(full_damage);
++
++        new_window_pixmap = xwl_window_buffer->pixmap;
++
+         while (nBox--) {
+             copy_pixmap_area(window_pixmap,
+-                             xwl_window_buffer->pixmap,
++                             new_window_pixmap,
+                              pBox->x1 + xwl_window->window->borderWidth,
+                              pBox->y1 + xwl_window->window->borderWidth,
+                              pBox->x2 - pBox->x1,
+@@ -285,31 +365,19 @@ xwl_window_buffers_get_pixmap(struct xwl_window *xwl_window,
+             pBox++;
+         }
+     } else {
+-#ifdef XWL_HAS_GLAMOR
+-        /* Try the xwayland/glamor direct hook first */
+-        xwl_window_buffer->pixmap =
+-            xwl_glamor_create_pixmap_for_window(xwl_window);
+-#endif /* XWL_HAS_GLAMOR */
+-        if (!xwl_window_buffer->pixmap) {
+-            xwl_window_buffer->pixmap =
+-                (*xwl_screen->screen->CreatePixmap) (window_pixmap->drawable.pScreen,
+-                                                     window_pixmap->drawable.width,
+-                                                     window_pixmap->drawable.height,
+-                                                     window_pixmap->drawable.depth,
+-                                                     CREATE_PIXMAP_USAGE_BACKING_PIXMAP);
+-        }
+-
+-        if (!xwl_window_buffer->pixmap)
++        new_window_pixmap = xwl_window_allocate_pixmap(xwl_window);
++        if (!new_window_pixmap)
+             return window_pixmap;
+ 
+         copy_pixmap_area(window_pixmap,
+-                         xwl_window_buffer->pixmap,
++                         new_window_pixmap,
+                          0, 0,
+                          window_pixmap->drawable.width,
+                          window_pixmap->drawable.height);
+     }
+ 
+     RegionEmpty(xwl_window_buffer->damage_region);
++    xwl_window_buffer->pixmap = window_pixmap;
+ 
+     /* Hold a reference on the buffer until it's released by the compositor */
+     xwl_window_buffer->refcnt++;
+@@ -321,6 +389,8 @@ xwl_window_buffers_get_pixmap(struct xwl_window *xwl_window,
+     xorg_list_append(&xwl_window_buffer->link_buffer,
+                      &xwl_window->window_buffers_unavailable);
+ 
++    xwl_window_set_pixmap(xwl_window->window, new_window_pixmap);
++
+     if (xorg_list_is_empty(&xwl_window->window_buffers_available))
+         TimerCancel(xwl_window->window_buffers_timer);
+ 
+diff --git a/hw/xwayland/xwayland-window-buffers.h b/hw/xwayland/xwayland-window-buffers.h
+index 585fa6df1..c795564bd 100644
+--- a/hw/xwayland/xwayland-window-buffers.h
++++ b/hw/xwayland/xwayland-window-buffers.h
+@@ -34,6 +34,7 @@
+ 
+ void xwl_window_buffers_init(struct xwl_window *xwl_window);
+ void xwl_window_buffers_dispose(struct xwl_window *xwl_window);
++void xwl_window_recycle_pixmap(struct xwl_window *xwl_window);
+ PixmapPtr xwl_window_buffers_get_pixmap(struct xwl_window *xwl_window,
+                                         RegionPtr damage_region);
+ 
+-- 
+2.43.0
+
+From 777c3e0000cec4deefbf8bec20d71a1821d49863 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Michel=20D=C3=A4nzer?= <mdaenzer@redhat.com>
+Date: Tue, 9 Jan 2024 17:10:23 +0100
+Subject: [PATCH 06/18] xwayland: Return NULL from
+ xwl_window_buffer_get_available
+
+If there's no available window buffer.
+
+This allows keeping xwl_window_buffer->damage_region empty for a newly
+allocated xwl_window_buffer in xwl_window_buffers_get_pixmap, instead
+of first populating it in xwl_window_buffer_add_damage_region and then
+emptying it again.
+---
+ hw/xwayland/xwayland-window-buffers.c | 18 ++++++++++--------
+ 1 file changed, 10 insertions(+), 8 deletions(-)
+
+diff --git a/hw/xwayland/xwayland-window-buffers.c b/hw/xwayland/xwayland-window-buffers.c
+index 8bebd63a0..658ec2199 100644
+--- a/hw/xwayland/xwayland-window-buffers.c
++++ b/hw/xwayland/xwayland-window-buffers.c
+@@ -140,7 +140,7 @@ static struct xwl_window_buffer *
+ xwl_window_buffer_get_available(struct xwl_window *xwl_window)
+ {
+     if (xorg_list_is_empty(&xwl_window->window_buffers_available))
+-        return xwl_window_buffer_new(xwl_window);
++        return NULL;
+ 
+     return xorg_list_last_entry(&xwl_window->window_buffers_available,
+                                 struct xwl_window_buffer,
+@@ -341,13 +341,10 @@ xwl_window_buffers_get_pixmap(struct xwl_window *xwl_window,
+         return window_pixmap;
+ #endif /* XWL_HAS_GLAMOR */
+ 
+-    xwl_window_buffer = xwl_window_buffer_get_available(xwl_window);
+-    if (!xwl_window_buffer)
+-        return window_pixmap;
+-
+     xwl_window_buffer_add_damage_region(xwl_window, damage_region);
+ 
+-    if (xwl_window_buffer->pixmap) {
++    xwl_window_buffer = xwl_window_buffer_get_available(xwl_window);
++    if (xwl_window_buffer) {
+         RegionPtr full_damage = xwl_window_buffer->damage_region;
+         BoxPtr pBox = RegionRects(full_damage);
+         int nBox = RegionNumRects(full_damage);
+@@ -364,10 +361,16 @@ xwl_window_buffers_get_pixmap(struct xwl_window *xwl_window,
+ 
+             pBox++;
+         }
++
++        RegionEmpty(xwl_window_buffer->damage_region);
+     } else {
++        xwl_window_buffer = xwl_window_buffer_new(xwl_window);
++
+         new_window_pixmap = xwl_window_allocate_pixmap(xwl_window);
+-        if (!new_window_pixmap)
++        if (!new_window_pixmap) {
++            xwl_window_buffer_maybe_dispose(xwl_window_buffer);
+             return window_pixmap;
++        }
+ 
+         copy_pixmap_area(window_pixmap,
+                          new_window_pixmap,
+@@ -376,7 +379,6 @@ xwl_window_buffers_get_pixmap(struct xwl_window *xwl_window,
+                          window_pixmap->drawable.height);
+     }
+ 
+-    RegionEmpty(xwl_window_buffer->damage_region);
+     xwl_window_buffer->pixmap = window_pixmap;
+ 
+     /* Hold a reference on the buffer until it's released by the compositor */
+-- 
+2.43.0
+
+From e1e3bef7f86020d2c157648966c1f65153019dd8 Mon Sep 17 00:00:00 2001
+From: Olivier Fourdan <ofourdan@redhat.com>
+Date: Mon, 4 Dec 2023 16:10:07 +0100
+Subject: [PATCH 07/18] xwayland: Use a helper function for fullscreen update
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Move the code which may update the fullscreen state of the rootful
+window to a dedicated helper function.
+
+No functional change.
+
+Signed-off-by: Olivier Fourdan <ofourdan@redhat.com>
+Acked-by: Michel Dänzer <mdaenzer@redhat.com>
+---
+ hw/xwayland/xwayland-output.c | 24 ++++++++++++++++--------
+ 1 file changed, 16 insertions(+), 8 deletions(-)
+
+diff --git a/hw/xwayland/xwayland-output.c b/hw/xwayland/xwayland-output.c
+index cf99c6e84..c9ff5087d 100644
+--- a/hw/xwayland/xwayland-output.c
++++ b/hw/xwayland/xwayland-output.c
+@@ -598,10 +598,24 @@ xwl_output_set_emulated_mode(struct xwl_output *xwl_output, ClientPtr client,
+ }
+ 
+ static void
+-apply_output_change(struct xwl_output *xwl_output)
++maybe_update_fullscreen_state(struct xwl_output *xwl_output)
+ {
+     struct xwl_screen *xwl_screen = xwl_output->xwl_screen;
+     struct xwl_window *xwl_window;
++
++    if (xwl_screen->fullscreen) {
++        /* The root window may not yet be created */
++        if (xwl_screen->screen->root) {
++            xwl_window = xwl_window_get(xwl_screen->screen->root);
++            xwl_window_rootful_update_fullscreen(xwl_window, xwl_output);
++        }
++    }
++}
++
++static void
++apply_output_change(struct xwl_output *xwl_output)
++{
++    struct xwl_screen *xwl_screen = xwl_output->xwl_screen;
+     struct xwl_output *it;
+     int mode_width, mode_height, count;
+     int width = 0, height = 0, has_this_output = 0;
+@@ -661,13 +675,7 @@ apply_output_change(struct xwl_output *xwl_output)
+         RRTellChanged(xwl_screen->screen);
+ 
+     /* If running rootful and fullscreen, make sure to match the new setup */
+-    if (xwl_screen->fullscreen) {
+-        /* The root window may not yet be created */
+-        if (xwl_screen->screen->root) {
+-            xwl_window = xwl_window_get(xwl_screen->screen->root);
+-            xwl_window_rootful_update_fullscreen(xwl_window, xwl_output);
+-        }
+-    }
++    maybe_update_fullscreen_state(xwl_output);
+ }
+ 
+ static void
+-- 
+2.43.0
+
+From a6bbc9663d33abe1868315a947310f90fb853a5b Mon Sep 17 00:00:00 2001
+From: Olivier Fourdan <ofourdan@redhat.com>
+Date: Tue, 5 Dec 2023 09:57:57 +0100
+Subject: [PATCH 08/18] xwayland: Use simpler initialization syntax
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Use the simpler form `{ 0 }` instead of `{ '\0', }` for the
+initialization of the output name buffer.
+
+No functional change.
+
+Signed-off-by: Olivier Fourdan <ofourdan@redhat.com>
+Acked-by: Michel Dänzer <mdaenzer@redhat.com>
+---
+ hw/xwayland/xwayland-output.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/hw/xwayland/xwayland-output.c b/hw/xwayland/xwayland-output.c
+index c9ff5087d..890dd7418 100644
+--- a/hw/xwayland/xwayland-output.c
++++ b/hw/xwayland/xwayland-output.c
+@@ -834,7 +834,7 @@ xwl_output_create(struct xwl_screen *xwl_screen, uint32_t id,
+                   Bool with_xrandr, uint32_t version)
+ {
+     struct xwl_output *xwl_output;
+-    char name[MAX_OUTPUT_NAME] = { '\0', };
++    char name[MAX_OUTPUT_NAME] = { 0 };
+ 
+     xwl_output = calloc(1, sizeof *xwl_output);
+     if (xwl_output == NULL) {
+-- 
+2.43.0
+
+From f0124485e10848a8b6e8e5834bef2c2da3fb8e37 Mon Sep 17 00:00:00 2001
+From: Olivier Fourdan <ofourdan@redhat.com>
+Date: Mon, 4 Dec 2023 16:12:08 +0100
+Subject: [PATCH 09/18] xwayland: Use the output serial for the fixed output
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+The fixed output is called "XWAYLAND0", yet if the compositor does not
+support Wayland output names, the "real" output names may collide with
+the fixed output name.
+
+Use the same output serial as with the (default) real output names to
+avoid reusing the same names.
+
+Signed-off-by: Olivier Fourdan <ofourdan@redhat.com>
+Acked-by: Michel Dänzer <mdaenzer@redhat.com>
+---
+ hw/xwayland/xwayland-output.c | 6 +++++-
+ 1 file changed, 5 insertions(+), 1 deletion(-)
+
+diff --git a/hw/xwayland/xwayland-output.c b/hw/xwayland/xwayland-output.c
+index 890dd7418..923745144 100644
+--- a/hw/xwayland/xwayland-output.c
++++ b/hw/xwayland/xwayland-output.c
+@@ -1174,6 +1174,7 @@ Bool
+ xwl_screen_init_randr_fixed(struct xwl_screen *xwl_screen)
+ {
+     struct xwl_output *xwl_output;
++    char name[MAX_OUTPUT_NAME] = { 0 };
+     rrScrPrivPtr rp;
+     RRModePtr mode;
+ 
+@@ -1192,7 +1193,10 @@ xwl_screen_init_randr_fixed(struct xwl_screen *xwl_screen)
+     rp->rrGetInfo = xwl_randr_get_info;
+     rp->rrSetConfig = xwl_randr_set_config_fixed;
+ 
+-    xwl_output->randr_output = RROutputCreate(xwl_screen->screen, "XWAYLAND0", 9, NULL);
++    snprintf(name, MAX_OUTPUT_NAME, "XWAYLAND%d",
++             xwl_screen_get_next_output_serial(xwl_screen));
++    xwl_output->randr_output = RROutputCreate(xwl_screen->screen, name,
++                                              strlen(name), NULL);
+     if (!xwl_output->randr_output) {
+         ErrorF("Failed to create RandR output\n");
+         goto err;
+-- 
+2.43.0
+
+From 060f1f1154aa094219e541cc3621245b9c2440f6 Mon Sep 17 00:00:00 2001
+From: Olivier Fourdan <ofourdan@redhat.com>
+Date: Mon, 4 Dec 2023 16:16:16 +0100
+Subject: [PATCH 10/18] xwayland: Always create the XrandR CRTCs
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+When running rootful, Xwayland would simply skip the creation of the CRTC
+for the "real" outputs.
+
+Instead, create the CRTC regardless of all outputs in rootful mode, but
+mark them as disconnected when running rootful.
+
+Signed-off-by: Olivier Fourdan <ofourdan@redhat.com>
+Acked-by: Michel Dänzer <mdaenzer@redhat.com>
+---
+ hw/xwayland/xwayland-output.c | 48 +++++++++++++++++------------------
+ hw/xwayland/xwayland-output.h |  2 +-
+ 2 files changed, 25 insertions(+), 25 deletions(-)
+
+diff --git a/hw/xwayland/xwayland-output.c b/hw/xwayland/xwayland-output.c
+index 923745144..60a997d76 100644
+--- a/hw/xwayland/xwayland-output.c
++++ b/hw/xwayland/xwayland-output.c
+@@ -831,7 +831,7 @@ xwl_output_from_wl_output(struct xwl_screen *xwl_screen,
+ 
+ struct xwl_output *
+ xwl_output_create(struct xwl_screen *xwl_screen, uint32_t id,
+-                  Bool with_xrandr, uint32_t version)
++                  Bool connected, uint32_t version)
+ {
+     struct xwl_output *xwl_output;
+     char name[MAX_OUTPUT_NAME] = { 0 };
+@@ -854,31 +854,31 @@ xwl_output_create(struct xwl_screen *xwl_screen, uint32_t id,
+ 
+     xwl_output->xwl_screen = xwl_screen;
+ 
+-    if (with_xrandr) {
+-        xwl_output->randr_crtc = RRCrtcCreate(xwl_screen->screen, xwl_output);
+-        if (!xwl_output->randr_crtc) {
+-            ErrorF("Failed creating RandR CRTC\n");
+-            goto err;
+-        }
+-        RRCrtcSetRotations (xwl_output->randr_crtc, ALL_ROTATIONS);
++    xwl_output->randr_crtc = RRCrtcCreate(xwl_screen->screen, xwl_output);
++    if (!xwl_output->randr_crtc) {
++        ErrorF("Failed creating RandR CRTC\n");
++        goto err;
++    }
++    RRCrtcSetRotations (xwl_output->randr_crtc, ALL_ROTATIONS);
+ 
+-        /* Allocate MAX_OUTPUT_NAME data for the output name, all filled with zeros */
+-        xwl_output->randr_output = RROutputCreate(xwl_screen->screen, name,
+-                                                  MAX_OUTPUT_NAME, xwl_output);
+-        if (!xwl_output->randr_output) {
+-            ErrorF("Failed creating RandR Output\n");
+-            goto err;
+-        }
+-        /* Set the default output name to a sensible value */
+-        snprintf(name, MAX_OUTPUT_NAME, "XWAYLAND%d",
+-                 xwl_screen_get_next_output_serial(xwl_screen));
+-        xwl_output_set_name(xwl_output, name);
+-        xwl_output_set_emulated(xwl_output);
+-
+-        RRCrtcGammaSetSize(xwl_output->randr_crtc, 256);
+-        RROutputSetCrtcs(xwl_output->randr_output, &xwl_output->randr_crtc, 1);
+-        RROutputSetConnection(xwl_output->randr_output, RR_Connected);
++    /* Allocate MAX_OUTPUT_NAME data for the output name, all filled with zeros */
++    xwl_output->randr_output = RROutputCreate(xwl_screen->screen, name,
++                                              MAX_OUTPUT_NAME, xwl_output);
++    if (!xwl_output->randr_output) {
++        ErrorF("Failed creating RandR Output\n");
++        goto err;
+     }
++    /* Set the default output name to a sensible value */
++    snprintf(name, MAX_OUTPUT_NAME, "XWAYLAND%d",
++             xwl_screen_get_next_output_serial(xwl_screen));
++    xwl_output_set_name(xwl_output, name);
++    xwl_output_set_emulated(xwl_output);
++
++    RRCrtcGammaSetSize(xwl_output->randr_crtc, 256);
++    RROutputSetCrtcs(xwl_output->randr_output, &xwl_output->randr_crtc, 1);
++    RROutputSetConnection(xwl_output->randr_output,
++                          connected ? RR_Connected : RR_Disconnected);
++
+     /* We want the output to be in the list as soon as created so we can
+      * use it when binding to the xdg-output protocol...
+      */
+diff --git a/hw/xwayland/xwayland-output.h b/hw/xwayland/xwayland-output.h
+index bcdf25bec..fd3179db0 100644
+--- a/hw/xwayland/xwayland-output.h
++++ b/hw/xwayland/xwayland-output.h
+@@ -88,7 +88,7 @@ struct xwl_output *xwl_output_from_wl_output(struct xwl_screen *xwl_screen,
+                                              struct wl_output* wl_output);
+ 
+ struct xwl_output *xwl_output_create(struct xwl_screen *xwl_screen,
+-                                     uint32_t id, Bool with_xrandr,
++                                     uint32_t id, Bool connected,
+                                      uint32_t version);
+ 
+ void xwl_output_destroy(struct xwl_output *xwl_output);
+-- 
+2.43.0
+
+From 0fede76cc387252347d6e098e59e9708ed623140 Mon Sep 17 00:00:00 2001
+From: Olivier Fourdan <ofourdan@redhat.com>
+Date: Mon, 11 Dec 2023 16:49:16 +0100
+Subject: [PATCH 11/18] xwayland: Do not update the outputs when rootful
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+When running rootful, we do not need to apply the output changes, these
+are there just to track the names and show up as disconnected in XRandR.
+
+Signed-off-by: Olivier Fourdan <ofourdan@redhat.com>
+Acked-by: Michel Dänzer <mdaenzer@redhat.com>
+---
+ hw/xwayland/xwayland-output.c | 9 +++++++++
+ 1 file changed, 9 insertions(+)
+
+diff --git a/hw/xwayland/xwayland-output.c b/hw/xwayland/xwayland-output.c
+index 60a997d76..6699bdb8f 100644
+--- a/hw/xwayland/xwayland-output.c
++++ b/hw/xwayland/xwayland-output.c
+@@ -698,8 +698,12 @@ static void
+ output_handle_done(void *data, struct wl_output *wl_output)
+ {
+     struct xwl_output *xwl_output = data;
++    struct xwl_screen *xwl_screen = xwl_output->xwl_screen;
+ 
+     xwl_output->wl_output_done = TRUE;
++    if (xwl_screen->fixed_output)
++        return;
++
+     /* Apply the changes from wl_output only if both "done" events are received,
+      * if xdg-output is not supported or if xdg-output version is high enough.
+      */
+@@ -761,8 +765,13 @@ static void
+ xdg_output_handle_done(void *data, struct zxdg_output_v1 *xdg_output)
+ {
+     struct xwl_output *xwl_output = data;
++    struct xwl_screen *xwl_screen = xwl_output->xwl_screen;
+ 
+     xwl_output->xdg_output_done = TRUE;
++
++    if (xwl_screen->fixed_output)
++        return;
++
+     if (xwl_output->wl_output_done &&
+         zxdg_output_v1_get_version(xdg_output) < 3)
+         apply_output_change(xwl_output);
+-- 
+2.43.0
+
+From d99e98ad68bf696bf508237e11c088429a154a66 Mon Sep 17 00:00:00 2001
+From: Olivier Fourdan <ofourdan@redhat.com>
+Date: Mon, 4 Dec 2023 16:26:14 +0100
+Subject: [PATCH 12/18] xwayland: Add a function to search for xwl_output by
+ name
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Add a convenient function to search for an xwl_output based on its
+XRandR name.
+
+Signed-off-by: Olivier Fourdan <ofourdan@redhat.com>
+Acked-by: Michel Dänzer <mdaenzer@redhat.com>
+---
+ hw/xwayland/xwayland-output.c | 21 +++++++++++++++++++++
+ hw/xwayland/xwayland-output.h |  2 ++
+ 2 files changed, 23 insertions(+)
+
+diff --git a/hw/xwayland/xwayland-output.c b/hw/xwayland/xwayland-output.c
+index 6699bdb8f..8f063169e 100644
+--- a/hw/xwayland/xwayland-output.c
++++ b/hw/xwayland/xwayland-output.c
+@@ -838,6 +838,27 @@ xwl_output_from_wl_output(struct xwl_screen *xwl_screen,
+     return NULL;
+ }
+ 
++
++struct xwl_output *
++xwl_output_get_output_from_name(struct xwl_screen *xwl_screen, const char *name)
++{
++    struct xwl_output *xwl_output;
++
++    if (name == NULL)
++        return NULL;
++
++    xorg_list_for_each_entry(xwl_output, &xwl_screen->output_list, link) {
++        if (xwl_output->randr_output == NULL)
++            continue;
++
++        if (strcmp(xwl_output->randr_output->name, name) == 0) {
++            return xwl_output;
++        }
++    }
++
++    return NULL;
++}
++
+ struct xwl_output *
+ xwl_output_create(struct xwl_screen *xwl_screen, uint32_t id,
+                   Bool connected, uint32_t version)
+diff --git a/hw/xwayland/xwayland-output.h b/hw/xwayland/xwayland-output.h
+index fd3179db0..24b118dfd 100644
+--- a/hw/xwayland/xwayland-output.h
++++ b/hw/xwayland/xwayland-output.h
+@@ -86,6 +86,8 @@ void xwl_output_set_mode_fixed(struct xwl_output *xwl_output,
+ 
+ struct xwl_output *xwl_output_from_wl_output(struct xwl_screen *xwl_screen,
+                                              struct wl_output* wl_output);
++struct xwl_output *xwl_output_get_output_from_name(struct xwl_screen *xwl_screen,
++                                                   const char *name);
+ 
+ struct xwl_output *xwl_output_create(struct xwl_screen *xwl_screen,
+                                      uint32_t id, Bool connected,
+-- 
+2.43.0
+
+From 01e31f5d95c88bb554cdb5afeb32af8b1dc1df0c Mon Sep 17 00:00:00 2001
+From: Olivier Fourdan <ofourdan@redhat.com>
+Date: Mon, 4 Dec 2023 16:24:06 +0100
+Subject: [PATCH 13/18] xwayland: Add an output name for fullscreen
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Add a output name to the xwl_screen.
+
+This is preparation work for fullscreen rootful on a specific output,
+no functional change.
+
+Signed-off-by: Olivier Fourdan <ofourdan@redhat.com>
+Acked-by: Michel Dänzer <mdaenzer@redhat.com>
+---
+ hw/xwayland/xwayland-screen.h | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/hw/xwayland/xwayland-screen.h b/hw/xwayland/xwayland-screen.h
+index 9eaac16db..92688a7e0 100644
+--- a/hw/xwayland/xwayland-screen.h
++++ b/hw/xwayland/xwayland-screen.h
+@@ -145,6 +145,7 @@ struct xwl_screen {
+     int libdecor_fd;
+     struct libdecor *libdecor_context;
+ #endif
++    const char *output_name;
+ };
+ 
+ /* Apps which use randr/vidmode to change the mode when going fullscreen,
+-- 
+2.43.0
+
+From 2e317e0242852f6476ecfeb364c6b823969c59e2 Mon Sep 17 00:00:00 2001
+From: Olivier Fourdan <ofourdan@redhat.com>
+Date: Mon, 4 Dec 2023 16:43:53 +0100
+Subject: [PATCH 14/18] xwayland: Check for fullscreen on output name change
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+At startup, the names of the Wayland outputs are not yet known,
+therefore we cannot rely on those when running fullscreen rootful.
+
+Make sure to check the fullscreen state once the Wayland output name
+changes.
+
+Signed-off-by: Olivier Fourdan <ofourdan@redhat.com>
+Acked-by: Michel Dänzer <mdaenzer@redhat.com>
+---
+ hw/xwayland/xwayland-output.c | 5 +++++
+ 1 file changed, 5 insertions(+)
+
+diff --git a/hw/xwayland/xwayland-output.c b/hw/xwayland/xwayland-output.c
+index 8f063169e..25559d0e1 100644
+--- a/hw/xwayland/xwayland-output.c
++++ b/hw/xwayland/xwayland-output.c
+@@ -681,6 +681,8 @@ apply_output_change(struct xwl_output *xwl_output)
+ static void
+ xwl_output_set_name(struct xwl_output *xwl_output, const char *name)
+ {
++    struct xwl_screen *xwl_screen = xwl_output->xwl_screen;
++
+     if (xwl_output->randr_output == NULL)
+         return; /* rootful */
+ 
+@@ -692,6 +694,9 @@ xwl_output_set_name(struct xwl_output *xwl_output, const char *name)
+ 
+     snprintf(xwl_output->randr_output->name, MAX_OUTPUT_NAME, "%s", name);
+     xwl_output->randr_output->nameLength = strlen(xwl_output->randr_output->name);
++
++    if (xwl_screen->output_name && strcmp(name, xwl_screen->output_name) == 0)
++        maybe_update_fullscreen_state(xwl_output);
+ }
+ 
+ static void
+-- 
+2.43.0
+
+From 87ca6dcb43a179838784d5fede94824b2b7f3a3a Mon Sep 17 00:00:00 2001
+From: Olivier Fourdan <ofourdan@redhat.com>
+Date: Mon, 4 Dec 2023 16:28:31 +0100
+Subject: [PATCH 15/18] xwayland: Check for the screen output name for
+ fullscreen
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+When putting the (root) window fullscreen, first search for an output
+with the specified name, if any.
+
+Signed-off-by: Olivier Fourdan <ofourdan@redhat.com>
+Acked-by: Michel Dänzer <mdaenzer@redhat.com>
+---
+ hw/xwayland/xwayland-window.c | 5 ++++-
+ 1 file changed, 4 insertions(+), 1 deletion(-)
+
+diff --git a/hw/xwayland/xwayland-window.c b/hw/xwayland/xwayland-window.c
+index a6a4cf8f5..aaeeace68 100644
+--- a/hw/xwayland/xwayland-window.c
++++ b/hw/xwayland/xwayland-window.c
+@@ -319,8 +319,11 @@ xwl_window_get_output(struct xwl_window *xwl_window)
+     struct xwl_screen *xwl_screen = xwl_window->xwl_screen;
+     struct xwl_output *xwl_output;
+ 
+-    xwl_output = xwl_output_from_wl_output(xwl_screen, xwl_window->wl_output);
++    xwl_output = xwl_output_get_output_from_name(xwl_screen, xwl_screen->output_name);
++    if (xwl_output)
++        return xwl_output;
+ 
++    xwl_output = xwl_output_from_wl_output(xwl_screen, xwl_window->wl_output);
+     if (xwl_output)
+         return xwl_output;
+ 
+-- 
+2.43.0
+
+From 4805d901c3064c4bd8570826c3e95cb8d1af2196 Mon Sep 17 00:00:00 2001
+From: Olivier Fourdan <ofourdan@redhat.com>
+Date: Mon, 4 Dec 2023 16:31:14 +0100
+Subject: [PATCH 16/18] xwayland: Add the output name for fullscreen rootful
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+This adds a new command line option "-output" to specify on which output
+Xwayland should be starting fullscreen when rootful.
+
+That allows to run multiple instances of Xwayland rootful fullscreen on
+multiple outputs.
+
+Signed-off-by: Olivier Fourdan <ofourdan@redhat.com>
+Acked-by: Michel Dänzer <mdaenzer@redhat.com>
+---
+ hw/xwayland/man/Xwayland.man  | 12 +++++++++++-
+ hw/xwayland/xwayland-screen.c |  4 ++++
+ hw/xwayland/xwayland.c        |  5 +++++
+ 3 files changed, 20 insertions(+), 1 deletion(-)
+
+diff --git a/hw/xwayland/man/Xwayland.man b/hw/xwayland/man/Xwayland.man
+index 26b554be8..62ace369a 100644
+--- a/hw/xwayland/man/Xwayland.man
++++ b/hw/xwayland/man/Xwayland.man
+@@ -124,6 +124,16 @@ support touch input.
+ Force additional non-native modes to be exposed when viewporter is not
+ supported by the Wayland compositor.
+ .TP 8
++.B \-output \fIname\fP
++Specifies on which output \fIXwayland\fP fullscreen rootful should be placed.
++The name must match the name of an existing Wayland output (output names can
++be found using wayland-info).
++
++If no matching output can be found, the Wayland compositor will decide on which
++output the fullscreen rootful \fIXwayland\fP window will be placed.
++
++This option has no effect if \fIXwayland\fP is not running fullscreen rootful.
++.TP 8
+ .B \-rootless
+ Run \fIXwayland\fP rootless, so that X clients integrate seamlessly with
+ Wayland clients in a Wayland desktop. That requires the Wayland server
+@@ -159,4 +169,4 @@ the name of the display of the Wayland server.
+ .B XWAYLAND_NO_GLAMOR
+ disable glamor and DRI3 support in \fIXwayland\fP, for testing purposes.
+ .SH "SEE ALSO"
+-General information: \fIX\fP(@miscmansuffix@)
++General information: \fIX\fP(@miscmansuffix@), \fIwayland-info\fP(@miscmansuffix@)
+diff --git a/hw/xwayland/xwayland-screen.c b/hw/xwayland/xwayland-screen.c
+index 099207855..22afd4e94 100644
+--- a/hw/xwayland/xwayland-screen.c
++++ b/hw/xwayland/xwayland-screen.c
+@@ -253,6 +253,7 @@ xwl_close_screen(ScreenPtr screen)
+     wl_display_disconnect(xwl_screen->display);
+ 
+     screen->CloseScreen = xwl_screen->CloseScreen;
++
+     free(xwl_screen);
+ 
+     return screen->CloseScreen(screen);
+@@ -846,6 +847,9 @@ xwl_screen_init(ScreenPtr pScreen, int argc, char **argv)
+             use_fixed_size = 1;
+             xwl_screen->fullscreen = 1;
+         }
++        else if (strcmp(argv[i], "-output") == 0) {
++            xwl_screen->output_name = argv[i + 1];
++        }
+         else if (strcmp(argv[i], "-host-grab") == 0) {
+             xwl_screen->host_grab = 1;
+             xwl_screen->has_grab = 1;
+diff --git a/hw/xwayland/xwayland.c b/hw/xwayland/xwayland.c
+index 6ec573674..2aa9893a1 100644
+--- a/hw/xwayland/xwayland.c
++++ b/hw/xwayland/xwayland.c
+@@ -94,6 +94,7 @@ ddxUseMsg(void)
+     ErrorF("-fullscreen            run fullscreen when rootful\n");
+     ErrorF("-geometry WxH          set Xwayland window size when rootful\n");
+     ErrorF("-host-grab             disable host keyboard shortcuts when rootful\n");
++    ErrorF("-output                specify which output to use for fullscreen when rootful\n");
+     ErrorF("-wm fd                 create X client for wm on given fd\n");
+     ErrorF("-initfd fd             add given fd as a listen socket for initialization clients\n");
+     ErrorF("-listenfd fd           add given fd as a listen socket\n");
+@@ -262,6 +263,10 @@ ddxProcessArgument(int argc, char *argv[], int i)
+     else if (strcmp(argv[i], "-enable-ei-portal") == 0) {
+         return 1;
+     }
++    else if (strcmp(argv[i], "-output") == 0) {
++        CHECK_FOR_REQUIRED_ARGUMENTS(1);
++        return 2;
++    }
+ 
+     return 0;
+ }
+-- 
+2.43.0
+
