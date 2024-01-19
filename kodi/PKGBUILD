@@ -19,8 +19,8 @@
 
 pkgbase=kodi
 pkgname=('kodi' 'kodi-gles' 'kodi-eventclients' 'kodi-tools-texturepacker' 'kodi-dev')
-pkgver=20.2
-pkgrel=6
+pkgver=20.3
+pkgrel=2
 arch=('x86_64')
 url="https://kodi.tv"
 license=('GPL2')
@@ -66,7 +66,6 @@ source=(
   "$pkgbase-libudfread-$_libudfread_version.tar.gz::https://mirrors.kodi.tv/build-deps/sources/libudfread-$_libudfread_version.tar.gz"
   'cheat-sse-build.patch'
   'https://github.com/xbmc/xbmc/commit/35be40daa39965a9ea5b3569eb7d515e6a14da5d.patch'  # flatbuffers 23.3.3
-  'kodi-fmt-10.patch::https://patch-diff.githubusercontent.com/raw/xbmc/xbmc/pull/23453.patch'
   '0001-ffmpeg-fix-build-with-binutils-update.patch'  # binutils >=2.41
 )
 noextract=(
@@ -79,7 +78,7 @@ noextract=(
   "$pkgbase-flatbuffers-$_flatbuffers_version.tar.gz"
   "$pkgbase-libudfread-$_libudfread_version.tar.gz"
 )
-sha512sums=('ddeaa626f324817f6d038fd1eaeb851d0006156fa9ef96ef475932ec50c64cbdcc7ce8b93ceea0d8bfcd1f24edc1c9d0c4a97a163a615842a9fb698e5393f7ca'
+sha512sums=('cdec1383d33f421828f0249ac2929980c6eaa39e345a8a364d9f3479f873029a15f3f6e6d40707fd2df2067a71bdaa3c6a1e26277074c31c631c71afe7465cb4'
             'd3be3bfc13c5ea56d8db745c2aab090c99760684fe4c8f62a13d266feb319e9180ceeecf8116bfd2ed90d9accba2c11dbbf93b61ad00f69a40812ebf4eabcdda'
             '51e6fc033121241354a5f0b3fc9a430577ae3ff6bb7f31445aa548ef4893037fb80eea3b2c6774c81e9ebaf9c45e9b490c98c2c65eb38f9f7daba84b236f7e1d'
             '629a41157d07b8ec0ea1fe89ae5ec48f63047472a862782b805c531ae31a0376fc4dc15175f8280c3ef91d7fa977bacebb1b51232640034a34bab2293210fc5e'
@@ -90,7 +89,6 @@ sha512sums=('ddeaa626f324817f6d038fd1eaeb851d0006156fa9ef96ef475932ec50c64cbdcc7
             '3069feb5db40288beb5b112b285186162a704f0fdd3cf67a17fd4eeea015f2cfcfbb455b7aa7c3d79d00fd095a3fd11cffc7b121dce94d99c3b06a509a8977d2'
             '91409cc66959a30f2d0dbf8d28e47dd2acbac560efb8961550c5928ae8546a32d1f156f8e55f073f953b114230117ec96c224212d28c1c1d752540c836c9ae1a'
             'c05888d1ad11f9a33a578ddd2fdb705ccd385178f93f68c6af66d9361a16664f2efec7e92c3bdc2c5c93a979e973e6448ffd2b26dab6d120e1ce8a5ceb2bd948'
-            '6b9cd3cf786c1e68c0a613a1f1794d2b4015cc92f032af7fbbdefe84559ee240650149c737a85cdcaa5f0eadf812dc55511ec3fdb738aff35960c8c07e8bac20'
             '6de9e7673022e74428a55ca1e761bdb70e0b6432faa3dae7a2306c197bc52616bffdc138073496c51aebee537079cfd768845f233d688eeea5440dfb5ba163ec')
 
 prepare() {
@@ -106,13 +104,12 @@ prepare() {
   [[ "$_sse_workaround" -eq 1 ]] && patch -p1 -i "$srcdir/cheat-sse-build.patch"
   # flatbuffers 23.3.3
   patch -p1 -i "$srcdir/35be40daa39965a9ea5b3569eb7d515e6a14da5d.patch"
-  # fix build with fmt 10
-  patch -p1 -i "$srcdir/kodi-fmt-10.patch"
   # fix build with binutils >=2.41
   patch -p1 -i "$srcdir/0001-ffmpeg-fix-build-with-binutils-update.patch"
 }
 
 build() {
+
   # Asserts
   CFLAGS=${CFLAGS/-Wp,-D_GLIBCXX_ASSERTIONS}
   CXXFLAGS=${CXXFLAGS/-Wp,-D_GLIBCXX_ASSERTIONS}
@@ -219,6 +216,10 @@ package_kodi() {
   # make sure the addons directory for binary addons exists
   # https://bugs.archlinux.org/task/77366
   mkdir -p "$pkgdir"/usr/lib/kodi/addons
+
+  # https://gitlab.archlinux.org/archlinux/packaging/packages/kodi/-/issues/2
+  mkdir -p "$pkgdir"/usr/share/kodi/system/certs
+  ln -s /etc/ssl/cert.pem "$pkgdir"/usr/share/kodi/system/certs/cacert.pem
 }
 
 # kodi-gles
