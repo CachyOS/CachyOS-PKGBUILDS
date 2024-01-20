@@ -1,4 +1,5 @@
 # Maintainer: Pierre Schmitz <pierre@archlinux.de>
+# PGO Version: Laio Seman <laio [at] ieee.org>
 
 pkgbase=php
 pkgname=('php'
@@ -28,7 +29,8 @@ makedepends=('apache' 'aspell' 'enchant' 'gd' 'gmp' 'icu' 'libsodium' 'libxslt' 
              'oniguruma')
 checkdepends=('procps-ng')
 source=("https://php.net/distributions/${pkgbase}-${pkgver}.tar.xz"{,.asc}
-        'apache.patch' 'apache.conf' 'php-fpm.patch' 'php-fpm.tmpfiles' 'php.ini.patch' 'php-cachy.patch' '0005-Enable-hugepages.patch')
+        'apache.patch' 'apache.conf' 'php-fpm.patch' 'php-fpm.tmpfiles' 'php.ini.patch' 'php-cachy.patch' '0005-Enable-hugepages.patch'
+		'https://raw.githubusercontent.com/SergiX44/php-benchmark-script/master/bench.php')
 sha256sums=('4ffa3e44afc9c590e28dc0d2d31fc61f0139f8b335f11880a121b9f9b9f0634e'
             'SKIP'
             '702b163c66c65af92dcad8d79f41bda84bcd5d863235fcf1497c33a86db9e4ca'
@@ -37,7 +39,8 @@ sha256sums=('4ffa3e44afc9c590e28dc0d2d31fc61f0139f8b335f11880a121b9f9b9f0634e'
             '640dba0d960bfeaae9ad38d2826d3f6b5d6c175a4d3e16664eefff29141faad5'
             '1aba0128b14b52afc353b198f43c1a6ec61317e8c2b428270ae17c9e8c9d4ec6'
             '40de67e43a972159c54d948ef1bf4e94e2d0e96da1f21efc9002ba71f39b80ae'
-            'faee19fff5f554638b28d3277388d6f3604738e8a2670f3e55562947e5678bbc')
+            'faee19fff5f554638b28d3277388d6f3604738e8a2670f3e55562947e5678bbc'
+			'SKIP')
 validpgpkeys=('1198C0117593497A5EC5C199286AF1F9897469DC'
               '39B641343D8C104B2B146DC3F9C39DC0B9698544'
               'E60913E4DF209907D8E30D96659A97C9CF2A795A')
@@ -143,7 +146,18 @@ export CFLAGS+=" $CFLAGS -O3 -Ofast -falign-functions=32 -fno-semantic-interposi
 		--with-fpm-group=http \
 		--enable-embed=shared \
 		${_phpextensions}
-	make
+	make prof-gen
+
+	# Run benchmark for PGO
+	PHP_BIN_DIR="${srcdir}/build/sapi/cli"
+	cd "${srcdir}"
+	${PHP_BIN_DIR}/php bench.php
+	${PHP_BIN_DIR}/php bench.php --multiplier=2
+	${PHP_BIN_DIR}/php bench.php --multiplier=4
+	${PHP_BIN_DIR}/php bench.php --multiplier=8
+
+	cd "${srcdir}/build"
+	make prof-use
 
 	# apache
 	# reuse the previous run; this will save us a lot of time
