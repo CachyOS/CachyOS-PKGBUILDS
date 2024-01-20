@@ -8,7 +8,7 @@ pkgname=cachy-browser
 _pkgname=Cachy
 __pkgname=cachy
 pkgver=121.0.1
-pkgrel=1
+pkgrel=2
 pkgdesc="Community-maintained fork of Firefox, focused on privacy, security and freedom."
 arch=(x86_64 x86_64_v3)
 license=(
@@ -37,7 +37,6 @@ makedepends=(
   cbindgen
   clang
   diffutils
-  dump_syms
   imake
   inetutils
   jack
@@ -68,11 +67,9 @@ optdepends=(
 )
 groups=('cachyos')
 options=(
-  !debug
   !emptydirs
   !lto
   !makeflags
-  !strip
 )
 install=cachy-browser.install
 backup=('usr/lib/cachy-browser/cachyos.cfg'
@@ -109,6 +106,7 @@ ac_add_options --enable-optimize
 ac_add_options --enable-rust-simd
 ac_add_options --enable-wasm-simd
 ac_add_options --enable-linker=lld
+ac_add_options --disable-install-strip
 ac_add_options --disable-elf-hack
 ac_add_options --disable-bootstrap
 ac_add_options --with-wasi-sysroot=/usr/share/wasi-sysroot
@@ -207,7 +205,6 @@ build() {
     export MACH_BUILD_PYTHON_NATIVE_PACKAGE_SOURCE=pip
     export MOZBUILD_STATE_PATH="$srcdir/mozbuild"
     export MOZ_BUILD_DATE="$(date -u${SOURCE_DATE_EPOCH:+d @$SOURCE_DATE_EPOCH} +%Y%m%d%H%M%S)"
-    export MOZ_ENABLE_FULL_SYMBOLS=1
     export MOZ_NOSPAM=1
 
     # malloc_usable_size is used in various parts of the codebase
@@ -252,9 +249,6 @@ ac_add_options --with-pgo-jarlog=${PWD@Q}/jarlog
 END
 
     ./mach build
-
-    echo "Building symbol archive..."
-    ./mach buildsymbols
 }
 
 package() {
