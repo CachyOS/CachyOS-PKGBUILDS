@@ -148,6 +148,9 @@ export CFLAGS+=" $CFLAGS -O3 -Ofast -falign-functions=32 -fno-semantic-interposi
 		${_phpextensions}
 	make prof-gen
 
+	# Make test
+	make test || true
+	
 	# Run benchmark for PGO
 	PHP_BIN_DIR="${srcdir}/build/sapi/cli"
 	cd "${srcdir}"
