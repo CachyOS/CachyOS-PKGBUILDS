@@ -7,13 +7,13 @@ _optimize=${_optimize-y}
 _optimize_v4=${_optimize_v4-}
 
 pkgname=proton-cachyos
-_srctag=8.0-20240111
+_srctag=8.0-74643-20240120-p3bf7e4-wacbb48-d1568c2-v4501d2
 _commit=
 pkgver=8.0
 # pkgver=${_srctag//-/.}
 _geckover=2.47.4
 _monover=8.1.0
-pkgrel=20
+pkgrel=21
 pkgdesc="Compatibility tool for Steam Play based on Wine and additional components, experimental branch with extra CachyOS flavour"
 url="https://github.com/ValveSoftware/Proton"
 arch=(x86_64 x86_64_v3)
@@ -92,7 +92,7 @@ makedepends=(${makedepends[@]} ${depends[@]})
 provides=('proton')
 install=${pkgname}.install
 source=(
-    proton::git+https://github.com/ValveSoftware/Proton.git#tag=experimental-${_srctag}
+    proton::git+https://github.com/ValveSoftware/Proton.git#tag=experimental-bleeding-edge-${_srctag}
     https://dl.winehq.org/wine/wine-gecko/${_geckover}/wine-gecko-${_geckover}-x86{,_64}.tar.xz
     https://github.com/madewokherd/wine-mono/releases/download/wine-mono-${_monover}/wine-mono-${_monover}-x86.tar.xz
     0001-AUR-Pkgbuild-changes.patch
