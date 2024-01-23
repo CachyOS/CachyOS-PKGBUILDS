@@ -1,0 +1,204 @@
+From e3ce6864f6ac66c69d46f0ba6f6f0c2ca32838dd Mon Sep 17 00:00:00 2001
+From: Vladislav Nepogodin <nepogodin.vlad@gmail.com>
+Date: Mon, 22 Jan 2024 01:54:36 +0400
+Subject: [PATCH] use snprintf instead of sprintf
+
+sprintf does not check for buffer overflows (CWE-120)
+---
+ lib/libalpm/alpm.c     | 5 +++--
+ lib/libalpm/be_local.c | 4 ++--
+ lib/libalpm/be_sync.c  | 2 +-
+ lib/libalpm/conflict.c | 5 +++--
+ lib/libalpm/db.c       | 4 ++--
+ lib/libalpm/signing.c  | 6 +++---
+ lib/libalpm/sync.c     | 6 ++++--
+ lib/libalpm/trans.c    | 2 +-
+ src/pacman/callback.c  | 2 +-
+ src/pacman/query.c     | 2 +-
+ 11 files changed, 22 insertions(+), 18 deletions(-)
+
+diff --git a/lib/libalpm/alpm.c b/lib/libalpm/alpm.c
+index fe151d0e1..95bc223b5 100644
+--- a/lib/libalpm/alpm.c
++++ b/lib/libalpm/alpm.c
+@@ -54,8 +54,9 @@ alpm_handle_t SYMEXPORT *alpm_initialize(const char *root, const char *dbpath,
+ 	/* to concatenate myhandle->root (ends with a slash) with SYSHOOKDIR (starts
+ 	 * with a slash) correctly, we skip SYSHOOKDIR[0]; the regular +1 therefore
+ 	 * disappears from the allocation */
+-	MALLOC(hookdir, strlen(myhandle->root) + strlen(SYSHOOKDIR), goto nomem);
+-	sprintf(hookdir, "%s%s", myhandle->root, &SYSHOOKDIR[1]);
++	size_t len = strlen(myhandle->root) + strlen(SYSHOOKDIR);
++	MALLOC(hookdir, len, goto nomem);
++	snprintf(hookdir, len, "%s%s", myhandle->root, &SYSHOOKDIR[1]);
+ 	myhandle->hookdirs = alpm_list_add(NULL, hookdir);
+ 
+ 	/* set default database extension */
+diff --git a/lib/libalpm/be_local.c b/lib/libalpm/be_local.c
+index e117b69df..1a149b224 100644
+--- a/lib/libalpm/be_local.c
++++ b/lib/libalpm/be_local.c
+@@ -663,7 +663,7 @@ char *_alpm_local_db_pkgpath(alpm_db_t *db, alpm_pkg_t *info,
+ 	len = strlen(dbpath) + strlen(info->name) + strlen(info->version) + 3;
+ 	len += filename ? strlen(filename) : 0;
+ 	MALLOC(pkgpath, len, RET_ERR(db->handle, ALPM_ERR_MEMORY, NULL));
+-	sprintf(pkgpath, "%s%s-%s/%s", dbpath, info->name, info->version,
++	snprintf(pkgpath, len, "%s%s-%s/%s", dbpath, info->name, info->version,
+ 			filename ? filename : "");
+ 	return pkgpath;
+ }
+@@ -1145,7 +1145,7 @@ int _alpm_local_db_remove(alpm_db_t *db, alpm_pkg_t *info)
+ 				/* file path is too long to remove, hmm. */
+ 				ret = -1;
+ 			} else {
+-				sprintf(name, "%s/%s", pkgpath, dp->d_name);
++				snprintf(name, PATH_MAX, "%s/%s", pkgpath, dp->d_name);
+ 				if(unlink(name)) {
+ 					ret = -1;
+ 				}
+diff --git a/lib/libalpm/be_sync.c b/lib/libalpm/be_sync.c
+index 81676be96..262b5410e 100644
+--- a/lib/libalpm/be_sync.c
++++ b/lib/libalpm/be_sync.c
+@@ -48,7 +48,7 @@ static char *get_sync_dir(alpm_handle_t *handle)
+ 	struct stat buf;
+ 
+ 	MALLOC(syncpath, len, RET_ERR(handle, ALPM_ERR_MEMORY, NULL));
+-	sprintf(syncpath, "%s%s", handle->dbpath, "sync/");
++	snprintf(syncpath, len, "%s%s", handle->dbpath, "sync/");
+ 
+ 	if(stat(syncpath, &buf) != 0) {
+ 		_alpm_log(handle, ALPM_LOG_DEBUG, "database dir '%s' does not exist, creating it\n",
+diff --git a/lib/libalpm/conflict.c b/lib/libalpm/conflict.c
+index d1e64e756..bd25226cd 100644
+--- a/lib/libalpm/conflict.c
++++ b/lib/libalpm/conflict.c
+@@ -612,8 +612,9 @@ alpm_list_t *_alpm_db_find_fileconflicts(alpm_handle_t *handle,
+ 			/* check if all files of the dir belong to the installed pkg */
+ 			if(!resolved_conflict && S_ISDIR(lsbuf.st_mode)) {
+ 				alpm_list_t *owners;
+-				char *dir = malloc(strlen(relative_path) + 2);
+-				sprintf(dir, "%s/", relative_path);
++				size_t dir_len = strlen(relative_path) + 2;
++				char *dir = malloc(dir_len);
++				snprintf(dir, dir_len, "%s/", relative_path);
+ 
+ 				owners = alpm_db_find_file_owners(handle->db_local, dir);
+ 				if(owners) {
+diff --git a/lib/libalpm/db.c b/lib/libalpm/db.c
+index 82b552153..d75a6dfb2 100644
+--- a/lib/libalpm/db.c
++++ b/lib/libalpm/db.c
+@@ -417,14 +417,14 @@ const char *_alpm_db_path(alpm_db_t *db)
+ 		if(db->status & DB_STATUS_LOCAL) {
+ 			pathsize = strlen(dbpath) + strlen(db->treename) + 2;
+ 			CALLOC(db->_path, 1, pathsize, RET_ERR(db->handle, ALPM_ERR_MEMORY, NULL));
+-			sprintf(db->_path, "%s%s/", dbpath, db->treename);
++			snprintf(db->_path, pathsize, "%s%s/", dbpath, db->treename);
+ 		} else {
+ 			const char *dbext = db->handle->dbext;
+ 
+ 			pathsize = strlen(dbpath) + 5 + strlen(db->treename) + strlen(dbext) + 1;
+ 			CALLOC(db->_path, 1, pathsize, RET_ERR(db->handle, ALPM_ERR_MEMORY, NULL));
+ 			/* all sync DBs now reside in the sync/ subdir of the dbpath */
+-			sprintf(db->_path, "%ssync/%s%s", dbpath, db->treename, dbext);
++			snprintf(db->_path, pathsize, "%ssync/%s%s", dbpath, db->treename, dbext);
+ 		}
+ 		_alpm_log(db->handle, ALPM_LOG_DEBUG, "database path for tree %s set to %s\n",
+ 				db->treename, db->_path);
+diff --git a/lib/libalpm/signing.c b/lib/libalpm/signing.c
+index 8a7fd87c6..02604c2b5 100644
+--- a/lib/libalpm/signing.c
++++ b/lib/libalpm/signing.c
+@@ -316,7 +316,7 @@ static int key_search_keyserver(alpm_handle_t *handle, const char *fpr,
+ 	 * key fingerprint with 0x, or the lookup will fail. */
+ 	fpr_len = strlen(fpr);
+ 	MALLOC(full_fpr, fpr_len + 3, RET_ERR(handle, ALPM_ERR_MEMORY, -1));
+-	sprintf(full_fpr, "0x%s", fpr);
++	snprintf(full_fpr, fpr_len + 3, "0x%s", fpr);
+ 
+ 	gpg_err = gpgme_new(&ctx);
+ 	CHECK_ERR();
+@@ -816,7 +816,7 @@ char *_alpm_sigpath(alpm_handle_t *handle, const char *path)
+ 	}
+ 	len = strlen(path) + 5;
+ 	CALLOC(sigpath, len, sizeof(char), RET_ERR(handle, ALPM_ERR_MEMORY, NULL));
+-	sprintf(sigpath, "%s.sig", path);
++	snprintf(sigpath, len, "%s.sig", path);
+ 	return sigpath;
+ }
+ 
+@@ -1085,7 +1085,7 @@ static int parse_subpacket(alpm_handle_t *handle, const char *identifier,
+ 					return -1;
+ 				}
+ 				for (i = 0; i < 8; i++) {
+-					sprintf(&key[i * 2], "%02X", sig[spos + i + 1]);
++					snprintf(&key[i * 2], 3, "%02X", sig[spos + i + 1]);
+ 				}
+ 				*keys = alpm_list_add(*keys, strdup(key));
+ 				break;
+diff --git a/lib/libalpm/sync.c b/lib/libalpm/sync.c
+index cf436a848..6d1128d7b 100644
+--- a/lib/libalpm/sync.c
++++ b/lib/libalpm/sync.c
+@@ -314,6 +314,7 @@ static int compute_download_size(alpm_pkg_t *newpkg)
+ 	off_t size = 0;
+ 	alpm_handle_t *handle = newpkg->handle;
+ 	int ret = 0;
++	size_t fnamepartlen = 0;
+ 
+ 	if(newpkg->origin != ALPM_PKG_FROM_SYNCDB) {
+ 		newpkg->infolevel |= INFRQ_DSIZE;
+@@ -331,8 +332,9 @@ static int compute_download_size(alpm_pkg_t *newpkg)
+ 		goto finish;
+ 	}
+ 
+-	CALLOC(fnamepart, strlen(fname) + 6, sizeof(char), return -1);
+-	sprintf(fnamepart, "%s.part", fname);
++	fnamepartlen = strlen(fname) + 6;
++	CALLOC(fnamepart, fnamepartlen, sizeof(char), return -1);
++	snprintf(fnamepart, fnamepartlen, "%s.part", fname);
+ 	fpath = _alpm_filecache_find(handle, fnamepart);
+ 	if(fpath) {
+ 		struct stat st;
+diff --git a/lib/libalpm/trans.c b/lib/libalpm/trans.c
+index 7048a059e..8800177e5 100644
+--- a/lib/libalpm/trans.c
++++ b/lib/libalpm/trans.c
+@@ -99,7 +99,7 @@ static alpm_list_t *check_arch(alpm_handle_t *handle, alpm_list_t *pkgs)
+ 			const char *pkgver = pkg->version;
+ 			size_t len = strlen(pkgname) + strlen(pkgver) + strlen(pkgarch) + 3;
+ 			MALLOC(string, len, RET_ERR(handle, ALPM_ERR_MEMORY, invalid));
+-			sprintf(string, "%s-%s-%s", pkgname, pkgver, pkgarch);
++			snprintf(string, len, "%s-%s-%s", pkgname, pkgver, pkgarch);
+ 			invalid = alpm_list_add(invalid, string);
+ 		}
+ 	}
+diff --git a/src/pacman/callback.c b/src/pacman/callback.c
+index 84a587aa0..f8766ef29 100644
+--- a/src/pacman/callback.c
++++ b/src/pacman/callback.c
+@@ -801,7 +801,7 @@ static void draw_pacman_progress_bar(struct pacman_progress_bar *bar)
+ 		// fname + digits +  ( /) + \0
+ 		size_t needed = strlen(fname) + (digits * 2) + 4 + 1;
+ 		char *name = malloc(needed);
+-		sprintf(name, "%s (%*zu/%*zu)", fname, digits, bar->downloaded, digits, bar->howmany);
++		snprintf(name, needed, "%s (%*zu/%*zu)", fname, digits, bar->downloaded, digits, bar->howmany);
+ 		free(fname);
+ 		fname = name;
+ 	}
+diff --git a/src/pacman/query.c b/src/pacman/query.c
+index d75c4c801..2790465ec 100644
+--- a/src/pacman/query.c
++++ b/src/pacman/query.c
+@@ -66,7 +66,7 @@ static int search_path(char **filename, struct stat *bufptr)
+ 			free(envpath);
+ 			return -1;
+ 		}
+-		sprintf(fullname, "%s/%s", path, *filename);
++		snprintf(fullname, plen + flen + 2, "%s/%s", path, *filename);
+ 
+ 		if(lstat(fullname, bufptr) == 0) {
+ 			free(*filename);
+-- 
+GitLab
+
