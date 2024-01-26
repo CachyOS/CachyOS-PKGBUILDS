@@ -1,0 +1,513 @@
+From e391d53076b9ee649c31a71a4a5fa69d7de910c7 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Michel=20D=C3=A4nzer?= <mdaenzer@redhat.com>
+Date: Thu, 18 Jan 2024 16:07:48 +0100
+Subject: [PATCH 1/6] xwayland/present: Update screen pixmap in
+ xwl_present_execute
+
+If the screen pixmap was also the toplevel window pixmap.
+
+This can't happen yet, it will with the next commit though.
+---
+ hw/xwayland/xwayland-present.c | 5 +++++
+ 1 file changed, 5 insertions(+)
+
+diff --git a/hw/xwayland/xwayland-present.c b/hw/xwayland/xwayland-present.c
+index 941be06da..ae6bf7489 100644
+--- a/hw/xwayland/xwayland-present.c
++++ b/hw/xwayland/xwayland-present.c
+@@ -883,6 +883,11 @@ xwl_present_execute(present_vblank_ptr vblank, uint64_t ust, uint64_t crtc_msc)
+                 vblank->pixmap->screen_y = old_pixmap->screen_y;
+ #endif
+                 present_set_tree_pixmap(toplvl_window, old_pixmap, vblank->pixmap);
++
++                if (toplvl_window == screen->root &&
++                    screen->GetScreenPixmap(screen) == old_pixmap)
++                    screen->SetScreenPixmap(vblank->pixmap);
++
+                 vblank->pixmap->refcnt++;
+                 dixDestroyPixmap(old_pixmap, old_pixmap->drawable.id);
+ 
+-- 
+2.43.0
+
+From f50ed265cf0e78c9c8aefe8dd7f82a750cb4e1d0 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Michel=20D=C3=A4nzer?= <mdaenzer@redhat.com>
+Date: Thu, 18 Jan 2024 16:11:45 +0100
+Subject: [PATCH 2/6] xwayland: Initialize Present extension support also with
+ rootful
+
+Multiple benefits, in particular:
+
+* Fullscreen windows can hit the page flip path
+* X client presentation is properly synchronized to the Wayland
+  compositor refresh cycle via frame events
+---
+ hw/xwayland/xwayland-screen.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/hw/xwayland/xwayland-screen.c b/hw/xwayland/xwayland-screen.c
+index 03ee4e668..989c84e2d 100644
+--- a/hw/xwayland/xwayland-screen.c
++++ b/hw/xwayland/xwayland-screen.c
+@@ -1016,7 +1016,7 @@ xwl_screen_init(ScreenPtr pScreen, int argc, char **argv)
+         }
+     }
+ #ifdef GLAMOR_HAS_GBM
+-    if (xwl_screen->glamor && xwl_screen->rootless)
++    if (xwl_screen->glamor)
+         xwl_screen->present = xwl_present_init(pScreen);
+ #endif /* GLAMOR_HAS_GBM */
+ #endif /* XWL_HAS_GLAMOR */
+-- 
+2.43.0
+
+From 613e4466b4586d86cc9af2cf3515438842e3362c Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Michel=20D=C3=A4nzer?= <mdaenzer@redhat.com>
+Date: Thu, 18 Jan 2024 16:44:14 +0100
+Subject: [PATCH 3/6] xwayland: Handle NULL xwl_pixmap in
+ xwl_shm_pixmap_get_wl_buffer
+
+---
+ hw/xwayland/xwayland-shm.c | 7 ++++++-
+ 1 file changed, 6 insertions(+), 1 deletion(-)
+
+diff --git a/hw/xwayland/xwayland-shm.c b/hw/xwayland/xwayland-shm.c
+index ff128316d..4788e1671 100644
+--- a/hw/xwayland/xwayland-shm.c
++++ b/hw/xwayland/xwayland-shm.c
+@@ -314,7 +314,12 @@ xwl_shm_destroy_pixmap(PixmapPtr pixmap)
+ struct wl_buffer *
+ xwl_shm_pixmap_get_wl_buffer(PixmapPtr pixmap)
+ {
+-    return xwl_pixmap_get(pixmap)->buffer;
++    struct xwl_pixmap *xwl_pixmap = xwl_pixmap_get(pixmap);
++
++    if (!xwl_pixmap)
++        return NULL;
++
++    return xwl_pixmap->buffer;
+ }
+ 
+ Bool
+-- 
+2.43.0
+
+From 17986658bf90ae0f999d5823dec61245c300dd0a Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Michel=20D=C3=A4nzer?= <mdaenzer@redhat.com>
+Date: Thu, 18 Jan 2024 17:10:57 +0100
+Subject: [PATCH 4/6] xwayland: Add xwl_pixmap_get_wl_buffer helper
+
+Preparation for the next commit.
+---
+ hw/xwayland/xwayland-pixmap.c | 18 ++++++++++++++++++
+ hw/xwayland/xwayland-pixmap.h |  1 +
+ hw/xwayland/xwayland-window.c |  9 ++-------
+ 3 files changed, 21 insertions(+), 7 deletions(-)
+
+diff --git a/hw/xwayland/xwayland-pixmap.c b/hw/xwayland/xwayland-pixmap.c
+index 6e797a34c..8e929f029 100644
+--- a/hw/xwayland/xwayland-pixmap.c
++++ b/hw/xwayland/xwayland-pixmap.c
+@@ -33,8 +33,13 @@
+ #include "fb.h"
+ #include "pixmapstr.h"
+ 
++#ifdef XWL_HAS_GLAMOR
++#include "xwayland-glamor.h"
++#endif
+ #include "xwayland-types.h"
+ #include "xwayland-pixmap.h"
++#include "xwayland-screen.h"
++#include "xwayland-shm.h"
+ #include "xwayland-window-buffers.h"
+ 
+ static DevPrivateKeyRec xwl_pixmap_private_key;
+@@ -57,6 +62,19 @@ xwl_pixmap_get(PixmapPtr pixmap)
+     return dixLookupPrivate(&pixmap->devPrivates, &xwl_pixmap_private_key);
+ }
+ 
++struct wl_buffer *
++xwl_pixmap_get_wl_buffer(PixmapPtr pixmap)
++{
++#ifdef XWL_HAS_GLAMOR
++    struct xwl_screen *xwl_screen = xwl_screen_get(pixmap->drawable.pScreen);
++
++    if (xwl_screen->glamor)
++        return xwl_glamor_pixmap_get_wl_buffer(pixmap);
++    else
++#endif
++        return xwl_shm_pixmap_get_wl_buffer(pixmap);
++}
++
+ Bool
+ xwl_pixmap_set_buffer_release_cb(PixmapPtr pixmap,
+                                  xwl_buffer_release_cb func, void *data)
+diff --git a/hw/xwayland/xwayland-pixmap.h b/hw/xwayland/xwayland-pixmap.h
+index 06ee4898a..95eb4e1a2 100644
+--- a/hw/xwayland/xwayland-pixmap.h
++++ b/hw/xwayland/xwayland-pixmap.h
+@@ -38,6 +38,7 @@ typedef void (*xwl_buffer_release_cb) (void *data);
+ 
+ void xwl_pixmap_set_private(PixmapPtr pixmap, struct xwl_pixmap *xwl_pixmap);
+ struct xwl_pixmap *xwl_pixmap_get(PixmapPtr pixmap);
++struct wl_buffer *xwl_pixmap_get_wl_buffer(PixmapPtr pixmap);
+ Bool xwl_pixmap_set_buffer_release_cb(PixmapPtr pixmap,
+                                       xwl_buffer_release_cb func, void *data);
+ void xwl_pixmap_del_buffer_release_cb(PixmapPtr pixmap);
+diff --git a/hw/xwayland/xwayland-window.c b/hw/xwayland/xwayland-window.c
+index aaeeace68..41dc1663e 100644
+--- a/hw/xwayland/xwayland-window.c
++++ b/hw/xwayland/xwayland-window.c
+@@ -39,6 +39,7 @@
+ 
+ #include "xwayland-types.h"
+ #include "xwayland-input.h"
++#include "xwayland-pixmap.h"
+ #include "xwayland-present.h"
+ #include "xwayland-screen.h"
+ #include "xwayland-window.h"
+@@ -1394,13 +1395,7 @@ xwl_window_attach_buffer(struct xwl_window *xwl_window)
+ 
+     region = DamageRegion(window_get_damage(xwl_window->window));
+     pixmap = xwl_window_buffers_get_pixmap(xwl_window, region);
+-
+-#ifdef XWL_HAS_GLAMOR
+-    if (xwl_screen->glamor)
+-        buffer = xwl_glamor_pixmap_get_wl_buffer(pixmap);
+-    else
+-#endif
+-        buffer = xwl_shm_pixmap_get_wl_buffer(pixmap);
++    buffer = xwl_pixmap_get_wl_buffer(pixmap);
+ 
+     if (!buffer) {
+         ErrorF("Error getting buffer\n");
+-- 
+2.43.0
+
+From abe3a08245a3633a27cd6062727065149ef8b0de Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Michel=20D=C3=A4nzer?= <mdaenzer@redhat.com>
+Date: Thu, 18 Jan 2024 16:48:50 +0100
+Subject: [PATCH 5/6] xwayland: Enable Present extension support also without
+ glamor
+
+This allows e.g.
+
+ xfwm4 --vblank=xpresent
+
+to hit the page flip path instead of copies.
+
+In the future, Mesa might also use the Present extension with software
+rendering.
+---
+ hw/xwayland/meson.build        |  2 +-
+ hw/xwayland/xwayland-glamor.c  |  3 ---
+ hw/xwayland/xwayland-present.c | 27 +++++++++++++++++++--------
+ hw/xwayland/xwayland-present.h |  3 ---
+ hw/xwayland/xwayland-screen.c  |  8 +++-----
+ hw/xwayland/xwayland-shm.c     | 27 +++++++++++++++++++++++++--
+ hw/xwayland/xwayland-window.c  | 13 -------------
+ hw/xwayland/xwayland-window.h  |  2 --
+ 8 files changed, 48 insertions(+), 37 deletions(-)
+
+diff --git a/hw/xwayland/meson.build b/hw/xwayland/meson.build
+index 748c40c15..8898f3e6c 100644
+--- a/hw/xwayland/meson.build
++++ b/hw/xwayland/meson.build
+@@ -9,6 +9,7 @@ srcs = [
+     'xwayland-glamor.h',
+     'xwayland-pixmap.c',
+     'xwayland-pixmap.h',
++    'xwayland-present.c',
+     'xwayland-present.h',
+     'xwayland-screen.c',
+     'xwayland-screen.h',
+@@ -107,7 +108,6 @@ if build_glamor
+     if gbm_dep.found()
+         srcs += [
+                   'xwayland-glamor-gbm.c',
+-                  'xwayland-present.c'
+                 ]
+     endif
+     if build_eglstream
+diff --git a/hw/xwayland/xwayland-glamor.c b/hw/xwayland/xwayland-glamor.c
+index 17fa20c80..074594cc7 100644
+--- a/hw/xwayland/xwayland-glamor.c
++++ b/hw/xwayland/xwayland-glamor.c
+@@ -97,9 +97,6 @@ xwl_glamor_check_flip(WindowPtr present_window, PixmapPtr pixmap)
+     if (pixmap->drawable.depth != backing_pixmap->drawable.depth)
+         return FALSE;
+ 
+-    if (!xwl_glamor_pixmap_get_wl_buffer(pixmap))
+-        return FALSE;
+-
+     if (xwl_screen->egl_backend->check_flip)
+         return xwl_screen->egl_backend->check_flip(pixmap);
+ 
+diff --git a/hw/xwayland/xwayland-present.c b/hw/xwayland/xwayland-present.c
+index ae6bf7489..783b04ff4 100644
+--- a/hw/xwayland/xwayland-present.c
++++ b/hw/xwayland/xwayland-present.c
+@@ -25,14 +25,17 @@
+ 
+ #include <xwayland-config.h>
+ 
++#ifdef XWL_HAS_GLAMOR
++#include <glamor.h>
++#endif
+ #include <windowstr.h>
+ #include <present.h>
+ 
+ #include "xwayland-present.h"
+ #include "xwayland-screen.h"
++#include "xwayland-shm.h"
+ #include "xwayland-window.h"
+ #include "xwayland-pixmap.h"
+-#include "glamor.h"
+ 
+ #include "tearing-control-v1-client-protocol.h"
+ 
+@@ -608,7 +611,13 @@ xwl_present_abort_vblank(ScreenPtr screen,
+ static void
+ xwl_present_flush(WindowPtr window)
+ {
+-    glamor_block_handler(window->drawable.pScreen);
++#ifdef XWL_HAS_GLAMOR
++    ScreenPtr screen = window->drawable.pScreen;
++    struct xwl_screen *xwl_screen = xwl_screen_get(screen);
++
++    if (xwl_screen->glamor)
++        glamor_block_handler(screen);
++#endif
+ }
+ 
+ static void
+@@ -670,6 +679,9 @@ xwl_present_check_flip(RRCrtcPtr crtc,
+             present_window->drawable.height != pixmap->drawable.height)
+         return FALSE;
+ 
++    if (!xwl_pixmap_get_wl_buffer(pixmap))
++        return FALSE;
++
+     /* Window must be same region as toplevel window */
+     if ( !RegionEqual(&present_window->winSize, &toplvl_window->winSize) )
+         return FALSE;
+@@ -678,8 +690,11 @@ xwl_present_check_flip(RRCrtcPtr crtc,
+     if (!RegionEqual(&present_window->clipList, &present_window->winSize))
+         return FALSE;
+ 
+-    if (!xwl_glamor_check_flip(present_window, pixmap))
++#ifdef XWL_HAS_GLAMOR
++    if (xwl_window->xwl_screen->glamor &&
++        !xwl_glamor_check_flip(present_window, pixmap))
+         return FALSE;
++#endif
+ 
+     /* Can't flip if the window pixmap doesn't match the xwl_window parent
+      * window's, e.g. because a client redirected this window or one of its
+@@ -766,7 +781,7 @@ xwl_present_flip(present_vblank_ptr vblank, RegionPtr damage)
+     if (!xwl_window)
+         return FALSE;
+ 
+-    buffer = xwl_glamor_pixmap_get_wl_buffer(pixmap);
++    buffer = xwl_pixmap_get_wl_buffer(pixmap);
+     if (!buffer) {
+         ErrorF("present: Error getting buffer\n");
+         return FALSE;
+@@ -1053,12 +1068,8 @@ xwl_present_unrealize_window(struct xwl_present_window *xwl_present_window)
+ Bool
+ xwl_present_init(ScreenPtr screen)
+ {
+-    struct xwl_screen *xwl_screen = xwl_screen_get(screen);
+     present_screen_priv_ptr screen_priv;
+ 
+-    if (!xwl_screen->glamor || !xwl_screen->egl_backend)
+-        return FALSE;
+-
+     if (!present_screen_register_priv_keys())
+         return FALSE;
+ 
+diff --git a/hw/xwayland/xwayland-present.h b/hw/xwayland/xwayland-present.h
+index 4fd1e579f..dab636c84 100644
+--- a/hw/xwayland/xwayland-present.h
++++ b/hw/xwayland/xwayland-present.h
+@@ -33,7 +33,6 @@
+ 
+ #include "xwayland-types.h"
+ 
+-#ifdef GLAMOR_HAS_GBM
+ struct xwl_present_window {
+     WindowPtr window;
+ 
+@@ -71,6 +70,4 @@ Bool xwl_present_init(ScreenPtr screen);
+ void xwl_present_cleanup(WindowPtr window);
+ void xwl_present_unrealize_window(struct xwl_present_window *xwl_present_window);
+ 
+-#endif /* GLAMOR_HAS_GBM */
+-
+ #endif /* XWAYLAND_PRESENT_H */
+diff --git a/hw/xwayland/xwayland-screen.c b/hw/xwayland/xwayland-screen.c
+index 989c84e2d..5c71b55e2 100644
+--- a/hw/xwayland/xwayland-screen.c
++++ b/hw/xwayland/xwayland-screen.c
+@@ -1015,11 +1015,9 @@ xwl_screen_init(ScreenPtr pScreen, int argc, char **argv)
+            xwl_screen->glamor = XWL_GLAMOR_NONE;
+         }
+     }
+-#ifdef GLAMOR_HAS_GBM
+-    if (xwl_screen->glamor)
+-        xwl_screen->present = xwl_present_init(pScreen);
+-#endif /* GLAMOR_HAS_GBM */
+-#endif /* XWL_HAS_GLAMOR */
++#endif
++
++    xwl_screen->present = xwl_present_init(pScreen);
+ 
+     if (!xwl_screen->glamor) {
+         xwl_screen->CreateScreenResources = pScreen->CreateScreenResources;
+diff --git a/hw/xwayland/xwayland-shm.c b/hw/xwayland/xwayland-shm.c
+index 4788e1671..65c88ead5 100644
+--- a/hw/xwayland/xwayland-shm.c
++++ b/hw/xwayland/xwayland-shm.c
+@@ -213,6 +213,28 @@ shm_format_for_depth(int depth)
+     }
+ }
+ 
++static Bool
++dimensions_match_toplevel_window(ScreenPtr screen, int width, int height)
++{
++    struct xwl_screen *xwl_screen = xwl_screen_get(screen);
++    WindowPtr toplevel;
++
++    if (xwl_screen->rootless)
++        toplevel = screen->root->firstChild;
++    else
++        toplevel = screen->root;
++
++    while (toplevel) {
++        if (width == toplevel->drawable.width &&
++            height == toplevel->drawable.height)
++            return TRUE;
++
++        toplevel = toplevel->nextSib;
++    }
++
++    return FALSE;
++}
++
+ static const struct wl_buffer_listener xwl_shm_buffer_listener = {
+     xwl_pixmap_buffer_release_cb,
+ };
+@@ -230,8 +252,9 @@ xwl_shm_create_pixmap(ScreenPtr screen,
+     int fd;
+ 
+     if (hint == CREATE_PIXMAP_USAGE_GLYPH_PICTURE ||
+-        (!xwl_screen->rootless && hint != CREATE_PIXMAP_USAGE_BACKING_PIXMAP) ||
+-        (width == 0 && height == 0) || depth < 15)
++        (width == 0 && height == 0) || depth < 15 ||
++        (hint != CREATE_PIXMAP_USAGE_BACKING_PIXMAP &&
++         !dimensions_match_toplevel_window(screen, width, height)))
+         return fbCreatePixmap(screen, width, height, depth, hint);
+ 
+     stride = PixmapBytePad(width, depth);
+diff --git a/hw/xwayland/xwayland-window.c b/hw/xwayland/xwayland-window.c
+index 41dc1663e..d2434de8f 100644
+--- a/hw/xwayland/xwayland-window.c
++++ b/hw/xwayland/xwayland-window.c
+@@ -188,7 +188,6 @@ damage_report(DamagePtr pDamage, RegionPtr pRegion, void *data)
+ 
+     xwl_screen = xwl_window->xwl_screen;
+ 
+-#ifdef GLAMOR_HAS_GBM
+     if (xwl_window->present_flipped) {
+         /* This damage is from a Present flip, which already committed a new
+          * buffer for the surface, so we don't need to do anything in response
+@@ -198,7 +197,6 @@ damage_report(DamagePtr pDamage, RegionPtr pRegion, void *data)
+         xwl_window->present_flipped = FALSE;
+         return;
+     }
+-#endif
+ 
+     if (xorg_list_is_empty(&xwl_window->link_damage))
+         xorg_list_add(&xwl_window->link_damage, &xwl_screen->damage_window_list);
+@@ -950,10 +948,7 @@ ensure_surface_for_window(WindowPtr window)
+     dixSetPrivate(&window->devPrivates, &xwl_window_private_key, xwl_window);
+     xorg_list_init(&xwl_window->link_damage);
+     xorg_list_add(&xwl_window->link_window, &xwl_screen->window_list);
+-
+-#ifdef GLAMOR_HAS_GBM
+     xorg_list_init(&xwl_window->frame_callback_list);
+-#endif
+ 
+     xwl_window_buffers_init(xwl_window);
+ 
+@@ -1181,10 +1176,8 @@ xwl_unrealize_window(WindowPtr window)
+ 
+     xwl_dmabuf_feedback_destroy(&xwl_window->feedback);
+ 
+-#ifdef GLAMOR_HAS_GBM
+     if (xwl_window->xwl_screen->present)
+         xwl_present_for_each_frame_callback(xwl_window, xwl_present_unrealize_window);
+-#endif
+ 
+     if (xwl_window->tearing_control)
+         wp_tearing_control_v1_destroy(xwl_window->tearing_control);
+@@ -1323,7 +1316,6 @@ frame_callback(void *data,
+     wl_callback_destroy (xwl_window->frame_callback);
+     xwl_window->frame_callback = NULL;
+ 
+-#ifdef GLAMOR_HAS_GBM
+     if (xwl_window->xwl_screen->present) {
+         xwl_present_for_each_frame_callback(xwl_window, xwl_present_frame_callback);
+ 
+@@ -1334,7 +1326,6 @@ frame_callback(void *data,
+         if (xwl_window->frame_callback)
+             xwl_present_for_each_frame_callback(xwl_window, xwl_present_reset_timer);
+     }
+-#endif
+ }
+ 
+ static const struct wl_callback_listener frame_listener = {
+@@ -1348,14 +1339,12 @@ xwl_window_create_frame_callback(struct xwl_window *xwl_window)
+     wl_callback_add_listener(xwl_window->frame_callback, &frame_listener,
+                              xwl_window);
+ 
+-#ifdef GLAMOR_HAS_GBM
+     /* If we get called from frame_callback, it will take care of calling
+      * xwl_present_reset_timer.
+      */
+     if (xwl_window->xwl_screen->present &&
+         !xwl_present_entered_for_each_frame_callback())
+         xwl_present_for_each_frame_callback(xwl_window, xwl_present_reset_timer);
+-#endif
+ }
+ 
+ Bool
+@@ -1365,10 +1354,8 @@ xwl_destroy_window(WindowPtr window)
+     struct xwl_screen *xwl_screen = xwl_screen_get(screen);
+     Bool ret;
+ 
+-#ifdef GLAMOR_HAS_GBM
+     if (xwl_screen->present)
+         xwl_present_cleanup(window);
+-#endif
+ 
+     screen->DestroyWindow = xwl_screen->DestroyWindow;
+ 
+diff --git a/hw/xwayland/xwayland-window.h b/hw/xwayland/xwayland-window.h
+index 7fbb2a623..3370c45aa 100644
+--- a/hw/xwayland/xwayland-window.h
++++ b/hw/xwayland/xwayland-window.h
+@@ -110,10 +110,8 @@ struct xwl_window {
+     OsTimerPtr window_buffers_timer;
+     struct wl_output *wl_output;
+     struct wl_output *wl_output_fullscreen;
+-#ifdef GLAMOR_HAS_GBM
+     struct xorg_list frame_callback_list;
+     Bool present_flipped;
+-#endif
+ #ifdef XWL_HAS_LIBDECOR
+     struct libdecor_frame *libdecor_frame;
+ #endif
+-- 
+2.43.0
+
