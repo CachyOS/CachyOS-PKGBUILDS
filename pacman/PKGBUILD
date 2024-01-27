@@ -51,7 +51,6 @@ source=(
 #        "0001-add-information-about-origin-db.patch"
         static_sqlite.patch
         "https://www.sqlite.org/2024/sqlite-src-${_sqlitever}.zip"
-        0001-use-snprintf-instead-of-sprintf.patch
         disable-always-stale.patch
         )
 sha256sums=('SKIP'
@@ -59,9 +58,10 @@ sha256sums=('SKIP'
             '90f77e16fb4425cf62969203447aa2803f5eb550d6c4fe2dda2035656e25615d'
             'bdd8fb13c1cd8606f41347bc1897e261031ac80b33c772d310f417064332f646'
             '14dc2db487e8563ce286a38949042cb1e87ca66d872d5ea43c76391004941fe2'
-            'c87a4dd373f255381780f8860026481dd2a28036f1377af5b26e16486ed70621')
+            '11e0078c5ac7cdafa625957a9da982989efe19719e4973cd77f28dc5780dccd9')
 
 if $_staging; then
+    source+=(0001-use-snprintf-instead-of-sprintf.patch)
     source+=(78cd453.patch)
     source+=(https://raw.githubusercontent.com/vnepogodin/my-patches/develop/pacman/0001-libalpm-parallel-signature-check.patch)
 fi
