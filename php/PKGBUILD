@@ -165,7 +165,8 @@ export CFLAGS+=" $CFLAGS -O3 -Ofast -falign-functions=32 -fno-semantic-interposi
 	# apache
 	# reuse the previous run; this will save us a lot of time
 	mkdir -p "${srcdir}/build-apache"
-	cd "${srcdir}/build-apache"
+ 	cd "${srcdir}/build-apache"
+    ln -s "../${pkgbase}-${pkgver}/configure"
 	./configure ${_phpconfig} \
 		--with-apxs2 \
 		${_phpextensions}
@@ -173,7 +174,8 @@ export CFLAGS+=" $CFLAGS -O3 -Ofast -falign-functions=32 -fno-semantic-interposi
 
 	# phpdbg
 	mkdir -p "${srcdir}/build-phpdbg"
-	cd "${srcdir}/build-phpdbg"
+ 	cd "${srcdir}/build-phpdbg"
+    ln -s "../${pkgbase}-${pkgver}/configure"
 	./configure ${_phpconfig} \
 		--enable-phpdbg \
 		${_phpextensions}
