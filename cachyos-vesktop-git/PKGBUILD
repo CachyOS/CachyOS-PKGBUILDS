@@ -1,0 +1,41 @@
+# Maintainer: Piotr Górski <lucjan.lucjanov@gmail.com>
+
+pkgname=cachyos-vesktop-git
+pkgdesc="Vesktop gives you the performance of web Discord and the comfort of Discord Desktop"
+pkgver=20240128.r288.g2bd8ca9
+pkgrel=1
+arch=("x86_64")
+url="https://github.com/Vencord/Vesktop"
+license=("GPL-3.0 license")
+makedepends=("git" "nodejs" "bunjs-bin" "libxcrypt-compat")
+optdepends=(
+  'libnotify: Notifications'
+  'xdg-utils: Open links, files, etc'
+)
+provides=("vesktop")
+conflicts=("vesktop")
+source=(
+  "${pkgname}::git+${url}.git"
+)
+sha256sums=('SKIP')
+
+pkgver() {
+  cd "$pkgname"
+  echo "$(git show --format='%cI' -q main | sed 's/T.*//g;s/-//g').r$(git rev-list --count HEAD).g$(git rev-parse --short HEAD)"
+}
+
+build() {
+  cd "$srcdir/$pkgname"
+
+  bun install
+  bun run build && bun x electron-builder --linux pacman
+
+  bsdtar -xf "dist/vesktop-1.5.0.pacman" -C "$srcdir"
+}
+
+package() {
+  cd "$srcdir"
+
+  cp -r opt "$pkgdir/"
+  cp -r usr "$pkgdir/"
+}
