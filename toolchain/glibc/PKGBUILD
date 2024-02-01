@@ -6,11 +6,17 @@
 # toolchain build order: linux-api-headers->glibc->binutils->gcc->glibc->binutils->gcc
 # NOTE: valgrind requires rebuilt with each major glibc version
 
+## ENABLE x86-64-v3 optimization
+_optimize_v3=${_optimize_v3-y}
+
+_optimize_v4=${_optimize_v4-}
+
+
 pkgbase=glibc
 pkgname=(glibc lib32-glibc glibc-locales)
-pkgver=2.38
-_commit=d37c2b20a4787463d192b32041c3406c2bd91de0
-pkgrel=13
+pkgver=2.39
+_commit=6d1e3fb07b45e2e31e469b16cf21b24bccf8914c
+pkgrel=1
 arch=(x86_64)
 url='https://www.gnu.org/software/libc'
 license=(GPL-2.0-or-later LGPL-2.1-or-later)
@@ -40,14 +46,24 @@ prepare() {
 }
 
 build() {
+
+
+    if [ -n "$_optimize_v3" ]; then
+      export ASFLAGS="-D__AVX__=1 -D__AVX2__=1 -msse2avx -D__FMA__=1 "
+    elif [-n "$_optimize_v4" ]; then
+      export ASFLAGS="-D__AVX__=1 -D__AVX2__=1 -D__AVX512__=1 -msse2avx -D__FMA__=1 "
+    else
+      unset AFLAGS
+    fi
+
+
   local _configure_flags=(
       --prefix=/usr
       --with-headers=/usr/include
       --with-bugurl=https://bugs.archlinux.org/
       --enable-bind-now
-      --enable-cet
       --enable-fortify-source
-      --enable-kernel=6.6
+      --enable-kernel=6.1
       --enable-multi-arch
       --enable-stack-protector=strong
       --enable-systemtap
@@ -72,6 +88,7 @@ build() {
     "${srcdir}"/glibc/configure \
         --libdir=/usr/lib \
         --libexecdir=/usr/lib \
+        --enable-cet \
         "${_configure_flags[@]}"
 
     make -O
@@ -94,6 +111,7 @@ build() {
         --host=i686-pc-linux-gnu \
         --libdir=/usr/lib32 \
         --libexecdir=/usr/lib32 \
+        --disable-cet \
         "${_configure_flags[@]}"
 
     make -O
