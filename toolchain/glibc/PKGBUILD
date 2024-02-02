@@ -60,7 +60,7 @@ build() {
   local _configure_flags=(
       --prefix=/usr
       --with-headers=/usr/include
-      --with-bugurl=https://bugs.archlinux.org/
+      --with-bugurl=https://gitlab.archlinux.org/archlinux/packaging/packages/glibc/-/issues
       --enable-bind-now
       --enable-fortify-source
       --enable-kernel=6.1
@@ -111,7 +111,6 @@ build() {
         --host=i686-pc-linux-gnu \
         --libdir=/usr/lib32 \
         --libexecdir=/usr/lib32 \
-        --disable-cet \
         "${_configure_flags[@]}"
 
     make -O
