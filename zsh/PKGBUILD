@@ -53,8 +53,8 @@ prepare() {
 
 build() {
     cd "${srcdir}/${pkgbase}-${pkgver}"
-
-
+    
+    export LIBS="-lgcov"
     export CFLAGS="${CFLAGS} -fprofile-generate -fprofile-update=atomic -fprofile-partial-training"
     export CXXFLAGS="${CXXFLAGS} -fprofile-generate -fprofile-update=atomic -fprofile-partial-training"
 
@@ -91,7 +91,8 @@ build() {
 
     export CFLAGS="${CFLAGS} -fprofile-use -Wno-error=coverage-mismatch"
     export CXXFLAGS="${CXXFLAGS} -fprofile-use -Wno-error=coverage-mismatch"
-
+    unset LIBS
+    
     make clean
     ./configure --prefix=/usr \
         --docdir=/usr/share/doc/zsh \
