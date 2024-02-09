@@ -10,6 +10,7 @@ from time import sleep
 
 def setup_driver():
     chrome_options = Options()
+    chrome_options.binary_location = 'out/Release/chrome'  # Specify the path to Chrome binary here
     chrome_options.add_argument("--headless") 
     chrome_options.add_argument("--no-sandbox")
     chrome_options.add_argument("--disable-gpu")

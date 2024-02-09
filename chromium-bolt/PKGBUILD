@@ -8,7 +8,7 @@ pkgver=121.0.6167.164
 pkgrel=1
 _launcher_ver=8
 _manual_clone=0
-_system_clang=1
+_system_clang=0
 pkgdesc="A web browser built for speed, simplicity, and security"
 arch=('x86_64')
 url="https://www.chromium.org/Home"
@@ -282,11 +282,14 @@ build() {
 
   perf2bolt out/Release/chrome -perfdata=perf.data -o perf.fdata -strict=0
 
-  llvm-bolt out/Default/chrome -o out/Release/chrome.bolt \
+  llvm-bolt out/Release/chrome -o out/Release/chrome.bolt \
     -data=perf.fdata -dyno-stats \
     -reorder-blocks=ext-tsp -reorder-functions=hfsort \
     -split-functions -split-all-cold -split-eh \
     -skip-funcs=Builtins_.\*
+
+  mv out/Release/chrome out/Release/chrome.orig
+  mv out/Release/chrome.bolt out/Release/chrome
 
 }
 
