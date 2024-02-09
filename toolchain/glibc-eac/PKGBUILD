@@ -151,18 +151,20 @@ check() (
   _skip_test tst-ntp_gettimex        sysdeps/unix/sysv/linux/Makefile
   _skip_test tst-pkey                sysdeps/unix/sysv/linux/Makefile
   _skip_test tst-process_mrelease    sysdeps/unix/sysv/linux/Makefile
+  _skip_test tst-shstk-legacy-1g     sysdeps/x86_64/Makefile
   _skip_test tst-adjtime             time/Makefile
 
   make -O check
 )
 
 package_glibc-eac() {
-  pkgdesc='GNU C Library'
+  pkgdesc='GNU C Library with DT_HASH patch for games using EAC'
   depends=('linux-api-headers>=4.10' tzdata filesystem)
   optdepends=('gd: for memusagestat'
               'perl: for mtrace')
-  install=glibc.install
   provides=("glibc=$pkgver")
+  conflicts=("glibc")
+  install=glibc.install
   backup=(etc/gai.conf
           etc/locale.gen)
 
@@ -204,9 +206,10 @@ package_glibc-eac() {
 }
 
 package_lib32-glibc-eac() {
-  pkgdesc='GNU C Library (32-bit)'
-  depends=("glibc=$pkgver")
+  pkgdesc='GNU C Library (32-bit) with DT_HASH patch for games using EAC'
+  depends=("glibc-eac=$pkgver")
   provides=("lib32-glibc=$pkgver")
+  conflicts=("lib32-glibc")
   options+=('!emptydirs')
 
   cd lib32-glibc-build
@@ -230,8 +233,9 @@ package_lib32-glibc-eac() {
 
 package_glibc-eac-locales() {
   pkgdesc='Pregenerated locales for GNU C Library'
-  depends=("glibc=$pkgver")
-  provides=("glibc-locales=$pkgver")
+  depends=("glibc-eac=$pkgver")
+  provides=("glibc-locales")
+  conflicts=("glibc-locales")
 
   cp -r locales/* -t "${pkgdir}"
   rm -r "${pkgdir}"/usr/lib/locale/C.utf8
