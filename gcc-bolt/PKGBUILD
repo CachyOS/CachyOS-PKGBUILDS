@@ -106,6 +106,8 @@ build() {
         --disable-vtable-verify
         --enable-linux-futex
         --enable-version-specific-runtime-libs
+        --with-pkgversion='CachyOS GCC 13.2.1'
+
     )
 
     cd gcc-build
@@ -129,24 +131,6 @@ build() {
         LDFLAGS_FOR_TARGET="$LDFLAGS" \
         profiledbootstrap
 
-    # Build libgccjit separately, to avoid building all compilers with --enable-host-shared
-    # which brings a performance penalty
-    cd "${srcdir}"/libgccjit-build
-
-    "$srcdir/gcc/configure" \
-        --enable-languages=jit \
-        --disable-bootstrap \
-        --enable-host-shared \
-        "${_confflags[@]:?_confflags unset}"
-
-    # see https://bugs.archlinux.org/task/71777 for rationale re *FLAGS handling
-    make -O STAGE1_CFLAGS="-O3" \
-        BOOT_CFLAGS="$CFLAGS" \
-        BOOT_LDFLAGS="$LDFLAGS" \
-        LDFLAGS_FOR_TARGET="$LDFLAGS" \
-        all-gcc
-
-    cp -a gcc/libgccjit.so* ../gcc-build/gcc/
 
     BOLTDIR="${srcdir}"/gcc-bolt
     mkdir -p "${BOLTDIR}"
@@ -159,7 +143,7 @@ build() {
     make distclean
     yes "" | make oldconfig
 
-    perf record -o ${srcdir}/cc1.data --max-size=1G -F 1700 -e cycles:u -j any,u -- make -j$(nproc) || true
+    perf record -o ${srcdir}/cc1.data --max-size=4G -F 1700 -e cycles:u -j any,u -- make -j$(nproc) || true
 
     cd "${srcdir}"
 
@@ -170,16 +154,15 @@ build() {
         --enable-bootstrap \
         "${_confflags[@]:?_confflags unset}"
 
-    perf record -o ${srcdir}/cc1plus.data --max-size=1G -F 1700 -e cycles:u -j any,u -- make -j$(nproc) all-gcc || true
+    perf record -o ${srcdir}/cc1plus.data --max-size=4G -F 1700 -e cycles:u -j any,u -- make -j$(nproc) all-gcc || true
 
 }
 
 package_gcc-bolt() {
     pkgdesc="The GNU Compiler Collection - C and C++ frontends"
-    depends=("gcc-libs=$pkgver-$pkgrel" 'binutils>=2.28' libmpc zstd libisl.so)
-    optdepends=('lib32-gcc-libs: for generating code for 32-bit ABI')
-    provides=($pkgname-multilib)
-    replaces=($pkgname-multilib)
+    depends=('binutils>=2.28' libmpc zstd libisl.so)
+    provides=($pkgname)
+    replaces=($pkgname)
     options=(!emptydirs staticlibs !strip !lto)
 
     cd gcc-build
@@ -194,7 +177,7 @@ package_gcc-bolt() {
         --data $srcdir/cc1.fdata \
         -o $pkgdir/usr/lib/gcc/x86_64-pc-linux-gnu/13.2.1/cc1.bolt \
         -reorder-blocks=ext-tsp \
-        -reorder-functions=cdsort \
+        -reorder-functions=hfsort+ \
         -split-functions \
         -split-all-cold \
         -split-eh \
@@ -214,7 +197,7 @@ package_gcc-bolt() {
         --data $srcdir/cc1plus.fdata \
         -o $pkgdir/usr/lib/gcc/x86_64-pc-linux-gnu/13.2.1/cc1plus.bolt \
         -reorder-blocks=ext-tsp \
-        -reorder-functions=cdsort \
+        -reorder-functions=hfsort+ \
         -split-functions \
         -split-all-cold \
         -split-eh \
