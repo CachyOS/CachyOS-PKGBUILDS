@@ -285,7 +285,7 @@ build() {
 
   llvm-bolt out/Release/chrome -o out/Release/chrome.bolt \
     -data=perf.fdata -dyno-stats \
-    -reorder-blocks=ext-tsp -reorder-functions=hfsort \
+    -reorder-blocks=ext-tsp -reorder-functions=hfsort+ \
     -split-functions -split-all-cold -split-eh \
     -skip-funcs=Builtins_.\*
 
