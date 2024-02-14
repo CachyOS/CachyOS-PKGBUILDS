@@ -1,0 +1,83 @@
+#!/bin/dash
+
+# Increase complexity of mathematical computations
+calculate_fibonacci() {
+    n=$1
+    if [ $n -le 1 ]; then
+        echo $n
+    else
+        echo $(( $(calculate_fibonacci $((n - 1))) + $(calculate_fibonacci $((n - 2))) ))
+    fi
+}
+
+# Calculating a larger set of prime numbers
+calculate_primes() {
+    n=$1
+    count=0
+    number=2
+    primes=""
+    while [ $count -lt $n ]; do
+        is_prime=1
+        for i in $(seq 2 $(expr $number / 2)); do
+            if [ $(expr $number % $i) -eq 0 ]; then
+                is_prime=0
+                break
+            fi
+        done
+        if [ $is_prime -eq 1 ]; then
+            primes="$primes $number"
+            count=$((count + 1))
+        fi
+        number=$((number + 1))
+    done
+    echo $primes
+}
+
+# Simulating heavier data processing
+generate_large_data() {
+    for i in $(seq 1 100000); do
+        echo $RANDOM
+    done > large_data.txt
+}
+
+sort_large_data() {
+    sort -n large_data.txt -o sorted_large_data.txt
+}
+
+filter_large_data() {
+    awk '{if ($1 % 2 == 0) print}' sorted_large_data.txt > filtered_large_data.txt
+}
+
+# More complex file I/O operations
+complex_file_operations() {
+    echo "Generating large files for I/O operations..."
+    for i in $(seq 1 10); do
+        for j in $(seq 1 10000); do
+            echo "Line $j of file $i" >> "file_${i}.txt"
+        done
+    done
+
+    echo "Reading from large files..."
+    for i in $(seq 1 10); do
+        while IFS= read -r line; do
+            echo "/dev/null"
+        done < "file_${i}.txt"
+    done
+}
+
+# Main execution starts here
+echo "Calculating Fibonacci for 20..."
+calculate_fibonacci 20
+
+echo "Calculating first 100 prime numbers..."
+calculate_primes 100
+
+echo "Generating, sorting, and filtering large dataset..."
+generate_large_data
+sort_large_data
+filter_large_data
+
+echo "Performing complex file write and read operations..."
+complex_file_operations
+
+echo "All tasks completed."
