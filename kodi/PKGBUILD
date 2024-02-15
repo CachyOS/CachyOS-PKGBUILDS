@@ -19,8 +19,8 @@
 
 pkgbase=kodi
 pkgname=('kodi' 'kodi-gles' 'kodi-eventclients' 'kodi-tools-texturepacker' 'kodi-dev')
-pkgver=20.3
-pkgrel=7
+pkgver=20.4
+pkgrel=2
 arch=('x86_64')
 url="https://kodi.tv"
 license=('GPL2')
@@ -79,7 +79,7 @@ noextract=(
   "$pkgbase-flatbuffers-$_flatbuffers_version.tar.gz"
   "$pkgbase-libudfread-$_libudfread_version.tar.gz"
 )
-sha512sums=('cdec1383d33f421828f0249ac2929980c6eaa39e345a8a364d9f3479f873029a15f3f6e6d40707fd2df2067a71bdaa3c6a1e26277074c31c631c71afe7465cb4'
+sha512sums=('3001f72ef8340af7401fa5604953be8303780ab61f0458882e15bd44a2f411addcec4c147c5a52526f9ed2fe7a004c5e8206ad908a63785ba8ce147a322ea51c'
             'd3be3bfc13c5ea56d8db745c2aab090c99760684fe4c8f62a13d266feb319e9180ceeecf8116bfd2ed90d9accba2c11dbbf93b61ad00f69a40812ebf4eabcdda'
             '51e6fc033121241354a5f0b3fc9a430577ae3ff6bb7f31445aa548ef4893037fb80eea3b2c6774c81e9ebaf9c45e9b490c98c2c65eb38f9f7daba84b236f7e1d'
             '629a41157d07b8ec0ea1fe89ae5ec48f63047472a862782b805c531ae31a0376fc4dc15175f8280c3ef91d7fa977bacebb1b51232640034a34bab2293210fc5e'
@@ -119,9 +119,11 @@ prepare() {
 }
 
 build() {
+  # NOTE: do we still need this?
   CFLAGS=${CFLAGS/-Wp,-D_GLIBCXX_ASSERTIONS}
   CXXFLAGS=${CXXFLAGS/-Wp,-D_GLIBCXX_ASSERTIONS}
   export LDFLAGS="-Wl,-O1 -Wl,--sort-common -Wl,--as-needed -Wl,-z,relro -Wl,-z,now"
+
   _cmake_common_args=(
     -DCMAKE_BUILD_TYPE=Release
     -DCMAKE_INSTALL_PREFIX=/usr
