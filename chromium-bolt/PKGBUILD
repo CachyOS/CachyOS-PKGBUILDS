@@ -18,7 +18,8 @@ depends=('gtk3' 'nss' 'alsa-lib' 'xdg-utils' 'libxss' 'libcups' 'libgcrypt'
          'ttf-liberation' 'systemd' 'dbus' 'libpulse' 'pciutils' 'libva'
          'libffi' 'desktop-file-utils' 'hicolor-icon-theme')
 makedepends=('python' 'gn' 'ninja' 'clang' 'lld' 'gperf' 'nodejs' 'pipewire'
-             'rust' 'qt5-base' 'java-runtime-headless' 'git')
+             'rust' 'qt5-base' 'java-runtime-headless' 'git'
+             'xorg-server-xvfb' 'llvm-bolt' 'perf')
 optdepends=('pipewire: WebRTC desktop sharing under Wayland'
             'kdialog: support for native dialogs in Plasma'
             'qt5-base: enable Qt5 with --enable-features=AllowQt'
@@ -273,13 +274,22 @@ build() {
   gn gen out/Release --args="${_flags[*]}"
   ninja -C out/Release chrome chrome_sandbox chromedriver.unstripped
 
+  # cp chromedriver.unstripped to chromedriver
+  cp out/Release/chromedriver.unstripped out/Release/chromedriver
+
   ## Export PATH for vpython
   export PATH+=":$PWD/third_party/depot_tools"
+
+  # Add out/Release to PATH for selenium
+  export PATH="$PWD/out/Release:$PATH"
+
+  # Move profiler to current directory
+  cp ../profiler.py .
 
   ## Branch Sampling for BOLT
   perf record -e cycles:u -j any,u -o perf.data --  \
   xvfb-run -s "-screen 0 1920x1080x24 -nolisten local" \
-  vpython3 ../profiler.py
+  vpython3 profiler.py
 
   perf2bolt out/Release/chrome -perfdata=perf.data -o perf.fdata -strict=0
 
