@@ -4,18 +4,41 @@
 
 pkgname=dracut
 pkgver=059
-pkgrel=5.2
+pkgrel=5.3
 pkgdesc="An event driven initramfs infrastructure"
 arch=('x86_64')
 url="https://dracut.wiki.kernel.org"
-license=('GPL')
-depends=('bash' 'coreutils' 'cpio' 'filesystem' 'findutils' 'grep' 'gzip'
-  'kmod' 'pkgconf' 'procps-ng' 'sed' 'systemd' 'util-linux' 'xz' 'binutils')
-makedepends=('asciidoc' 'bash-completion' 'git')
-optdepends=('elfutils: strip binaries to reduce initramfs size'
+license=('GPL-2.0-or-later')
+depends=(
+  'bash'
+  'coreutils'
+  'cpio'
+  'filesystem'
+  'findutils'
+  'gawk'
+  'grep'
+  'kmod'
+  'pkgconf'
+  'procps-ng'
+  'sed'
+  'systemd'
+  'util-linux'
+)
+makedepends=(
+  'asciidoc'
+  'bash-completion'
+  'git'
+)
+optdepends=(
+  'binutils: --uefi option support'
+  'elfutils: strip binaries to reduce initramfs size'
+  'gzip: gzip compression'
   'multipath-tools: dmraid dracut module support'
   'pigz: faster gzip compression'
-  'sbsigntools: uefi_secureboot_cert/key configuration option support')
+  'sbsigntools: uefi_secureboot_cert/key configuration option support'
+  'tpm2-tools: tpm2 support for e.g. LUKS'
+  'xz: xz compression'
+)
 provides=('initramfs')
 backup=('etc/dracut.conf' 'etc/dracut-cachyos.conf')
 source=("https://github.com/dracutdevs/$pkgname/archive/$pkgver/$pkgname-$pkgver.tar.gz"
@@ -29,7 +52,9 @@ source=("https://github.com/dracutdevs/$pkgname/archive/$pkgver/$pkgname-$pkgver
   "module-setup.sh"
   "dracut-systemd-253.patch"
   "dracut-systemd-254-uki.patch::https://github.com/dracutdevs/dracut/commit/f32e95bcadbc5158843530407adc1e7b700561b1.patch"
-  "dracut-systemd-255-systemd-executor.patch::https://github.com/dracutdevs/dracut/pull/2535/commits/62fd8ebe4776dbb60ca04a865c2d160e45d65e91.patch")
+  "dracut-systemd-255-systemd-executor.patch::https://github.com/dracutdevs/dracut/pull/2535/commits/62fd8ebe4776dbb60ca04a865c2d160e45d65e91.patch"
+  "dracut-systemd-255-pcrphase.patch"
+  "dracut-systemd-255-hibernate-resume.patch::https://github.com/dracutdevs/dracut/pull/2527/commits/a2fe89116db4b286fbf515f26bd1773b5e6ee8ad.patch")
 
 sha512sums=('196bc8bf18703c72bffb51a7e0493719c58173ad2da7d121eb42f9a8de47e953af36d109214dc4a10b2dc2d3bd19e844f7f51c2bdec087e064ea11f75124032d'
             '6457ce228e78e1d7f07eafec6f37484264004e53e170b357093d2a92c024588bc28a4c4664539e7ca42a6e6838f156ca7cb047f3b8c927228d6ead2a43786d2f'
@@ -42,7 +67,9 @@ sha512sums=('196bc8bf18703c72bffb51a7e0493719c58173ad2da7d121eb42f9a8de47e953af3
             '461231a756b6bc250fb973a5b4b6fbc0b2d6f8dae0dbc89a37bab17745dcfe38d9ae6cfe58bd4b9c4661e5f0024577ad9e4aa1d3c16169e7a83744da4b9068a5'
             'dfbef5ee06fd0f7b51bfd3571eb284272d7694754eaf232cf1a14f3b2f95a67c87098fabf6d88068ef7e235e717bec26024a3b342c5dba940b8600799cef0791'
             '8d232afccf84e24348c0e13d8eb34bcf670ca98a8e6a1e17cd4e861b8c036db1431ad8d8cb3942fb7645489d450dc2dbb91d54c18275796be26aae3ec53db557'
-            '9940448b4a83c9a837a916557b413b4523097554175420e554e039baa0395a387634bdf4486c212b930942a32e4f336b65e3d6624517b3e134b010a614fbcb41')
+            '9940448b4a83c9a837a916557b413b4523097554175420e554e039baa0395a387634bdf4486c212b930942a32e4f336b65e3d6624517b3e134b010a614fbcb41'
+            '1cdcff2b4ade4a227e55dce33457f6974cf1fd3352766d731b5e7a372239c211bd5c105e3fa46f48b6b2456d04471da9d1adfa12d99444802e4d06febbd4b38f'
+            'bba154e13463fb759e1cfd5f461b2b4e786ad8c6f4cacacbd918e911efc7d5a5368300676d6e6d8e9b7b2f4333314886bb1e34daac9f0c73c1c441baf7918063')
 validpgpkeys=(
   '7F3D64824AC0B6B8009E50504BC0896FB5693595' # Harald Hoyer <harald@redhat.com>
 )
