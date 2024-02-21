@@ -3,8 +3,9 @@
 # Contributor: SoulHarsh007 <admin@soulharsh007.dev>
 
 pkgname=dracut
-pkgver=059
-pkgrel=5.3
+_pkgname=dracut-canary
+pkgver=060
+pkgrel=0.1
 pkgdesc="An event driven initramfs infrastructure"
 arch=('x86_64')
 url="https://dracut.wiki.kernel.org"
@@ -41,7 +42,7 @@ optdepends=(
 )
 provides=('initramfs')
 backup=('etc/dracut.conf' 'etc/dracut-cachyos.conf')
-source=("https://github.com/dracutdevs/$pkgname/archive/$pkgver/$pkgname-$pkgver.tar.gz"
+source=("https://github.com/dracutdevs-extra/dracut-canary/archive/$pkgver/$pkgname-$pkgver.tar.gz"
   "dracut-rebuild"
   "dracut-install"
   "dracut-remove"
@@ -50,13 +51,9 @@ source=("https://github.com/dracutdevs/$pkgname/archive/$pkgver/$pkgname-$pkgver
   "dracut-cachyos.conf"
   "snapshot-overlay.sh"
   "module-setup.sh"
-  "dracut-systemd-253.patch"
-  "dracut-systemd-254-uki.patch::https://github.com/dracutdevs/dracut/commit/f32e95bcadbc5158843530407adc1e7b700561b1.patch"
-  "dracut-systemd-255-systemd-executor.patch::https://github.com/dracutdevs/dracut/pull/2535/commits/62fd8ebe4776dbb60ca04a865c2d160e45d65e91.patch"
-  "dracut-systemd-255-pcrphase.patch"
-  "dracut-systemd-255-hibernate-resume.patch::https://github.com/dracutdevs/dracut/pull/2527/commits/a2fe89116db4b286fbf515f26bd1773b5e6ee8ad.patch")
+  "dracut-systemd-255-pcrphase.patch")
 
-sha512sums=('196bc8bf18703c72bffb51a7e0493719c58173ad2da7d121eb42f9a8de47e953af36d109214dc4a10b2dc2d3bd19e844f7f51c2bdec087e064ea11f75124032d'
+sha512sums=('3a1df3ef830638fe118048b06f055332b3c51d32b6dffad7b90da674be5b646aa3161891115c92a711e05e32f99e6f682ac31eaddbeb537d9710c0729e0d2da1'
             '6457ce228e78e1d7f07eafec6f37484264004e53e170b357093d2a92c024588bc28a4c4664539e7ca42a6e6838f156ca7cb047f3b8c927228d6ead2a43786d2f'
             'f298693ee1a637329b1a38c746151c2ae8d2ae431f894c3001f55d812a2a20a68907ffa0b04ba748c18a2898cc30e0f49e75d0d13c7dd453129304f3cfd4621e'
             'd687dd7951ffabe696a2f6b5f27d8446173c61f5c744f447065045c702c24c0bd89eb610c6a3ec0f56c5afb8aeff2199a1c2bfd7926f0a5f817e0f53c3c92529'
@@ -65,17 +62,13 @@ sha512sums=('196bc8bf18703c72bffb51a7e0493719c58173ad2da7d121eb42f9a8de47e953af3
             '3fb23adbf462d655638a6a5a3083b464150b05b088e9139fceda500ba7560a29eb90d0e4dab896a257264fc6e72ec537a0519ad4e4e25e4c44b2dc3263cb5a52'
             'cd755060b6a2c534f8ee5ec9d1fff18ee71250db1ab4105fc9df4c28e1634fad031944b94790da8b29f296e013631bd61731423c1f847e95b1bd415a7a5ca4a5'
             '461231a756b6bc250fb973a5b4b6fbc0b2d6f8dae0dbc89a37bab17745dcfe38d9ae6cfe58bd4b9c4661e5f0024577ad9e4aa1d3c16169e7a83744da4b9068a5'
-            'dfbef5ee06fd0f7b51bfd3571eb284272d7694754eaf232cf1a14f3b2f95a67c87098fabf6d88068ef7e235e717bec26024a3b342c5dba940b8600799cef0791'
-            '8d232afccf84e24348c0e13d8eb34bcf670ca98a8e6a1e17cd4e861b8c036db1431ad8d8cb3942fb7645489d450dc2dbb91d54c18275796be26aae3ec53db557'
-            '9940448b4a83c9a837a916557b413b4523097554175420e554e039baa0395a387634bdf4486c212b930942a32e4f336b65e3d6624517b3e134b010a614fbcb41'
-            '1cdcff2b4ade4a227e55dce33457f6974cf1fd3352766d731b5e7a372239c211bd5c105e3fa46f48b6b2456d04471da9d1adfa12d99444802e4d06febbd4b38f'
-            'bba154e13463fb759e1cfd5f461b2b4e786ad8c6f4cacacbd918e911efc7d5a5368300676d6e6d8e9b7b2f4333314886bb1e34daac9f0c73c1c441baf7918063')
+            '947587274ac11d4186b28c3894298da615ca1f72e56ba8278fb647a0068f38e84bd68720015caba9881219605296a19633674217b3fe89b5ff699791938a0ab7')
 validpgpkeys=(
   '7F3D64824AC0B6B8009E50504BC0896FB5693595' # Harald Hoyer <harald@redhat.com>
 )
 
 prepare() {
-  cd "$srcdir/${pkgname}-${pkgver}"
+  cd "$srcdir/${_pkgname}-${pkgver}"
 
   local src
   for src in "${source[@]}"; do
@@ -90,7 +83,7 @@ prepare() {
 build() {
   local prefix=/usr sysconfdir=/etc
 
-  cd "$srcdir/${pkgname}-${pkgver}"
+  cd "$srcdir/${_pkgname}-${pkgver}"
 
   ./configure \
     --sysconfdir=${sysconfdir} \
@@ -102,7 +95,7 @@ build() {
 }
 
 package() {
-  cd "$srcdir/${pkgname}-${pkgver}"
+  cd "$srcdir/${_pkgname}-${pkgver}"
 
   DESTDIR="$pkgdir" make install
   install -Dm644 "${srcdir}/90-dracut-install.hook" "${pkgdir}/usr/share/libalpm/hooks/90-dracut-install.hook"
