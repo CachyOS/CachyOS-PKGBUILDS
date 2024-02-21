@@ -38,6 +38,47 @@ def run_speedometer(driver, version='2.0'):
 
     driver.save_screenshot(f"speedometer_{version}_b.png")
 
+# run https://browserbench.org/JetStream/
+def run_jetstream(driver):
+    base_url = 'https://browserbench.org/JetStream/'
+    driver.get(base_url)
+
+    driver.save_screenshot("jetstream_start.png")
+
+    start_button = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.CLASS_NAME, "button")))
+    start_button.click()
+
+    # Wait for the details button to be visible
+    details_button = WebDriverWait(driver, 60).until(EC.visibility_of_element_located((By.CLASS_NAME, "done")))
+    driver.save_screenshot(f"jetstream.png")
+
+# run https://browserbench.org/MotionMark1.3/
+def run_motionmark(driver):
+    base_url = 'https://browserbench.org/MotionMark1.3/'
+    driver.get(base_url)
+
+    driver.save_screenshot("motionmark_start.png")
+
+    # wait for text to appear
+    element = WebDriverWait(driver, 10).until(
+        EC.visibility_of_element_located((By.XPATH, "//*[contains(text(), 'Run Benchmark')]"))
+    )
+    element.click()
+
+    sleep(60)
+
+# https://web.basemark.com
+def run_basemark(driver):
+    base_url = 'https://web.basemark.com/run/'
+    driver.get(base_url)
+
+    driver.save_screenshot("basemark_start.png")
+
+    # wait for text to appear
+    start_button = WebDriverWait(driver, 15).until(EC.presence_of_element_located((By.CLASS_NAME, "btn")))
+    start_button.click()
+
+    sleep(60)
 
 def main():
     driver = setup_driver()
@@ -46,6 +87,12 @@ def main():
         run_speedometer(driver, '2.0')
         # Run Speedometer 2.1
         run_speedometer(driver, '2.1')
+        # Run JetStream
+        run_jetstream(driver)
+        # Run MotionMark
+        run_motionmark(driver)
+        # Run Basemark
+        run_basemark(driver)
     finally:
         driver.quit()
 
