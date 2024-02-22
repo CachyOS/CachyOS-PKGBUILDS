@@ -2,7 +2,7 @@
 
 pkgname=wayland-protocols
 pkgver=1.33
-pkgrel=2
+pkgrel=3
 pkgdesc='Specifications of extended Wayland protocols'
 arch=('any')
 url='https://wayland.freedesktop.org/'
@@ -10,11 +10,10 @@ license=('MIT')
 makedepends=('wayland' 'meson' 'ninja')
 validpgpkeys=('8307C0A224BABDA1BABD0EB9A6EEEC9E0136164A'  # Jonas Ådahl
               'A66D805F7C9329B4C5D82767CCC4F07FAC641EFF') # Daniel Stone
-source=("https://gitlab.freedesktop.org/wayland/$pkgname/-/releases/$pkgver/downloads/$pkgname-$pkgver.tar.xz"{,.sig}
+source=("https://gitlab.freedesktop.org/wayland/$pkgname/-/releases/$pkgver/downloads/$pkgname-$pkgver.tar.xz"
 		https://gitlab.freedesktop.org/wayland/wayland-protocols/-/merge_requests/90.patch)
 sha256sums=('94f0c50b090d6e61a03f62048467b19abbe851be4e11ae7b36f65f8b98c3963a'
-            'SKIP'
-            '1050a724b97b6b8d58004361ef02dd93456d2486f383b2c26cc898aaa507cbb0')
+            'ea03fb50b6c07d8fd94389eb7ba56804c0ecccf207391ec18759031f03fb2ec3')
 
 prepare() {
   cd $pkgname-$pkgver

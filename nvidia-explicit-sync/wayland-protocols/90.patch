@@ -1,4 +1,4 @@
-From 48d6bf23f4de780f6b96b13e13eafe94bdbed276 Mon Sep 17 00:00:00 2001
+From d0c6d0f479f3c6a8099a36ad138c087579d0391f Mon Sep 17 00:00:00 2001
 From: Simon Ser <contact@emersion.fr>
 Date: Wed, 12 May 2021 12:08:24 +0200
 Subject: [PATCH 1/2] linux-drm-syncobj-v1: new protocol
@@ -12,13 +12,13 @@ Signed-off-by: Simon Ser <contact@emersion.fr>
 ---
  meson.build                                   |   1 +
  staging/linux-drm-syncobj/README              |   4 +
- .../linux-drm-syncobj-v1.xml                  | 229 ++++++++++++++++++
- 3 files changed, 234 insertions(+)
+ .../linux-drm-syncobj-v1.xml                  | 251 ++++++++++++++++++
+ 3 files changed, 256 insertions(+)
  create mode 100644 staging/linux-drm-syncobj/README
  create mode 100644 staging/linux-drm-syncobj/linux-drm-syncobj-v1.xml
 
 diff --git a/meson.build b/meson.build
-index a477e098..1a0d05d6 100644
+index 8f5fac26..df2e5cc6 100644
 --- a/meson.build
 +++ b/meson.build
 @@ -44,6 +44,7 @@ staging_protocols = {
@@ -41,10 +41,10 @@ index 00000000..a380b314
 +Simon Ser <contact@emersion.fr>
 diff --git a/staging/linux-drm-syncobj/linux-drm-syncobj-v1.xml b/staging/linux-drm-syncobj/linux-drm-syncobj-v1.xml
 new file mode 100644
-index 00000000..810c98b4
+index 00000000..4690d65f
 --- /dev/null
 +++ b/staging/linux-drm-syncobj/linux-drm-syncobj-v1.xml
-@@ -0,0 +1,229 @@
+@@ -0,0 +1,251 @@
 +<?xml version="1.0" encoding="UTF-8"?>
 +<protocol name="linux_drm_syncobj_v1">
 +  <copyright>
@@ -193,7 +193,7 @@ index 00000000..810c98b4
 +        Destroy this surface synchronization object.
 +
 +        Any timeline point set by this object with set_acquire_point or
-+        set_release_point since the last commit will be discarded by the
++        set_release_point since the last commit may be discarded by the
 +        compositor. Any timeline point set by this object before the last
 +        commit will not be affected.
 +      </description>
@@ -205,6 +205,12 @@ index 00000000..810c98b4
 +      <entry name="unsupported_buffer" value="2"
 +        summary="the buffer does not support explicit synchronization"/>
 +      <entry name="no_buffer" value="3" summary="no buffer was attached"/>
++      <entry name="conflicting_points" value="4"
++        summary="acquire and release timeline points are in conflict"/>
++      <entry name="no_acquire_point" value="5"
++        summary="no acquire timeline point was set"/>
++      <entry name="no_release_point" value="6"
++        summary="no acquire timeline point was set"/>
 +    </enum>
 +
 +    <request name="set_acquire_point">
@@ -229,7 +235,15 @@ index 00000000..810c98b4
 +        If at surface commit time the attached buffer does not support explicit
 +        synchronization, an unsupported_buffer error is raised.
 +
-+        If at surface commit time there is no buffer attached, a no_buffer
++        If at surface commit time there is a pending acquire timeline point set
++        but no pending buffer attached, a no_buffer error is raised. If at
++        surface commit time there is a pending buffer attached but no pending
++        acquire timeline point set, the no_acquire_point protocol error is
++        raised.
++
++        The acquire timeline point set in a commit must be different from the
++        release timeline point. If at surface commit time, both the DRM syncobj
++        and the point value are identical, the conflicting_points protocol
 +        error is raised.
 +      </description>
 +      <arg name="timeline" type="object" interface="wp_linux_drm_syncobj_timeline_v1"/>
@@ -265,7 +279,15 @@ index 00000000..810c98b4
 +        If at surface commit time the attached buffer does not support explicit
 +        synchronization, an unsupported_buffer error is raised.
 +
-+        If at surface commit time there is no buffer attached, a no_buffer
++        If at surface commit time there is a pending release timeline point set
++        but no pending buffer attached, a no_buffer error is raised. If at
++        surface commit time there is a pending buffer attached but no pending
++        release timeline point set, the no_release_point protocol error is
++        raised.
++
++        The release timeline point set in a commit must be different from the
++        acquire timeline point. If at surface commit time, both the DRM syncobj
++        and the point value are identical, the conflicting_points protocol
 +        error is raised.
 +      </description>
 +      <arg name="timeline" type="object" interface="wp_linux_drm_syncobj_timeline_v1"/>
@@ -278,7 +300,7 @@ index 00000000..810c98b4
 GitLab
 
 
-From dd5f95cf2951d46c3189a8a9612b4f6cbc51ed0e Mon Sep 17 00:00:00 2001
+From d1345cfcbfd72573ccd7305fd9bc3b7b53f59041 Mon Sep 17 00:00:00 2001
 From: Simon Ser <contact@emersion.fr>
 Date: Mon, 16 Oct 2023 10:47:28 +0200
 Subject: [PATCH 2/2] linux-explicit-synchronization-v1: add linux-drm-syncobj
