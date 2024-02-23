@@ -3,11 +3,9 @@
 while read -r line; do
 	if [[ "${line}" == */pkgbase ]]; then
 	    pkgbase="$(<"/${line}")"
-	    kver="$(echo ${line} | cut -d/ -f4)"
 
 # List of files to remove
 files_to_remove=(
-	"/usr/lib/modules/${kver}"
 	"/boot/vmlinuz-${pkgbase}"
 	"/boot/initramfs-${pkgbase}.img"
 	"/boot/initramfs-${pkgbase}-fallback.img"
