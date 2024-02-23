@@ -1,4 +1,4 @@
-From ba39127e68299fb9ccfcad5f5cb8531011fa10a9 Mon Sep 17 00:00:00 2001
+From 7a996ad2eadf6f4748e9902d85a1fe428fcc3fef Mon Sep 17 00:00:00 2001
 From: Austin Shafer <ashafer@badland.io>
 Date: Wed, 21 Feb 2024 10:46:02 -0500
 Subject: [PATCH] egl-wayland: implement linux-drm-syncobj-v1
@@ -25,21 +25,71 @@ Separate timelines are used for the acquire and release points. Each
 stream image will have its own timeline, otherwise our signaling of
 acquire points would implicitly signal the still-pending release points.
 ---
- include/wayland-egldisplay.h          |   4 +
+ Makefile.am                           |  14 +
+ include/wayland-egldisplay.h          |   7 +
  include/wayland-eglhandle.h           |   2 +
- include/wayland-eglsurface-internal.h |  20 +
+ include/wayland-eglsurface-internal.h |  18 +
  src/meson.build                       |   4 +
- src/wayland-egldisplay.c              |  23 ++
+ src/wayland-egldisplay.c              |  31 +-
  src/wayland-eglhandle.c               |   2 +
- src/wayland-eglsurface.c              | 514 ++++++++++++++++++++++++--
+ src/wayland-eglsurface.c              | 477 ++++++++++++++++++++++++--
  src/wayland-eglswap.c                 |   1 +
- 8 files changed, 535 insertions(+), 35 deletions(-)
+ 9 files changed, 527 insertions(+), 29 deletions(-)
 
+diff --git a/Makefile.am b/Makefile.am
+index 4d86f75..66cc8d2 100644
+--- a/Makefile.am
++++ b/Makefile.am
+@@ -80,6 +80,12 @@ libnvidia_egl_wayland_la_dmabuf_built_client_headers =        \
+ libnvidia_egl_wayland_la_dmabuf_built_private_protocols =     \
+     linux-dmabuf-unstable-v1-protocol.c
+ 
++libnvidia_egl_wayland_la_drm_syncobj_built_client_headers =       \
++    linux-drm-syncobj-v1-client-protocol.h
++
++libnvidia_egl_wayland_la_drm_syncobj_built_private_protocols =    \
++    linux-drm-syncobj-v1-protocol.c
++
+ libnvidia_egl_wayland_la_presentation_time_built_client_headers = \
+     presentation-time-client-protocol.h
+ 
+@@ -93,6 +99,8 @@ libnvidia_egl_wayland_la_built_sources =                               \
+     $(libnvidia_egl_wayland_la_built_server_headers)                   \
+     $(libnvidia_egl_wayland_la_dmabuf_built_client_headers)            \
+     $(libnvidia_egl_wayland_la_dmabuf_built_private_protocols)         \
++    $(libnvidia_egl_wayland_la_drm_syncobj_built_client_headers)       \
++    $(libnvidia_egl_wayland_la_drm_syncobj_built_private_protocols)    \
+     $(libnvidia_egl_wayland_la_presentation_time_built_client_headers) \
+     $(libnvidia_egl_wayland_la_presentation_time_private_protocols)
+ 
+@@ -129,6 +137,12 @@ $(libnvidia_egl_wayland_la_dmabuf_built_private_protocols):%-protocol.c : $(WAYL
+ $(libnvidia_egl_wayland_la_dmabuf_built_client_headers):%-client-protocol.h : $(WAYLAND_PROTOCOLS_DATADIR)/unstable/linux-dmabuf/%.xml
+ 	$(AM_V_GEN)$(WAYLAND_SCANNER) client-header < $< > $@
+ 
++$(libnvidia_egl_wayland_la_drm_syncobj_built_private_protocols):%-protocol.c : $(WAYLAND_PROTOCOLS_DATADIR)/staging/linux-drm-syncobj/%.xml
++	$(AM_V_GEN)$(WAYLAND_SCANNER) $(WAYLAND_PRIVATE_CODEGEN) < $< > $@
++
++$(libnvidia_egl_wayland_la_drm_syncobj_built_client_headers):%-client-protocol.h : $(WAYLAND_PROTOCOLS_DATADIR)/staging/linux-drm-syncobj/%.xml
++	$(AM_V_GEN)$(WAYLAND_SCANNER) client-header < $< > $@
++
+ $(libnvidia_egl_wayland_la_presentation_time_private_protocols):%-protocol.c : $(WAYLAND_PROTOCOLS_DATADIR)/stable/presentation-time/%.xml
+ 	$(AM_V_GEN)$(WAYLAND_SCANNER) $(WAYLAND_PRIVATE_CODEGEN) < $< > $@
+ 
 diff --git a/include/wayland-egldisplay.h b/include/wayland-egldisplay.h
-index e038668..8e02ed0 100644
+index e038668..29318e3 100644
 --- a/include/wayland-egldisplay.h
 +++ b/include/wayland-egldisplay.h
-@@ -128,6 +128,7 @@ typedef struct WlEglDisplayRec {
+@@ -121,6 +121,9 @@ typedef struct WlEglDmaBufFeedbackRec {
+ typedef struct WlEglDisplayRec {
+     WlEglDeviceDpy *devDpy;
+ 
++    /* Supports EGL_ANDROID_native_fence_sync */
++    int supports_native_fence_sync;
++
+     EGLBoolean         ownNativeDpy;
+     struct wl_display *nativeDpy;
+ 
+@@ -128,6 +131,7 @@ typedef struct WlEglDisplayRec {
      struct wl_eglstream_display    *wlStreamDpy;
      struct wl_eglstream_controller *wlStreamCtl;
      struct zwp_linux_dmabuf_v1     *wlDmaBuf;
@@ -47,7 +97,7 @@ index e038668..8e02ed0 100644
      unsigned int                    wlStreamCtlVer;
      struct wp_presentation         *wpPresentation;
      struct wl_event_queue          *wlEventQueue;
-@@ -139,6 +140,9 @@ typedef struct WlEglDisplayRec {
+@@ -139,6 +143,9 @@ typedef struct WlEglDisplayRec {
  
      WlEglPlatformData *data;
  
@@ -72,16 +122,15 @@ index bd8abaf..9e694f9 100644
          /* Used for dma-buf surfaces */
          PFNEGLSTREAMIMAGECONSUMERCONNECTNVPROC      streamImageConsumerConnect;
 diff --git a/include/wayland-eglsurface-internal.h b/include/wayland-eglsurface-internal.h
-index 3af8829..ee6edae 100644
+index 3af8829..33ccb26 100644
 --- a/include/wayland-eglsurface-internal.h
 +++ b/include/wayland-eglsurface-internal.h
-@@ -51,6 +51,15 @@ typedef struct WlEglStreamImageRec {
+@@ -51,6 +51,14 @@ typedef struct WlEglStreamImageRec {
      struct wl_buffer       *buffer;
      EGLBoolean              attached;
      struct wl_list          acquiredLink;
 +
 +    struct wp_linux_drm_syncobj_timeline_v1 *wlReleaseTimeline;
-+    int                     drmSyncobjFd;
 +    uint32_t                drmSyncobjHandle;
 +    int                     releasePending;
 +    /* Latest release point the compositor will signal with explicit sync */
@@ -91,7 +140,7 @@ index 3af8829..ee6edae 100644
  } WlEglStreamImage;
  
  typedef struct WlEglSurfaceCtxRec {
-@@ -151,6 +160,14 @@ struct WlEglSurfaceRec {
+@@ -151,6 +159,13 @@ struct WlEglSurfaceRec {
      EGLBoolean isResized;
  
      WlEglDmaBufFeedback feedback;
@@ -99,14 +148,13 @@ index 3af8829..ee6edae 100644
 +    /* per-surface Explicit Sync objects */
 +    struct wp_linux_drm_syncobj_surface_v1 *wlSyncobjSurf;
 +    struct wp_linux_drm_syncobj_timeline_v1 *wlAcquireTimeline;
-+    int drmSyncobjFd;
 +    uint32_t drmSyncobjHandle;
 +    /* Last acquire point used. This starts at 1, zero means invalid.  */
 +    uint64_t syncPoint;
  };
  
  void wlEglReallocSurface(WlEglDisplay *display,
-@@ -185,6 +202,9 @@ EGLBoolean wlEglQueryNativeResourceHook(EGLDisplay dpy,
+@@ -185,6 +200,9 @@ EGLBoolean wlEglQueryNativeResourceHook(EGLDisplay dpy,
                                          EGLint attribute,
                                          int *value);
  
@@ -139,7 +187,7 @@ index 56d075b..5a5e4e0 100644
      src,
      dependencies : [
 diff --git a/src/wayland-egldisplay.c b/src/wayland-egldisplay.c
-index a72c3f4..72bbddc 100644
+index a72c3f4..c3f28cf 100644
 --- a/src/wayland-egldisplay.c
 +++ b/src/wayland-egldisplay.c
 @@ -32,6 +32,7 @@
@@ -150,11 +198,12 @@ index a72c3f4..72bbddc 100644
  #include <string.h>
  #include <stdlib.h>
  #include <assert.h>
-@@ -454,6 +455,11 @@ registry_handle_global(void *data,
+@@ -454,6 +455,12 @@ registry_handle_global(void *data,
                                                     name,
                                                     &wp_presentation_interface,
                                                     version);
-+    } else if (strcmp(interface, "wp_linux_drm_syncobj_manager_v1") == 0) {
++    } else if (strcmp(interface, "wp_linux_drm_syncobj_manager_v1") == 0 &&
++               display->supports_native_fence_sync) {
 +        display->wlDrmSyncobj = wl_registry_bind(registry,
 +                                                 name,
 +                                                 &wp_linux_drm_syncobj_manager_v1_interface,
@@ -162,7 +211,7 @@ index a72c3f4..72bbddc 100644
      }
  }
  
-@@ -738,6 +744,10 @@ static EGLBoolean terminateDisplay(WlEglDisplay *display, EGLBoolean globalTeard
+@@ -738,6 +745,10 @@ static EGLBoolean terminateDisplay(WlEglDisplay *display, EGLBoolean globalTeard
              wp_presentation_destroy(display->wpPresentation);
              display->wpPresentation = NULL;
          }
@@ -173,7 +222,7 @@ index a72c3f4..72bbddc 100644
          if (display->wlDmaBuf) {
              zwp_linux_dmabuf_v1_destroy(display->wlDmaBuf);
              display->wlDmaBuf = NULL;
-@@ -926,6 +936,7 @@ EGLDisplay wlEglGetPlatformDisplayExport(void *data,
+@@ -926,6 +937,7 @@ EGLDisplay wlEglGetPlatformDisplayExport(void *data,
      EGLDeviceEXT requestedDevice = EGL_NO_DEVICE_EXT;
      EGLBoolean usePrimeRenderOffload = EGL_FALSE;
      EGLBoolean isServerNV;
@@ -181,6 +230,14 @@ index a72c3f4..72bbddc 100644
  
      if (platform != EGL_PLATFORM_WAYLAND_EXT) {
          wlEglSetError(data, EGL_BAD_PARAMETER);
+@@ -1156,7 +1168,6 @@ EGLDisplay wlEglGetPlatformDisplayExport(void *data,
+         display->primeRenderOffload = EGL_TRUE;
+     }
+ 
+-
+     display->devDpy = wlGetInternalDisplay(pData, eglDevice);
+     if (display->devDpy == NULL) {
+         goto fail;
 @@ -1168,6 +1179,17 @@ EGLDisplay wlEglGetPlatformDisplayExport(void *data,
      display->refCount = 1;
      WL_LIST_INIT(&display->wlEglSurfaceList);
@@ -192,14 +249,34 @@ index a72c3f4..72bbddc 100644
 +        goto fail;
 +    }
 +
-+    display->drmFd = open(drmName, O_RDWR);
++    display->drmFd = open(drmName, O_RDWR | O_CLOEXEC);
 +    if (display->drmFd < 0) {
 +        goto fail;
 +    }
  
      // The newly created WlEglDisplay has been set up properly, insert it
      // in wlEglDisplayList.
-@@ -1353,6 +1375,7 @@ WlEglDisplay *wlEglAcquireDisplay(EGLDisplay dpy) {
+@@ -1205,6 +1227,7 @@ EGLBoolean wlEglInitializeHook(EGLDisplay dpy, EGLint *major, EGLint *minor)
+     struct wl_display *wrapper = NULL;
+     EGLint             err     = EGL_SUCCESS;
+     int                ret     = 0;
++    const char *dev_exts = NULL;
+ 
+     if (!display) {
+         return EGL_FALSE;
+@@ -1235,6 +1258,11 @@ EGLBoolean wlEglInitializeHook(EGLDisplay dpy, EGLint *major, EGLint *minor)
+         return EGL_FALSE;
+     }
+ 
++    dev_exts = display->data->egl.queryString(display->devDpy->eglDisplay, EGL_EXTENSIONS);
++    if (dev_exts && wlEglFindExtension("EGL_ANDROID_native_fence_sync", dev_exts)) {
++        display->supports_native_fence_sync = true;
++    }
++
+     // Set the initCount to 1. If something goes wrong, then terminateDisplay
+     // will clean up and set it back to zero.
+     display->initCount = 1;
+@@ -1353,6 +1381,7 @@ WlEglDisplay *wlEglAcquireDisplay(EGLDisplay dpy) {
  static void wlEglUnrefDisplay(WlEglDisplay *display) {
      if (--display->refCount == 0) {
          wlEglMutexDestroy(&display->mutex);
@@ -221,7 +298,7 @@ index e0080f1..df01d6e 100644
      /* Stream flush */
      GET_PROC(streamFlush,                 eglStreamFlushNV);
 diff --git a/src/wayland-eglsurface.c b/src/wayland-eglsurface.c
-index 98f38cf..cf91815 100644
+index 98f38cf..0c28a4f 100644
 --- a/src/wayland-eglsurface.c
 +++ b/src/wayland-eglsurface.c
 @@ -24,6 +24,7 @@
@@ -241,7 +318,7 @@ index 98f38cf..cf91815 100644
  
  #define WL_EGL_WINDOW_DESTROY_CALLBACK_SINCE 3
  
-@@ -154,10 +157,108 @@ EGLint wlEglWaitFrameSync(WlEglSurface *surface)
+@@ -154,6 +157,89 @@ EGLint wlEglWaitFrameSync(WlEglSurface *surface)
      return EGL_SUCCESS;
  }
  
@@ -280,8 +357,6 @@ index 98f38cf..cf91815 100644
 +{
 +    WlEglPlatformData  *data        = display->data;
 +    EGLDisplay          dpy         = display->devDpy->eglDisplay;
-+    struct wp_linux_drm_syncobj_surface_v1 *syncobj_wrapper = NULL;
-+    struct wp_linux_drm_syncobj_timeline_v1 *acquire_timeline, *release_timeline;
 +    int                 syncFd, err;
 +    uint64_t            acquireSyncPoint;
 +
@@ -316,27 +391,16 @@ index 98f38cf..cf91815 100644
 +    /* --------------- Send sync points -------------- */
 +
 +    /* Now notify the compositor of our next acquire point */
-+    syncobj_wrapper = wl_proxy_create_wrapper(surface->wlSyncobjSurf);
-+    wl_proxy_set_queue((struct wl_proxy *)syncobj_wrapper, surface->wlEventQueue);
-+    acquire_timeline = wl_proxy_create_wrapper(surface->wlAcquireTimeline);
-+    wl_proxy_set_queue((struct wl_proxy *)acquire_timeline, surface->wlEventQueue);
-+    release_timeline = wl_proxy_create_wrapper(image->wlReleaseTimeline);
-+    wl_proxy_set_queue((struct wl_proxy *)release_timeline, surface->wlEventQueue);
-+
-+    wp_linux_drm_syncobj_surface_v1_set_acquire_point(syncobj_wrapper,
-+                                                      acquire_timeline,
++    wp_linux_drm_syncobj_surface_v1_set_acquire_point(surface->wlSyncobjSurf,
++                                                      surface->wlAcquireTimeline,
 +                                                      acquireSyncPoint >> 32,
 +                                                      acquireSyncPoint & 0xffffffff);
 +
 +    /* Now notify the compositor of our next release point */
-+    wp_linux_drm_syncobj_surface_v1_set_release_point(syncobj_wrapper,
-+                                                      release_timeline,
++    wp_linux_drm_syncobj_surface_v1_set_release_point(surface->wlSyncobjSurf,
++                                                      image->wlReleaseTimeline,
 +                                                      image->releasePoint >> 32,
 +                                                      image->releasePoint & 0xffffffff);
-+
-+    wl_proxy_wrapper_destroy(syncobj_wrapper);
-+    wl_proxy_wrapper_destroy(acquire_timeline);
-+    wl_proxy_wrapper_destroy(release_timeline);
 +
 +    return true;
 +}
@@ -344,28 +408,7 @@ index 98f38cf..cf91815 100644
  EGLBoolean
  wlEglSendDamageEvent(WlEglSurface *surface, struct wl_event_queue *queue)
  {
-     struct wl_display *wlDpy = surface->wlEglDpy->nativeDpy;
-+    struct wl_surface *wrapper = wl_proxy_create_wrapper(surface->wlSurface);
-+    wl_proxy_set_queue((struct wl_proxy *)wrapper, queue);
- 
-     if (surface->ctx.wlStreamResource) {
-         /* Attach same buffer to indicate new content for the surface is
-@@ -168,8 +269,8 @@ wlEglSendDamageEvent(WlEglSurface *surface, struct wl_event_queue *queue)
-                           surface->dy);
-     } else {
-         WlEglStreamImage *image;
--
-         if (wlEglHandleImageStreamEvents(surface) != EGL_SUCCESS) {
-+            wl_proxy_wrapper_destroy(wrapper);
-             return EGL_FALSE;
-         }
- 
-@@ -179,17 +280,29 @@ wlEglSendDamageEvent(WlEglSurface *surface, struct wl_event_queue *queue)
-             image->attached = EGL_TRUE;
-         }
- 
--        wl_surface_attach(surface->wlSurface,
-+        wl_surface_attach(wrapper,
+@@ -183,6 +269,15 @@ wlEglSendDamageEvent(WlEglSurface *surface, struct wl_event_queue *queue)
                            surface->ctx.currentBuffer,
                            surface->dx,
                            surface->dy);
@@ -376,24 +419,12 @@ index 98f38cf..cf91815 100644
 +         * points without attaching a buffer in the same commit.
 +         */
 +        if (!send_explicit_sync_points(surface->wlEglDpy, surface, image)) {
-+            wl_proxy_wrapper_destroy(wrapper);
 +            return EGL_FALSE;
 +        }
      }
  
--    wl_surface_damage(surface->wlSurface, 0, 0,
-+    wl_surface_damage(wrapper, 0, 0,
-                       surface->width, surface->height);
--    wl_surface_commit(surface->wlSurface);
-+    wl_surface_commit(wrapper);
-     surface->ctx.isAttached = EGL_TRUE;
- 
-+    wl_proxy_wrapper_destroy(wrapper);
-+
-     return (wl_display_roundtrip_queue(wlDpy,
-                                        queue) >= 0) ? EGL_TRUE : EGL_FALSE;
- }
-@@ -473,6 +586,7 @@ destroy_stream_image(WlEglDisplay *display,
+     wl_surface_damage(surface->wlSurface, 0, 0,
+@@ -473,6 +568,7 @@ destroy_stream_image(WlEglDisplay *display,
      assert(image->eglImage != EGL_NO_IMAGE_KHR);
      data->egl.destroyImage(dpy, image->eglImage);
      image->eglImage = EGL_NO_IMAGE_KHR;
@@ -401,7 +432,7 @@ index 98f38cf..cf91815 100644
  
      if (surface->ctx.currentBuffer == image->buffer) {
          surface->ctx.currentBuffer = NULL;
-@@ -487,6 +601,17 @@ destroy_stream_image(WlEglDisplay *display,
+@@ -487,6 +583,16 @@ destroy_stream_image(WlEglDisplay *display,
          wl_list_remove(&image->acquiredLink);
          wl_list_init(&image->acquiredLink);
      }
@@ -413,37 +444,27 @@ index 98f38cf..cf91815 100644
 +            data->egl.destroySync(dpy, image->acquireSync);
 +            image->acquireSync = EGL_NO_SYNC_KHR;
 +        }
-+        close(surface->drmSyncobjFd);
 +        image->releasePending = false;
 +    }
  }
  
  static void
-@@ -938,10 +1063,19 @@ stream_local_buffer_release_callback(void *ptr, struct wl_buffer *buffer)
+@@ -938,6 +1044,14 @@ stream_local_buffer_release_callback(void *ptr, struct wl_buffer *buffer)
      image->attached = EGL_FALSE;
  
      if (image->eglImage != EGL_NO_IMAGE_KHR) {
--        data->egl.streamReleaseImage(display->devDpy->eglDisplay,
--                                     surface->ctx.eglStream,
--                                     image->eglImage,
--                                     EGL_NO_SYNC_KHR);
 +        /*
 +         * Release our image back to the stream if explicit sync is not in use
 +         *
 +         * If explicit sync was used, then wl_buffer.release means nothing. We
 +         * will instead have already marked this image for release contingent
-+         * on the release sync getting signaled.
++         * on the release sync getting signaled. This callback doesn't even fire
++         * in that scenario.
 +         */
-+        if (!surface->wlSyncobjSurf) {
-+            data->egl.streamReleaseImage(display->devDpy->eglDisplay,
-+                                         surface->ctx.eglStream,
-+                                         image->eglImage,
-+                                         EGL_NO_SYNC_KHR);
-+        }
-     } else if (image->buffer) {
-         /*
-          * If the image has been destroyed while the buffer was attached
-@@ -958,6 +1092,174 @@ static const struct wl_buffer_listener stream_local_buffer_listener = {
+         data->egl.streamReleaseImage(display->devDpy->eglDisplay,
+                                      surface->ctx.eglStream,
+                                      image->eglImage,
+@@ -958,6 +1072,173 @@ static const struct wl_buffer_listener stream_local_buffer_listener = {
      stream_local_buffer_release_callback,
  };
  
@@ -550,7 +571,7 @@ index 98f38cf..cf91815 100644
 +    }
 +
 +    /*
-+     * Wait for at least on release point to have a fence. We need to block here
++     * Wait for at least one release point to have a fence. We need to block here
 +     * since the streams internal code expects to have at least one buffer placed
 +     * back on the release (internally called returns) queue.
 +     *
@@ -564,14 +585,13 @@ index 98f38cf..cf91815 100644
 +    /*
 +     * The Linux docs say that DRM_SYNCOBJ_WAIT_FLAGS_WAIT_AVAILABLE should be
 +     * used to wait for a fence to appear without waiting on the fence itself.
-+     * Note that there are some bugs with certain kernels where this may not
++     * Note that there are some bugs with older kernels where this may not
 +     * signal correctly.
 +     */
 +    if (drmSyncobjTimelineWait(display->drmFd, syncobjs, syncPoints,
 +                               surface->ctx.numStreamImages, timeout,
-+                               DRM_SYNCOBJ_WAIT_FLAGS_WAIT_FOR_SUBMIT,
++                               DRM_SYNCOBJ_WAIT_FLAGS_WAIT_AVAILABLE,
 +                               &firstSignaled) != 0) {
-+        printf("wlEglSurfaceCheckReleasePoints: drmSyncobjTimelineWait failed with errno %d\n", errno);
 +        goto end;
 +    }
 +
@@ -618,7 +638,7 @@ index 98f38cf..cf91815 100644
  static EGLint
  acquire_surface_image(WlEglDisplay *display, WlEglSurface *surface)
  {
-@@ -974,12 +1276,33 @@ acquire_surface_image(WlEglDisplay *display, WlEglSurface *surface)
+@@ -974,12 +1255,33 @@ acquire_surface_image(WlEglDisplay *display, WlEglSurface *surface)
      EGLint              offset;
      uint32_t            i;
      int                 fd;
@@ -654,7 +674,7 @@ index 98f38cf..cf91815 100644
      }
  
      for (i = 0; i < surface->ctx.numStreamImages; i++) {
-@@ -990,11 +1313,13 @@ acquire_surface_image(WlEglDisplay *display, WlEglSurface *surface)
+@@ -990,11 +1292,13 @@ acquire_surface_image(WlEglDisplay *display, WlEglSurface *surface)
      }
  
      if (!image) {
@@ -669,7 +689,17 @@ index 98f38cf..cf91815 100644
      if (!image->buffer) {
          if (!data->egl.exportDMABUFImageQuery(dpy,
                                                eglImage,
-@@ -1081,12 +1406,23 @@ acquire_surface_image(WlEglDisplay *display, WlEglSurface *surface)
+@@ -1058,7 +1362,8 @@ acquire_surface_image(WlEglDisplay *display, WlEglSurface *surface)
+             goto fail_release;
+         }
+ 
+-        if (wl_buffer_add_listener(image->buffer,
++        if (!surface->wlSyncobjSurf &&
++            wl_buffer_add_listener(image->buffer,
+                                    &stream_local_buffer_listener,
+                                    image) == -1) {
+             wl_buffer_destroy(image->buffer);
+@@ -1081,12 +1386,23 @@ acquire_surface_image(WlEglDisplay *display, WlEglSurface *surface)
                                   eglImage,
                                   EGL_NO_SYNC_KHR);
  
@@ -693,9 +723,27 @@ index 98f38cf..cf91815 100644
  }
  
  static void
-@@ -1126,33 +1462,86 @@ pop_acquired_image(WlEglSurface *surface)
+@@ -1125,34 +1441,94 @@ pop_acquired_image(WlEglSurface *surface)
+     return NULL;
  }
  
++static int
++create_syncobj_timeline(WlEglDisplay *display, uint32_t *drmSyncobjHandleOut)
++{
++    int ret;
++
++    /* Create a DRM timeline and share it with the compositor */
++    if (drmSyncobjCreate(display->drmFd, 0, drmSyncobjHandleOut)) {
++        return -1;
++    }
++
++    if (drmSyncobjHandleToFD(display->drmFd, *drmSyncobjHandleOut, &ret)) {
++        return -1;
++    }
++
++    return ret;
++}
++
  static EGLint
 -add_surface_image(WlEglDisplay *display, WlEglSurface *surface)
 +init_surface_image(WlEglDisplay *display, WlEglSurface *surface,
@@ -703,6 +751,7 @@ index 98f38cf..cf91815 100644
  {
      WlEglPlatformData   *data     = display->data;
      EGLDisplay           dpy      = display->devDpy->eglDisplay;
++    int                  drmSyncobjFd = -1;
 +
 +    image->eglImage = data->egl.createImage(dpy, EGL_NO_CONTEXT,
 +                                            EGL_STREAM_CONSUMER_IMAGE_NV,
@@ -720,31 +769,20 @@ index 98f38cf..cf91815 100644
 +     * pending release points.
 +     */
 +    if (surface->wlSyncobjSurf) {
-+        struct wp_linux_drm_syncobj_manager_v1 *wrapper;
-+
-+        /* Create a DRM timeline and share it with the compositor */
-+        if (drmSyncobjCreate(display->drmFd, 0, &image->drmSyncobjHandle)) {
-+            goto fail;
-+        }
-+
-+        if (drmSyncobjHandleToFD(display->drmFd, image->drmSyncobjHandle,
-+                                 &image->drmSyncobjFd)) {
++        drmSyncobjFd = create_syncobj_timeline(display, &image->drmSyncobjHandle);
++        if (drmSyncobjFd < 0) {
 +            goto fail;
 +        }
 +        image->acquireSync = EGL_NO_SYNC_KHR;
 +
 +        /* Get a DRM timeline wl object */
-+        wrapper = wl_proxy_create_wrapper(display->wlDrmSyncobj);
-+        wl_proxy_set_queue((struct wl_proxy *)wrapper, surface->wlEventQueue);
-+
 +        image->wlReleaseTimeline =
-+            wp_linux_drm_syncobj_manager_v1_import_timeline(wrapper, image->drmSyncobjFd);
-+
-+        wl_proxy_wrapper_destroy(wrapper);
-+
++            wp_linux_drm_syncobj_manager_v1_import_timeline(display->wlDrmSyncobj, drmSyncobjFd);
 +        if (!image->wlReleaseTimeline) {
 +            goto fail;
 +        }
++
++        close(drmSyncobjFd);
 +    }
 +
 +    return EGL_SUCCESS;
@@ -754,8 +792,8 @@ index 98f38cf..cf91815 100644
 +        drmSyncobjDestroy(display->drmFd, image->drmSyncobjHandle);
 +    }
 +
-+    if (image->drmSyncobjFd > 0) {
-+        close(image->drmSyncobjFd);
++    if (drmSyncobjFd > 0) {
++        close(drmSyncobjFd);
 +    }
 +
 +    data->egl.destroyImage(dpy, image->eglImage);
@@ -794,7 +832,7 @@ index 98f38cf..cf91815 100644
          }
          pthread_mutex_unlock(&image->mutex);
      }
-@@ -1187,14 +1576,8 @@ add_surface_image(WlEglDisplay *display, WlEglSurface *surface)
+@@ -1187,14 +1563,8 @@ add_surface_image(WlEglDisplay *display, WlEglSurface *surface)
      }
  
      wl_list_init(&newImages[i]->acquiredLink);
@@ -811,7 +849,7 @@ index 98f38cf..cf91815 100644
          wlEglMutexDestroy(&newImages[i]->mutex);
          goto free_image;
      }
-@@ -1218,6 +1601,7 @@ EGLint wlEglHandleImageStreamEvents(WlEglSurface *surface)
+@@ -1218,6 +1588,7 @@ EGLint wlEglHandleImageStreamEvents(WlEglSurface *surface)
      EGLAttrib             aux;
      EGLenum               event;
      EGLint                err = EGL_SUCCESS;
@@ -819,7 +857,7 @@ index 98f38cf..cf91815 100644
  
      if (surface->ctx.wlStreamResource) {
          /* Not a local stream */
-@@ -1225,9 +1609,14 @@ EGLint wlEglHandleImageStreamEvents(WlEglSurface *surface)
+@@ -1225,9 +1596,14 @@ EGLint wlEglHandleImageStreamEvents(WlEglSurface *surface)
      }
  
      while (1) {
@@ -835,7 +873,7 @@ index 98f38cf..cf91815 100644
                                                   &event,
                                                   &aux);
  
-@@ -1247,6 +1636,8 @@ EGLint wlEglHandleImageStreamEvents(WlEglSurface *surface)
+@@ -1247,6 +1623,8 @@ EGLint wlEglHandleImageStreamEvents(WlEglSurface *surface)
          switch (event) {
          case EGL_STREAM_IMAGE_AVAILABLE_NV:
              err = acquire_surface_image(display, surface);
@@ -844,7 +882,7 @@ index 98f38cf..cf91815 100644
              break;
          case EGL_STREAM_IMAGE_ADD_NV:
              err = add_surface_image(display, surface);
-@@ -1457,7 +1848,12 @@ static EGLint create_surface_stream_local(WlEglSurface *surface)
+@@ -1457,7 +1835,12 @@ static EGLint create_surface_stream_local(WlEglSurface *surface)
  
      wl_list_init(&surface->ctx.acquiredImages);
  
@@ -858,7 +896,7 @@ index 98f38cf..cf91815 100644
          /*
           * Local stream contexts need a private wayland queue used by a separate
           * thread that can process buffer release events even the application
-@@ -1651,6 +2047,7 @@ create_surface_context(WlEglSurface *surface)
+@@ -1651,6 +2034,7 @@ create_surface_context(WlEglSurface *surface)
  
      /* Check whether we should use a damage thread */
      surface->ctx.useDamageThread =
@@ -866,7 +904,7 @@ index 98f38cf..cf91815 100644
                      display->devDpy->exts.stream_fifo_synchronous &&
                      display->devDpy->exts.stream_sync &&
                      data->egl.queryStream(display->devDpy->eglDisplay,
-@@ -2151,6 +2548,11 @@ static EGLBoolean wlEglDestroySurface(EGLDisplay dpy, EGLSurface eglSurface)
+@@ -2151,6 +2535,11 @@ static EGLBoolean wlEglDestroySurface(EGLDisplay dpy, EGLSurface eglSurface)
  
      wlEglDestroyFeedback(&surface->feedback);
  
@@ -878,7 +916,15 @@ index 98f38cf..cf91815 100644
      if (surface->presentFeedbackQueue != NULL) {
          wl_event_queue_destroy(surface->presentFeedbackQueue);
          surface->presentFeedbackQueue = NULL;
-@@ -2319,6 +2721,7 @@ EGLSurface wlEglCreatePlatformWindowSurfaceHook(EGLDisplay dpy,
+@@ -2247,6 +2636,7 @@ EGLSurface wlEglCreatePlatformWindowSurfaceHook(EGLDisplay dpy,
+     EGLBoolean            res     = EGL_FALSE;
+     EGLint                err     = EGL_SUCCESS;
+     EGLint                surfType;
++    int                   drmSyncobjFd = -1;
+ 
+     if (!display) {
+         return EGL_NO_SURFACE;
+@@ -2319,6 +2709,7 @@ EGLSurface wlEglCreatePlatformWindowSurfaceHook(EGLDisplay dpy,
      surface->isSurfaceProducer = EGL_TRUE;
      surface->refCount = 1;
      surface->isDestroyed = EGL_FALSE;
@@ -886,36 +932,25 @@ index 98f38cf..cf91815 100644
      // FIFO_LENGTH == 1 to set FIFO mode, FIFO_LENGTH == 0 to set MAILBOX mode
      surface->fifoLength = (display->devDpy->exts.stream_fifo_synchronous &&
                             display->devDpy->exts.stream_sync) ? 1 : 0;
-@@ -2365,6 +2768,39 @@ EGLSurface wlEglCreatePlatformWindowSurfaceHook(EGLDisplay dpy,
+@@ -2365,6 +2756,28 @@ EGLSurface wlEglCreatePlatformWindowSurfaceHook(EGLDisplay dpy,
          surface->feedback.unprocessedFeedback = false;
      }
  
 +    if (display->wlDrmSyncobj) {
-+        struct wp_linux_drm_syncobj_manager_v1 *wrapper;
-+
 +        /* Create a DRM timeline and share it with the compositor */
-+        if (drmSyncobjCreate(display->drmFd, 0, &surface->drmSyncobjHandle)) {
-+            err = EGL_BAD_ALLOC;
-+            goto fail;
-+        }
-+
-+        if (drmSyncobjHandleToFD(display->drmFd, surface->drmSyncobjHandle,
-+                                 &surface->drmSyncobjFd)) {
-+            err = EGL_BAD_ALLOC;
++        drmSyncobjFd = create_syncobj_timeline(display, &surface->drmSyncobjHandle);
++        if (drmSyncobjFd < 0) {
 +            goto fail;
 +        }
 +
 +        /* Get a per-surface explicit sync object, share our DRM syncobj with the compositor */
-+        wrapper = wl_proxy_create_wrapper(display->wlDrmSyncobj);
-+        wl_proxy_set_queue((struct wl_proxy *)wrapper, surface->wlEventQueue);
-+
 +        surface->wlSyncobjSurf =
-+            wp_linux_drm_syncobj_manager_v1_get_surface(wrapper, surface->wlSurface);
++            wp_linux_drm_syncobj_manager_v1_get_surface(display->wlDrmSyncobj, surface->wlSurface);
 +
 +        surface->wlAcquireTimeline =
-+            wp_linux_drm_syncobj_manager_v1_import_timeline(wrapper, surface->drmSyncobjFd);
-+
-+        wl_proxy_wrapper_destroy(wrapper);
++            wp_linux_drm_syncobj_manager_v1_import_timeline(display->wlDrmSyncobj, drmSyncobjFd);
++        close(drmSyncobjFd);
++        drmSyncobjFd = -1;
 +
 +        if (!surface->wlSyncobjSurf || !surface->wlAcquireTimeline) {
 +            err = EGL_BAD_ALLOC;
@@ -926,7 +961,7 @@ index 98f38cf..cf91815 100644
      err = create_surface_context(surface);
      if (err != EGL_SUCCESS) {
          goto fail;
-@@ -2391,6 +2827,14 @@ EGLSurface wlEglCreatePlatformWindowSurfaceHook(EGLDisplay dpy,
+@@ -2391,6 +2804,14 @@ EGLSurface wlEglCreatePlatformWindowSurfaceHook(EGLDisplay dpy,
      return surface;
  
  fail:
@@ -934,8 +969,8 @@ index 98f38cf..cf91815 100644
 +        drmSyncobjDestroy(display->drmFd, surface->drmSyncobjHandle);
 +    }
 +
-+    if (surface->drmSyncobjFd > 0) {
-+        close(surface->drmSyncobjFd);
++    if (drmSyncobjFd > 0) {
++        close(drmSyncobjFd);
 +    }
 +
      if (surface) {
