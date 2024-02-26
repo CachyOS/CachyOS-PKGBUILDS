@@ -20,7 +20,7 @@ pkgrel=28
 pkgdesc="A library-based package manager with dependency support. CachyOS fork."
 arch=('x86_64')
 url="https://www.archlinux.org/pacman/"
-license=('GPL')
+license=('GPL-2.0-or-later')
 depends=('bash' 'glibc' 'libarchive' 'curl' 'gpgme' 'pacman-mirrorlist'
          'gettext' 'gawk' 'coreutils' 'gnupg' 'grep' 'debugedit')
 makedepends=('meson' 'asciidoc' 'doxygen' 'git' 'curl' 'unzip'
@@ -191,4 +191,12 @@ package() {
   install -dm755 "$pkgdir/etc"
   install -m644 "$srcdir/pacman.conf" "$pkgdir/etc"
   install -m644 "$srcdir/makepkg.conf" "$pkgdir/etc"
+
+  local wantsdir="$pkgdir/usr/lib/systemd/system/sockets.target.wants"
+  install -dm755 "$wantsdir"
+
+  local unit
+  for unit in dirmngr gpg-agent gpg-agent-{browser,extra,ssh} keyboxd; do
+    ln -s "../${unit}@.socket" "$wantsdir/${unit}@etc-pacman.d-gnupg.socket"
+  done
 }
