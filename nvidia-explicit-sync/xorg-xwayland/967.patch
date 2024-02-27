@@ -1,4 +1,4 @@
-From ed9991b1152359079b72d8193509aea0de395f1b Mon Sep 17 00:00:00 2001
+From c0445936213e4acbdb850f408ec61a3c7044afe7 Mon Sep 17 00:00:00 2001
 From: Erik Kurzinger <ekurzinger@nvidia.com>
 Date: Tue, 24 Oct 2023 16:14:17 -0700
 Subject: [PATCH 1/6] DRI3: provide stub implementation of
@@ -104,7 +104,7 @@ index bb2b81b8f9..951cc6357e 100644
 GitLab
 
 
-From 7bdf16ff9725990ed1e54437748bed3899e9d67b Mon Sep 17 00:00:00 2001
+From 18ab70c492ea1da2e4e2233405d4017e8ee093bf Mon Sep 17 00:00:00 2001
 From: Erik Kurzinger <ekurzinger@nvidia.com>
 Date: Tue, 16 Aug 2022 11:57:40 -0700
 Subject: [PATCH 2/6] DRI3: add DRI3ImportSyncobj and DRI3FreeSyncobj
@@ -436,7 +436,7 @@ index 951cc6357e..2b0f85e392 100644
 GitLab
 
 
-From 1faf528c3c99884a8d04031ee96a1ff44531f77f Mon Sep 17 00:00:00 2001
+From 2681c066d42649251a396b548add920e0f9be1dc Mon Sep 17 00:00:00 2001
 From: Erik Kurzinger <ekurzinger@nvidia.com>
 Date: Tue, 16 Aug 2022 11:59:14 -0700
 Subject: [PATCH 3/6] xwayland: implement support for DRI3 syncobjs
@@ -693,7 +693,7 @@ index 69ead78f26..35c06f5bee 100644
 GitLab
 
 
-From 9609ec156eb29bd66e3a5cf2001d6b222e0dada3 Mon Sep 17 00:00:00 2001
+From 84f0e7e2518580067b929a90d1e0943be0240f86 Mon Sep 17 00:00:00 2001
 From: Erik Kurzinger <ekurzinger@nvidia.com>
 Date: Tue, 16 Aug 2022 12:03:59 -0700
 Subject: [PATCH 4/6] Present: implement PresentPixmapSynced
@@ -760,7 +760,7 @@ index 6166e85590..b6eb806228 100644
  #define ABI_EXTENSION_VERSION	SET_ABI_VERSION(10, 0)
  
 diff --git a/hw/xwayland/xwayland-glamor.c b/hw/xwayland/xwayland-glamor.c
-index 074594cc7a..850e25db05 100644
+index 150c5e971a..84718eab7b 100644
 --- a/hw/xwayland/xwayland-glamor.c
 +++ b/hw/xwayland/xwayland-glamor.c
 @@ -1073,6 +1073,30 @@ xwl_glamor_create_pixmap_for_window(struct xwl_window *xwl_window)
@@ -1656,7 +1656,7 @@ index 4f94f16e44..2eb57abfff 100644
 GitLab
 
 
-From 4c9cfe1021be0604bf2158dbc5df3b5b59f6777e Mon Sep 17 00:00:00 2001
+From df2f1aa5a37ce1bc76997101135274135686ab1e Mon Sep 17 00:00:00 2001
 From: Erik Kurzinger <ekurzinger@nvidia.com>
 Date: Tue, 15 Aug 2023 15:32:47 -0700
 Subject: [PATCH 5/6] xwayland: add support for wp_linux_drm_syncobj_v1
@@ -1965,7 +1965,7 @@ index 35c06f5bee..da8ae6c32f 100644
 +    xwl_screen->gbm_backend.dri3_syncobj_passthrough = xwl_glamor_gbm_dri3_syncobj_passthrough;
  }
 diff --git a/hw/xwayland/xwayland-glamor.c b/hw/xwayland/xwayland-glamor.c
-index 850e25db05..dcc1c2f5fe 100644
+index 84718eab7b..1bae9f315c 100644
 --- a/hw/xwayland/xwayland-glamor.c
 +++ b/hw/xwayland/xwayland-glamor.c
 @@ -1059,6 +1059,26 @@ xwl_glamor_needs_n_buffering(struct xwl_screen *xwl_screen)
@@ -2604,7 +2604,7 @@ index 913a8b67ba..2fb49749eb 100644
 GitLab
 
 
-From 903a04d3e83a1cba3b882a8be01c22a10c9e1ac1 Mon Sep 17 00:00:00 2001
+From a47e9005d45acc49a8102abf2c4c00167d285c2e Mon Sep 17 00:00:00 2001
 From: Erik Kurzinger <ekurzinger@nvidia.com>
 Date: Wed, 31 Jan 2024 11:36:45 -0800
 Subject: [PATCH 6/6] xwayland: don't scrap pending present requests
@@ -2631,95 +2631,80 @@ ready. The blocked requests will be added to a list tracked in the
 xwl_present_window struct. Once the earlier request's fence is signaled,
 any blocked requests will be re-executed.
 
-Note that one of these blocked requests may also need to wait for its
-fence, in which case it will become the new blocking request. Therefore,
-the blocked list needs to be double-buffered.
-
 Signed-off-by: Erik Kurzinger <ekurzinger@nvidia.com>
 ---
- hw/xwayland/xwayland-present.c | 88 ++++++++++++++++++++++------------
- hw/xwayland/xwayland-present.h |  8 ++++
- 2 files changed, 66 insertions(+), 30 deletions(-)
+ hw/xwayland/xwayland-present.c | 87 +++++++++++++++++++++-------------
+ hw/xwayland/xwayland-present.h |  3 ++
+ 2 files changed, 57 insertions(+), 33 deletions(-)
 
 diff --git a/hw/xwayland/xwayland-present.c b/hw/xwayland/xwayland-present.c
-index ff74909c72..090529320d 100644
+index ff74909c72..71e2fb3633 100644
 --- a/hw/xwayland/xwayland-present.c
 +++ b/hw/xwayland/xwayland-present.c
-@@ -80,6 +80,10 @@ xwl_present_window_get_priv(WindowPtr window)
+@@ -80,6 +80,7 @@ xwl_present_window_get_priv(WindowPtr window)
          xorg_list_init(&xwl_present_window->wait_list);
          xorg_list_init(&xwl_present_window->flip_queue);
          xorg_list_init(&xwl_present_window->idle_queue);
-+        xorg_list_init(&xwl_present_window->blocked_lists[0]);
-+        xorg_list_init(&xwl_present_window->blocked_lists[1]);
-+        xwl_present_window->current_blocked_list =
-+            &xwl_present_window->blocked_lists[0];
++        xorg_list_init(&xwl_present_window->blocked_queue);
  
          dixSetPrivate(&window->devPrivates,
                        &xwl_present_window_private_key,
-@@ -962,6 +966,38 @@ xwl_present_wait_acquire_fence_avail(struct xwl_screen *xwl_screen,
+@@ -962,6 +963,27 @@ xwl_present_wait_acquire_fence_avail(struct xwl_screen *xwl_screen,
      return FALSE;
  }
  
 +static void
-+xwl_present_window_swap_blocked_list(struct xwl_present_window *xwl_present_window)
++xwl_present_flush_blocked(struct xwl_present_window *xwl_present_window,
++                          uint64_t crtc_msc)
 +{
-+    xwl_present_window->current_blocked_list =
-+        xwl_present_window->current_blocked_list ==
-+        &xwl_present_window->blocked_lists[0] ?
-+            &xwl_present_window->blocked_lists[1] :
-+            &xwl_present_window->blocked_lists[0];
-+    xorg_list_init(xwl_present_window->current_blocked_list);
-+}
++    struct xwl_screen *xwl_screen =
++        xwl_screen_get(xwl_present_window->window->drawable.pScreen);
++    struct xwl_present_event *blocked_event, *tmp;
 +
-+/*
-+ * If execution for this window is currently blocked, unblock it, reset the
-+ * blocked list, and re-execute any deferred requests.
-+ */
-+static void
-+xwl_present_flush_blocked(struct xwl_present_window *xwl_present_window)
-+{
-+    if (!xwl_present_window->blocking_event)
-+        return;
++    xorg_list_for_each_entry_safe(blocked_event, tmp,
++                                  &xwl_present_window->blocked_queue,
++                                  blocked) {
++        present_vblank_ptr blocked_vblank = &blocked_event->vblank;
++        if (present_execute_wait(blocked_vblank, crtc_msc) ||
++            xwl_present_wait_acquire_fence_avail(xwl_screen, blocked_vblank))
++            return;
 +
-+    struct xwl_present_event *blocked_event;
-+    struct xorg_list *blocked_list = xwl_present_window->current_blocked_list;
-+
-+    xwl_present_window_swap_blocked_list(xwl_present_window);
-+    xwl_present_window->blocking_event = 0;
-+
-+    xorg_list_for_each_entry(blocked_event, blocked_list, blocked) {
-+        xwl_present_re_execute(&blocked_event->vblank);
++        xorg_list_del(&blocked_event->blocked);
++        xwl_present_re_execute(blocked_vblank);
 +    }
 +}
 +
  /*
   * Once the required MSC has been reached, execute the pending request.
   *
-@@ -978,15 +1014,30 @@ xwl_present_execute(present_vblank_ptr vblank, uint64_t ust, uint64_t crtc_msc)
+@@ -978,15 +1000,33 @@ xwl_present_execute(present_vblank_ptr vblank, uint64_t ust, uint64_t crtc_msc)
      struct xwl_present_window *xwl_present_window = xwl_present_window_get_priv(window);
      present_vblank_ptr flip_pending = xwl_present_get_pending_flip(xwl_present_window);
      struct xwl_screen *xwl_screen = xwl_screen_get(window->drawable.pScreen);
 +    struct xwl_present_event *event = xwl_present_event_from_vblank(vblank);
-+    Bool notify_only = !vblank->window || !vblank->pixmap;
++    Bool notify_only = !vblank->window || !vblank->pixmap, flush_blocked = FALSE;
  
      xorg_list_del(&vblank->event_queue);
  
-+    if (!notify_only &&
-+        xwl_present_window->blocking_event != 0 &&
-+        xwl_present_window->blocking_event != vblank->event_id) {
-+        /* an earlier request is blocking execution */
-+        xorg_list_append(&event->blocked, xwl_present_window->current_blocked_list);
-+        return;
++    if (!notify_only && !xorg_list_is_empty(&xwl_present_window->blocked_queue)) {
++        if (event == xorg_list_first_entry(&xwl_present_window->blocked_queue,
++                                           struct xwl_present_event, blocked)) {
++            xorg_list_del(&event->blocked);
++            flush_blocked = TRUE;
++        } else {
++            /* an earlier request is blocking execution */
++            xorg_list_append(&event->blocked, &xwl_present_window->blocked_queue);
++            return;
++        }
 +    }
 +
  retry:
      if (present_execute_wait(vblank, crtc_msc) ||
 -        xwl_present_wait_acquire_fence_avail(xwl_screen, vblank))
 +        xwl_present_wait_acquire_fence_avail(xwl_screen, vblank)) {
-+
 +        if (!notify_only)
-+            /* block execution of later requests until this request is ready */
-+            xwl_present_window->blocking_event = vblank->event_id;
++            /* block execution of subsequent requests until this request is ready */
++            xorg_list_append(&event->blocked, &xwl_present_window->blocked_queue);
          return;
 +    }
  
@@ -2728,33 +2713,44 @@ index ff74909c72..090529320d 100644
          DebugPresent(("\tr %" PRIu64 " %p (pending %p)\n",
                        vblank->event_id, vblank, flip_pending));
          xorg_list_append(&vblank->event_queue, &xwl_present_window->flip_queue);
-@@ -996,7 +1047,7 @@ retry:
+@@ -996,8 +1036,9 @@ retry:
  
      vblank->queued = FALSE;
  
 -    if (vblank->pixmap && vblank->window) {
 +    if (!notify_only) {
          ScreenPtr screen = window->drawable.pScreen;
++        int ret;
  
          if (vblank->flip) {
-@@ -1044,6 +1095,7 @@ retry:
+             RegionPtr damage;
+@@ -1044,6 +1085,8 @@ retry:
                  /* Realign timer */
                  xwl_present_reset_timer(xwl_present_window);
  
-+                xwl_present_flush_blocked(xwl_present_window);
++                if (flush_blocked)
++                    xwl_present_flush_blocked(xwl_present_window, crtc_msc);
                  return;
              }
  
-@@ -1066,6 +1118,8 @@ retry:
+@@ -1066,9 +1109,13 @@ retry:
          dixDestroyPixmap(vblank->pixmap, vblank->pixmap->drawable.id);
          vblank->pixmap = NULL;
  
-+        xwl_present_flush_blocked(xwl_present_window);
+-        if (xwl_present_queue_vblank(screen, window, vblank->crtc,
+-                                     vblank->event_id, crtc_msc + 1)
+-            == Success)
++        ret = xwl_present_queue_vblank(screen, window, vblank->crtc,
++                                       vblank->event_id, crtc_msc + 1);
 +
-         if (xwl_present_queue_vblank(screen, window, vblank->crtc,
-                                      vblank->event_id, crtc_msc + 1)
-             == Success)
-@@ -1102,7 +1156,7 @@ xwl_present_pixmap(WindowPtr window,
++        if (flush_blocked)
++            xwl_present_flush_blocked(xwl_present_window, crtc_msc);
++
++        if (ret == Success)
+             return;
+     }
+ 
+@@ -1102,7 +1149,7 @@ xwl_present_pixmap(WindowPtr window,
      uint64_t                    target_msc;
      uint64_t                    crtc_msc = 0;
      int                         ret;
@@ -2763,7 +2759,7 @@ index ff74909c72..090529320d 100644
      ScreenPtr                   screen = window->drawable.pScreen;
      present_window_priv_ptr     window_priv = present_get_window_priv(window, TRUE);
      present_screen_priv_ptr     screen_priv = present_screen_priv(screen);
-@@ -1135,32 +1189,6 @@ xwl_present_pixmap(WindowPtr window,
+@@ -1135,32 +1182,6 @@ xwl_present_pixmap(WindowPtr window,
                                          remainder,
                                          options);
  
@@ -2797,23 +2793,18 @@ index ff74909c72..090529320d 100644
      if (!event)
          return BadAlloc;
 diff --git a/hw/xwayland/xwayland-present.h b/hw/xwayland/xwayland-present.h
-index f518068fbd..218fb40aab 100644
+index f518068fbd..b64a445f33 100644
 --- a/hw/xwayland/xwayland-present.h
 +++ b/hw/xwayland/xwayland-present.h
-@@ -52,6 +52,12 @@ struct xwl_present_window {
+@@ -50,6 +50,7 @@ struct xwl_present_window {
+     struct xorg_list wait_list;
+     struct xorg_list flip_queue;
      struct xorg_list idle_queue;
++    struct xorg_list blocked_queue;
  
      present_vblank_ptr flip_active;
-+
-+    /* id of the event currently blocking execution */
-+    uint64_t blocking_event;
-+    /* double-buffered list of blocked events */
-+    struct xorg_list *current_blocked_list;
-+    struct xorg_list blocked_lists[2];
  };
- 
- struct xwl_present_event {
-@@ -61,6 +67,8 @@ struct xwl_present_event {
+@@ -61,6 +62,8 @@ struct xwl_present_event {
      uint32_t options;
      uint64_t divisor;
      uint64_t remainder;
