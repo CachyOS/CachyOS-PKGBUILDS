@@ -1,4 +1,4 @@
-From d0c6d0f479f3c6a8099a36ad138c087579d0391f Mon Sep 17 00:00:00 2001
+From 8cb62326a94f1f3b84e5da8faad8c52f74b14ed0 Mon Sep 17 00:00:00 2001
 From: Simon Ser <contact@emersion.fr>
 Date: Wed, 12 May 2021 12:08:24 +0200
 Subject: [PATCH 1/2] linux-drm-syncobj-v1: new protocol
@@ -12,8 +12,8 @@ Signed-off-by: Simon Ser <contact@emersion.fr>
 ---
  meson.build                                   |   1 +
  staging/linux-drm-syncobj/README              |   4 +
- .../linux-drm-syncobj-v1.xml                  | 251 ++++++++++++++++++
- 3 files changed, 256 insertions(+)
+ .../linux-drm-syncobj-v1.xml                  | 246 ++++++++++++++++++
+ 3 files changed, 251 insertions(+)
  create mode 100644 staging/linux-drm-syncobj/README
  create mode 100644 staging/linux-drm-syncobj/linux-drm-syncobj-v1.xml
 
@@ -41,10 +41,10 @@ index 00000000..a380b314
 +Simon Ser <contact@emersion.fr>
 diff --git a/staging/linux-drm-syncobj/linux-drm-syncobj-v1.xml b/staging/linux-drm-syncobj/linux-drm-syncobj-v1.xml
 new file mode 100644
-index 00000000..4690d65f
+index 00000000..08f6ac8d
 --- /dev/null
 +++ b/staging/linux-drm-syncobj/linux-drm-syncobj-v1.xml
-@@ -0,0 +1,251 @@
+@@ -0,0 +1,246 @@
 +<?xml version="1.0" encoding="UTF-8"?>
 +<protocol name="linux_drm_syncobj_v1">
 +  <copyright>
@@ -181,11 +181,22 @@ index 00000000..4690d65f
 +      Explicit synchronization is guaranteed to be supported for buffers
 +      created with any version of the linux-dmabuf protocol. Compositors are
 +      free to support explicit synchronization for additional buffer types.
++      If at surface commit time the attached buffer does not support explicit
++      synchronization, an unsupported_buffer error is raised.
 +
 +      As long as the wp_linux_drm_syncobj_surface_v1 object is alive, the
 +      compositor may ignore implicit synchronization for buffers attached and
 +      committed to the wl_surface. The delivery of wl_buffer.release events
 +      for buffers attached to the surface becomes undefined.
++
++      Clients must set both acquire and release points if and only if a
++      non-null buffer is attached in the same surface commit. See the
++      no_buffer, no_acquire_point and no_release_point protocol errors.
++
++      If at surface commit time the acquire and release DRM syncobj timelines
++      are identical, the acquire point value must be strictly less than the
++      release point value, or else the conflicting_points protocol error is
++      raised.
 +    </description>
 +
 +    <request name="destroy" type="destructor">
@@ -205,12 +216,12 @@ index 00000000..4690d65f
 +      <entry name="unsupported_buffer" value="2"
 +        summary="the buffer does not support explicit synchronization"/>
 +      <entry name="no_buffer" value="3" summary="no buffer was attached"/>
-+      <entry name="conflicting_points" value="4"
++      <entry name="no_acquire_point" value="4"
++        summary="no acquire timeline point was set"/>
++      <entry name="no_release_point" value="5"
++        summary="no release timeline point was set"/>
++      <entry name="conflicting_points" value="6"
 +        summary="acquire and release timeline points are in conflict"/>
-+      <entry name="no_acquire_point" value="5"
-+        summary="no acquire timeline point was set"/>
-+      <entry name="no_release_point" value="6"
-+        summary="no acquire timeline point was set"/>
 +    </enum>
 +
 +    <request name="set_acquire_point">
@@ -232,19 +243,11 @@ index 00000000..4690d65f
 +        If the associated wl_surface was destroyed, a no_surface error is
 +        raised.
 +
-+        If at surface commit time the attached buffer does not support explicit
-+        synchronization, an unsupported_buffer error is raised.
-+
 +        If at surface commit time there is a pending acquire timeline point set
 +        but no pending buffer attached, a no_buffer error is raised. If at
 +        surface commit time there is a pending buffer attached but no pending
 +        acquire timeline point set, the no_acquire_point protocol error is
 +        raised.
-+
-+        The acquire timeline point set in a commit must be different from the
-+        release timeline point. If at surface commit time, both the DRM syncobj
-+        and the point value are identical, the conflicting_points protocol
-+        error is raised.
 +      </description>
 +      <arg name="timeline" type="object" interface="wp_linux_drm_syncobj_timeline_v1"/>
 +      <arg name="point_hi" type="uint" summary="high 32 bits of the point value"/>
@@ -276,19 +279,11 @@ index 00000000..4690d65f
 +        If the associated wl_surface was destroyed, a no_surface error is
 +        raised.
 +
-+        If at surface commit time the attached buffer does not support explicit
-+        synchronization, an unsupported_buffer error is raised.
-+
 +        If at surface commit time there is a pending release timeline point set
 +        but no pending buffer attached, a no_buffer error is raised. If at
 +        surface commit time there is a pending buffer attached but no pending
 +        release timeline point set, the no_release_point protocol error is
 +        raised.
-+
-+        The release timeline point set in a commit must be different from the
-+        acquire timeline point. If at surface commit time, both the DRM syncobj
-+        and the point value are identical, the conflicting_points protocol
-+        error is raised.
 +      </description>
 +      <arg name="timeline" type="object" interface="wp_linux_drm_syncobj_timeline_v1"/>
 +      <arg name="point_hi" type="uint" summary="high 32 bits of the point value"/>
@@ -300,7 +295,7 @@ index 00000000..4690d65f
 GitLab
 
 
-From d1345cfcbfd72573ccd7305fd9bc3b7b53f59041 Mon Sep 17 00:00:00 2001
+From 3440918f7a5e73844caf728d00f082ac493d992c Mon Sep 17 00:00:00 2001
 From: Simon Ser <contact@emersion.fr>
 Date: Mon, 16 Oct 2023 10:47:28 +0200
 Subject: [PATCH 2/2] linux-explicit-synchronization-v1: add linux-drm-syncobj
