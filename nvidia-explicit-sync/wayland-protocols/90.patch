@@ -1,4 +1,4 @@
-From 8cb62326a94f1f3b84e5da8faad8c52f74b14ed0 Mon Sep 17 00:00:00 2001
+From 16d1b3838fa4e6eb72b592c8fb63ae2b12b4d722 Mon Sep 17 00:00:00 2001
 From: Simon Ser <contact@emersion.fr>
 Date: Wed, 12 May 2021 12:08:24 +0200
 Subject: [PATCH 1/2] linux-drm-syncobj-v1: new protocol
@@ -41,7 +41,7 @@ index 00000000..a380b314
 +Simon Ser <contact@emersion.fr>
 diff --git a/staging/linux-drm-syncobj/linux-drm-syncobj-v1.xml b/staging/linux-drm-syncobj/linux-drm-syncobj-v1.xml
 new file mode 100644
-index 00000000..08f6ac8d
+index 00000000..89edf0d0
 --- /dev/null
 +++ b/staging/linux-drm-syncobj/linux-drm-syncobj-v1.xml
 @@ -0,0 +1,246 @@
@@ -89,9 +89,9 @@ index 00000000..08f6ac8d
 +    By contrast, with explicit synchronization, DRM synchronization object
 +    timeline points mark when the asynchronous operations are complete. When
 +    submitting a buffer, the client provides a timeline point which will be
-+    waited on before the compositor accesses the buffer. The client can also
-+    provide a timeline point that the compositor will signal when it no longer
-+    needs to access the buffer contents for the purposes of the surface commit.
++    waited on before the compositor accesses the buffer, and another timeline
++    point that the compositor will signal when it no longer needs to access the
++    buffer contents for the purposes of the surface commit.
 +
 +    Linux DRM synchronization objects are documented at:
 +    https://dri.freedesktop.org/docs/drm/gpu/drm-mm.html#drm-sync-objects
@@ -295,7 +295,7 @@ index 00000000..08f6ac8d
 GitLab
 
 
-From 3440918f7a5e73844caf728d00f082ac493d992c Mon Sep 17 00:00:00 2001
+From 8ead72b7559cf2dc6f24943eb6f48f2d93cb8a78 Mon Sep 17 00:00:00 2001
 From: Simon Ser <contact@emersion.fr>
 Date: Mon, 16 Oct 2023 10:47:28 +0200
 Subject: [PATCH 2/2] linux-explicit-synchronization-v1: add linux-drm-syncobj
