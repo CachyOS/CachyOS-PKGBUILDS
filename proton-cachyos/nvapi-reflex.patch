@@ -1,4 +1,4 @@
-From 0738bfdd9b9fbdcba019bfdbcd2e29ffc8fe557a Mon Sep 17 00:00:00 2001
+From 5ca994fc315184a68dedd34e542a0999521522e1 Mon Sep 17 00:00:00 2001
 From: Eric Sullivan <esullivan@nvidia.com>
 Date: Fri, 13 Oct 2023 01:38:30 +0000
 Subject: [PATCH] nvapi: Add support for Reflex
@@ -13,30 +13,28 @@ To provide compatibility with LatencyFleX this change will
 only use the ID3DLowLatencyDevice interface when LatencyFleX
 is not detected.
 ---
- src/d3d/nvapi_d3d_instance.cpp               |  40 ++-
- src/d3d/nvapi_d3d_instance.h                 |  14 +-
- src/d3d/nvapi_d3d_low_latency_device.cpp     |  58 +++++
- src/d3d/nvapi_d3d_low_latency_device.h       |  23 ++
- src/d3d12/nvapi_d3d12_device.cpp             |  26 ++
- src/d3d12/nvapi_d3d12_device.h               |   4 +
- src/meson.build                              |   2 +
- src/nvapi_d3d.cpp                            |  76 ++++--
- src/nvapi_d3d12.cpp                          |  52 ++++
- src/nvapi_interface.cpp                      |   2 +
- src/shared/shared_interfaces.cpp             |   3 +
- src/shared/shared_interfaces.h               |  61 +++++
- src/vkd3d-proton/vkd3d-proton_interfaces.cpp |   1 +
- src/vkd3d-proton/vkd3d-proton_interfaces.h   |  17 +-
- tests/meson.build                            |   2 +
- tests/nvapi_d3d.cpp                          | 252 ++++++++++++++++++-
- tests/nvapi_d3d12.cpp                        | 126 ++++++++++
- tests/nvapi_d3d12_mocks.h                    |  25 ++
- tests/nvapi_d3d_mocks.h                      |  12 +
- tests/nvapi_tests_private.h                  |   1 +
- 20 files changed, 750 insertions(+), 47 deletions(-)
+ src/d3d/nvapi_d3d_instance.cpp             |  40 +++-
+ src/d3d/nvapi_d3d_instance.h               |  14 +-
+ src/d3d/nvapi_d3d_low_latency_device.cpp   |  64 ++++++
+ src/d3d/nvapi_d3d_low_latency_device.h     |  25 ++
+ src/d3d12/nvapi_d3d12_device.cpp           |  26 +++
+ src/d3d12/nvapi_d3d12_device.h             |   4 +
+ src/meson.build                            |   1 +
+ src/nvapi_d3d.cpp                          |  76 +++++--
+ src/nvapi_d3d12.cpp                        |  52 +++++
+ src/nvapi_interface.cpp                    |   2 +
+ src/shared/shared_interfaces.h             |  57 +++++
+ src/sysinfo/nvapi_adapter_registry.cpp     |   2 +
+ src/vkd3d-proton/vkd3d-proton_interfaces.h |  15 +-
+ tests/meson.build                          |   1 +
+ tests/nvapi_d3d.cpp                        | 252 ++++++++++++++++++++-
+ tests/nvapi_d3d12.cpp                      | 126 +++++++++++
+ tests/nvapi_d3d12_mocks.h                  |  29 +++
+ tests/nvapi_d3d_mocks.h                    |  12 +
+ tests/nvapi_tests_private.h                |   1 +
+ 19 files changed, 752 insertions(+), 47 deletions(-)
  create mode 100644 src/d3d/nvapi_d3d_low_latency_device.cpp
  create mode 100644 src/d3d/nvapi_d3d_low_latency_device.h
- create mode 100644 src/shared/shared_interfaces.cpp
  create mode 100644 src/shared/shared_interfaces.h
 
 diff --git a/src/d3d/nvapi_d3d_instance.cpp b/src/d3d/nvapi_d3d_instance.cpp
@@ -134,10 +132,10 @@ index 5a223714..eb7d9388 100644
 \ No newline at end of file
 diff --git a/src/d3d/nvapi_d3d_low_latency_device.cpp b/src/d3d/nvapi_d3d_low_latency_device.cpp
 new file mode 100644
-index 00000000..37c8dd75
+index 00000000..bff43cd3
 --- /dev/null
 +++ b/src/d3d/nvapi_d3d_low_latency_device.cpp
-@@ -0,0 +1,58 @@
+@@ -0,0 +1,64 @@
 +#include "nvapi_d3d_low_latency_device.h"
 +
 +namespace dxvk {
@@ -181,6 +179,12 @@ index 00000000..37c8dd75
 +        return SUCCEEDED(d3dLowLatencyDevice->SetLatencyMarker(frameID, markerType));
 +    }
 +
++    void NvapiD3dLowLatencyDevice::ClearCacheMaps() {
++        std::scoped_lock lock(m_LowLatencyDeviceMutex);
++
++        m_lowLatencyDeviceMap.clear();
++    }
++
 +    Com<ID3DLowLatencyDevice> NvapiD3dLowLatencyDevice::GetLowLatencyDevice(IUnknown* device) {
 +        std::scoped_lock lock(m_LowLatencyDeviceMutex);
 +        auto it = m_lowLatencyDeviceMap.find(device);
@@ -198,10 +202,10 @@ index 00000000..37c8dd75
 +}
 diff --git a/src/d3d/nvapi_d3d_low_latency_device.h b/src/d3d/nvapi_d3d_low_latency_device.h
 new file mode 100644
-index 00000000..77938340
+index 00000000..9339fbb4
 --- /dev/null
 +++ b/src/d3d/nvapi_d3d_low_latency_device.h
-@@ -0,0 +1,23 @@
+@@ -0,0 +1,25 @@
 +#pragma once
 +
 +#include "../nvapi_private.h"
@@ -216,6 +220,8 @@ index 00000000..77938340
 +        static bool SetLatencySleepMode(IUnknown* device, bool lowLatencyMode, bool lowLatencyBoost, uint32_t minimumIntervalUs);
 +        static bool GetLatencyInfo(IUnknown* device, D3D_LATENCY_RESULTS* latencyResults);
 +        static bool SetLatencyMarker(IUnknown* device, uint64_t frameID, uint32_t markerType);
++
++        static void ClearCacheMaps();
 +
 +      private:
 +        inline static std::unordered_map<IUnknown*, ID3DLowLatencyDevice*> m_lowLatencyDeviceMap;
@@ -314,18 +320,10 @@ index ef419d34..386de906 100644
      };
  }
 diff --git a/src/meson.build b/src/meson.build
-index 98410c0f..daabb3f8 100644
+index e151aa95..1b9e9111 100644
 --- a/src/meson.build
 +++ b/src/meson.build
-@@ -1,6 +1,7 @@
- nvapi_src = files([
-   'dxvk/dxvk_interfaces.cpp',
-   'vkd3d-proton/vkd3d-proton_interfaces.cpp',
-+  'shared/shared_interfaces.cpp',
-   'util/util_string.cpp',
-   'util/util_env.cpp',
-   'util/util_log.cpp',
-@@ -12,6 +13,7 @@ nvapi_src = files([
+@@ -10,6 +10,7 @@ nvapi_src = files([
    'resource_factory.cpp',
    'd3d/lfx.cpp',
    'd3d/nvapi_d3d_instance.cpp',
@@ -531,7 +529,7 @@ index aadd7f22..c989cc42 100644
 +    }
  }
 diff --git a/src/nvapi_interface.cpp b/src/nvapi_interface.cpp
-index b461166e..4b6f24b3 100644
+index 3f09aad0..4ff66caa 100644
 --- a/src/nvapi_interface.cpp
 +++ b/src/nvapi_interface.cpp
 @@ -69,6 +69,8 @@ extern "C" {
@@ -543,21 +541,12 @@ index b461166e..4b6f24b3 100644
          INSERT_AND_RETURN_WHEN_EQUALS(NvAPI_D3D_GetObjectHandleForResource)
          INSERT_AND_RETURN_WHEN_EQUALS(NvAPI_D3D_SetResourceHint)
          INSERT_AND_RETURN_WHEN_EQUALS(NvAPI_D3D_GetCurrentSLIState)
-diff --git a/src/shared/shared_interfaces.cpp b/src/shared/shared_interfaces.cpp
-new file mode 100644
-index 00000000..2d675ebc
---- /dev/null
-+++ b/src/shared/shared_interfaces.cpp
-@@ -0,0 +1,3 @@
-+#include "shared_interfaces.h"
-+
-+const GUID ID3DLowLatencyDevice::guid = {0xf3112584, 0x41f9, 0x348d, {0xa5, 0x9b, 0x00, 0xb7, 0xe1, 0xd2, 0x85, 0xd6}};
 diff --git a/src/shared/shared_interfaces.h b/src/shared/shared_interfaces.h
 new file mode 100644
-index 00000000..bc5e0baa
+index 00000000..56862b2e
 --- /dev/null
 +++ b/src/shared/shared_interfaces.h
-@@ -0,0 +1,61 @@
+@@ -0,0 +1,57 @@
 +#pragma once
 +
 +#include "../nvapi_private.h"
@@ -565,10 +554,6 @@ index 00000000..bc5e0baa
 +#ifdef __GNUC__
 +#pragma GCC diagnostic ignored "-Wnon-virtual-dtor"
 +#endif // __GNUC__
-+
-+#define SHARED_DEFINE_GUID(iface) \
-+    template <>                   \
-+    inline GUID const& __mingw_uuidof<iface>() { return iface::guid; }
 +
 +/**
 + * \brief Frame Report Info
@@ -599,8 +584,6 @@ index 00000000..bc5e0baa
 +
 +MIDL_INTERFACE("f3112584-41f9-348d-a59b-00b7e1d285d6")
 +ID3DLowLatencyDevice : public IUnknown {
-+    static const GUID guid;
-+
 +    virtual BOOL STDMETHODCALLTYPE SupportsLowLatency() = 0;
 +
 +    virtual HRESULT STDMETHODCALLTYPE LatencySleep() = 0;
@@ -618,21 +601,34 @@ index 00000000..bc5e0baa
 +        D3D_LATENCY_RESULTS * latencyResults) = 0;
 +};
 +
-+SHARED_DEFINE_GUID(ID3DLowLatencyDevice)
-diff --git a/src/vkd3d-proton/vkd3d-proton_interfaces.cpp b/src/vkd3d-proton/vkd3d-proton_interfaces.cpp
-index 03a4acd1..7b41fb7d 100644
---- a/src/vkd3d-proton/vkd3d-proton_interfaces.cpp
-+++ b/src/vkd3d-proton/vkd3d-proton_interfaces.cpp
-@@ -20,3 +20,4 @@
- const GUID ID3D12DeviceExt::guid = {0x11ea7a1a, 0x0f6a, 0x49bf, {0xb6, 0x12, 0x3e, 0x30, 0xf8, 0xe2, 0x01, 0xdd}};
- const GUID ID3D12GraphicsCommandListExt::guid = {0x77a86b09, 0x2bea, 0x4801, {0xb8, 0x9a, 0x37, 0x64, 0x8e, 0x10, 0x4a, 0xf1}};
- const GUID ID3D12GraphicsCommandListExt1::guid = {0xd53b0028, 0xafb4, 0x4b65, {0xa4, 0xf1, 0x7b, 0x0d, 0xaa, 0xa6, 0x5b, 0x4f}};
-+const GUID ID3D12CommandQueueExt::guid = {0x40ed3f96, 0xe773, 0xe9bc, {0xfc, 0x0c, 0xe9, 0x55, 0x60, 0xc9, 0x9a, 0xd6}};
++#ifndef _MSC_VER
++__CRT_UUID_DECL(ID3DLowLatencyDevice, 0xf3112584, 0x41f9, 0x348d, 0xa5, 0x9b, 0x00, 0xb7, 0xe1, 0xd2, 0x85, 0xd6);
++#endif
+diff --git a/src/sysinfo/nvapi_adapter_registry.cpp b/src/sysinfo/nvapi_adapter_registry.cpp
+index 3b68a0ba..c45aaf7e 100644
+--- a/src/sysinfo/nvapi_adapter_registry.cpp
++++ b/src/sysinfo/nvapi_adapter_registry.cpp
+@@ -1,6 +1,7 @@
+ #include "nvapi_adapter_registry.h"
+ #include "../d3d11/nvapi_d3d11_device.h"
+ #include "../d3d12/nvapi_d3d12_device.h"
++#include "../d3d/nvapi_d3d_low_latency_device.h"
+ #include "../util/util_log.h"
+ 
+ namespace dxvk {
+@@ -11,6 +12,7 @@ namespace dxvk {
+     NvapiAdapterRegistry::~NvapiAdapterRegistry() {
+         NvapiD3d11Device::ClearCacheMaps();
+         NvapiD3d12Device::ClearCacheMaps();
++        NvapiD3dLowLatencyDevice::ClearCacheMaps();
+ 
+         for (const auto output : m_nvapiOutputs)
+             delete output;
 diff --git a/src/vkd3d-proton/vkd3d-proton_interfaces.h b/src/vkd3d-proton/vkd3d-proton_interfaces.h
-index 8f388ac6..b16f38d7 100644
+index 35826a63..1ab71962 100644
 --- a/src/vkd3d-proton/vkd3d-proton_interfaces.h
 +++ b/src/vkd3d-proton/vkd3d-proton_interfaces.h
-@@ -29,7 +29,13 @@
+@@ -25,7 +25,13 @@
  
  enum D3D12_VK_EXTENSION : uint32_t {
      D3D12_VK_NVX_BINARY_IMPORT = 0x1,
@@ -647,35 +643,27 @@ index 8f388ac6..b16f38d7 100644
  };
  
  struct D3D12_CUBIN_DATA_HANDLE {
-@@ -114,6 +120,15 @@ ID3D12GraphicsCommandListExt1 : public ID3D12GraphicsCommandListExt {
+@@ -106,8 +112,15 @@ ID3D12GraphicsCommandListExt1 : public ID3D12GraphicsCommandListExt {
          UINT32 raw_params_count) = 0;
  };
  
 +MIDL_INTERFACE("40ed3f96-e773-e9bc-fc0c-e95560c99ad6")
 +ID3D12CommandQueueExt : public IUnknown {
-+    static const GUID guid;
-+
 +    virtual HRESULT STDMETHODCALLTYPE NotifyOutOfBandCommandQueue(
 +        D3D12_OUT_OF_BAND_CQ_TYPE type) = 0;
 +};
 +
- VKD3D_PROTON_GUID(ID3D12DeviceExt)
- VKD3D_PROTON_GUID(ID3D12GraphicsCommandListExt)
- VKD3D_PROTON_GUID(ID3D12GraphicsCommandListExt1)
-+VKD3D_PROTON_GUID(ID3D12CommandQueueExt)
+ #ifndef _MSC_VER
+ __CRT_UUID_DECL(ID3D12DeviceExt, 0x11ea7a1a, 0x0f6a, 0x49bf, 0xb6, 0x12, 0x3e, 0x30, 0xf8, 0xe2, 0x01, 0xdd);
+ __CRT_UUID_DECL(ID3D12GraphicsCommandListExt, 0x77a86b09, 0x2bea, 0x4801, 0xb8, 0x9a, 0x37, 0x64, 0x8e, 0x10, 0x4a, 0xf1);
+ __CRT_UUID_DECL(ID3D12GraphicsCommandListExt1, 0xd53b0028, 0xafb4, 0x4b65, 0xa4, 0xf1, 0x7b, 0x0d, 0xaa, 0xa6, 0x5b, 0x4f);
++__CRT_UUID_DECL(ID3D12CommandQueueExt, 0x40ed3f96, 0xe773, 0xe9bc, 0xfc, 0x0c, 0xe9, 0x55, 0x60, 0xc9, 0x9a, 0xd6);
+ #endif
 diff --git a/tests/meson.build b/tests/meson.build
-index 5aca1d56..c967aed8 100644
+index 9b9b256e..f020c0f4 100644
 --- a/tests/meson.build
 +++ b/tests/meson.build
-@@ -1,6 +1,7 @@
- nvapi_src = files([
-   '../src/dxvk/dxvk_interfaces.cpp',
-   '../src/vkd3d-proton/vkd3d-proton_interfaces.cpp',
-+  '../src/shared/shared_interfaces.cpp',
-   '../src/util/util_string.cpp',
-   '../src/util/util_env.cpp',
-   '../src/util/util_log.cpp',
-@@ -8,6 +9,7 @@ nvapi_src = files([
+@@ -6,6 +6,7 @@ nvapi_src = files([
    '../src/sysinfo/nvml.cpp',
    '../src/d3d/lfx.cpp',
    '../src/d3d/nvapi_d3d_instance.cpp',
@@ -684,7 +672,7 @@ index 5aca1d56..c967aed8 100644
    '../src/sysinfo/nvapi_adapter.cpp',
    '../src/sysinfo/nvapi_adapter_registry.cpp',
 diff --git a/tests/nvapi_d3d.cpp b/tests/nvapi_d3d.cpp
-index 2b32d69e..afc10fec 100644
+index 2b32d69e..3bb83a2c 100644
 --- a/tests/nvapi_d3d.cpp
 +++ b/tests/nvapi_d3d.cpp
 @@ -116,11 +116,16 @@ TEST_CASE("D3D Reflex/LatencyFleX depending methods succeed", "[.d3d]") {
@@ -698,7 +686,7 @@ index 2b32d69e..afc10fec 100644
  
      auto e = ConfigureDefaultTestEnvironment(*dxgiFactory, *vulkan, *nvml, *lfx, adapter, output);
  
-+    ALLOW_CALL(unknown, QueryInterface(ID3DLowLatencyDevice::guid, _))
++    ALLOW_CALL(unknown, QueryInterface(__uuidof(ID3DLowLatencyDevice), _))
 +        .RETURN(E_NOINTERFACE);
 +
      ALLOW_CALL(*lfx, IsAvailable())
@@ -732,7 +720,7 @@ index 2b32d69e..afc10fec 100644
 -        params.version = NV_LATENCY_MARKER_PARAMS_VER;
 -        REQUIRE(NvAPI_D3D_SetLatencyMarker(&unknown, &params) == NVAPI_NO_IMPLEMENTATION);
 +    SECTION("Reflex depending methods succeed when D3DLowLatencyDevice is available") {
-+        ALLOW_CALL(unknown, QueryInterface(ID3DLowLatencyDevice::guid, _))
++        ALLOW_CALL(unknown, QueryInterface(__uuidof(ID3DLowLatencyDevice), _))
 +            .LR_SIDE_EFFECT(*_2 = static_cast<ID3DLowLatencyDevice*>(&lowLatencyDevice))
 +            .LR_SIDE_EFFECT(lowLatencyDeviceRefCount++)
 +            .RETURN(S_OK);
@@ -961,7 +949,7 @@ index 2b32d69e..afc10fec 100644
      }
  }
 diff --git a/tests/nvapi_d3d12.cpp b/tests/nvapi_d3d12.cpp
-index 7e587280..05bf0ba9 100644
+index 18b31540..d04dcf87 100644
 --- a/tests/nvapi_d3d12.cpp
 +++ b/tests/nvapi_d3d12.cpp
 @@ -2,6 +2,7 @@
@@ -984,13 +972,13 @@ index 7e587280..05bf0ba9 100644
 +    auto commandQueueRefCount = 0;
 +    auto lowLatencyDeviceRefCount = 0;
  
-     ALLOW_CALL(device, QueryInterface(ID3D12DeviceExt::guid, _))
+     ALLOW_CALL(device, QueryInterface(__uuidof(ID3D12DeviceExt), _))
          .LR_SIDE_EFFECT(*_2 = static_cast<ID3D12DeviceExt*>(&device))
 @@ -36,6 +41,9 @@ TEST_CASE("D3D12 methods succeed", "[.d3d12]") {
          .LR_SIDE_EFFECT(deviceRefCount--)
          .RETURN(deviceRefCount);
  
-+    ALLOW_CALL(device, QueryInterface(ID3DLowLatencyDevice::guid, _))
++    ALLOW_CALL(device, QueryInterface(__uuidof(ID3DLowLatencyDevice), _))
 +        .RETURN(E_NOINTERFACE);
 +
      ALLOW_CALL(device, GetExtensionSupport(_))
@@ -1004,7 +992,7 @@ index 7e587280..05bf0ba9 100644
 +        .LR_SIDE_EFFECT(*_2 = static_cast<ID3D12CommandQueue*>(&commandQueue))
 +        .LR_SIDE_EFFECT(commandQueueRefCount++)
 +        .RETURN(S_OK);
-+    ALLOW_CALL(commandQueue, QueryInterface(ID3D12CommandQueueExt::guid, _))
++    ALLOW_CALL(commandQueue, QueryInterface(__uuidof(ID3D12CommandQueueExt), _))
 +        .LR_SIDE_EFFECT(*_2 = static_cast<ID3D12CommandQueueExt*>(&commandQueue))
 +        .LR_SIDE_EFFECT(commandQueueRefCount++)
 +        .RETURN(S_OK);
@@ -1021,7 +1009,7 @@ index 7e587280..05bf0ba9 100644
      SECTION("CreateGraphicsPipelineState for other than SetDepthBounds returns not-supported") {
          FORBID_CALL(device, CreateGraphicsPipelineState(_, _, _));
  
-@@ -748,4 +774,104 @@ TEST_CASE("D3D12 methods succeed", "[.d3d12]") {
+@@ -750,4 +776,104 @@ TEST_CASE("D3D12 methods succeed", "[.d3d12]") {
              REQUIRE(NvAPI_D3D12_BuildRaytracingAccelerationStructureEx(static_cast<ID3D12GraphicsCommandList4*>(&commandList), &params) != NVAPI_INCOMPATIBLE_STRUCT_VERSION);
          }
      }
@@ -1036,7 +1024,7 @@ index 7e587280..05bf0ba9 100644
 +
 +        auto e = ConfigureDefaultTestEnvironment(*dxgiFactory, *vulkan, *nvml, *lfx, adapter, output);
 +
-+        ALLOW_CALL(device, QueryInterface(ID3DLowLatencyDevice::guid, _))
++        ALLOW_CALL(device, QueryInterface(__uuidof(ID3DLowLatencyDevice), _))
 +            .LR_SIDE_EFFECT(*_2 = static_cast<ID3DLowLatencyDevice*>(&lowLatencyDevice))
 +            .LR_SIDE_EFFECT(lowLatencyDeviceRefCount++)
 +            .RETURN(S_OK);
@@ -1127,10 +1115,10 @@ index 7e587280..05bf0ba9 100644
 +    }
  }
 diff --git a/tests/nvapi_d3d12_mocks.h b/tests/nvapi_d3d12_mocks.h
-index a3cff713..cf6529f5 100644
+index 429f9139..27f78968 100644
 --- a/tests/nvapi_d3d12_mocks.h
 +++ b/tests/nvapi_d3d12_mocks.h
-@@ -164,3 +164,28 @@ class D3D12Vkd3dGraphicsCommandListMock final : public trompeloeil::mock_interfa
+@@ -177,3 +177,32 @@ class D3D12Vkd3dGraphicsCommandListMock final : public trompeloeil::mock_interfa
      IMPLEMENT_MOCK6(LaunchCubinShader);
      IMPLEMENT_MOCK9(LaunchCubinShaderEx);
  };
@@ -1156,7 +1144,11 @@ index a3cff713..cf6529f5 100644
 +    IMPLEMENT_MOCK2(Wait);
 +    IMPLEMENT_MOCK1(GetTimestampFrequency);
 +    IMPLEMENT_MOCK2(GetClockCalibration);
++#if defined(WIDL_EXPLICIT_AGGREGATE_RETURNS)
 +    MAKE_MOCK1(GetDesc, D3D12_COMMAND_QUEUE_DESC*(D3D12_COMMAND_QUEUE_DESC*), override);
++#else
++    IMPLEMENT_MOCK0(GetDesc);
++#endif
 +    IMPLEMENT_MOCK1(NotifyOutOfBandCommandQueue);
 +};
 \ No newline at end of file
@@ -1189,10 +1181,10 @@ index d1e7ac72..472cfc54 100644
 +};
 \ No newline at end of file
 diff --git a/tests/nvapi_tests_private.h b/tests/nvapi_tests_private.h
-index e126e61b..ff1856ae 100644
+index 1f8c92f0..e94c0c28 100644
 --- a/tests/nvapi_tests_private.h
 +++ b/tests/nvapi_tests_private.h
-@@ -2,6 +2,7 @@
+@@ -4,6 +4,7 @@
  
  #include "../src/nvapi_private.h"
  #include "../src/nvapi_globals.h"

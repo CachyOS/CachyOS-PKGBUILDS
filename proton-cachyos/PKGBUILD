@@ -7,7 +7,7 @@ _optimize=${_optimize-y}
 _optimize_v4=${_optimize_v4-}
 
 pkgname=proton-cachyos
-_srctag=9.0.20240221
+_srctag=9.0-20240229
 _commit=
 pkgver=9.0
 _geckover=2.47.4
@@ -175,7 +175,7 @@ prepare() {
     done
 
     patch -p1 -i "$srcdir"/0001-AUR-Pkgbuild-changes.patch
-    #patch -p1 -i "$srcdir"/0002-AUR-Do-not-update-cargo-crates.patch
+    patch -p1 -i "$srcdir"/0002-AUR-Do-not-update-cargo-crates.patch
     patch -p1 -i "$srcdir"/0003-AUR-Remove-kaldi-openfst-vosk-api-modules-because-of.patch
     patch -p1 -i "$srcdir"/0004-AUR-Copy-DLL-dependencies-of-32bit-libvkd3d-dlls-int.patch
     patch -p1 -i "$srcdir"/0005-AUR-Strip-binaries-early.patch
@@ -186,24 +186,27 @@ prepare() {
     cd $srcdir/proton/wine
     echo "Wine: Enable LTO for wineserver"
     patch -Np1 -i "$srcdir"/server-Enable-link-time-optimization.patch
-#    echo "Wine: FSR"
-#    patch -Np1 -i "$srcdir"/amd-fsr.patch
-#    echo "Wine: Enable Reflex"
-#    patch -Np1 -i "$srcdir"/wine-reflex.patch
+    echo "Wine: FSR"
+    patch -Np1 -i "$srcdir"/amd-fsr.patch
+    echo "Wine: Enable Reflex"
+    patch -Np1 -i "$srcdir"/wine-reflex.patch
 #    echo "Wine: Enable Fastsync/NTSync"
 #    patch -Np1 -i "$srcdir"/fastsync.patch
 
-#    cd $srcdir/proton/dxvk
-#    echo "dxvk: Enable Reflex"
-#    patch -Np1 -i "$srcdir"/dxvk-reflex.patch
-#    echo "dxvk-nvapi: Enable Reflex"
-#    cd $srcdir/proton/dxvk-nvapi
-#    git checkout 0a7c48b256cafe6b3fa1db8183f089712c72e9ad
-#    patch -Np1 -i "$srcdir"/nvapi-reflex.patch
+    cd $srcdir/proton/dxvk
+    echo "dxvk: Enable Reflex"
+    patch -Np1 -i "$srcdir"/dxvk-reflex.patch
+    echo "dxvk-nvapi: Enable Reflex"
+    cd $srcdir/proton/dxvk-nvapi
+    patch -Np1 -i "$srcdir"/nvapi-reflex.patch
 
-#    echo "vkd3d-proton: Enable-Reflex"
-#    cd $srcdir/proton/vkd3d-proton
-#    patch -Np1 -i "$srcdir"/vkd3d-reflex.patch
+    echo "vkd3d-proton: Enable-Reflex"
+    cd $srcdir/proton/vkd3d-proton
+    patch -Np1 -i "$srcdir"/vkd3d-reflex.patch
+
+    echo "Update Vulkan Headers for dxvk"
+    cd $srcdir/proton/dxvk/include/vulkan
+    git checkout 5a5c9a643484d888873e32c5d7d484fae8e71d3d
 }
 
 build() {
@@ -297,18 +300,18 @@ sha256sums=('SKIP'
             'fd88fc7e537d058d7a8abf0c1ebc90c574892a466de86706a26d254710a82814'
             'd73d440c08ebd67c93fbd6534f4f1b4e98aa07342f9c7d98c8aaeb74755eb9cf'
             '1a7594e71ad34046226e6145570b2bd3f19b0145ec1e0f66dc4cbad3e83cc224'
-            '25693e0d04c6e959cfe75eee69c0812f4ec8c4ef1183a0e4e40705bd501ddb85'
+            'd4f84a05dfeec12d8bd31b6049325ca05852856cd9a29f53c81ef4f56205b013'
             '369193510b9309fc9cb80fc204220599583677a59976c7f434c2a33871b0cbe1'
             'd94e11af39dce07e09c3448b38cd3511931c6981fa18f136a2b3f3f448206438'
             '8c1518d07b7516fd09b189d9182174ea2fb7b5a4d83f6dda8b857cdf429b43fa'
             '115925bfa8e727013955fb9b27feb63462c6c40f45758d2204f8c7322af8e44a'
             '13921bc7b252d439b4c3355f4010d4c0dfe91eee0ec5cdd0363f19c01dbc8309'
-            'd84f6530acd6d6480fa15cc566665ca2a5af98dbe1b66b4a9295bd186a685585'
+            'f619015fa7c8c782023f46b2752d34726fcfec0c62746675f88ce0a3cfa6cc76'
             '2f30e393b5e6c371a68ad6b5b6693d35412d30ba7e3963bc65a650c9c29ff569'
             'ceff1ff8de8bc25729cc7928eb46d16ef4c2f49ef3eb2e47ce3134337ca7107e'
-            '80322501d28cc3f288fe206e4e943b5b8a579993f15227ad4f7ce5d879af0d54'
-            '972623dc2e428804b8873306527906f7c852f8dce29478df0eb034e3507ab886'
-            '08af47c4597b9cb5e7984eb7e273d03ba7c205eb4a72f4f91329e5e1d60e90a7'
+            'ad835a1149ce3afd95bff72c798c81e032a44e6998e6c52f061089af63854d7e'
+            '7f68c6221f7de93d217af8dd2026097a81d235630fc3a19bcc1f8c27f85fa174'
+            '36e601bf53a3e938bffd0b6f02432930a53a652b732a503aa29944c043def690'
             '23e35740995ada449865b0b5129e8177e995d28842a924be4562e65d6513bafd'
             'bd0482c05474068bb50a176eb33c02a1eb3ac1bece0365ee0dd3bcd304fabf9e')
 
