@@ -99,11 +99,11 @@ package() {
 
   DESTDIR="$pkgdir" make install
   install -Dm644 "${srcdir}/90-dracut-install.hook" "${pkgdir}/usr/share/libalpm/hooks/90-dracut-install.hook"
-  install -Dm644 "${srcdir}/60-dracut-remove.hook" "${pkgdir}/usr/share/libalpm/hooks/60-dracut-remove.hook"
-  install -Dm755 "${srcdir}/dracut-install" "${pkgdir}/usr/share/libalpm/scripts/dracut-install"
-  install -Dm755 "${srcdir}/dracut-remove" "${pkgdir}/usr/share/libalpm/scripts/dracut-remove"
-  install -Dm755 "${srcdir}/dracut-rebuild" "${pkgdir}/usr/bin/dracut-rebuild"
-  install -Dm644 "${srcdir}/dracut-cachyos.conf" "${pkgdir}/etc/dracut-cachyos.conf"
-  install -Dm755 "${srcdir}/snapshot-overlay.sh" "${pkgdir}/usr/lib/dracut/modules.d/91btrfs-snapshot-overlay/snapshot-overlay.sh"
-  install -Dm755 "${srcdir}/module-setup.sh" "${pkgdir}/usr/lib/dracut/modules.d/91btrfs-snapshot-overlay/module-setup.sh"
+  install -Dm644 "${srcdir}/60-dracut-remove.hook"  "${pkgdir}/usr/share/libalpm/hooks/60-dracut-remove.hook"
+  install -Dm755 "${srcdir}/dracut-install"         "${pkgdir}/usr/share/libalpm/scripts/dracut-install"
+  install -Dm755 "${srcdir}/dracut-remove"          "${pkgdir}/usr/share/libalpm/scripts/dracut-remove"
+  install -Dm755 "${srcdir}/dracut-rebuild"         "${pkgdir}/usr/bin/dracut-rebuild"
+  install -Dm644 "${srcdir}/dracut-cachyos.conf"    "${pkgdir}/etc/dracut-cachyos.conf"
+  install -Dm755 "${srcdir}/snapshot-overlay.sh"    "${pkgdir}/usr/lib/dracut/modules.d/91btrfs-snapshot-overlay/snapshot-overlay.sh"
+  install -Dm755 "${srcdir}/module-setup.sh"        "${pkgdir}/usr/lib/dracut/modules.d/91btrfs-snapshot-overlay/module-setup.sh"
 }
