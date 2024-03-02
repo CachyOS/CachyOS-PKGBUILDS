@@ -1,0 +1,43 @@
+From bc6c21fe707cccbdc9bd14a517e8aa7bdf0b85c2 Mon Sep 17 00:00:00 2001
+From: Stelios Tsampas <loathingkernel@gmail.com>
+Date: Thu, 29 Feb 2024 15:28:48 +0200
+Subject: [PATCH 7/7] AUR Enable winewayland
+
+---
+ Makefile.in | 1 +
+ proton      | 8 ++++++++
+ 2 files changed, 9 insertions(+)
+
+diff --git a/Makefile.in b/Makefile.in
+index 99ee6e17..581b981c 100644
+--- a/Makefile.in
++++ b/Makefile.in
+@@ -426,6 +426,7 @@ WINE_SOURCE_ARGS = \
+ 
+ WINE_CONFIGURE_ARGS = \
+   --with-x \
++  --with-wayland \
+   --with-gstreamer \
+   --with-mingw \
+   --without-oss \
+diff --git a/proton b/proton
+index 89baeb8e..5ef22e8c 100755
+--- a/proton
++++ b/proton
+@@ -1524,6 +1524,14 @@ if __name__ == "__main__":
+     elif sys.argv[1] == "waitforexitandrun":
+         #wait for wineserver to shut down
+         g_session.run_proc([g_proton.wineserver_bin, "-w"])
++        winedrv = "x11"
++        if os.environ.get("PROTON_ENABLE_WAYLAND", False) and os.environ["PROTON_ENABLE_WAYLAND"] == "1":
++            del os.environ["DISPLAY"]
++            winedrv = "wayland"
++        g_session.run_proc(
++            [g_proton.wine_bin, "reg.exe", "add", "HKCU\\Software\\Wine\\Drivers", "/v", "Graphics", "/d", f"{winedrv}", "/f"]
++        )
++        g_session.run_proc([g_proton.wineserver_bin, "-w"])
+         #then run
+         rc = g_session.run()
+     elif sys.argv[1] == "runinprefix":
+-- 
+2.44.0
