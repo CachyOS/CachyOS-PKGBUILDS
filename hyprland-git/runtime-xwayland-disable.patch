@@ -1,21 +1,21 @@
 diff --git a/src/config/ConfigManager.cpp b/src/config/ConfigManager.cpp
-index 4d3e6358..41118235 100644
+index 2fd5aa28..304ae39f 100644
 --- a/src/config/ConfigManager.cpp
 +++ b/src/config/ConfigManager.cpp
-@@ -468,6 +468,7 @@ CConfigManager::CConfigManager() {
-
-     m_pConfig->addConfigValue("xwayland:use_nearest_neighbor", {1L});
-     m_pConfig->addConfigValue("xwayland:force_zero_scaling", {0L});
-+    m_pConfig->addConfigValue("xwayland:enabled", {1L});
-
-     m_pConfig->addConfigValue("opengl:nvidia_anti_flicker", {1L});
-
+@@ -498,6 +498,7 @@ CConfigManager::CConfigManager() {
+ 
+     m_pConfig->addConfigValue("xwayland:use_nearest_neighbor", Hyprlang::INT{1});
+     m_pConfig->addConfigValue("xwayland:force_zero_scaling", Hyprlang::INT{0});
++    m_pConfig->addConfigValue("xwayland:enabled", Hyprlang::INT{1});
+ 
+     m_pConfig->addConfigValue("opengl:nvidia_anti_flicker", Hyprlang::INT{1});
+     m_pConfig->addConfigValue("opengl:force_introspection", Hyprlang::INT{2});
 diff --git a/src/managers/XWaylandManager.cpp b/src/managers/XWaylandManager.cpp
-index b46004e6..16598afb 100644
+index f70022cf..b6e3740e 100644
 --- a/src/managers/XWaylandManager.cpp
 +++ b/src/managers/XWaylandManager.cpp
 @@ -9,6 +9,10 @@
-
+ 
  CHyprXWaylandManager::CHyprXWaylandManager() {
  #ifndef NO_XWAYLAND
 +    static auto* const XWAYLAND_ENABLED = (Hyprlang::INT* const*)g_pConfigManager->getConfigValuePtr("xwayland:enabled");
@@ -23,5 +23,5 @@ index b46004e6..16598afb 100644
 +        return;
 +    }
      m_sWLRXWayland = wlr_xwayland_create(g_pCompositor->m_sWLDisplay, g_pCompositor->m_sWLRCompositor, 1);
-
+ 
      if (!m_sWLRXWayland) {
