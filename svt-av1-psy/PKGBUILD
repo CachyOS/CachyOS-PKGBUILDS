@@ -1,0 +1,52 @@
+# Maintainer: Maxime Gauduin <alucryd@archlinux.org>
+# Contributor: Daniel Bermond <dbermond@archlinux.org>
+# Contributor: Thomas Schneider <maxmusterm@gmail.com>
+# Contributor: Zak BlueSwordM <neutronpcxt@gmail.com>
+
+pkgname=svt-av1-psy
+pkgver=v2.0.0.rc2.r0.g5cac47c1
+pkgrel=1
+pkgdesc='Scalable Video Technology AV1 encoder and decoder, with added perceptual enhancements for psychovisually optimal AV1 encoding'
+arch=(x86_64)
+url=https://github.com/gianni-rosato/svt-av1-psy
+license=(
+  BSD
+  'custom: Alliance for Open Media Patent License 1.0'
+)
+depends=(glibc)
+makedepends=(
+  cmake
+  git
+  nasm
+  ninja
+)
+provides=('svt-av1')
+conflicts=('svt-av1')
+_tag=5cac47c1eaee9c5229cdf693bf26e90ff6c54b40
+source=(git+https://github.com/gianni-rosato/svt-av1-psy.git#tag=${_tag})
+b2sums=('SKIP')
+
+prepare() {
+  sed '/CMAKE_BUILD_TYPE Release/d' -i svt-av1-psy/CMakeLists.txt
+}
+
+pkgver() {
+  cd svt-av1-psy
+  git describe --long --tags | sed 's/\([^-]*-g\)/r\1/;s/-/./g'
+}
+
+build() {
+  export LDFLAGS="$LDFLAGS -Wl,-z,noexecstack"
+  cmake -S svt-av1-psy -B build -G Ninja \
+    -DCMAKE_INSTALL_PREFIX=/usr \
+    -DBUILD_SHARED_LIBS=ON \
+    -DENABLE_AVX512=ON
+  ninja -C build
+}
+
+package() {
+  DESTDIR="${pkgdir}" ninja -C build install
+  install -Dm 644 svt-av1-psy/{LICENSE,PATENTS}.md -t "${pkgdir}"/usr/share/licenses/svt-av1/
+}
+
+# vim: ts=2 sw=2 et:
