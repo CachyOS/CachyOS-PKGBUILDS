@@ -4,8 +4,8 @@
 # Contributor: Zak BlueSwordM <neutronpcxt@gmail.com>
 
 pkgname=svt-av1
-pkgver=2.0.0.rc2
-pkgrel=2
+pkgver=v2.0.0.rc2.r0.g5cac47c1
+pkgrel=1
 pkgdesc='Scalable Video Technology AV1 encoder and decoder, with added perceptual enhancements for psychovisually optimal AV1 encoding'
 arch=(x86_64)
 url=https://github.com/gianni-rosato/svt-av1-psy
@@ -26,6 +26,11 @@ b2sums=('SKIP')
 
 prepare() {
   sed '/CMAKE_BUILD_TYPE Release/d' -i svt-av1-psy/CMakeLists.txt
+}
+
+pkgver() {
+  cd svt-av1-psy
+  git describe --long --tags | sed 's/\([^-]*-g\)/r\1/;s/-/./g'
 }
 
 build() {
