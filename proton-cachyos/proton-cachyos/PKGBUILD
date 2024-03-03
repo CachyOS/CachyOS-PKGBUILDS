@@ -13,7 +13,7 @@ _commit=
 pkgver=9.0
 _geckover=2.47.4
 _monover=9.0.0
-pkgrel=2
+pkgrel=3
 pkgdesc="Compatibility tool for Steam Play based on Wine and additional components, experimental branch with extra CachyOS flavour"
 url="https://github.com/ValveSoftware/Proton"
 arch=(x86_64 x86_64_v3)
@@ -112,6 +112,7 @@ source=(
     disable-fastsync.patch
     wine-wayland.patch
     4947.patch
+    wayland-upstream.patch
 )
 noextract=(
     wine-gecko-${_geckover}-{x86,x86_64}.tar.xz
@@ -195,7 +196,7 @@ prepare() {
     echo "Wine: Enable Reflex"
     patch -Np1 -i "$srcdir"/wine-reflex.patch
     echo "Add upstream patch for wine wayland"
-    patch -Np1 -i "$srcdir"/4947.patch
+    patch -Np1 -i "$srcdir"/wayland-upstream.patch
 #    echo "Wine: Enable Fastsync/NTSync"
 #    patch -Np1 -i "$srcdir"/fastsync.patch
 
@@ -321,5 +322,6 @@ sha256sums=('SKIP'
             '23e35740995ada449865b0b5129e8177e995d28842a924be4562e65d6513bafd'
             'bd0482c05474068bb50a176eb33c02a1eb3ac1bece0365ee0dd3bcd304fabf9e'
             'fec4876c9795338cf3b5d35c95a28b39362fe98630b728cdf904176d63004aaf'
-            'b195da8ad075e5f5ca0eb67d188bddb0477f1ad1e31005aba30704e83486bcbe')
+            'b195da8ad075e5f5ca0eb67d188bddb0477f1ad1e31005aba30704e83486bcbe'
+            '93980df905e97b07d200ed968bb4b8477f9f8a13ea0e13f7f4044e2bf440020c')
 
