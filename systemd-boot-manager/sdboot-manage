@@ -178,18 +178,6 @@ generate_entries() {
                 fi
             fi
 
-            # handle initrd / ucode entries
-            initrd=""
-            if [[ -z ${INITRD_ENTRIES} ]]; then
-                while read -r ucodefile; do
-                    initrd="${initrd}initrd\t${ucodefile}\n"
-                done < <(find "${ESP}" -maxdepth 2 -type f -iname "*ucode.img" -printf "/%P\n")
-            else
-                for entry in $INITRD_ENTRIES; do
-                    initrd="${initrd}initrd\t/${entry}\n"
-                done
-            fi
-
             # when remove existing is set we want to start from an empty slate
             if [[ ${REMOVE_EXISTING,,} == "yes" ]]; then
                 while read -r entry; do
