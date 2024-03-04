@@ -6,17 +6,17 @@
 # Maintainer: Piotr Gorski <piotrgorski@cachyos.org>
 # Maintainer: Peter Jung ptr1337 <admin@ptr1337.dev>
 
-_staging=false
+_staging=true
 pkgname=pacman
-pkgver=6.0.2
-_pkgver=6.0.2
+pkgver=6.1.0
+_pkgver=6.1.0
 _sqlitever=$(curl -s 'https://archlinux.org/packages/search/json/?name=sqlite' | grep -oP '"pkgver":\s*"\K[^"]+' | head -n 1 | awk -F. '{
     printf "%d%02d%02d", $1, $2, $3;
     if (NF == 4) { printf "%02d", $4 }
     else { printf "00" }
 }')
 
-pkgrel=29
+pkgrel=1
 pkgdesc="A library-based package manager with dependency support. CachyOS fork."
 arch=('x86_64')
 url="https://www.archlinux.org/pacman/"
@@ -35,7 +35,7 @@ options=('strip') #'!lto' -- should we put no lto here??
 #              'B8151B117037781095514CA7BBDFFC92306B1121') # Andrew Gregory (pacman) <andrew@archlinux.org>
 _commit="c95951992afdc717eb4f4aa51c3082ff576e7003"
 if $_staging; then
-    _commit="7634047eaeb7a37ce0200f2b605836ffec503d49"
+    _commit="f2db61a3f96ac583ccfb853c93cb5deaf682cd9e"
 fi
 source=(
 #       https://sources.archlinux.org/other/pacman/$pkgname-$_pkgver.tar.xz{,.sig}
