@@ -1,8 +1,12 @@
-From b100d44faeadcabe8bc9444df6d199115842d4c1 Mon Sep 17 00:00:00 2001
+From f843969c0802835b34414330715e2b22599c9ca0 Mon Sep 17 00:00:00 2001
 From: Xaver Hugl <xaver.hugl@gmail.com>
 Date: Wed, 22 Nov 2023 19:51:24 +0100
-Subject: [PATCH] wip: wayland: implement linux-drm-syncobj-v1
+Subject: [PATCH] wayland: implement linux-drm-syncobj-v1
 
+linux-drm-syncobj-v1 allows drivers and apps to synchronize KWin's buffer access
+to their rendering, and synchronize their rendering to KWin's buffer release. This
+fixes severe glitches with the proprietary NVidia driver and allows for some
+performance improvements with Mesa too.
 ---
  src/CMakeLists.txt                            |   1 +
  src/backends/drm/drm_egl_backend.cpp          |  16 ++
@@ -20,25 +24,27 @@ Subject: [PATCH] wip: wayland: implement linux-drm-syncobj-v1
  .../scenes/opengl/abstract_egl_backend.h      |   2 +-
  .../scenes/opengl/openglbackend.cpp           |   4 +
  .../scenes/opengl/openglbackend.h             |   3 +
- src/scene/item.cpp                            |  11 +
- src/scene/item.h                              |   4 +
+ src/scene/item.cpp                            |   2 +-
+ src/scene/item.h                              |   1 +
  src/scene/itemrenderer_opengl.cpp             |  20 +-
  src/scene/itemrenderer_opengl.h               |   9 +-
+ src/scene/surfaceitem.cpp                     |   5 +
+ src/scene/surfaceitem.h                       |   2 +
  src/scene/surfaceitem_wayland.cpp             |   6 +
  src/scene/surfaceitem_wayland.h               |   1 +
  src/scene/workspacescene_opengl.cpp           |   2 +-
  src/wayland/CMakeLists.txt                    |   6 +
- src/wayland/linux_drm_syncobj_v1.cpp          | 146 ++++++++++
- src/wayland/linux_drm_syncobj_v1.h            |  65 +++++
+ src/wayland/linux_drm_syncobj_v1.cpp          | 153 +++++++++++
+ src/wayland/linux_drm_syncobj_v1.h            |  73 +++++
  .../protocols/linux-drm-syncobj-v1.xml        | 251 ++++++++++++++++++
- src/wayland/surface.cpp                       |  11 +
+ src/wayland/surface.cpp                       |  15 ++
  src/wayland/surface.h                         |   4 +
- src/wayland/surface_p.h                       |   4 +
+ src/wayland/surface_p.h                       |   5 +
  src/wayland/transaction.cpp                   |  18 +-
  src/wayland/transaction_p.h                   |  14 +
  src/wayland_server.cpp                        |  17 ++
  src/wayland_server.h                          |   7 +
- 34 files changed, 801 insertions(+), 6 deletions(-)
+ 36 files changed, 815 insertions(+), 7 deletions(-)
  create mode 100644 src/core/syncobjtimeline.cpp
  create mode 100644 src/core/syncobjtimeline.h
  create mode 100644 src/wayland/linux_drm_syncobj_v1.cpp
@@ -46,10 +52,10 @@ Subject: [PATCH] wip: wayland: implement linux-drm-syncobj-v1
  create mode 100644 src/wayland/protocols/linux-drm-syncobj-v1.xml
 
 diff --git a/src/CMakeLists.txt b/src/CMakeLists.txt
-index cb3d70105cc..fdd44887aad 100644
+index 262973f7cda..746017aca5c 100644
 --- a/src/CMakeLists.txt
 +++ b/src/CMakeLists.txt
-@@ -73,6 +73,7 @@ target_sources(kwin PRIVATE
+@@ -71,6 +71,7 @@ target_sources(kwin PRIVATE
      core/session_logind.cpp
      core/session_noop.cpp
      core/shmgraphicsbufferallocator.cpp
@@ -58,7 +64,7 @@ index cb3d70105cc..fdd44887aad 100644
      cursorsource.cpp
      dbusinterface.cpp
 diff --git a/src/backends/drm/drm_egl_backend.cpp b/src/backends/drm/drm_egl_backend.cpp
-index cfb7a482a03..943407e1d9b 100644
+index 6573ff32fde..0c267358298 100644
 --- a/src/backends/drm/drm_egl_backend.cpp
 +++ b/src/backends/drm/drm_egl_backend.cpp
 @@ -9,6 +9,7 @@
@@ -69,7 +75,7 @@ index cfb7a482a03..943407e1d9b 100644
  #include "drm_abstract_output.h"
  #include "drm_backend.h"
  #include "drm_egl_cursor_layer.h"
-@@ -199,6 +200,21 @@ DrmGpu *EglGbmBackend::gpu() const
+@@ -192,6 +193,21 @@ DrmGpu *EglGbmBackend::gpu() const
      return m_backend->primaryGpu();
  }
  
@@ -92,10 +98,10 @@ index cfb7a482a03..943407e1d9b 100644
  
  #include "moc_drm_egl_backend.cpp"
 diff --git a/src/backends/drm/drm_egl_backend.h b/src/backends/drm/drm_egl_backend.h
-index 43c431f07be..4a47e900cd3 100644
+index 32132f50bf4..3c53d0b2f1f 100644
 --- a/src/backends/drm/drm_egl_backend.h
 +++ b/src/backends/drm/drm_egl_backend.h
-@@ -63,6 +63,9 @@ public:
+@@ -62,6 +62,9 @@ public:
      EglDisplay *displayForGpu(DrmGpu *gpu);
      std::shared_ptr<EglContext> contextForGpu(DrmGpu *gpu);
  
@@ -106,7 +112,7 @@ index 43c431f07be..4a47e900cd3 100644
      bool initializeEgl();
      bool initRenderingContext();
 diff --git a/src/backends/drm/drm_gpu.cpp b/src/backends/drm/drm_gpu.cpp
-index 73276cca332..f1cdcc219d2 100644
+index 24bfe046777..607dbf15d03 100644
 --- a/src/backends/drm/drm_gpu.cpp
 +++ b/src/backends/drm/drm_gpu.cpp
 @@ -77,6 +77,9 @@ DrmGpu::DrmGpu(DrmBackend *backend, const QString &devNode, int fd, dev_t device
@@ -421,7 +427,7 @@ index 00000000000..465f791dd58
 +};
 +}
 diff --git a/src/platformsupport/scenes/opengl/abstract_egl_backend.cpp b/src/platformsupport/scenes/opengl/abstract_egl_backend.cpp
-index 4b4ae68f5db..18c50f55add 100644
+index 5328ac4d5eb..adb93cf3994 100644
 --- a/src/platformsupport/scenes/opengl/abstract_egl_backend.cpp
 +++ b/src/platformsupport/scenes/opengl/abstract_egl_backend.cpp
 @@ -13,6 +13,7 @@
@@ -432,7 +438,7 @@ index 4b4ae68f5db..18c50f55add 100644
  #include "wayland_server.h"
  // kwin libs
  #include "opengl/eglimagetexture.h"
-@@ -217,9 +218,13 @@ void AbstractEglBackend::initWayland()
+@@ -215,9 +216,13 @@ void AbstractEglBackend::initWayland()
          .formatTable = includeShaderConversions(filterFormats({}, true)),
      });
  
@@ -447,7 +453,7 @@ index 4b4ae68f5db..18c50f55add 100644
  
  void AbstractEglBackend::initClientExtensions()
 diff --git a/src/platformsupport/scenes/opengl/abstract_egl_backend.h b/src/platformsupport/scenes/opengl/abstract_egl_backend.h
-index 0abd331ed6b..1f77898db50 100644
+index b8550f36f3d..58c7f824231 100644
 --- a/src/platformsupport/scenes/opengl/abstract_egl_backend.h
 +++ b/src/platformsupport/scenes/opengl/abstract_egl_backend.h
 @@ -34,7 +34,7 @@ public:
@@ -496,7 +502,7 @@ index 3318f4da187..e0749561826 100644
      /**
       * @brief Sets the backend initialization to failed.
 diff --git a/src/scene/item.cpp b/src/scene/item.cpp
-index d5675677c43..ca3a298561a 100644
+index f7c97cab60e..1e3e0df8d52 100644
 --- a/src/scene/item.cpp
 +++ b/src/scene/item.cpp
 @@ -6,6 +6,7 @@
@@ -507,25 +513,16 @@ index d5675677c43..ca3a298561a 100644
  #include "scene/scene.h"
  #include "utils/common.h"
  
-@@ -462,6 +463,16 @@ void Item::setPresentationHint(PresentationModeHint hint)
+@@ -475,7 +476,6 @@ void Item::setPresentationHint(PresentationModeHint hint)
+ {
      m_presentationHint = hint;
  }
- 
-+std::shared_ptr<SyncReleasePoint> Item::bufferReleasePoint() const
-+{
-+    return m_bufferReleasePoint;
-+}
-+
-+void Item::setBufferReleasePoint(const std::shared_ptr<SyncReleasePoint> &releasePoint)
-+{
-+    m_bufferReleasePoint = releasePoint;
-+}
-+
+-
  } // namespace KWin
  
  #include "moc_item.cpp"
 diff --git a/src/scene/item.h b/src/scene/item.h
-index 5e9e4f1c92a..f4dd963a41b 100644
+index 3e6b0e4b26a..9e1ac3eeddb 100644
 --- a/src/scene/item.h
 +++ b/src/scene/item.h
 @@ -22,6 +22,7 @@ namespace KWin
@@ -536,32 +533,8 @@ index 5e9e4f1c92a..f4dd963a41b 100644
  
  /**
   * The Item class is the base class for items in the scene.
-@@ -114,6 +115,7 @@ public:
-     virtual void preprocess();
-     const ColorDescription &colorDescription() const;
-     PresentationModeHint presentationHint() const;
-+    std::shared_ptr<SyncReleasePoint> bufferReleasePoint() const;
- 
- Q_SIGNALS:
-     void childAdded(Item *item);
-@@ -137,6 +139,7 @@ protected:
-     void discardQuads();
-     void setColorDescription(const ColorDescription &description);
-     void setPresentationHint(PresentationModeHint hint);
-+    void setBufferReleasePoint(const std::shared_ptr<SyncReleasePoint> &releasePoint);
- 
- private:
-     void addChild(Item *item);
-@@ -166,6 +169,7 @@ private:
-     mutable std::optional<QList<Item *>> m_sortedChildItems;
-     ColorDescription m_colorDescription = ColorDescription::sRGB;
-     PresentationModeHint m_presentationHint = PresentationModeHint::VSync;
-+    std::shared_ptr<SyncReleasePoint> m_bufferReleasePoint;
- };
- 
- } // namespace KWin
 diff --git a/src/scene/itemrenderer_opengl.cpp b/src/scene/itemrenderer_opengl.cpp
-index 44ec0918e33..e59150550e5 100644
+index abf11d21dcd..72b565a36c5 100644
 --- a/src/scene/itemrenderer_opengl.cpp
 +++ b/src/scene/itemrenderer_opengl.cpp
 @@ -8,7 +8,9 @@
@@ -599,7 +572,7 @@ index 44ec0918e33..e59150550e5 100644
  }
  
  QVector4D ItemRendererOpenGL::modulate(float opacity, float brightness) const
-@@ -173,6 +184,7 @@ void ItemRendererOpenGL::createRenderNode(Item *item, RenderContext *context)
+@@ -181,6 +192,7 @@ void ItemRendererOpenGL::createRenderNode(Item *item, RenderContext *context)
                  .coordinateType = UnnormalizedCoordinates,
                  .scale = scale,
                  .colorDescription = item->colorDescription(),
@@ -607,7 +580,7 @@ index 44ec0918e33..e59150550e5 100644
              });
          }
      } else if (auto decorationItem = qobject_cast<DecorationItem *>(item)) {
-@@ -187,6 +199,7 @@ void ItemRendererOpenGL::createRenderNode(Item *item, RenderContext *context)
+@@ -195,6 +207,7 @@ void ItemRendererOpenGL::createRenderNode(Item *item, RenderContext *context)
                  .coordinateType = UnnormalizedCoordinates,
                  .scale = scale,
                  .colorDescription = item->colorDescription(),
@@ -615,15 +588,15 @@ index 44ec0918e33..e59150550e5 100644
              });
          }
      } else if (auto surfaceItem = qobject_cast<SurfaceItem *>(item)) {
-@@ -202,6 +215,7 @@ void ItemRendererOpenGL::createRenderNode(Item *item, RenderContext *context)
+@@ -210,6 +223,7 @@ void ItemRendererOpenGL::createRenderNode(Item *item, RenderContext *context)
                      .coordinateType = NormalizedCoordinates,
                      .scale = scale,
                      .colorDescription = item->colorDescription(),
-+                    .bufferReleasePoint = item->bufferReleasePoint(),
++                    .bufferReleasePoint = surfaceItem->bufferReleasePoint(),
                  });
              }
          }
-@@ -216,6 +230,7 @@ void ItemRendererOpenGL::createRenderNode(Item *item, RenderContext *context)
+@@ -224,6 +238,7 @@ void ItemRendererOpenGL::createRenderNode(Item *item, RenderContext *context)
                  .coordinateType = NormalizedCoordinates,
                  .scale = scale,
                  .colorDescription = item->colorDescription(),
@@ -631,7 +604,7 @@ index 44ec0918e33..e59150550e5 100644
              });
          }
      }
-@@ -407,6 +422,9 @@ void ItemRendererOpenGL::renderItem(const RenderTarget &renderTarget, const Rend
+@@ -414,6 +429,9 @@ void ItemRendererOpenGL::renderItem(const RenderTarget &renderTarget, const Rend
                  contents.planes[plane]->unbind();
              }
          }
@@ -642,7 +615,7 @@ index 44ec0918e33..e59150550e5 100644
      if (shader) {
          ShaderManager::instance()->popShader();
 diff --git a/src/scene/itemrenderer_opengl.h b/src/scene/itemrenderer_opengl.h
-index c35839335c6..11ab8cea386 100644
+index 74b78b311a6..fb6c8c1b083 100644
 --- a/src/scene/itemrenderer_opengl.h
 +++ b/src/scene/itemrenderer_opengl.h
 @@ -10,9 +10,13 @@
@@ -667,7 +640,7 @@ index c35839335c6..11ab8cea386 100644
      };
  
      struct RenderContext
-@@ -41,7 +46,7 @@ public:
+@@ -42,7 +47,7 @@ public:
          const qreal renderTargetScale;
      };
  
@@ -676,7 +649,7 @@ index c35839335c6..11ab8cea386 100644
  
      void beginFrame(const RenderTarget &renderTarget, const RenderViewport &viewport) override;
      void endFrame() override;
-@@ -58,6 +63,8 @@ private:
+@@ -59,6 +64,8 @@ private:
      void visualizeFractional(const RenderViewport &viewport, const QRegion &region, const RenderContext &renderContext);
  
      bool m_blendingEnabled = false;
@@ -685,11 +658,47 @@ index c35839335c6..11ab8cea386 100644
  
      struct
      {
+diff --git a/src/scene/surfaceitem.cpp b/src/scene/surfaceitem.cpp
+index 4404dbc3c6c..f04053f3566 100644
+--- a/src/scene/surfaceitem.cpp
++++ b/src/scene/surfaceitem.cpp
+@@ -270,6 +270,11 @@ std::chrono::nanoseconds SurfaceItem::frameTimeEstimation() const
+     }
+ }
+ 
++std::shared_ptr<SyncReleasePoint> SurfaceItem::bufferReleasePoint() const
++{
++    return m_bufferReleasePoint;
++}
++
+ SurfaceTexture::~SurfaceTexture()
+ {
+ }
+diff --git a/src/scene/surfaceitem.h b/src/scene/surfaceitem.h
+index 5dfcfd0ad16..769542037b5 100644
+--- a/src/scene/surfaceitem.h
++++ b/src/scene/surfaceitem.h
+@@ -59,6 +59,7 @@ public:
+     virtual void freeze();
+ 
+     std::chrono::nanoseconds frameTimeEstimation() const;
++    std::shared_ptr<SyncReleasePoint> bufferReleasePoint() const;
+ 
+ Q_SIGNALS:
+     void damaged();
+@@ -82,6 +83,7 @@ protected:
+     std::deque<std::chrono::nanoseconds> m_lastDamageTimeDiffs;
+     std::optional<std::chrono::steady_clock::time_point> m_lastDamage;
+     std::chrono::nanoseconds m_frameTimeEstimation = std::chrono::days(1000);
++    std::shared_ptr<SyncReleasePoint> m_bufferReleasePoint;
+ };
+ 
+ class KWIN_EXPORT SurfaceTexture
 diff --git a/src/scene/surfaceitem_wayland.cpp b/src/scene/surfaceitem_wayland.cpp
-index 82863c3a456..b966b3366e0 100644
+index eabc4836cc7..c9960b83ccb 100644
 --- a/src/scene/surfaceitem_wayland.cpp
 +++ b/src/scene/surfaceitem_wayland.cpp
-@@ -41,6 +41,7 @@ SurfaceItemWayland::SurfaceItemWayland(SurfaceInterface *surface, Scene *scene,
+@@ -44,6 +44,7 @@ SurfaceItemWayland::SurfaceItemWayland(SurfaceInterface *surface, Scene *scene,
              this, &SurfaceItemWayland::handleColorDescriptionChanged);
      connect(surface, &SurfaceInterface::presentationModeHintChanged,
              this, &SurfaceItemWayland::handlePresentationModeHintChanged);
@@ -697,20 +706,20 @@ index 82863c3a456..b966b3366e0 100644
  
      SubSurfaceInterface *subsurface = surface->subSurface();
      if (subsurface) {
-@@ -184,6 +185,11 @@ void SurfaceItemWayland::handlePresentationModeHintChanged()
+@@ -187,6 +188,11 @@ void SurfaceItemWayland::handlePresentationModeHintChanged()
      setPresentationHint(m_surface->presentationModeHint());
  }
  
 +void SurfaceItemWayland::handleReleasePointChanged()
 +{
-+    setBufferReleasePoint(m_surface->bufferReleasePoint());
++    m_bufferReleasePoint = m_surface->bufferReleasePoint();
 +}
 +
  SurfacePixmapWayland::SurfacePixmapWayland(SurfaceItemWayland *item, QObject *parent)
      : SurfacePixmap(Compositor::self()->backend()->createSurfaceTextureWayland(this), parent)
      , m_item(item)
 diff --git a/src/scene/surfaceitem_wayland.h b/src/scene/surfaceitem_wayland.h
-index ab31192cb9a..c428f1ea417 100644
+index 7e3c7a09803..8e652e252de 100644
 --- a/src/scene/surfaceitem_wayland.h
 +++ b/src/scene/surfaceitem_wayland.h
 @@ -48,6 +48,7 @@ private Q_SLOTS:
@@ -735,7 +744,7 @@ index 3a024f56bd9..aabee9be151 100644
  {
  }
 diff --git a/src/wayland/CMakeLists.txt b/src/wayland/CMakeLists.txt
-index e46625575a7..8b115c6a7cd 100644
+index 41ee1c5581a..689b8012a0d 100644
 --- a/src/wayland/CMakeLists.txt
 +++ b/src/wayland/CMakeLists.txt
 @@ -231,6 +231,10 @@ ecm_add_qtwayland_server_protocol_kde(WaylandProtocols_xml
@@ -757,7 +766,7 @@ index e46625575a7..8b115c6a7cd 100644
      linuxdmabufv1clientbuffer.cpp
      lockscreen_overlay_v1.cpp
      output.cpp
-@@ -343,6 +348,7 @@ install(FILES
+@@ -344,6 +349,7 @@ install(FILES
      keyboard_shortcuts_inhibit_v1.h
      keystate.h
      layershell_v1.h
@@ -767,10 +776,18 @@ index e46625575a7..8b115c6a7cd 100644
      output_order_v1.h
 diff --git a/src/wayland/linux_drm_syncobj_v1.cpp b/src/wayland/linux_drm_syncobj_v1.cpp
 new file mode 100644
-index 00000000000..74fcbb885e9
+index 00000000000..c8597349ace
 --- /dev/null
 +++ b/src/wayland/linux_drm_syncobj_v1.cpp
-@@ -0,0 +1,146 @@
+@@ -0,0 +1,153 @@
++/*
++    KWin - the KDE window manager
++    This file is part of the KDE project.
++
++    SPDX-FileCopyrightText: 2024 Xaver Hugl <xaver.hugl@gmail.com>
++
++    SPDX-License-Identifier: GPL-2.0-or-later
++*/
 +#include "linux_drm_syncobj_v1.h"
 +#include "core/syncobjtimeline.h"
 +#include "display.h"
@@ -804,7 +821,7 @@ index 00000000000..74fcbb885e9
 +
 +void LinuxDrmSyncObjV1Interface::wp_linux_drm_syncobj_manager_v1_import_timeline(Resource *resource, uint32_t id, int32_t fd)
 +{
-+    // TODO add a GPU abstraction, instead of using the render backend?
++    // TODO add a GPU abstraction, instead of using the render backend
 +    if (!m_renderBackend || isGlobalRemoved()) {
 +        // to not crash the client, create an inert timeline
 +        new LinuxDrmSyncObjTimelineV1(resource->client(), id, nullptr);
@@ -903,7 +920,6 @@ index 00000000000..74fcbb885e9
 +    }
 +    const uint64_t point = (uint64_t(point_hi) << 32) | point_lo;
 +    SurfaceInterfacePrivate::get(m_surface)->pending->releasePoint = std::make_unique<SyncReleasePoint>(timeline->timeline(), point);
-+    Q_EMIT m_surface->bufferReleasePointChanged();
 +}
 +
 +void LinuxDrmSyncObjSurfaceV1::wp_linux_drm_syncobj_surface_v1_destroy_resource(Resource *resource)
@@ -919,10 +935,18 @@ index 00000000000..74fcbb885e9
 +}
 diff --git a/src/wayland/linux_drm_syncobj_v1.h b/src/wayland/linux_drm_syncobj_v1.h
 new file mode 100644
-index 00000000000..fbf6cb24973
+index 00000000000..c66c10a1e76
 --- /dev/null
 +++ b/src/wayland/linux_drm_syncobj_v1.h
-@@ -0,0 +1,65 @@
+@@ -0,0 +1,73 @@
++/*
++    KWin - the KDE window manager
++    This file is part of the KDE project.
++
++    SPDX-FileCopyrightText: 2024 Xaver Hugl <xaver.hugl@gmail.com>
++
++    SPDX-License-Identifier: GPL-2.0-or-later
++*/
 +#pragma once
 +
 +#include "qwayland-server-linux-drm-syncobj-v1.h"
@@ -1246,7 +1270,7 @@ index 00000000000..4690d65ffbe
 +  </interface>
 +</protocol>
 diff --git a/src/wayland/surface.cpp b/src/wayland/surface.cpp
-index 73627946629..b53bb2054b6 100644
+index 9beb517cda1..138d37e7578 100644
 --- a/src/wayland/surface.cpp
 +++ b/src/wayland/surface.cpp
 @@ -344,6 +344,10 @@ void SurfaceInterfacePrivate::surface_commit(Resource *resource)
@@ -1269,7 +1293,25 @@ index 73627946629..b53bb2054b6 100644
          target->bufferIsSet = true;
      }
      if (viewport.sourceGeometryIsSet) {
-@@ -1178,6 +1184,11 @@ void SurfaceInterface::traverseTree(std::function<void(SurfaceInterface *surface
+@@ -602,6 +608,7 @@ void SurfaceInterfacePrivate::applyState(SurfaceState *next)
+     const bool visibilityChanged = bufferChanged && bool(current->buffer) != bool(next->buffer);
+     const bool colorDescriptionChanged = next->colorDescriptionIsSet;
+     const bool presentationModeHintChanged = next->presentationModeHintIsSet;
++    const bool bufferReleasePointChanged = next->releasePointIsSet;
+ 
+     const QSizeF oldSurfaceSize = surfaceSize;
+     const QSize oldBufferSize = bufferSize;
+@@ -691,6 +698,9 @@ void SurfaceInterfacePrivate::applyState(SurfaceState *next)
+     if (presentationModeHintChanged) {
+         Q_EMIT q->presentationModeHintChanged();
+     }
++    if (bufferReleasePointChanged) {
++        Q_EMIT q->bufferReleasePointChanged();
++    }
+ 
+     if (bufferChanged) {
+         if (current->buffer && (!current->damage.isEmpty() || !current->bufferDamage.isEmpty())) {
+@@ -1181,6 +1191,11 @@ void SurfaceInterface::traverseTree(std::function<void(SurfaceInterface *surface
      }
  }
  
@@ -1311,7 +1353,7 @@ index 597f06774f8..8ec77a3ccde 100644
      /**
       * Emitted when the Surface has been committed.
 diff --git a/src/wayland/surface_p.h b/src/wayland/surface_p.h
-index c83098ede95..fd7559e8648 100644
+index c83098ede95..2db879ecfbd 100644
 --- a/src/wayland/surface_p.h
 +++ b/src/wayland/surface_p.h
 @@ -28,6 +28,7 @@ class FractionalScaleV1Interface;
@@ -1322,7 +1364,15 @@ index c83098ede95..fd7559e8648 100644
  
  struct SurfaceState
  {
-@@ -71,6 +72,8 @@ struct SurfaceState
+@@ -58,6 +59,7 @@ struct SurfaceState
+     bool contentTypeIsSet = false;
+     bool presentationModeHintIsSet = false;
+     bool colorDescriptionIsSet = false;
++    bool releasePointIsSet = false;
+     qint32 bufferScale = 1;
+     OutputTransform bufferTransform = OutputTransform::Normal;
+     wl_list frameCallbacks;
+@@ -71,6 +73,8 @@ struct SurfaceState
      PresentationModeHint presentationHint = PresentationModeHint::VSync;
      ColorDescription colorDescription = ColorDescription::sRGB;
      std::unique_ptr<PresentationTimeFeedback> presentationFeedback;
@@ -1331,7 +1381,7 @@ index c83098ede95..fd7559e8648 100644
  
      struct
      {
-@@ -170,6 +173,7 @@ public:
+@@ -170,6 +174,7 @@ public:
      TearingControlV1Interface *tearing = nullptr;
      FrogColorManagementSurfaceV1 *frogColorManagement = nullptr;
      XXColorSurfaceV2 *xxColorSurface = nullptr;
@@ -1399,7 +1449,7 @@ index 5bcf148aaad..0f8ac19bcfd 100644
 +
  } // namespace KWin
 diff --git a/src/wayland_server.cpp b/src/wayland_server.cpp
-index 2b02eb2fa69..037b633fc6c 100644
+index 416910b1114..40c3a74880a 100644
 --- a/src/wayland_server.cpp
 +++ b/src/wayland_server.cpp
 @@ -41,6 +41,7 @@
@@ -1410,7 +1460,7 @@ index 2b02eb2fa69..037b633fc6c 100644
  #include "wayland/linuxdmabufv1clientbuffer.h"
  #include "wayland/lockscreen_overlay_v1.h"
  #include "wayland/output.h"
-@@ -811,6 +812,22 @@ QString WaylandServer::socketName() const
+@@ -821,6 +822,22 @@ QString WaylandServer::socketName() const
      return QString();
  }
  
@@ -1434,7 +1484,7 @@ index 2b02eb2fa69..037b633fc6c 100644
  WaylandServer::LockScreenPresentationWatcher::LockScreenPresentationWatcher(WaylandServer *server)
  {
 diff --git a/src/wayland_server.h b/src/wayland_server.h
-index 8eb6f31a176..60dc67d9670 100644
+index d4dc7d1e413..8bf7733ca55 100644
 --- a/src/wayland_server.h
 +++ b/src/wayland_server.h
 @@ -58,6 +58,8 @@ class XdgSurfaceWindow;
@@ -1446,7 +1496,7 @@ index 8eb6f31a176..60dc67d9670 100644
  
  class KWIN_EXPORT WaylandServer : public QObject
  {
-@@ -226,6 +228,10 @@ public:
+@@ -230,6 +232,10 @@ public:
          return m_xdgActivationIntegration;
      }
  
@@ -1457,7 +1507,7 @@ index 8eb6f31a176..60dc67d9670 100644
  Q_SIGNALS:
      void windowAdded(KWin::Window *);
      void windowRemoved(KWin::Window *);
-@@ -284,6 +290,7 @@ private:
+@@ -290,6 +296,7 @@ private:
      TearingControlManagerV1Interface *m_tearingControlInterface = nullptr;
      XwaylandShellV1Interface *m_xwaylandShell = nullptr;
      PresentationTime *m_presentationTime = nullptr;
