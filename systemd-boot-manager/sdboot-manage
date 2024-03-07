@@ -57,7 +57,8 @@ export LINUX_OPTIONS \
     NO_AUTOGEN \
     NO_AUTOUPDATE \
     CDISCARD \
-    DISCARD
+    DISCARD \
+    INITRD_PREFIX=initramfs
 
 # Load the config file
 [[ -f ${config} ]] && . "${config}"
@@ -101,7 +102,10 @@ generate_entries() {
             srcdev_partuuid=$(findmnt -no PARTUUID ${root})
             srcdev_fsroot=$(findmnt -no FSROOT ${root})
             root_fstype=$(findmnt -no FSTYPE ${root})
-            mkinitcpio_has_sdencrypt_hook=$(grep -c '^HOOKS=\(.*sd-encrypt.*\)$' /etc/mkinitcpio.conf)
+            # mkinitcpio.conf might not exist (e.g. when using booster)
+            if [[ -f /etc/mkinitcpio.conf ]]; then
+                mkinitcpio_has_sdencrypt_hook=$(grep -c '^HOOKS=\(.*sd-encrypt.*\)$' /etc/mkinitcpio.conf)
+            fi
 
             # generate an appropriate options line
             case ${root_fstype} in
@@ -188,7 +192,7 @@ generate_entries() {
             # create entries for each installed kernel
             while read -r kernel; do
                 entry=${kernel//vmlinuz-/}
-                initramfs=${kernel//vmlinuz/initramfs}
+                initramfs=${kernel//vmlinuz/${INITRD_PREFIX}}
 
                 # first validate we don't already have an entry for this kernel
                 [[ ${OVERWRITE_EXISTING,,} != "yes" && -f $(get_entry_root "$ESP")${entry}.conf ]] && continue
