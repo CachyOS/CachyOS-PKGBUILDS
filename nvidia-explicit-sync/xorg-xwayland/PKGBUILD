@@ -20,13 +20,15 @@ source=(https://xorg.freedesktop.org/archive/individual/xserver/xwayland-$pkgver
         "https://gitlab.freedesktop.org/xorg/xserver/-/merge_requests/967.patch"
         "xf86Module.h::https://gitlab.freedesktop.org/xorg/xserver/-/raw/24c5d8f17e2afd7d4e9626ba7cdcfbab53b2fdc0/hw/xfree86/common/xf86Module.h"
         "upstream.patch"
-        "upstream2.patch")
+        "upstream2.patch"
+        "upstream3.patch")
 sha256sums=('a99e159b6d0d33098b3b6ab22a88bfcece23c8b9d0ca72c535c55dcb0681b46b'
             'SKIP'
-            '36dd7f484ec02b23faa325523a8e74abf0ae329380fc6aea12cb036af75a103f'
+            'e6e8f8aee742b540e25c96d9a1607b39c102352b18f4345daad39b321947b20b'
             '01011be86f706aba20623191befc353ce9f730f9bcde7966b17c112007b5a11f'
             '2e112b742df7d524c202066685a1eca0ab67412cc6886b1bfe3a455ab79a171a'
-            '714c62a5518149ed082ba99453677b22292d561fc3f0f8fec29a13267fc9d693')
+            '714c62a5518149ed082ba99453677b22292d561fc3f0f8fec29a13267fc9d693'
+            '851cefdf30b2ac9d442320127277b9f17148fbe92312749fe27dcec85f846755')
 provides=('xorg-server-xwayland')
 conflicts=('xorg-server-xwayland')
 replaces=('xorg-server-xwayland')
@@ -45,6 +47,9 @@ prepare() {
   patch -Np1 < ../upstream.patch
   # Add upstream patches to not conflict with the newest explicit sync
   patch -Np1 < ../upstream2.patch
+  # Add upstream patches to not conflict with the newest explicit sync
+  patch -Np1 < ../upstream3.patch
+
   # Add Explicit GPU Synchronization for DRI3, Present, and Xwayland
   # https://gitlab.freedesktop.org/xorg/xserver/-/merge_requests/967
   patch -Np1 < ../967.patch
