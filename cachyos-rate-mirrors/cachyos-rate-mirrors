@@ -89,6 +89,37 @@ rate_mirror_ex() {
 
     TMPFILE="$(mktemp)"
 
+    _rate_mirrors_flags=("--allow-root" "--save=${TMPFILE}" "${name}" "--fetch-mirrors-timeout=30000" "--completion=1" "--max-delay=21600")
+    if [[ -n "${special_arch}" ]]; then
+        _rate_mirrors_flags+=("--arch=${special_arch}")
+    fi
+
+    rate-mirrors "${_rate_mirrors_flags[@]}"
+    _exitcode=$?
+    if [[ "${_exitcode}" -eq 0 ]]; then
+        if [ ! -f "${mirrorlist_path}" ]; then
+            die "${mirrorlist_path} doesn't exist! You must install "${mirrorlist_path##*/}". Run sudo pacman -S ${mirrorlist_path##*/}" 
+        fi
+        cat "${mirrorlist_path}" > "${mirrorlist_path}-backup"
+        cat "${TMPFILE}" > "${mirrorlist_path}"
+        msg "Done [${name}] ${mirrorlist_path}"
+    else
+        die "rate-mirrors failed [errcode=%d]." "${_exitcode}"
+    fi
+
+    rm "${TMPFILE}"
+}
+
+rate_mirror_ex_cos() {
+    local name=$1
+    local mirrorlist_path=$2
+    local special_arch=$3
+    local _exitcode=-1
+
+    info "name '${name}'; mirrorlist_path '${mirrorlist_path}'; special_arch '${special_arch}'"
+
+    TMPFILE="$(mktemp)"
+
     _rate_mirrors_flags=("--allow-root" "--save=${TMPFILE}" "${name}" "--fetch-mirrors-timeout=30000")
     if [[ -n "${special_arch}" ]]; then
         _rate_mirrors_flags+=("--arch=${special_arch}")
@@ -113,7 +144,7 @@ rate_mirror_ex() {
 MIRRORS_DEFAULT_DIR="/etc/pacman.d"
 
 rate_mirror_ex arch "${MIRRORS_DEFAULT_DIR}/mirrorlist"
-rate_mirror_ex cachyos "${MIRRORS_DEFAULT_DIR}/cachyos-mirrorlist"
+rate_mirror_ex_cos cachyos "${MIRRORS_DEFAULT_DIR}/cachyos-mirrorlist"
 
 cp -f --backup=simple --suffix="-backup" "${MIRRORS_DEFAULT_DIR}/cachyos-mirrorlist" "${MIRRORS_DEFAULT_DIR}/cachyos-v3-mirrorlist"
 cp -f --backup=simple --suffix="-backup" "${MIRRORS_DEFAULT_DIR}/cachyos-mirrorlist" "${MIRRORS_DEFAULT_DIR}/cachyos-v4-mirrorlist"
