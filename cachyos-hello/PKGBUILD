@@ -19,7 +19,7 @@ provides=('cachyos-hello')
 conflicts=('cachyos-hello')
 options=(strip)
 
-build() {
+prepare() {
   cd "${srcdir}/${_pkgname}-${pkgver}"
   patch -Np1 -i ../revert-alpm.patch
 }
