@@ -5,7 +5,7 @@
 
 pkgname=svt-av1-psy
 pkgver=v2.0.0.rc2.r0.g5cac47c1
-pkgrel=1
+pkgrel=2
 pkgdesc='Scalable Video Technology AV1 encoder and decoder, with added perceptual enhancements for psychovisually optimal AV1 encoding'
 arch=(x86_64)
 url=https://github.com/gianni-rosato/svt-av1-psy
@@ -40,7 +40,8 @@ build() {
   cmake -S svt-av1-psy -B build -G Ninja \
     -DCMAKE_INSTALL_PREFIX=/usr \
     -DBUILD_SHARED_LIBS=ON \
-    -DENABLE_AVX512=ON
+    -DENABLE_AVX512=OFF \
+    -DNATIVE=OFF
   ninja -C build
 }
 
