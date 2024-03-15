@@ -1,4 +1,4 @@
-From 16d1b3838fa4e6eb72b592c8fb63ae2b12b4d722 Mon Sep 17 00:00:00 2001
+From 4847969e89146c629cbc05d8175b281596d94fb2 Mon Sep 17 00:00:00 2001
 From: Simon Ser <contact@emersion.fr>
 Date: Wed, 12 May 2021 12:08:24 +0200
 Subject: [PATCH 1/2] linux-drm-syncobj-v1: new protocol
@@ -12,8 +12,8 @@ Signed-off-by: Simon Ser <contact@emersion.fr>
 ---
  meson.build                                   |   1 +
  staging/linux-drm-syncobj/README              |   4 +
- .../linux-drm-syncobj-v1.xml                  | 246 ++++++++++++++++++
- 3 files changed, 251 insertions(+)
+ .../linux-drm-syncobj-v1.xml                  | 250 ++++++++++++++++++
+ 3 files changed, 255 insertions(+)
  create mode 100644 staging/linux-drm-syncobj/README
  create mode 100644 staging/linux-drm-syncobj/linux-drm-syncobj-v1.xml
 
@@ -41,10 +41,10 @@ index 00000000..a380b314
 +Simon Ser <contact@emersion.fr>
 diff --git a/staging/linux-drm-syncobj/linux-drm-syncobj-v1.xml b/staging/linux-drm-syncobj/linux-drm-syncobj-v1.xml
 new file mode 100644
-index 00000000..89edf0d0
+index 00000000..802d3b9c
 --- /dev/null
 +++ b/staging/linux-drm-syncobj/linux-drm-syncobj-v1.xml
-@@ -0,0 +1,246 @@
+@@ -0,0 +1,250 @@
 +<?xml version="1.0" encoding="UTF-8"?>
 +<protocol name="linux_drm_syncobj_v1">
 +  <copyright>
@@ -262,8 +262,12 @@ index 00000000..89edf0d0
 +
 +        Once the timeline point is signaled, and assuming the associated buffer
 +        is not pending release from other wl_surface.commit requests, no
-+        additional explicit or implicit synchronization is required to safely
-+        re-use the buffer.
++        additional explicit or implicit synchronization with the compositor is
++        required to safely re-use the buffer.
++
++        Note that clients cannot rely on the release point being always
++        signaled after the acquire point: compositors may release buffers
++        without ever reading from them.
 +
 +        The 64-bit unsigned value combined from point_hi and point_lo is the
 +        point value.
@@ -295,7 +299,7 @@ index 00000000..89edf0d0
 GitLab
 
 
-From 8ead72b7559cf2dc6f24943eb6f48f2d93cb8a78 Mon Sep 17 00:00:00 2001
+From 5cdb784155b3c09aff57c8bad871a1752abe9086 Mon Sep 17 00:00:00 2001
 From: Simon Ser <contact@emersion.fr>
 Date: Mon, 16 Oct 2023 10:47:28 +0200
 Subject: [PATCH 2/2] linux-explicit-synchronization-v1: add linux-drm-syncobj
