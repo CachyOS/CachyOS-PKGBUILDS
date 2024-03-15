@@ -89,10 +89,10 @@ build() {
   export NM=llvm-nm
   export RANLIB=llvm-ranlib
 
-  if ! rustc --version | grep nightly >/dev/null 2>&1; then
-    echo "Installing nightly compiler…"
-    rustup toolchain install nightly
-    rustup default nightly
+  if ! rustc --version | grep stable >/dev/null 2>&1; then
+    echo "Installing stable compiler…"
+    rustup toolchain install stable
+    rustup default stable
   fi
 
   local _saved_cflags="${CFLAGS}"
