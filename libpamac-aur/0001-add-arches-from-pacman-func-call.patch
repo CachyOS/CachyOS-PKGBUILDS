@@ -1,0 +1,48 @@
+From 336229b96f79ff241e6033a7c71706d5d971e4e0 Mon Sep 17 00:00:00 2001
+From: Vladislav Nepogodin <nepogodin.vlad@gmail.com>
+Date: Sun, 18 Dec 2022 02:31:30 +0400
+Subject: [PATCH] add arches from pacman func call
+
+---
+ src/alpm_config.vala | 9 ++++++++-
+ vapi/libalpm.vapi    | 2 ++
+ 2 files changed, 10 insertions(+), 1 deletion(-)
+
+diff --git a/src/alpm_config.vala b/src/alpm_config.vala
+index 94ba59a..c29fac5 100644
+--- a/src/alpm_config.vala
++++ b/src/alpm_config.vala
+@@ -288,9 +288,16 @@ internal class AlpmConfig {
+ 						} else if (key == "LogFile") {
+ 							logfile = val;
+ 						} else if (key == "Architecture") {
++							Alpm.Errno error = 0;
++							Alpm.Handle tmp_handle = new Alpm.Handle ("/", "/var/lib/pacman/", out error);
+ 							foreach (unowned string arch in val.split (" ")) {
+ 								if (arch == "auto") {
+-									architectures.add (Posix.utsname ().machine);
++									Alpm.List<unowned string> physical_arches = tmp_handle.get_physical_architectures();
++									while (physical_arches != null) {
++										unowned string physical_arch = physical_arches.data;
++										architectures.add (physical_arch);
++										physical_arches.next ();
++									}
+ 								} else {
+ 									architectures.add (arch);
+ 								}
+diff --git a/vapi/libalpm.vapi b/vapi/libalpm.vapi
+index 6cd14e3..a8d7e60 100644
+--- a/vapi/libalpm.vapi
++++ b/vapi/libalpm.vapi
+@@ -74,6 +74,8 @@ namespace Alpm {
+ 			[CCode (cname = "alpm_option_get_architectures")] get;
+ 			[CCode (cname = "alpm_option_set_architectures")] set;
+ 		}
++		[CCode (cname = "alpm_option_get_physical_architectures")]
++		public Alpm.List<unowned string> get_physical_architectures();
+ 		[CCode (cname = "alpm_option_add_architecture")]
+ 		public int add_architecture(string path);
+ 		[CCode (cname = "alpm_option_remove_architecture")]
+-- 
+2.39.0
+
