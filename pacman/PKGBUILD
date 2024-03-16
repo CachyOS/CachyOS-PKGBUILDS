@@ -16,7 +16,7 @@ _sqlitever=$(curl -s 'https://archlinux.org/packages/search/json/?name=sqlite' |
     else { printf "00" }
 }')
 
-pkgrel=4
+pkgrel=5
 pkgdesc="A library-based package manager with dependency support. CachyOS fork."
 arch=('x86_64')
 url="https://www.archlinux.org/pacman/"
@@ -52,6 +52,7 @@ source=(
         static_sqlite.patch
         "https://www.sqlite.org/2024/sqlite-src-${_sqlitever}.zip"
         disable-always-stale.patch
+        repo-add
         )
 sha256sums=('d49033acfd55591eb36eb04a118fcfb68d1fa34bd20216b82333841a0b83a9d7'
             '47f4ba578b1a6a3291cb65a6f60ab8c4871ae45bbe93da308a595a447ed9ad9d'
@@ -188,6 +189,8 @@ package() {
   export RUSTFLAGS+=" -Cembed-bitcode -Clinker-plugin-lto -Clinker=clang -C link-arg=-flto=thin"
 
   DESTDIR="$pkgdir" meson install -C build
+
+  cp "$srcdir/repo-add" "$pkgdir/usr/bin/repo-add"
 
   # install Arch specific stuff
   install -dm755 "$pkgdir/etc"
