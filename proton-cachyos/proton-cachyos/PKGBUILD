@@ -8,7 +8,7 @@ _optimize_v3=${_optimize_v3-y}
 _optimize_v4=${_optimize_v4-}
 
 pkgname=proton-cachyos
-_srctag=9.0-20240301
+_srctag=9.0-20240315
 _commit=
 pkgver=9.0
 _geckover=2.47.4
@@ -41,10 +41,9 @@ depends=(
   desktop-file-utils
   python
   steam-native-runtime
-## Currently not working for proton 9
-#  winesync-dkms
-#  winesync-header
-#  winesync-udev-rule
+)
+depends+=(
+  wayland          lib32-wayland
 )
 
 makedepends=(autoconf bison perl flex mingw-w64-gcc
@@ -179,7 +178,7 @@ prepare() {
     done
 
     patch -p1 -i "$srcdir"/0001-AUR-Pkgbuild-changes.patch
-    patch -p1 -i "$srcdir"/0002-AUR-Do-not-update-cargo-crates.patch
+    #patch -p1 -i "$srcdir"/0002-AUR-Do-not-update-cargo-crates.patch
     patch -p1 -i "$srcdir"/0003-AUR-Remove-kaldi-openfst-vosk-api-modules-because-of.patch
     patch -p1 -i "$srcdir"/0004-AUR-Copy-DLL-dependencies-of-32bit-libvkd3d-dlls-int.patch
     patch -p1 -i "$srcdir"/0005-AUR-Strip-binaries-early.patch
@@ -203,13 +202,6 @@ prepare() {
     cd $srcdir/proton/dxvk
     echo "dxvk: Enable Reflex"
     patch -Np1 -i "$srcdir"/dxvk-reflex.patch
-    echo "dxvk-nvapi: Enable Reflex"
-    cd $srcdir/proton/dxvk-nvapi
-    patch -Np1 -i "$srcdir"/nvapi-reflex.patch
-
-    echo "vkd3d-proton: Enable-Reflex"
-    cd $srcdir/proton/vkd3d-proton
-    patch -Np1 -i "$srcdir"/vkd3d-reflex.patch
 
     echo "Update Vulkan Headers for dxvk"
     cd $srcdir/proton/dxvk/include/vulkan
@@ -250,7 +242,8 @@ build() {
     export CARGO_HOME="${SRCDEST}"/proton-cargo
     export WINEESYNC=0
     export WINEFSYNC=0
-    export DISPLAY=
+    unset DISPLAY
+
     SUBJOBS=$([[ "$MAKEFLAGS" =~ -j\ *([1-9][0-9]*) ]] && echo "${BASH_REMATCH[1]}" || echo "$(nproc)") \
         make -j1 dist
 }
@@ -302,17 +295,17 @@ package() {
         $(find "$_monodir" -iname "*x86_64.dll" -or -iname "*x86_64.exe")
 }
 
-sha256sums=('SKIP'
+sha256sums=('c0e64cc3ead6f61da397d53a017ede22e4dac62f2541d771ff1b2482af11d0ee'
             '2cfc8d5c948602e21eff8a78613e1826f2d033df9672cace87fed56e8310afb6'
             'fd88fc7e537d058d7a8abf0c1ebc90c574892a466de86706a26d254710a82814'
             'd73d440c08ebd67c93fbd6534f4f1b4e98aa07342f9c7d98c8aaeb74755eb9cf'
-            '5063d6d85a4025da6cd8f1f49ca28cf095c8c45110541af243831cf8f9e4597f'
-            'd4f84a05dfeec12d8bd31b6049325ca05852856cd9a29f53c81ef4f56205b013'
+            '0d416d251da423e4c21a4ae2a7aba5cd28a522231981657d33e250c8c740f1fe'
+            'a0efa9e3020c348bd47601fb753e1e053eb00867837afac055631295ed7df765'
             '369193510b9309fc9cb80fc204220599583677a59976c7f434c2a33871b0cbe1'
-            'd94e11af39dce07e09c3448b38cd3511931c6981fa18f136a2b3f3f448206438'
-            '8c1518d07b7516fd09b189d9182174ea2fb7b5a4d83f6dda8b857cdf429b43fa'
-            '115925bfa8e727013955fb9b27feb63462c6c40f45758d2204f8c7322af8e44a'
-            '13921bc7b252d439b4c3355f4010d4c0dfe91eee0ec5cdd0363f19c01dbc8309'
+            '4af57781b6e81f0ac5ed1b1ab1a0fdaea92e1992e67d69d37a92334962921f5b'
+            'a3667c3fe517ea856dc7a5ab73fb5e10b20e5743f66f72d35b9a42394ed31701'
+            'fce16c5db9950068a3c965fd87e9194bbe13ead8a2c02d4710884c3669e236e5'
+            '89baf181f197a6156507841c018fd81c8f934f77161ba90f5ee6466677428235'
             'f619015fa7c8c782023f46b2752d34726fcfec0c62746675f88ce0a3cfa6cc76'
             '2f30e393b5e6c371a68ad6b5b6693d35412d30ba7e3963bc65a650c9c29ff569'
             'ceff1ff8de8bc25729cc7928eb46d16ef4c2f49ef3eb2e47ce3134337ca7107e'
@@ -323,5 +316,5 @@ sha256sums=('SKIP'
             'bd0482c05474068bb50a176eb33c02a1eb3ac1bece0365ee0dd3bcd304fabf9e'
             'fec4876c9795338cf3b5d35c95a28b39362fe98630b728cdf904176d63004aaf'
             'b195da8ad075e5f5ca0eb67d188bddb0477f1ad1e31005aba30704e83486bcbe'
-            '93980df905e97b07d200ed968bb4b8477f9f8a13ea0e13f7f4044e2bf440020c')
+            '416350c345db4c680f825d89b0eea79dbef668f671b18f7f792bbeb4b9e59e18')
 
