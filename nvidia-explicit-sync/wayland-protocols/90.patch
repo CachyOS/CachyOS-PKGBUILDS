@@ -1,4 +1,4 @@
-From 4847969e89146c629cbc05d8175b281596d94fb2 Mon Sep 17 00:00:00 2001
+From ae9ed7ac14e02021bc9f200aff19ff1601a1ae61 Mon Sep 17 00:00:00 2001
 From: Simon Ser <contact@emersion.fr>
 Date: Wed, 12 May 2021 12:08:24 +0200
 Subject: [PATCH 1/2] linux-drm-syncobj-v1: new protocol
@@ -12,13 +12,13 @@ Signed-off-by: Simon Ser <contact@emersion.fr>
 ---
  meson.build                                   |   1 +
  staging/linux-drm-syncobj/README              |   4 +
- .../linux-drm-syncobj-v1.xml                  | 250 ++++++++++++++++++
- 3 files changed, 255 insertions(+)
+ .../linux-drm-syncobj-v1.xml                  | 261 ++++++++++++++++++
+ 3 files changed, 266 insertions(+)
  create mode 100644 staging/linux-drm-syncobj/README
  create mode 100644 staging/linux-drm-syncobj/linux-drm-syncobj-v1.xml
 
 diff --git a/meson.build b/meson.build
-index 8f5fac26..df2e5cc6 100644
+index 5adc8008..0ab09f1c 100644
 --- a/meson.build
 +++ b/meson.build
 @@ -44,6 +44,7 @@ staging_protocols = {
@@ -41,10 +41,10 @@ index 00000000..a380b314
 +Simon Ser <contact@emersion.fr>
 diff --git a/staging/linux-drm-syncobj/linux-drm-syncobj-v1.xml b/staging/linux-drm-syncobj/linux-drm-syncobj-v1.xml
 new file mode 100644
-index 00000000..802d3b9c
+index 00000000..2c491eaf
 --- /dev/null
 +++ b/staging/linux-drm-syncobj/linux-drm-syncobj-v1.xml
-@@ -0,0 +1,250 @@
+@@ -0,0 +1,261 @@
 +<?xml version="1.0" encoding="UTF-8"?>
 +<protocol name="linux_drm_syncobj_v1">
 +  <copyright>
@@ -267,7 +267,18 @@ index 00000000..802d3b9c
 +
 +        Note that clients cannot rely on the release point being always
 +        signaled after the acquire point: compositors may release buffers
-+        without ever reading from them.
++        without ever reading from them. In addition, the compositor may use
++        different presentation paths for different commits, which may have
++        different release behavior. As a result, the compositor may signal the
++        release points in a different order than the client committed them.
++
++        Because signaling a timeline point also signals every previous point,
++        it is generally not safe to use the same timeline object for the
++        release points of multiple buffers. The out-of-order signaling
++        described above may lead to a release point being signaled before the
++        compositor has finished reading. To avoid this, it is strongly
++        recommended that each buffer should use a separate timeline for its
++        release points.
 +
 +        The 64-bit unsigned value combined from point_hi and point_lo is the
 +        point value.
@@ -299,7 +310,7 @@ index 00000000..802d3b9c
 GitLab
 
 
-From 5cdb784155b3c09aff57c8bad871a1752abe9086 Mon Sep 17 00:00:00 2001
+From 8be7ad67fa59e4d2edb4479597b76f93aa912990 Mon Sep 17 00:00:00 2001
 From: Simon Ser <contact@emersion.fr>
 Date: Mon, 16 Oct 2023 10:47:28 +0200
 Subject: [PATCH 2/2] linux-explicit-synchronization-v1: add linux-drm-syncobj
