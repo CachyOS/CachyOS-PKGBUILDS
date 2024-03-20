@@ -1,6 +1,6 @@
-From bad35043268d5604c7132454fdc8094ed054bb07 Mon Sep 17 00:00:00 2001
+From 03a133e78580be0d7536c10068ba3000cf3a73b3 Mon Sep 17 00:00:00 2001
 From: Peter Jung <admin@ptr1337.dev>
-Date: Sat, 16 Mar 2024 11:14:03 +0100
+Date: Wed, 20 Mar 2024 18:14:42 +0100
 Subject: [PATCH] dxvk-reflex
 
 Signed-off-by: Peter Jung <admin@ptr1337.dev>
@@ -28,7 +28,7 @@ Signed-off-by: Peter Jung <admin@ptr1337.dev>
  20 files changed, 618 insertions(+), 55 deletions(-)
 
 diff --git a/src/d3d11/d3d11_device.cpp b/src/d3d11/d3d11_device.cpp
-index 2b9a82b9..ae4371c8 100644
+index 863a9a31..55d48bfa 100644
 --- a/src/d3d11/d3d11_device.cpp
 +++ b/src/d3d11/d3d11_device.cpp
 @@ -15,6 +15,7 @@
@@ -599,7 +599,7 @@ index 00073d76..508f7aaf 100644
 \ No newline at end of file
 +}
 diff --git a/src/dxvk/dxvk_adapter.cpp b/src/dxvk/dxvk_adapter.cpp
-index 7c0e79f5..7b28d989 100644
+index 7c0e79f5..949beda9 100644
 --- a/src/dxvk/dxvk_adapter.cpp
 +++ b/src/dxvk/dxvk_adapter.cpp
 @@ -940,6 +940,9 @@ namespace dxvk {
@@ -640,7 +640,7 @@ index 7c0e79f5..7b28d989 100644
        "\n", VK_KHR_PRESENT_WAIT_EXTENSION_NAME,
        "\n  presentWait                            : ", features.khrPresentWait.presentWait ? "1" : "0",
 +      "\n", VK_NV_LOW_LATENCY_2_EXTENSION_NAME,
-+      "\n  extension supported
++      "\n  extension supported                    : ", features.nvLowLatency2 ? "1" : "0",
        "\n", VK_NV_RAW_ACCESS_CHAINS_EXTENSION_NAME,
        "\n  shaderRawAccessChains                  : ", features.nvRawAccessChains.shaderRawAccessChains ? "1" : "0",
        "\n", VK_NVX_BINARY_IMPORT_EXTENSION_NAME,
@@ -734,7 +734,7 @@ index 1934b9a0..81b6929d 100644
      /**
       * \brief Stat counters
 diff --git a/src/dxvk/dxvk_context.cpp b/src/dxvk/dxvk_context.cpp
-index bbd139ed..034467bd 100644
+index dcaa7cb7..1f417f92 100644
 --- a/src/dxvk/dxvk_context.cpp
 +++ b/src/dxvk/dxvk_context.cpp
 @@ -105,9 +105,9 @@ namespace dxvk {
@@ -750,7 +750,7 @@ index bbd139ed..034467bd 100644
      this->beginRecording(
        m_device->createCommandList());
 diff --git a/src/dxvk/dxvk_context.h b/src/dxvk/dxvk_context.h
-index b1fbc7df..594ccf54 100644
+index 3b61d474..5bd3006c 100644
 --- a/src/dxvk/dxvk_context.h
 +++ b/src/dxvk/dxvk_context.h
 @@ -65,8 +65,9 @@ namespace dxvk {
@@ -881,14 +881,15 @@ index a24ee311..305e6e00 100644
      DxvkStatCounters            m_statCounters;
      
 diff --git a/src/dxvk/dxvk_device_info.h b/src/dxvk/dxvk_device_info.h
-index c1da783a..6c315306 100644
+index c1da783a..b4af6fab 100644
 --- a/src/dxvk/dxvk_device_info.h
 +++ b/src/dxvk/dxvk_device_info.h
-@@ -69,9 +69,10 @@ namespace dxvk {
+@@ -68,10 +68,11 @@ namespace dxvk {
+     VkPhysicalDeviceMaintenance5FeaturesKHR                   khrMaintenance5;
      VkPhysicalDevicePresentIdFeaturesKHR                      khrPresentId;
      VkPhysicalDevicePresentWaitFeaturesKHR                    khrPresentWait;
-     VkPhysicalDeviceRawAccessChainsFeaturesNV                 nvRawAccessChains;
 +    VkBool32                                                  nvLowLatency2;
+     VkPhysicalDeviceRawAccessChainsFeaturesNV                 nvRawAccessChains;
      VkBool32                                                  nvxBinaryImport;
      VkBool32                                                  nvxImageViewHandle;
      VkBool32                                                  khrWin32KeyedMutex;
