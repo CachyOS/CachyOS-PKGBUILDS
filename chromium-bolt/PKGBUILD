@@ -290,7 +290,7 @@ build() {
   cp ../profiler.py .
 
   ## Branch Sampling for BOLT
-  perf record -e cycles:u -F max -j any,u -o perf.data --  \
+  perf record -e cycles:u -F 15000 -j any,u -o perf.data --  \
   xvfb-run -s "-screen 0 1920x1080x24 -nolisten local" \
   vpython3 profiler.py
 
@@ -316,6 +316,7 @@ package() {
   cd ../chromium-$pkgver
 
   install -D out/Release/chrome "$pkgdir/usr/lib/chromium/chromium"
+  install -D out/Release/chrome.orig "$pkgdir/usr/lib/chromium/chromium.orig"
   install -D out/Release/chromedriver.unstripped "$pkgdir/usr/bin/chromedriver"
   install -Dm4755 out/Release/chrome_sandbox "$pkgdir/usr/lib/chromium/chrome-sandbox"
 

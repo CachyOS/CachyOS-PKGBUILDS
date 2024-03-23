@@ -32,11 +32,7 @@ def run_speedometer(driver, version='2.0'):
     start_button = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.TAG_NAME, "button")))
     start_button.click()
 
-    # Wait for the details button to be visible
-    details_button = WebDriverWait(driver, 60).until(EC.visibility_of_element_located((By.CLASS_NAME, "show-details")))
-    details_button.click()
-
-    driver.save_screenshot(f"speedometer_{version}_b.png")
+    sleep(60)
 
 # run https://browserbench.org/JetStream/
 def run_jetstream(driver):
@@ -45,12 +41,10 @@ def run_jetstream(driver):
 
     driver.save_screenshot("jetstream_start.png")
 
-    start_button = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.CLASS_NAME, "button")))
+    start_button = WebDriverWait(driver, 30).until(EC.presence_of_element_located((By.CLASS_NAME, "button")))
     start_button.click()
 
-    # Wait for the details button to be visible
-    details_button = WebDriverWait(driver, 60).until(EC.visibility_of_element_located((By.CLASS_NAME, "done")))
-    driver.save_screenshot(f"jetstream.png")
+    sleep(60)
 
 # run https://browserbench.org/MotionMark1.3/
 def run_motionmark(driver):
@@ -60,7 +54,7 @@ def run_motionmark(driver):
     driver.save_screenshot("motionmark_start.png")
 
     # wait for text to appear
-    element = WebDriverWait(driver, 10).until(
+    element = WebDriverWait(driver, 30).until(
         EC.visibility_of_element_located((By.XPATH, "//*[contains(text(), 'Run Benchmark')]"))
     )
     element.click()
@@ -75,7 +69,7 @@ def run_basemark(driver):
     driver.save_screenshot("basemark_start.png")
 
     # wait for text to appear
-    start_button = WebDriverWait(driver, 15).until(EC.presence_of_element_located((By.CLASS_NAME, "btn")))
+    start_button = WebDriverWait(driver, 30).until(EC.presence_of_element_located((By.CLASS_NAME, "btn")))
     start_button.click()
 
     sleep(60)
