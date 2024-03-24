@@ -2,12 +2,13 @@
 # Contributor: Bartłomiej Piotrowski <bpiotrowski@archlinux.org>
 # Contributor: Andrzej Giniewicz <gginiu@gmail.com>
 # Contributor: Johan Förberg <johan@forberg.se>
+# PGO Version: Laio O. Seman <laio@ieee.org>
 
 pkgname=zstd
 pkgver=1.5.5
-pkgrel=6
+pkgrel=4
 pkgdesc='Zstandard - Fast real-time compression algorithm'
-url='https://facebook.github.io/zstd/'
+url='https://github.com/facebook/zstd'
 arch=(x86_64)
 license=(BSD GPL2)
 depends=(glibc gcc-libs zlib xz lz4)
@@ -19,12 +20,26 @@ sha256sums=('ce264bca60eb2f0e99e4508cffd0d4d19dd362e84244d7fc941e79fa69ccf673'
 b2sums=('2c2dc95f227e661ada23d8f6141bcd293505ce14e605f946ae00d4d4ac37d10b4eb08279ef7560618c67caf266431f76686fda5ae1921d698a6a93bbaf9a0052'
         'SKIP')
 validpgpkeys=(4EF4AC63455FC9F4545D9B7DEF8FE99528B52FFD)
-
+options=('debug')
 prepare() {
   cd ${pkgname}-${pkgver}
   # avoid error on tests without static libs, we use LD_LIBRARY_PATH
   sed '/build static library to build tests/d' -i build/cmake/CMakeLists.txt
   sed 's/libzstd_static/libzstd_shared/g' -i build/cmake/tests/CMakeLists.txt
+
+  # PGO Patch
+  echo '
+	# Apply PGO-specific flags
+	if(PGO_GENERATE)
+      set_target_properties(zstd PROPERTIES COMPILE_FLAGS "-fprofile-generate")
+      message(STATUS "PGO GENERATE")
+	    target_link_libraries(zstd gcov)
+	endif()
+
+	if(PGO_USE)
+      set_target_properties(zstd PROPERTIES COMPILE_FLAGS "-fprofile-use -Werror=missing-profile -Wno-error=coverage-mismatch")
+	endif()
+  ' >> build/cmake/programs/CMakeLists.txt
 }
 
 build() {
@@ -32,6 +47,32 @@ build() {
   export CFLAGS+=' -ffat-lto-objects'
   export CXXFLAGS+=' -ffat-lto-objects'
 
+  # First build pass: Generate profile
+  cmake -S build/cmake -B build -G Ninja \
+    -DCMAKE_BUILD_TYPE=None \
+      -DCMAKE_INSTALL_PREFIX=/usr \
+      -DZSTD_ZLIB_SUPPORT=ON \
+      -DZSTD_LZMA_SUPPORT=ON \
+      -DZSTD_LZ4_SUPPORT=ON \
+      -DZSTD_BUILD_CONTRIB=ON \
+      -DZSTD_BUILD_STATIC=OFF \
+      -DZSTD_BUILD_TESTS=ON \
+      -DZSTD_PROGRAMS_LINK_SHARED=ON \
+      -DPGO_GENERATE=ON \
+      -DPGO_USE=OFF
+  cmake --build build
+
+  build/programs/zstd -b19i1
+  build/programs/zstd -b16i1
+  build/programs/zstd -b9i2
+  build/programs/zstd -b
+  build/programs/zstd -b7i2
+  build/programs/zstd -b5
+  
+  # clean files
+  cmake --build build --target clean
+
+  # Second build pass: Use profile
   cmake -S build/cmake -B build -G Ninja \
     -DCMAKE_BUILD_TYPE=None \
     -DCMAKE_INSTALL_PREFIX=/usr \
@@ -41,9 +82,13 @@ build() {
     -DZSTD_BUILD_CONTRIB=ON \
     -DZSTD_BUILD_STATIC=OFF \
     -DZSTD_BUILD_TESTS=ON \
-    -DZSTD_PROGRAMS_LINK_SHARED=ON
+    -DZSTD_PROGRAMS_LINK_SHARED=ON \
+    -DPGO_GENERATE=OFF \
+    -DPGO_USE=ON
+
   cmake --build build
 }
+
 
 check() {
   cd ${pkgname}-${pkgver}
