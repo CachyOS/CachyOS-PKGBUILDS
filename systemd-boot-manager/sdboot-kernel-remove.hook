@@ -1,9 +1,10 @@
 [Trigger]
 Type = Path
 Operation = Remove
-Target = boot/linux*.kver
+Target = usr/lib/modules/*/vmlinuz
+Target = boot/vmlinuz*
 
 [Action]
-Description = Updating systemd-boot entries
+Description = Cleaning up systemd-boot entries
 When = PostTransaction
 Exec = /usr/bin/sdboot-manage remove
