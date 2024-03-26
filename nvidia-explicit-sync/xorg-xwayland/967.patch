@@ -148,7 +148,7 @@ index ced9d95679..85c987de72 100644
 GitLab
 
 
-From f94a3300b61ff17c7f69efb0d60abc31830420d0 Mon Sep 17 00:00:00 2001
+From 53f83f841d256a4ba5f4971abfe93aaade8d9c53 Mon Sep 17 00:00:00 2001
 From: Erik Kurzinger <ekurzinger@nvidia.com>
 Date: Tue, 24 Oct 2023 16:14:17 -0700
 Subject: [PATCH 3/8] DRI3: provide stub implementation of
@@ -169,7 +169,8 @@ Signed-off-by: Erik Kurzinger <ekurzinger@nvidia.com>
 ---
  dri3/dri3_request.c         | 34 ++++++++++++++++++++++++++++++++++
  include/protocol-versions.h |  2 +-
- 2 files changed, 35 insertions(+), 1 deletion(-)
+ meson.build                 |  2 +-
+ 3 files changed, 36 insertions(+), 2 deletions(-)
 
 diff --git a/dri3/dri3_request.c b/dri3/dri3_request.c
 index 99ff73d393..a5cc7ccc97 100644
@@ -250,11 +251,24 @@ index a81a2d17c4..ee58e8a673 100644
  
  /* Generic event extension */
  #define SERVER_GE_MAJOR_VERSION                 1
+diff --git a/meson.build b/meson.build
+index 935e3b8b14..2cc7bf9c96 100644
+--- a/meson.build
++++ b/meson.build
+@@ -90,7 +90,7 @@ scrnsaverproto_dep = dependency('scrnsaverproto', version: '>= 1.1', fallback: [
+ resourceproto_dep = dependency('resourceproto', version: '>= 1.2.0', fallback: ['xorgproto', 'ext_xorgproto'])
+ xf86driproto_dep = dependency('xf86driproto', version: '>= 2.1.0', fallback: ['xorgproto', 'ext_xorgproto'], required: get_option('dri1') == 'true')
+ dri2proto_dep = dependency('dri2proto', version: '>= 2.8', fallback: ['xorgproto', 'ext_xorgproto'], required: get_option('dri2') == 'true')
+-dri3proto_dep = dependency('dri3proto', version: '>= 1.2', fallback: ['xorgproto', 'ext_xorgproto'], required: get_option('dri3') == 'true')
++dri3proto_dep = dependency('dri3proto', version: '>= 1.3', fallback: ['xorgproto', 'ext_xorgproto'], required: get_option('dri3') == 'true')
+ xineramaproto_dep = dependency('xineramaproto', fallback: ['xorgproto', 'ext_xorgproto'])
+ xf86bigfontproto_dep = dependency('xf86bigfontproto', version: '>= 1.2.0', fallback: ['xorgproto', 'ext_xorgproto'], required: get_option('xf86bigfont'))
+ xf86vidmodeproto_dep = dependency('xf86vidmodeproto', version: '>= 2.2.99.1', fallback: ['xorgproto', 'ext_xorgproto'])
 -- 
 GitLab
 
 
-From cecbebd20f751c248a15247989c431c91a2ae6a7 Mon Sep 17 00:00:00 2001
+From 11246bb4d8f6aa0ee8169ad8be859996e0aa1bcc Mon Sep 17 00:00:00 2001
 From: Erik Kurzinger <ekurzinger@nvidia.com>
 Date: Tue, 16 Aug 2022 11:57:40 -0700
 Subject: [PATCH 4/8] DRI3: add DRI3ImportSyncobj and DRI3FreeSyncobj
@@ -287,7 +301,8 @@ Signed-off-by: Erik Kurzinger <ekurzinger@nvidia.com>
  dri3/dri3_request.c         | 91 +++++++++++++++++++++++++++++++++++++
  dri3/dri3_screen.c          | 20 ++++++++
  include/protocol-versions.h |  2 +-
- 6 files changed, 167 insertions(+), 2 deletions(-)
+ meson.build                 |  2 +-
+ 7 files changed, 168 insertions(+), 3 deletions(-)
 
 diff --git a/dri3/dri3.c b/dri3/dri3.c
 index 1912529695..f9c5172774 100644
@@ -398,7 +413,7 @@ index f319d17702..71d2da9571 100644
 +
  #endif /* _DRI3PRIV_H_ */
 diff --git a/dri3/dri3_request.c b/dri3/dri3_request.c
-index a5cc7ccc97..6da91a8c42 100644
+index a5cc7ccc97..98c37aa912 100644
 --- a/dri3/dri3_request.c
 +++ b/dri3/dri3_request.c
 @@ -29,6 +29,17 @@
@@ -486,7 +501,7 @@ index a5cc7ccc97..6da91a8c42 100644
 +    if (status != Success)
 +        return status;
 +
-+    FreeResource(stuff->syncobj, dri3_syncobj_type);
++    FreeResource(stuff->syncobj, RT_NONE);
 +    return Success;
 +}
 +
@@ -582,11 +597,24 @@ index ee58e8a673..6d1b4daa53 100644
  
  /* Generic event extension */
  #define SERVER_GE_MAJOR_VERSION                 1
+diff --git a/meson.build b/meson.build
+index 2cc7bf9c96..cbfbb715ed 100644
+--- a/meson.build
++++ b/meson.build
+@@ -90,7 +90,7 @@ scrnsaverproto_dep = dependency('scrnsaverproto', version: '>= 1.1', fallback: [
+ resourceproto_dep = dependency('resourceproto', version: '>= 1.2.0', fallback: ['xorgproto', 'ext_xorgproto'])
+ xf86driproto_dep = dependency('xf86driproto', version: '>= 2.1.0', fallback: ['xorgproto', 'ext_xorgproto'], required: get_option('dri1') == 'true')
+ dri2proto_dep = dependency('dri2proto', version: '>= 2.8', fallback: ['xorgproto', 'ext_xorgproto'], required: get_option('dri2') == 'true')
+-dri3proto_dep = dependency('dri3proto', version: '>= 1.3', fallback: ['xorgproto', 'ext_xorgproto'], required: get_option('dri3') == 'true')
++dri3proto_dep = dependency('dri3proto', version: '>= 1.4', fallback: ['xorgproto', 'ext_xorgproto'], required: get_option('dri3') == 'true')
+ xineramaproto_dep = dependency('xineramaproto', fallback: ['xorgproto', 'ext_xorgproto'])
+ xf86bigfontproto_dep = dependency('xf86bigfontproto', version: '>= 1.2.0', fallback: ['xorgproto', 'ext_xorgproto'], required: get_option('xf86bigfont'))
+ xf86vidmodeproto_dep = dependency('xf86vidmodeproto', version: '>= 2.2.99.1', fallback: ['xorgproto', 'ext_xorgproto'])
 -- 
 GitLab
 
 
-From 883bbf4c4e13352c4f7c7b3d31713cb524aa7614 Mon Sep 17 00:00:00 2001
+From c4d4b7de165f74f7d35ec98df9cd145d5e9b547d Mon Sep 17 00:00:00 2001
 From: Erik Kurzinger <ekurzinger@nvidia.com>
 Date: Mon, 18 Mar 2024 11:33:15 -0700
 Subject: [PATCH 5/8] Present: add PresentCapabilitySyncobj and
@@ -597,6 +625,7 @@ Signed-off-by: Erik Kurzinger <ekurzinger@nvidia.com>
  hw/xfree86/common/xf86Module.h |   2 +-
  hw/xwayland/xwayland-present.c |  12 ++-
  include/protocol-versions.h    |   2 +-
+ meson.build                    |   2 +-
  present/present.c              |   9 ++
  present/present_execute.c      |  34 ++++++-
  present/present_priv.h         |  25 +++++
@@ -604,7 +633,7 @@ Signed-off-by: Erik Kurzinger <ekurzinger@nvidia.com>
  present/present_scmd.c         |  11 +++
  present/present_screen.c       |   1 +
  present/present_vblank.c       |  36 +++++++
- 10 files changed, 263 insertions(+), 39 deletions(-)
+ 11 files changed, 264 insertions(+), 40 deletions(-)
 
 diff --git a/hw/xfree86/common/xf86Module.h b/hw/xfree86/common/xf86Module.h
 index 6166e85590..b6eb806228 100644
@@ -669,6 +698,19 @@ index 6d1b4daa53..d08ee0a278 100644
  
  /* RandR */
  #define SERVER_RANDR_MAJOR_VERSION		1
+diff --git a/meson.build b/meson.build
+index cbfbb715ed..c26d1644f8 100644
+--- a/meson.build
++++ b/meson.build
+@@ -80,7 +80,7 @@ fixesproto_dep = dependency('fixesproto', version: '>= 6.0', fallback: ['xorgpro
+ damageproto_dep = dependency('damageproto', version: '>= 1.1', fallback: ['xorgproto', 'ext_xorgproto'])
+ xcmiscproto_dep = dependency('xcmiscproto', version: '>= 1.2.0', fallback: ['xorgproto', 'ext_xorgproto'])
+ bigreqsproto_dep = dependency('bigreqsproto', version: '>= 1.1.0', fallback: ['xorgproto', 'ext_xorgproto'])
+-presentproto_dep = dependency('presentproto', version: '>= 1.3', fallback: ['xorgproto', 'ext_xorgproto'])
++presentproto_dep = dependency('presentproto', version: '>= 1.4', fallback: ['xorgproto', 'ext_xorgproto'])
+ xtrans_dep = dependency('xtrans', version: '>= 1.3.5')
+ 
+ videoproto_dep = dependency('videoproto', fallback: ['xorgproto', 'ext_xorgproto'])
 diff --git a/present/present.c b/present/present.c
 index 211868341d..e0764fab1f 100644
 --- a/present/present.c
@@ -1240,7 +1282,7 @@ index 4f94f16e44..2eb57abfff 100644
 GitLab
 
 
-From fe9fe15d8177699f4ee16cc2fb891be09ef55281 Mon Sep 17 00:00:00 2001
+From 5ac24042b3ce352cc649d033d9d7cfe5adfc0fd0 Mon Sep 17 00:00:00 2001
 From: Erik Kurzinger <ekurzinger@nvidia.com>
 Date: Mon, 18 Mar 2024 11:36:35 -0700
 Subject: [PATCH 6/8] xwayland: support DRI3 1.4 and Present 1.4
@@ -1819,7 +1861,7 @@ index 477473eea5..d0b510d1b4 100644
 GitLab
 
 
-From 5368fb457bb1a561cf7fe98d0ffed3d2d7d88b2c Mon Sep 17 00:00:00 2001
+From a92c4ff97466b2706ee57ac25e9a2feb81c1b7a0 Mon Sep 17 00:00:00 2001
 From: Erik Kurzinger <ekurzinger@nvidia.com>
 Date: Tue, 15 Aug 2023 15:32:47 -0700
 Subject: [PATCH 7/8] xwayland: add support for wp_linux_drm_syncobj_v1
@@ -1842,14 +1884,14 @@ Signed-off-by: Erik Kurzinger <ekurzinger@nvidia.com>
  hw/xwayland/xwayland-glamor-gbm.c     | 146 ++++++++++++++++++++++++++
  hw/xwayland/xwayland-glamor.c         |  24 +++++
  hw/xwayland/xwayland-glamor.h         |  12 +++
- hw/xwayland/xwayland-present.c        |  83 +++++++++++++--
- hw/xwayland/xwayland-screen.c         |   1 +
+ hw/xwayland/xwayland-present.c        | 110 +++++++++++++++++--
  hw/xwayland/xwayland-screen.h         |   1 +
- hw/xwayland/xwayland-window-buffers.c | 102 +++++++++++++++++-
- hw/xwayland/xwayland-window.c         |  10 ++
+ hw/xwayland/xwayland-window-buffers.c | 109 ++++++++++++++++++-
+ hw/xwayland/xwayland-window.c         |   4 +
  hw/xwayland/xwayland-window.h         |   1 +
+ meson.build                           |   2 +-
  present/present_execute.c             |   5 +-
- 11 files changed, 373 insertions(+), 15 deletions(-)
+ 11 files changed, 400 insertions(+), 17 deletions(-)
 
 diff --git a/hw/xwayland/meson.build b/hw/xwayland/meson.build
 index 7a9645c00c..0097ca8b21 100644
@@ -1880,7 +1922,7 @@ index 7a9645c00c..0097ca8b21 100644
  if build_ei
      xwayland_dep += libei_dep
 diff --git a/hw/xwayland/xwayland-glamor-gbm.c b/hw/xwayland/xwayland-glamor-gbm.c
-index add4f408d4..68eb73cd2b 100644
+index add4f408d4..977fa1520b 100644
 --- a/hw/xwayland/xwayland-glamor-gbm.c
 +++ b/hw/xwayland/xwayland-glamor-gbm.c
 @@ -35,6 +35,9 @@
@@ -1988,7 +2030,7 @@ index add4f408d4..68eb73cd2b 100644
 +                                    uint64_t acquire_point,
 +                                    uint64_t release_point)
 +{
-+    struct xwl_window *xwl_window = xwl_window_get(window);
++    struct xwl_window *xwl_window = xwl_window_from_window(window);
 +    struct xwl_screen *xwl_screen = xwl_window->xwl_screen;
 +    struct xwl_dri3_syncobj *xwl_acquire_syncobj = (struct xwl_dri3_syncobj *)acquire_syncobj;
 +    struct xwl_dri3_syncobj *xwl_release_syncobj = (struct xwl_dri3_syncobj *)release_syncobj;
@@ -2189,7 +2231,7 @@ index d12cd31d61..f90ff4a9af 100644
  #ifdef XV
  /* glamor Xv Adaptor */
 diff --git a/hw/xwayland/xwayland-present.c b/hw/xwayland/xwayland-present.c
-index 5673c2a4c3..3f1e4218d8 100644
+index 5673c2a4c3..e88c750f12 100644
 --- a/hw/xwayland/xwayland-present.c
 +++ b/hw/xwayland/xwayland-present.c
 @@ -40,6 +40,7 @@
@@ -2249,38 +2291,54 @@ index 5673c2a4c3..3f1e4218d8 100644
          return FALSE;
  #endif /* XWL_HAS_GLAMOR */
  
-@@ -838,6 +844,7 @@ xwl_present_flip(present_vblank_ptr vblank, RegionPtr damage)
-     PixmapPtr pixmap = vblank->pixmap;
-     struct xwl_window           *xwl_window = xwl_window_from_window(present_window);
-     struct xwl_present_window   *xwl_present_window = xwl_present_window_priv(present_window);
-+    struct xwl_screen           *xwl_screen = xwl_window->xwl_screen;
+@@ -831,6 +837,18 @@ xwl_present_clear_window_flip(WindowPtr window)
+     /* xwl_present_cleanup cleaned up everything */
+ }
+ 
++static void
++xwl_present_release_fence_avail(int fd, int xevents, void *data)
++{
++    present_vblank_ptr vblank = data;
++
++    SetNotifyFd(fd, NULL, 0, NULL);
++    close(fd);
++    vblank->efd = -1;
++
++    xwl_present_buffer_release(xwl_present_event_from_vblank(vblank));
++}
++
+ static Bool
+ xwl_present_flip(present_vblank_ptr vblank, RegionPtr damage)
+ {
+@@ -841,6 +859,7 @@ xwl_present_flip(present_vblank_ptr vblank, RegionPtr damage)
      BoxPtr                      damage_box;
      struct wl_buffer            *buffer;
      struct xwl_present_event    *event = xwl_present_event_from_vblank(vblank);
-@@ -851,12 +858,35 @@ xwl_present_flip(present_vblank_ptr vblank, RegionPtr damage)
++    Bool                        implicit_sync = TRUE;
+ 
+     if (!xwl_window)
          return FALSE;
-     }
- 
-+    if (xwl_window->surface_sync) {
-+        wp_linux_drm_syncobj_surface_v1_destroy(xwl_window->surface_sync);
-+        xwl_window->surface_sync = NULL;
-+    }
-+
-     damage_box = RegionExtents(damage);
- 
-     pixmap->refcnt++;
+@@ -857,7 +876,38 @@ xwl_present_flip(present_vblank_ptr vblank, RegionPtr damage)
  
      event->pixmap = pixmap;
  
+-    xwl_pixmap_set_buffer_release_cb(pixmap, xwl_present_buffer_release, event);
 +#ifdef XWL_HAS_GLAMOR
 +    if (vblank->acquire_syncobj && vblank->release_syncobj) {
-+        if (xwl_screen->explicit_sync)
++        if (xwl_window->xwl_screen->explicit_sync) {
 +            xwl_glamor_dri3_syncobj_passthrough(present_window,
 +                                                vblank->acquire_syncobj,
 +                                                vblank->release_syncobj,
 +                                                vblank->acquire_point,
 +                                                vblank->release_point);
-+        else {
++            implicit_sync = FALSE;
++            /* set up release callback */
++            vblank->efd = eventfd(0, EFD_CLOEXEC);
++            SetNotifyFd(vblank->efd, xwl_present_release_fence_avail, X_NOTIFY_READ, vblank);
++            vblank->release_syncobj->submitted_eventfd(vblank->release_syncobj,
++                                                       vblank->release_point,
++                                                       vblank->efd);
++        } else {
 +            /* transfer from acquire syncobj to implicit fence */
 +            int fence_fd =
 +                vblank->acquire_syncobj->export_fence(vblank->acquire_syncobj,
@@ -2290,10 +2348,29 @@ index 5673c2a4c3..3f1e4218d8 100644
 +    }
 +#endif /* XWL_HAS_GLAMOR */
 +
-     xwl_pixmap_set_buffer_release_cb(pixmap, xwl_present_buffer_release, event);
++    if (vblank->efd == -1)
++        xwl_pixmap_set_buffer_release_cb(pixmap, xwl_present_buffer_release, event);
++
++    if (implicit_sync && xwl_window->surface_sync) {
++        wp_linux_drm_syncobj_surface_v1_destroy(xwl_window->surface_sync);
++        xwl_window->surface_sync = NULL;
++    }
  
      /* We can flip directly to the main surface (full screen window without clips) */
-@@ -900,6 +930,38 @@ xwl_present_flip(present_vblank_ptr vblank, RegionPtr damage)
+     wl_surface_attach(xwl_window->surface, buffer, 0, 0);
+@@ -888,6 +938,11 @@ xwl_present_flip(present_vblank_ptr vblank, RegionPtr damage)
+ 
+     wl_surface_commit(xwl_window->surface);
+ 
++    if (xwl_window->surface_sync) {
++        wp_linux_drm_syncobj_surface_v1_destroy(xwl_window->surface_sync);
++        xwl_window->surface_sync = NULL;
++    }
++
+     if (!vblank->sync_flip) {
+         xwl_present_window->sync_callback =
+             wl_display_sync(xwl_window->xwl_screen->display);
+@@ -900,6 +955,38 @@ xwl_present_flip(present_vblank_ptr vblank, RegionPtr damage)
      return TRUE;
  }
  
@@ -2332,7 +2409,7 @@ index 5673c2a4c3..3f1e4218d8 100644
  /*
   * Once the required MSC has been reached, execute the pending request.
   *
-@@ -916,11 +978,13 @@ xwl_present_execute(present_vblank_ptr vblank, uint64_t ust, uint64_t crtc_msc)
+@@ -916,11 +1003,13 @@ xwl_present_execute(present_vblank_ptr vblank, uint64_t ust, uint64_t crtc_msc)
      struct xwl_present_window *xwl_present_window = xwl_present_window_get_priv(window);
      present_vblank_ptr flip_pending = xwl_present_get_pending_flip(xwl_present_window);
      struct xwl_present_event *event = xwl_present_event_from_vblank(vblank);
@@ -2347,7 +2424,7 @@ index 5673c2a4c3..3f1e4218d8 100644
          return;
  
      if (flip_pending && vblank->flip && vblank->pixmap && vblank->window) {
-@@ -956,7 +1020,6 @@ retry:
+@@ -956,7 +1045,6 @@ retry:
              if (xwl_present_flip(vblank, damage)) {
                  WindowPtr toplvl_window = xwl_present_toplvl_pixmap_window(vblank->window);
                  struct xwl_window *xwl_window = xwl_window_from_window(window);
@@ -2355,18 +2432,6 @@ index 5673c2a4c3..3f1e4218d8 100644
                  PixmapPtr old_pixmap = screen->GetWindowPixmap(window);
  
                  /* Replace window pixmap with flip pixmap */
-diff --git a/hw/xwayland/xwayland-screen.c b/hw/xwayland/xwayland-screen.c
-index 42c9a0e20c..2decf90a5f 100644
---- a/hw/xwayland/xwayland-screen.c
-+++ b/hw/xwayland/xwayland-screen.c
-@@ -70,6 +70,7 @@
- #include "xwayland-shell-v1-client-protocol.h"
- #include "tearing-control-v1-client-protocol.h"
- #include "fractional-scale-v1-client-protocol.h"
-+#include "linux-drm-syncobj-v1-client-protocol.h"
- 
- static DevPrivateKeyRec xwl_screen_private_key;
- static DevPrivateKeyRec xwl_client_private_key;
 diff --git a/hw/xwayland/xwayland-screen.h b/hw/xwayland/xwayland-screen.h
 index d0b510d1b4..2b3bdb29e8 100644
 --- a/hw/xwayland/xwayland-screen.h
@@ -2380,7 +2445,7 @@ index d0b510d1b4..2b3bdb29e8 100644
      struct xorg_list queued_drm_lease_devices;
      struct xorg_list drm_leases;
 diff --git a/hw/xwayland/xwayland-window-buffers.c b/hw/xwayland/xwayland-window-buffers.c
-index 85c987de72..29d1489ef1 100644
+index 85c987de72..9f73c7a0e4 100644
 --- a/hw/xwayland/xwayland-window-buffers.c
 +++ b/hw/xwayland/xwayland-window-buffers.c
 @@ -35,6 +35,11 @@
@@ -2447,7 +2512,7 @@ index 85c987de72..29d1489ef1 100644
  void
  xwl_window_buffers_init(struct xwl_window *xwl_window)
  {
-@@ -333,6 +362,46 @@ xwl_window_realloc_pixmap(struct xwl_window *xwl_window)
+@@ -333,12 +362,53 @@ xwl_window_realloc_pixmap(struct xwl_window *xwl_window)
      screen->DestroyPixmap(window_pixmap);
  }
  
@@ -2494,7 +2559,14 @@ index 85c987de72..29d1489ef1 100644
  PixmapPtr
  xwl_window_swap_pixmap(struct xwl_window *xwl_window)
  {
-@@ -350,6 +419,16 @@ xwl_window_swap_pixmap(struct xwl_window *xwl_window)
+     struct xwl_screen *xwl_screen = xwl_window->xwl_screen;
+     struct xwl_window_buffer *xwl_window_buffer;
+     PixmapPtr window_pixmap;
++    Bool implicit_sync = TRUE;
+ 
+     window_pixmap = (*xwl_screen->screen->GetWindowPixmap) (xwl_window->window);
+ 
+@@ -350,6 +420,16 @@ xwl_window_swap_pixmap(struct xwl_window *xwl_window)
          BoxPtr pBox = RegionRects(full_damage);
          int nBox = RegionNumRects(full_damage);
  
@@ -2511,12 +2583,13 @@ index 85c987de72..29d1489ef1 100644
          while (nBox--) {
              copy_pixmap_area(window_pixmap,
                               xwl_window_buffer->pixmap,
-@@ -390,12 +469,27 @@ xwl_window_swap_pixmap(struct xwl_window *xwl_window)
+@@ -390,12 +470,33 @@ xwl_window_swap_pixmap(struct xwl_window *xwl_window)
  
  #ifdef XWL_HAS_GLAMOR
      if (!xwl_glamor_supports_implicit_sync(xwl_screen)) {
 -        glamor_finish(xwl_screen->screen);
 +        if (xwl_screen->explicit_sync && xwl_window_buffers_set_syncpts(xwl_window_buffer)) {
++            implicit_sync = FALSE;
 +            /* wait until the release fence is available before re-using this buffer */
 +            xwl_window_buffer->efd = eventfd(0, EFD_CLOEXEC);
 +            SetNotifyFd(xwl_window_buffer->efd, xwl_window_buffers_release_fence_avail,
@@ -2540,11 +2613,16 @@ index 85c987de72..29d1489ef1 100644
 +        xwl_pixmap_set_buffer_release_cb(xwl_window_buffer->pixmap,
 +                                         xwl_window_buffer_release_callback,
 +                                         xwl_window_buffer);
++
++    if (implicit_sync && xwl_window->surface_sync) {
++        wp_linux_drm_syncobj_surface_v1_destroy(xwl_window->surface_sync);
++        xwl_window->surface_sync = NULL;
++    }
  
      xorg_list_append(&xwl_window_buffer->link_buffer,
                       &xwl_window->window_buffers_unavailable);
 diff --git a/hw/xwayland/xwayland-window.c b/hw/xwayland/xwayland-window.c
-index f4d8a0227e..2de6f5d656 100644
+index f4d8a0227e..a8731f4dda 100644
 --- a/hw/xwayland/xwayland-window.c
 +++ b/hw/xwayland/xwayland-window.c
 @@ -55,6 +55,7 @@
@@ -2565,19 +2643,6 @@ index f4d8a0227e..2de6f5d656 100644
      release_wl_surface_for_window(xwl_window);
      xorg_list_del(&xwl_window->link_damage);
      xorg_list_del(&xwl_window->link_window);
-@@ -1706,6 +1710,12 @@ xwl_window_attach_buffer(struct xwl_window *xwl_window)
-     pixmap = xwl_window_swap_pixmap(xwl_window);
-     buffer = xwl_pixmap_get_wl_buffer(pixmap);
- 
-+    if (xwl_window->surface_sync) {
-+        /* default to implicit sync */
-+        wp_linux_drm_syncobj_surface_v1_destroy(xwl_window->surface_sync);
-+        xwl_window->surface_sync = NULL;
-+    }
-+
-     if (!buffer) {
-         ErrorF("Error getting buffer\n");
-         return FALSE;
 diff --git a/hw/xwayland/xwayland-window.h b/hw/xwayland/xwayland-window.h
 index 108c19e09c..a00284fde9 100644
 --- a/hw/xwayland/xwayland-window.h
@@ -2590,6 +2655,19 @@ index 108c19e09c..a00284fde9 100644
  };
  
  struct xwl_window *xwl_window_get(WindowPtr window);
+diff --git a/meson.build b/meson.build
+index c26d1644f8..93a9ecf872 100644
+--- a/meson.build
++++ b/meson.build
+@@ -64,7 +64,7 @@ libdrm_req = '>= 2.4.109'
+ libselinux_req = '>= 2.0.86'
+ xext_req = '>= 1.0.99.4'
+ wayland_req = '>= 1.21.0'
+-wayland_protocols_req = '>= 1.31'
++wayland_protocols_req = '>= 1.34'
+ gbm_req = '>= 10.2'
+ xf86dgaproto_req = '>= 2.0.99.1'
+ xshmfence_req = '>= 1.1'
 diff --git a/present/present_execute.c b/present/present_execute.c
 index 913a8b67ba..2fb49749eb 100644
 --- a/present/present_execute.c
@@ -2610,7 +2688,7 @@ index 913a8b67ba..2fb49749eb 100644
 GitLab
 
 
-From 7eccbfa124c2abaf106f2cea86a0dd4886edcdc1 Mon Sep 17 00:00:00 2001
+From 6084919abd962ab4a9de7325a0877e58f169d2d2 Mon Sep 17 00:00:00 2001
 From: Erik Kurzinger <ekurzinger@nvidia.com>
 Date: Wed, 31 Jan 2024 11:36:45 -0800
 Subject: [PATCH 8/8] xwayland: don't scrap pending present requests
@@ -2644,7 +2722,7 @@ Signed-off-by: Erik Kurzinger <ekurzinger@nvidia.com>
  2 files changed, 60 insertions(+), 37 deletions(-)
 
 diff --git a/hw/xwayland/xwayland-present.c b/hw/xwayland/xwayland-present.c
-index 3f1e4218d8..10cf99c7c6 100644
+index e88c750f12..4cbb38c693 100644
 --- a/hw/xwayland/xwayland-present.c
 +++ b/hw/xwayland/xwayland-present.c
 @@ -81,6 +81,7 @@ xwl_present_window_get_priv(WindowPtr window)
@@ -2665,7 +2743,7 @@ index 3f1e4218d8..10cf99c7c6 100644
  }
  
  void
-@@ -962,6 +964,34 @@ xwl_present_wait_acquire_fence_avail(struct xwl_screen *xwl_screen,
+@@ -987,6 +989,34 @@ xwl_present_wait_acquire_fence_avail(struct xwl_screen *xwl_screen,
      return FALSE;
  }
  
@@ -2686,13 +2764,13 @@ index 3f1e4218d8..10cf99c7c6 100644
 +                                  &xwl_present_window->blocked_queue,
 +                                  blocked) {
 +        present_vblank_ptr blocked_vblank = &blocked_event->vblank;
++        xorg_list_del(&blocked_event->blocked);
 +        if (present_execute_wait(blocked_vblank, crtc_msc) ||
 +            xwl_present_wait_acquire_fence_avail(xwl_screen, blocked_vblank)) {
 +            xwl_present_window->blocking_event = blocked_vblank->event_id;
 +            return;
 +        }
 +
-+        xorg_list_del(&blocked_event->blocked);
 +        xwl_present_re_execute(blocked_vblank);
 +    }
 +}
@@ -2700,7 +2778,7 @@ index 3f1e4218d8..10cf99c7c6 100644
  /*
   * Once the required MSC has been reached, execute the pending request.
   *
-@@ -979,15 +1009,28 @@ xwl_present_execute(present_vblank_ptr vblank, uint64_t ust, uint64_t crtc_msc)
+@@ -1004,15 +1034,28 @@ xwl_present_execute(present_vblank_ptr vblank, uint64_t ust, uint64_t crtc_msc)
      present_vblank_ptr flip_pending = xwl_present_get_pending_flip(xwl_present_window);
      struct xwl_present_event *event = xwl_present_event_from_vblank(vblank);
      struct xwl_screen *xwl_screen = xwl_screen_get(window->drawable.pScreen);
@@ -2731,7 +2809,7 @@ index 3f1e4218d8..10cf99c7c6 100644
          DebugPresent(("\tr %" PRIu64 " %p (pending %p)\n",
                        vblank->event_id, vblank, flip_pending));
          xorg_list_append(&vblank->event_queue, &xwl_present_window->flip_queue);
-@@ -997,8 +1040,9 @@ retry:
+@@ -1022,8 +1065,9 @@ retry:
  
      vblank->queued = FALSE;
  
@@ -2742,7 +2820,7 @@ index 3f1e4218d8..10cf99c7c6 100644
  
          if (vblank->flip) {
              RegionPtr damage;
-@@ -1055,6 +1099,7 @@ retry:
+@@ -1080,6 +1124,7 @@ retry:
                  /* Realign timer */
                  xwl_present_reset_timer(xwl_present_window);
  
@@ -2750,7 +2828,7 @@ index 3f1e4218d8..10cf99c7c6 100644
                  return;
              }
  
-@@ -1076,9 +1121,12 @@ retry:
+@@ -1101,9 +1146,12 @@ retry:
          /* Set the copy_executed field, so this will fall through to present_execute_post next time */
          event->copy_executed = TRUE;
  
@@ -2766,7 +2844,7 @@ index 3f1e4218d8..10cf99c7c6 100644
              return;
      }
  
-@@ -1112,7 +1160,7 @@ xwl_present_pixmap(WindowPtr window,
+@@ -1137,7 +1185,7 @@ xwl_present_pixmap(WindowPtr window,
      uint64_t                    target_msc;
      uint64_t                    crtc_msc = 0;
      int                         ret;
@@ -2775,7 +2853,7 @@ index 3f1e4218d8..10cf99c7c6 100644
      ScreenPtr                   screen = window->drawable.pScreen;
      present_window_priv_ptr     window_priv = present_get_window_priv(window, TRUE);
      present_screen_priv_ptr     screen_priv = present_screen_priv(screen);
-@@ -1145,35 +1193,6 @@ xwl_present_pixmap(WindowPtr window,
+@@ -1170,35 +1218,6 @@ xwl_present_pixmap(WindowPtr window,
                                          remainder,
                                          options);
  
