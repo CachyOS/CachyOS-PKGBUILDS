@@ -5,48 +5,58 @@
 
 _pkgname=zstd
 pkgname=lib32-zstd
-pkgver=1.5.5
-pkgrel=3
+pkgver=1.5.6
+pkgrel=2
 pkgdesc='Zstandard - Fast real-time compression algorithm (32-bit)'
 url='https://facebook.github.io/zstd/'
-arch=('x86_64')
-license=('BSD' 'GPL2')
-depends=('zstd' 'lib32-glibc')
-makedepends=('gtest')
-provides=('libzstd.so')
+arch=(x86_64)
+license=(BSD GPL2)
+depends=(zstd lib32-glibc)
+makedepends=(cmake gtest ninja)
+provides=(libzstd.so)
 source=(https://github.com/facebook/zstd/releases/download/v${pkgver}/zstd-${pkgver}.tar.zst{,.sig})
-sha256sums=('ce264bca60eb2f0e99e4508cffd0d4d19dd362e84244d7fc941e79fa69ccf673'
+sha256sums=('4aa8dd1c1115c0fd6b6b66c35c7f6ce7bd58cc1dfd3e4f175b45b39e84b14352'
             'SKIP')
-sha512sums=('c2d88b2c2050262f85be32877142c94e36a8ee451890f579cd2426c7de565fb22d21c369bad11f306093f0b356e935cef5a8ff5a2b0c007ade0f7e7eb944d2a5'
-            'SKIP')
-b2sums=('2c2dc95f227e661ada23d8f6141bcd293505ce14e605f946ae00d4d4ac37d10b4eb08279ef7560618c67caf266431f76686fda5ae1921d698a6a93bbaf9a0052'
+b2sums=('88430a6a5db47462f93f2458cd3cc4823913de2d2d979cad56b06b48367a4ee51f59c795944c16d06abfdd19758b69f0b6e504ed833d02ff76e4cda519d220e4'
         'SKIP')
 validpgpkeys=(4EF4AC63455FC9F4545D9B7DEF8FE99528B52FFD)
+
+prepare() {
+  cd ${_pkgname}-${pkgver}
+  # avoid error on tests without static libs, we use LD_LIBRARY_PATH
+  sed '/build static library to build tests/d' -i build/cmake/CMakeLists.txt
+  sed 's/libzstd_static/libzstd_shared/g' -i build/cmake/tests/CMakeLists.txt
+}
 
 build() {
   cd ${_pkgname}-${pkgver}
   export CC="gcc -m32"
   export CXX="g++ -m32"
   export PKG_CONFIG_PATH="/usr/lib32/pkgconfig"
-  make
-  make zstdmt
-  make -C contrib/pzstd
+
+  export CFLAGS+=' -ffat-lto-objects'
+  export CXXFLAGS+=' -ffat-lto-objects'
+
+  cmake -S build/cmake -B build -G Ninja \
+    -DCMAKE_BUILD_TYPE=None \
+    -DCMAKE_INSTALL_PREFIX=/usr \
+    -DCMAKE_INSTALL_LIBDIR=lib32 \
+    -DZSTD_BUILD_CONTRIB=ON \
+    -DZSTD_BUILD_STATIC=OFF \
+    -DZSTD_BUILD_TESTS=ON \
+    -DZSTD_PROGRAMS_LINK_SHARED=ON
+  cmake --build build
 }
 
 check() {
   cd ${_pkgname}-${pkgver}
-  make check
-  make -C contrib/pzstd test
+  LD_LIBRARY_PATH="$(pwd)/build/lib" \
+    ctest -VV --test-dir build
 }
 
 package() {
   cd ${_pkgname}-${pkgver}
-  make \
-    PREFIX=/usr \
-    LIBDIR=/usr/lib32 \
-    PKGCONFIGDIR=/usr/lib32/pkgconfig \
-    DESTDIR="${pkgdir}" \
-    install
+  DESTDIR="${pkgdir}" cmake --install build
   rm -rf "${pkgdir}"/usr/{share,include,bin}
   install -Dm 644 LICENSE -t "${pkgdir}/usr/share/licenses/${pkgname}"
 }
