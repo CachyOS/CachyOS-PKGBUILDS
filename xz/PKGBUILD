@@ -4,7 +4,7 @@
 
 pkgname=xz
 pkgver=5.6.1
-pkgrel=2
+pkgrel=3
 pkgdesc='Library and command line tools for XZ and LZMA compressed files'
 arch=('x86_64')
 url='https://xz.tukaani.org/xz-utils/'
@@ -18,6 +18,15 @@ sha256sums=('2398f4a8e53345325f44bdd9f0cc7401bd9025d736c6d43b372f4dea77bf75b8'
             'SKIP')
 sha512sums=('8af100eb83288f032e4813be2bf8de7d733c8761f77f078776c1391709241ad8fe3192d107664786e2543677915c5eeb3fe7add5c53b48b50c10a9de7c9f4fda'
             'SKIP')
+
+prepare() {
+	cd "${srcdir}/${pkgname}-${pkgver}"
+    rm -rf tests/files/bad-3-corrupt_lzma2.xz
+    rm -rf tests/files/bad-dict_size.lzma
+    rm -rf tests/files/good-2cat.xz
+    rm -rf tests/files/good-large_compressed.lzma
+    rm -rf tests/files/good-small_compressed.lzma
+}
 
 build() {
   cd "${srcdir}/${pkgname}-${pkgver}"
