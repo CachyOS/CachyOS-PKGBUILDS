@@ -7,9 +7,9 @@
 # grub, systemd, refind
 _bootloader=${_bootloader-'systemd'}
 
-pkgname=cachyos-calamares-qt6-next-${_bootloader}
+pkgname=cachyos-calamares-qt6-${_bootloader}
 pkgver=3.3.5
-pkgrel=4
+pkgrel=6
 pkgdesc='Distribution-independent installer framework'
 arch=('i686' 'x86_64' 'x86_64_v3')
 license=('GPL3')
@@ -57,7 +57,7 @@ build() {
         finishedq keyboardq license localeq notesqml oemid \
         openrcdmcryptcfg packagechooserq fsresizer \
         rawfs mkinitfs contextualprocess interactiveterminal \
-        plymouthcfg plasmalnf services-openrc \
+        plasmalnf services-openrc \
         summaryq tracking usersq webview welcomeq"
 
     cmake --build build --parallel $_cpuCount
