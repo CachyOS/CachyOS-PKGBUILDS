@@ -11,8 +11,9 @@
 # using PGO-LTO script from https://github.com/JuliaLang/julia/pull/45641#issue-1268010204
 
 pkgname=julia
+epoch=2
 pkgver=1.10.2
-pkgrel=2
+pkgrel=4
 arch=(x86_64)
 pkgdesc='High-level, high-performance, dynamic programming language'
 url='https://julialang.org/'
@@ -226,4 +227,6 @@ package() {
 
   rm -f "$STAGE2_DONE"/usr/lib/julia/libccalltest.so.debug # Remove debug testing library
   install -Dm644 ${srcdir}/${pkgname}-${pkgver}/LICENSE.md -t "$STAGE2_DONE"/usr/share/licenses/$pkgname
+  install -Dm644 contrib/julia.svg -t "$pkgdir"/usr/share/pixmaps
+
 }
