@@ -170,6 +170,9 @@ prepare() {
     popd
     done
 
+    cd $srcdir/proton
+    echo "Disable Fastsync as default"
+    patch -Np1 -i "$srcdir"/disable-fastsync.patch
     cd $srcdir/proton/wine
     echo "Wine: Enable LTO for wineserver"
     patch -Np1 -i "$srcdir"/server-Enable-link-time-optimization.patch
@@ -277,7 +280,7 @@ package() {
         $(find "$_monodir" -iname "*x86_64.dll" -or -iname "*x86_64.exe")
 }
 
-sha256sums=('0c5cb5d355247324d11fe1fa5858f7fcfd0b50c96f83431b5690e04555cd9706'
+sha256sums=('666d3b568e1fbf5dcefc09fe9c7da66926cc003fc4f534814b928ba3839510e5'
             '2cfc8d5c948602e21eff8a78613e1826f2d033df9672cace87fed56e8310afb6'
             'fd88fc7e537d058d7a8abf0c1ebc90c574892a466de86706a26d254710a82814'
             'd73d440c08ebd67c93fbd6534f4f1b4e98aa07342f9c7d98c8aaeb74755eb9cf'
@@ -286,7 +289,7 @@ sha256sums=('0c5cb5d355247324d11fe1fa5858f7fcfd0b50c96f83431b5690e04555cd9706'
             '2f30e393b5e6c371a68ad6b5b6693d35412d30ba7e3963bc65a650c9c29ff569'
             '7b36b2ddf9e61d095f44aa7f7d41107addbbf9c435f338840718af3fd426f53f'
             '36e601bf53a3e938bffd0b6f02432930a53a652b732a503aa29944c043def690'
-            '23e35740995ada449865b0b5129e8177e995d28842a924be4562e65d6513bafd'
-            'bd0482c05474068bb50a176eb33c02a1eb3ac1bece0365ee0dd3bcd304fabf9e'
+            'aca568c20741784b0a9ae4628e97eff1e9b1a4643974bd8c36ae0d692450f2c3'
+            '27d4d636566623a598ec958457fe2efd7d38d79aa1a55dea226bf18d413ca126'
             '416350c345db4c680f825d89b0eea79dbef668f671b18f7f792bbeb4b9e59e18')
 
