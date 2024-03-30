@@ -44,12 +44,3 @@ index f93f545f..2e0199f0 100755
          if "nowritewatch" in self.compat_config:
              self.env["WINE_DISABLE_WRITE_WATCH"] = "1"
  
-@@ -1587,6 +1598,8 @@ class Session:
-             f.write("\tWINEESYNC=\"" + self.env["WINEESYNC"] + "\" \\\n")
-         if "WINEFSYNC" in self.env:
-             f.write("\tWINEFSYNC=\"" + self.env["WINEFSYNC"] + "\" \\\n")
-+        if "WINE_DISABLE_FAST_SYNC" in self.env:
-+            f.write("\tWINE_DISABLE_FAST_SYNC=\"" + self.env["WINE_DISABLE_FAST_SYNC"] + "\" \\\n")
-         if "SteamGameId" in self.env:
-             f.write("\tSteamGameId=\"" + self.env["SteamGameId"] + "\" \\\n")
-         if "SteamAppId" in self.env:
