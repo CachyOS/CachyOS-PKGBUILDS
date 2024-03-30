@@ -1,6 +1,5 @@
 Subject: [PATCH] Proton 9.0 port
 ---
-Index: configure.ac
 
 diff --git a/configure.ac b/configure.ac
 --- a/configure.ac	(revision 43519126ca490c19ee2e5f0509939b0d90955143)
@@ -13,7 +12,6 @@ diff --git a/configure.ac b/configure.ac
  	linux/wireless.h \
  	lwp.h \
  	mach-o/loader.h \
-Index: dlls/ntdll/unix/esync.c
 
 diff --git a/dlls/ntdll/unix/esync.c b/dlls/ntdll/unix/esync.c
 --- a/dlls/ntdll/unix/esync.c	(revision 43519126ca490c19ee2e5f0509939b0d90955143)
@@ -28,7 +26,6 @@ diff --git a/dlls/ntdll/unix/esync.c b/dlls/ntdll/unix/esync.c
  
      return do_esync_cached;
  #else
-Index: dlls/ntdll/unix/file.c
 
 diff --git a/dlls/ntdll/unix/file.c b/dlls/ntdll/unix/file.c
 --- a/dlls/ntdll/unix/file.c	(revision 43519126ca490c19ee2e5f0509939b0d90955143)
@@ -42,7 +39,6 @@ diff --git a/dlls/ntdll/unix/file.c b/dlls/ntdll/unix/file.c
              NtClose( handle );
          }
          else  /* Unix lock conflict, sleep a bit and retry */
-Index: dlls/ntdll/unix/fsync.c
 
 diff --git a/dlls/ntdll/unix/fsync.c b/dlls/ntdll/unix/fsync.c
 --- a/dlls/ntdll/unix/fsync.c	(revision 43519126ca490c19ee2e5f0509939b0d90955143)
@@ -57,7 +53,6 @@ diff --git a/dlls/ntdll/unix/fsync.c b/dlls/ntdll/unix/fsync.c
      }
  
      return do_fsync_cached;
-Index: dlls/ntdll/unix/process.c
 
 diff --git a/dlls/ntdll/unix/process.c b/dlls/ntdll/unix/process.c
 --- a/dlls/ntdll/unix/process.c	(revision 43519126ca490c19ee2e5f0509939b0d90955143)
@@ -71,7 +66,6 @@ diff --git a/dlls/ntdll/unix/process.c b/dlls/ntdll/unix/process.c
      SERVER_START_REQ( get_new_process_info )
      {
          req->info = wine_server_obj_handle( process_info );
-Index: dlls/ntdll/unix/server.c
 
 diff --git a/dlls/ntdll/unix/server.c b/dlls/ntdll/unix/server.c
 --- a/dlls/ntdll/unix/server.c	(revision 43519126ca490c19ee2e5f0509939b0d90955143)
@@ -141,7 +135,6 @@ diff --git a/dlls/ntdll/unix/server.c b/dlls/ntdll/unix/server.c
      if (do_fsync())
          fsync_close( handle );
  
-Index: dlls/ntdll/unix/sync.c
 
 diff --git a/dlls/ntdll/unix/sync.c b/dlls/ntdll/unix/sync.c
 --- a/dlls/ntdll/unix/sync.c	(revision 43519126ca490c19ee2e5f0509939b0d90955143)
@@ -1366,7 +1359,6 @@ diff --git a/dlls/ntdll/unix/sync.c b/dlls/ntdll/unix/sync.c
      if (!handle) handle = keyed_event;
      if ((ULONG_PTR)key & 1) return STATUS_INVALID_PARAMETER_1;
      if (alertable) flags |= SELECT_ALERTABLE;
-Index: dlls/ntdll/unix/thread.c
 
 diff --git a/dlls/ntdll/unix/thread.c b/dlls/ntdll/unix/thread.c
 --- a/dlls/ntdll/unix/thread.c	(revision 43519126ca490c19ee2e5f0509939b0d90955143)
@@ -1380,7 +1372,6 @@ diff --git a/dlls/ntdll/unix/thread.c b/dlls/ntdll/unix/thread.c
  
          SERVER_START_REQ( get_thread_context )
          {
-Index: dlls/ntdll/unix/unix_private.h
 
 diff --git a/dlls/ntdll/unix/unix_private.h b/dlls/ntdll/unix/unix_private.h
 --- a/dlls/ntdll/unix/unix_private.h	(revision 43519126ca490c19ee2e5f0509939b0d90955143)
@@ -1429,7 +1420,6 @@ diff --git a/dlls/ntdll/unix/unix_private.h b/dlls/ntdll/unix/unix_private.h
  }
  
  static inline BOOL in_wow64_call(void)
-Index: include/linux/winesync.h
 
 diff --git a/include/linux/winesync.h b/include/linux/winesync.h
 new file mode 100644
@@ -1507,7 +1497,6 @@ new file mode 100644
 +					      struct winesync_event_args)
 +
 +#endif
-Index: include/wine/server_protocol.h
 
 diff --git a/include/wine/server_protocol.h b/include/wine/server_protocol.h
 --- a/include/wine/server_protocol.h	(revision 43519126ca490c19ee2e5f0509939b0d90955143)
@@ -1642,7 +1631,6 @@ diff --git a/include/wine/server_protocol.h b/include/wine/server_protocol.h
  
  /* ### protocol_version end ### */
  
-Index: server/Makefile.in
 
 diff --git a/server/Makefile.in b/server/Makefile.in
 --- a/server/Makefile.in	(revision 43519126ca490c19ee2e5f0509939b0d90955143)
@@ -1655,7 +1643,6 @@ diff --git a/server/Makefile.in b/server/Makefile.in
  	fd.c \
  	file.c \
  	fsync.c \
-Index: server/async.c
 
 diff --git a/server/async.c b/server/async.c
 --- a/server/async.c	(revision 43519126ca490c19ee2e5f0509939b0d90955143)
@@ -1676,7 +1663,6 @@ diff --git a/server/async.c b/server/async.c
      no_close_handle,          /* close_handle */
      iosb_destroy              /* destroy */
  };
-Index: server/atom.c
 
 diff --git a/server/atom.c b/server/atom.c
 --- a/server/atom.c	(revision 43519126ca490c19ee2e5f0509939b0d90955143)
@@ -1689,7 +1675,6 @@ diff --git a/server/atom.c b/server/atom.c
      no_close_handle,              /* close_handle */
      atom_table_destroy            /* destroy */
  };
-Index: server/change.c
 
 diff --git a/server/change.c b/server/change.c
 --- a/server/change.c	(revision 43519126ca490c19ee2e5f0509939b0d90955143)
@@ -1702,7 +1687,6 @@ diff --git a/server/change.c b/server/change.c
      dir_close_handle,         /* close_handle */
      dir_destroy               /* destroy */
  };
-Index: server/clipboard.c
 
 diff --git a/server/clipboard.c b/server/clipboard.c
 --- a/server/clipboard.c	(revision 43519126ca490c19ee2e5f0509939b0d90955143)
@@ -1715,7 +1699,6 @@ diff --git a/server/clipboard.c b/server/clipboard.c
      no_close_handle,              /* close_handle */
      clipboard_destroy             /* destroy */
  };
-Index: server/completion.c
 
 diff --git a/server/completion.c b/server/completion.c
 --- a/server/completion.c	(revision 43519126ca490c19ee2e5f0509939b0d90955143)
@@ -1826,7 +1809,6 @@ diff --git a/server/completion.c b/server/completion.c
  
          if (!completion_wait_signaled( &wait->obj, NULL ))
          {
-Index: server/console.c
 
 diff --git a/server/console.c b/server/console.c
 --- a/server/console.c	(revision 43519126ca490c19ee2e5f0509939b0d90955143)
@@ -2117,7 +2099,6 @@ diff --git a/server/console.c b/server/console.c
  
      release_object( server );
  }
-Index: server/debugger.c
 
 diff --git a/server/debugger.c b/server/debugger.c
 --- a/server/debugger.c	(revision 43519126ca490c19ee2e5f0509939b0d90955143)
@@ -2214,7 +2195,6 @@ diff --git a/server/debugger.c b/server/debugger.c
      }
      else
      {
-Index: server/device.c
 
 diff --git a/server/device.c b/server/device.c
 --- a/server/device.c	(revision 43519126ca490c19ee2e5f0509939b0d90955143)
@@ -2338,7 +2318,6 @@ diff --git a/server/device.c b/server/device.c
                  /* we already own the object if it's only on manager queue */
                  if (irp->file) grab_object( irp );
                  manager->current_call = irp;
-Index: server/directory.c
 
 diff --git a/server/directory.c b/server/directory.c
 --- a/server/directory.c	(revision 43519126ca490c19ee2e5f0509939b0d90955143)
@@ -2359,7 +2338,6 @@ diff --git a/server/directory.c b/server/directory.c
      no_close_handle,              /* close_handle */
      directory_destroy             /* destroy */
  };
-Index: server/esync.c
 
 diff --git a/server/esync.c b/server/esync.c
 --- a/server/esync.c	(revision 43519126ca490c19ee2e5f0509939b0d90955143)
@@ -2382,7 +2360,6 @@ diff --git a/server/esync.c b/server/esync.c
      no_close_handle,           /* close_handle */
      esync_destroy              /* destroy */
  };
-Index: server/event.c
 
 diff --git a/server/event.c b/server/event.c
 --- a/server/event.c	(revision 43519126ca490c19ee2e5f0509939b0d90955143)
@@ -2521,7 +2498,6 @@ diff --git a/server/event.c b/server/event.c
  /* create an event */
  DECL_HANDLER(create_event)
  {
-Index: server/fast_sync.c
 
 diff --git a/server/fast_sync.c b/server/fast_sync.c
 new file mode 100644
@@ -2933,7 +2909,6 @@ new file mode 100644
 +        release_object( obj );
 +    }
 +}
-Index: server/fd.c
 
 diff --git a/server/fd.c b/server/fd.c
 --- a/server/fd.c	(revision 43519126ca490c19ee2e5f0509939b0d90955143)
@@ -3050,7 +3025,6 @@ diff --git a/server/fd.c b/server/fd.c
  /* default signaled() routine for objects that poll() on an fd */
  int default_fd_signaled( struct object *obj, struct wait_queue_entry *entry )
  {
-Index: server/file.c
 
 diff --git a/server/file.c b/server/file.c
 --- a/server/file.c	(revision 43519126ca490c19ee2e5f0509939b0d90955143)
@@ -3063,7 +3037,6 @@ diff --git a/server/file.c b/server/file.c
      no_close_handle,              /* close_handle */
      file_destroy                  /* destroy */
  };
-Index: server/file.h
 
 diff --git a/server/file.h b/server/file.h
 --- a/server/file.h	(revision 43519126ca490c19ee2e5f0509939b0d90955143)
@@ -3076,7 +3049,6 @@ diff --git a/server/file.h b/server/file.h
  extern int default_fd_get_poll_events( struct fd *fd );
  extern void default_poll_event( struct fd *fd, int event );
  extern void fd_cancel_async( struct fd *fd, struct async *async );
-Index: server/fsync.c
 
 diff --git a/server/fsync.c b/server/fsync.c
 --- a/server/fsync.c	(revision 43519126ca490c19ee2e5f0509939b0d90955143)
@@ -3099,7 +3071,6 @@ diff --git a/server/fsync.c b/server/fsync.c
      no_close_handle,           /* close_handle */
      fsync_destroy              /* destroy */
  };
-Index: server/handle.c
 
 diff --git a/server/handle.c b/server/handle.c
 --- a/server/handle.c	(revision 43519126ca490c19ee2e5f0509939b0d90955143)
@@ -3112,7 +3083,6 @@ diff --git a/server/handle.c b/server/handle.c
      no_close_handle,                 /* close_handle */
      handle_table_destroy             /* destroy */
  };
-Index: server/hook.c
 
 diff --git a/server/hook.c b/server/hook.c
 --- a/server/hook.c	(revision 43519126ca490c19ee2e5f0509939b0d90955143)
@@ -3125,7 +3095,6 @@ diff --git a/server/hook.c b/server/hook.c
      no_close_handle,              /* close_handle */
      hook_table_destroy            /* destroy */
  };
-Index: server/mailslot.c
 
 diff --git a/server/mailslot.c b/server/mailslot.c
 --- a/server/mailslot.c	(revision 43519126ca490c19ee2e5f0509939b0d90955143)
@@ -3162,7 +3131,6 @@ diff --git a/server/mailslot.c b/server/mailslot.c
      no_close_handle,                        /* close_handle */
      mailslot_device_file_destroy            /* destroy */
  };
-Index: server/main.c
 
 diff --git a/server/main.c b/server/main.c
 --- a/server/main.c	(revision 43519126ca490c19ee2e5f0509939b0d90955143)
@@ -3192,7 +3160,6 @@ diff --git a/server/main.c b/server/main.c
  
      if (debug_level) fprintf( stderr, "wineserver: starting (pid=%ld)\n", (long) getpid() );
      set_current_time();
-Index: server/mapping.c
 
 diff --git a/server/mapping.c b/server/mapping.c
 --- a/server/mapping.c	(revision 43519126ca490c19ee2e5f0509939b0d90955143)
@@ -3221,7 +3188,6 @@ diff --git a/server/mapping.c b/server/mapping.c
      no_close_handle,             /* close_handle */
      mapping_destroy              /* destroy */
  };
-Index: server/mutex.c
 
 diff --git a/server/mutex.c b/server/mutex.c
 --- a/server/mutex.c	(revision 43519126ca490c19ee2e5f0509939b0d90955143)
@@ -3289,7 +3255,6 @@ diff --git a/server/mutex.c b/server/mutex.c
  }
  
  /* create a mutex */
-Index: server/named_pipe.c
 
 diff --git a/server/named_pipe.c b/server/named_pipe.c
 --- a/server/named_pipe.c	(revision 43519126ca490c19ee2e5f0509939b0d90955143)
@@ -3334,7 +3299,6 @@ diff --git a/server/named_pipe.c b/server/named_pipe.c
      no_close_handle,                         /* close_handle */
      named_pipe_device_file_destroy           /* destroy */
  };
-Index: server/object.c
 
 diff --git a/server/object.c b/server/object.c
 --- a/server/object.c	(revision 43519126ca490c19ee2e5f0509939b0d90955143)
@@ -3352,7 +3316,6 @@ diff --git a/server/object.c b/server/object.c
  unsigned int default_map_access( struct object *obj, unsigned int access )
  {
      return map_access( access, &obj->ops->type->mapping );
-Index: server/object.h
 
 diff --git a/server/object.h b/server/object.h
 --- a/server/object.h	(revision 43519126ca490c19ee2e5f0509939b0d90955143)
@@ -3392,7 +3355,6 @@ diff --git a/server/object.h b/server/object.h
  /* serial functions */
  
  int get_serial_async_timeout(struct object *obj, int type, int count);
-Index: server/process.c
 
 diff --git a/server/process.c b/server/process.c
 --- a/server/process.c	(revision 43519126ca490c19ee2e5f0509939b0d90955143)
@@ -3521,7 +3483,6 @@ diff --git a/server/process.c b/server/process.c
  }
  
  /* add a thread to a process running threads list */
-Index: server/process.h
 
 diff --git a/server/process.h b/server/process.h
 --- a/server/process.h	(revision 43519126ca490c19ee2e5f0509939b0d90955143)
@@ -3534,7 +3495,6 @@ diff --git a/server/process.h b/server/process.h
      struct cpu_topology_override cpu_override; /* Overridden CPUs to host CPUs mapping. */
      unsigned char   wine_cpu_id_from_host[64]; /* Host to overridden CPU mapping. */
  };
-Index: server/protocol.def
 
 diff --git a/server/protocol.def b/server/protocol.def
 --- a/server/protocol.def	(revision 43519126ca490c19ee2e5f0509939b0d90955143)
@@ -3588,7 +3548,6 @@ diff --git a/server/protocol.def b/server/protocol.def
 +@REPLY
 +    obj_handle_t handle;          /* handle to the event */
 +@END
-Index: server/queue.c
 
 diff --git a/server/queue.c b/server/queue.c
 --- a/server/queue.c	(revision 43519126ca490c19ee2e5f0509939b0d90955143)
@@ -3822,7 +3781,6 @@ diff --git a/server/queue.c b/server/queue.c
  DECL_HANDLER(fsync_msgwait)
  {
      struct msg_queue *queue = get_current_queue();
-Index: server/registry.c
 
 diff --git a/server/registry.c b/server/registry.c
 --- a/server/registry.c	(revision 43519126ca490c19ee2e5f0509939b0d90955143)
@@ -3835,7 +3793,6 @@ diff --git a/server/registry.c b/server/registry.c
      key_close_handle,        /* close_handle */
      key_destroy              /* destroy */
  };
-Index: server/request.c
 
 diff --git a/server/request.c b/server/request.c
 --- a/server/request.c	(revision 43519126ca490c19ee2e5f0509939b0d90955143)
@@ -3848,7 +3805,6 @@ diff --git a/server/request.c b/server/request.c
      no_close_handle,               /* close_handle */
      master_socket_destroy          /* destroy */
  };
-Index: server/request.h
 
 diff --git a/server/request.h b/server/request.h
 --- a/server/request.h	(revision 43519126ca490c19ee2e5f0509939b0d90955143)
@@ -3902,7 +3858,6 @@ diff --git a/server/request.h b/server/request.h
  
  #endif  /* WANT_REQUEST_HANDLERS */
  
-Index: server/semaphore.c
 
 diff --git a/server/semaphore.c b/server/semaphore.c
 --- a/server/semaphore.c	(revision 43519126ca490c19ee2e5f0509939b0d90955143)
@@ -3966,7 +3921,6 @@ diff --git a/server/semaphore.c b/server/semaphore.c
  /* create a semaphore */
  DECL_HANDLER(create_semaphore)
  {
-Index: server/serial.c
 
 diff --git a/server/serial.c b/server/serial.c
 --- a/server/serial.c	(revision 43519126ca490c19ee2e5f0509939b0d90955143)
@@ -3979,7 +3933,6 @@ diff --git a/server/serial.c b/server/serial.c
      no_close_handle,              /* close_handle */
      serial_destroy                /* destroy */
  };
-Index: server/signal.c
 
 diff --git a/server/signal.c b/server/signal.c
 --- a/server/signal.c	(revision 43519126ca490c19ee2e5f0509939b0d90955143)
@@ -3992,7 +3945,6 @@ diff --git a/server/signal.c b/server/signal.c
      no_close_handle,          /* close_handle */
      handler_destroy           /* destroy */
  };
-Index: server/sock.c
 
 diff --git a/server/sock.c b/server/sock.c
 --- a/server/sock.c	(revision 43519126ca490c19ee2e5f0509939b0d90955143)
@@ -4021,7 +3973,6 @@ diff --git a/server/sock.c b/server/sock.c
      no_close_handle,            /* close_handle */
      no_destroy                  /* destroy */
  };
-Index: server/symlink.c
 
 diff --git a/server/symlink.c b/server/symlink.c
 --- a/server/symlink.c	(revision 43519126ca490c19ee2e5f0509939b0d90955143)
@@ -4034,7 +3985,6 @@ diff --git a/server/symlink.c b/server/symlink.c
      no_close_handle,              /* close_handle */
      symlink_destroy               /* destroy */
  };
-Index: server/thread.c
 
 diff --git a/server/thread.c b/server/thread.c
 --- a/server/thread.c	(revision 43519126ca490c19ee2e5f0509939b0d90955143)
@@ -4162,7 +4112,6 @@ diff --git a/server/thread.c b/server/thread.c
 +    if (current->fast_alert_event)
 +        reply->handle = alloc_handle( current->process, current->fast_alert_event, SYNCHRONIZE, 0 );
 +}
-Index: server/thread.h
 
 diff --git a/server/thread.h b/server/thread.h
 --- a/server/thread.h	(revision 43519126ca490c19ee2e5f0509939b0d90955143)
@@ -4176,7 +4125,6 @@ diff --git a/server/thread.h b/server/thread.h
      struct object         *locked_completion; /* completion port wait object successfully waited by the thread */
      struct object         *queue_shared_mapping; /* thread queue shared memory mapping */
      queue_shm_t           *queue_shared;  /* thread queue shared memory ptr */
-Index: server/timer.c
 
 diff --git a/server/timer.c b/server/timer.c
 --- a/server/timer.c	(revision 43519126ca490c19ee2e5f0509939b0d90955143)
@@ -4258,7 +4206,6 @@ diff --git a/server/timer.c b/server/timer.c
  }
  
  /* create a timer */
-Index: server/token.c
 
 diff --git a/server/token.c b/server/token.c
 --- a/server/token.c	(revision 43519126ca490c19ee2e5f0509939b0d90955143)
@@ -4271,7 +4218,6 @@ diff --git a/server/token.c b/server/token.c
      no_close_handle,           /* close_handle */
      token_destroy              /* destroy */
  };
-Index: server/trace.c
 
 diff --git a/server/trace.c b/server/trace.c
 --- a/server/trace.c	(revision 43519126ca490c19ee2e5f0509939b0d90955143)
@@ -4362,7 +4308,6 @@ diff --git a/server/trace.c b/server/trace.c
  };
  
  static const struct
-Index: server/window.c
 
 diff --git a/server/window.c b/server/window.c
 --- a/server/window.c	(revision 43519126ca490c19ee2e5f0509939b0d90955143)
@@ -4375,7 +4320,6 @@ diff --git a/server/window.c b/server/window.c
      no_close_handle,          /* close_handle */
      window_destroy            /* destroy */
  };
-Index: server/winstation.c
 
 diff --git a/server/winstation.c b/server/winstation.c
 --- a/server/winstation.c	(revision 43519126ca490c19ee2e5f0509939b0d90955143)
