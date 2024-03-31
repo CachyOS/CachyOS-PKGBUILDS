@@ -9,8 +9,8 @@ groups=(cachyos)
 arch=('any')
 license=('GPL')
 pkgdesc='CachyOS - ananicy-rules'
-source=("${pkgname}::git+https://github.com/CachyOS/${_gitname}.git")
-sha256sums=('SKIP')
+source=("${pkgname}::git+https://github.com/CachyOS/${_gitname}.git#commit=17e2fec57d872b5d1612b1ec26b0a98ba2ece31c")
+sha256sums=('b679db73b127e8fc794566adc0c9efa11566731f240d77015f3ecb074a95da8d')
 replaces=(ananicy-rules-git)
 provides=(ananicy-rules-git)
 conflicts=(ananicy-rules-git)
@@ -21,8 +21,8 @@ pkgver() {
   printf "${_gittag}.r%s.%s" "$(git rev-list --count HEAD)" "$(git rev-parse --short HEAD)"
 }
 prepare() {
-	cd "${pkgname}"
-	rm -f README.md
+  cd "${pkgname}"
+  rm -f README.md
 }
 package() {
   cd "${pkgname}"
