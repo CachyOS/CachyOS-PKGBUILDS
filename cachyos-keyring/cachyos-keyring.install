@@ -1,10 +1,14 @@
-post_install() {
-    pacman-key --init
-    pacman-key --add /usr/share/pacman/keyrings/cachyos.gpg
-    pacman-key --lsign-key F3B607488DB35A47
-    pacman-key --populate
+post_upgrade() {
+	if usr/bin/pacman-key -l >/dev/null 2>&1; then
+		usr/bin/pacman-key --populate cachyos
+	else
+		echo " >>> Run \`pacman-key --init\` to set up your pacman keyring."
+		echo " >>> Then run \`pacman-key --populate cachyos\` to install the CachyOS keyring."
+	fi
 }
 
-post_upgrade() {
-        post_install
+post_install() {
+	if [ -x usr/bin/pacman-key ]; then
+		post_upgrade
+	fi
 }
