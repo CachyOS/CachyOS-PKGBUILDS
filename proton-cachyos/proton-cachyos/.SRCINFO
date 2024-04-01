@@ -1,7 +1,7 @@
 pkgbase = proton-cachyos
 	pkgdesc = Compatibility tool for Steam Play based on Wine and additional components, experimental branch with extra CachyOS flavour
 	pkgver = 9.0
-	pkgrel = 5
+	pkgrel = 8
 	url = https://github.com/cachyos/proton-cachyos
 	install = proton-cachyos.install
 	arch = x86_64
@@ -99,6 +99,9 @@ pkgbase = proton-cachyos
 	depends = python
 	depends = steam-native-runtime
 	depends = cabextract
+	depends = winesync-dkms
+	depends = winesync-header
+	depends = winesync-udev-rule
 	depends = wayland
 	depends = lib32-wayland
 	optdepends = giflib
@@ -134,7 +137,7 @@ pkgbase = proton-cachyos
 	options = !lto
 	options = !debug
 	options = emptydirs
-	source = proton::git+https://github.com/CachyOS/proton-cachyos.git#tag=cachyos-9.0-20240320
+	source = proton::git+https://github.com/CachyOS/proton-cachyos.git#branch=experimental_9.0
 	source = https://dl.winehq.org/wine/wine-gecko/2.47.4/wine-gecko-2.47.4-x86.tar.xz
 	source = https://dl.winehq.org/wine/wine-gecko/2.47.4/wine-gecko-2.47.4-x86_64.tar.xz
 	source = https://github.com/madewokherd/wine-mono/releases/download/wine-mono-9.0.0/wine-mono-9.0.0-x86.tar.xz
@@ -146,7 +149,7 @@ pkgbase = proton-cachyos
 	source = fastsync.patch
 	source = disable-fastsync.patch
 	source = wayland-upstream.patch
-	sha256sums = 666d3b568e1fbf5dcefc09fe9c7da66926cc003fc4f534814b928ba3839510e5
+	sha256sums = SKIP
 	sha256sums = 2cfc8d5c948602e21eff8a78613e1826f2d033df9672cace87fed56e8310afb6
 	sha256sums = fd88fc7e537d058d7a8abf0c1ebc90c574892a466de86706a26d254710a82814
 	sha256sums = d73d440c08ebd67c93fbd6534f4f1b4e98aa07342f9c7d98c8aaeb74755eb9cf

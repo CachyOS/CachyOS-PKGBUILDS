@@ -13,7 +13,7 @@ _commit=
 pkgver=9.0
 _geckover=2.47.4
 _monover=9.0.0
-pkgrel=5
+pkgrel=8
 pkgdesc="Compatibility tool for Steam Play based on Wine and additional components, experimental branch with extra CachyOS flavour"
 url="https://github.com/cachyos/proton-cachyos"
 arch=(x86_64 x86_64_v3)
@@ -43,6 +43,10 @@ depends=(
   python
   steam-native-runtime
   cabextract
+
+  winesync-dkms
+  winesync-header
+  winesync-udev-rule
 )
 depends+=(
   wayland          lib32-wayland
@@ -94,7 +98,7 @@ optdepends=(
 provides=('proton')
 install=${pkgname}.install
 source=(
-    proton::git+https://github.com/CachyOS/proton-cachyos.git#tag=cachyos-${_srctag}
+    proton::git+https://github.com/CachyOS/proton-cachyos.git#branch=experimental_9.0
     https://dl.winehq.org/wine/wine-gecko/${_geckover}/wine-gecko-${_geckover}-x86{,_64}.tar.xz
     https://github.com/madewokherd/wine-mono/releases/download/wine-mono-${_monover}/wine-mono-${_monover}-x86.tar.xz
     server-Enable-link-time-optimization.patch
@@ -142,6 +146,20 @@ EOF
     done
 }
 
+_backports=(
+420235c1882727468a1af290b798f5a4c6198826
+6c11af2dde8d759b43f4b52932fe0638d8da155a
+0225689d620778123982f87ebf4f9143f1976028
+fadcad39fa1ce8654464346c6becc1d53d666744
+081e5e187bf050765f6205e98791208e31a41df2
+7d124b292023cd1a794ece194e831f695df73c74
+1db4b8d3b5827557edbbf5bbd728e5cb78a42b94
+fd7761295cd08440ed0450dcfd5ab88e29e3acc4
+a8bc34f612c78658565389e27a6e1b99b2a1b072
+017e694cf3f57bda7b382c86fc8caf6b8f74b0a8
+0ed61be66b8a87ad45959f006548673ac53e7b60
+)
+
 prepare() {
 
     # Provide wrappers to compiler tools
@@ -172,7 +190,16 @@ prepare() {
 
     cd $srcdir/proton
     echo "Disable Fastsync as default"
+
+# Manually apply backport, to not depend on the latest srctag from loathing
+ local _c _l
+  for _c in "${_backports[@]}"; do
+    if [[ "${_c}" == *..* ]]; then _l='--reverse'; else _l='--max-count=1'; fi
+    git log --oneline "${_l}" "${_c}"
+    git cherry-pick --mainline 1 --no-commit "${_c}"
+  done
     patch -Np1 -i "$srcdir"/disable-fastsync.patch
+
     cd $srcdir/proton/wine
     echo "Wine: Enable LTO for wineserver"
     patch -Np1 -i "$srcdir"/server-Enable-link-time-optimization.patch
@@ -280,7 +307,7 @@ package() {
         $(find "$_monodir" -iname "*x86_64.dll" -or -iname "*x86_64.exe")
 }
 
-sha256sums=('666d3b568e1fbf5dcefc09fe9c7da66926cc003fc4f534814b928ba3839510e5'
+sha256sums=('SKIP'
             '2cfc8d5c948602e21eff8a78613e1826f2d033df9672cace87fed56e8310afb6'
             'fd88fc7e537d058d7a8abf0c1ebc90c574892a466de86706a26d254710a82814'
             'd73d440c08ebd67c93fbd6534f4f1b4e98aa07342f9c7d98c8aaeb74755eb9cf'
