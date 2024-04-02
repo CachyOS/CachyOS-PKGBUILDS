@@ -20,13 +20,16 @@ makedepends=('git' 'cmake' 'extra-cmake-modules' 'boost' 'python-jsonschema' 'py
 depends=('qt6-svg' 'yaml-cpp' 'networkmanager' 'upower' 'kcoreaddons' 'kconfig' 'ki18n' 'kservice' 'kcrash'
          'kwidgetsaddons' 'kpmcore' 'squashfs-tools' 'rsync' 'cryptsetup' 'doxygen' 'dmidecode' 'qt6-declarative'
          'gptfdisk' 'hwinfo' 'kparts' 'polkit-qt6' 'python' 'solid' 'boost-libs' 'libpwquality' 'ckbcomp' 'mkinitcpio-openswap')
-sha256sums=('SKIP')
+sha256sums=('SKIP'
+            'adce3a4c40f0cabe935e6715fed0ecabe63aefae0ab700e85379a52dfe8e1da6')
 # Bootloader
-source=(calamares::git+https://github.com/cachyos/cachyos-calamares.git#branch=cachyos-${_bootloader}-qt6)
+source=(calamares::git+https://github.com/cachyos/cachyos-calamares.git#branch=cachyos-${_bootloader}-qt6
+        zfs-plymouth.patch::https://github.com/CachyOS/cachyos-calamares/commit/3d47146a1dc8be37e91d9669a04c7f81dfda7f35.patch)
 options=('!strip' '!emptydirs')
 
 prepare() {
     cd ${srcdir}/calamares
+    patch -Np1 < ../zfs-plymouth.patch
     # change version
     _ver="$(cat CMakeLists.txt | grep -m3 -e "  VERSION" | grep -o "[[:digit:]]*" | xargs | sed s'/ /./g')"
     _ver="$pkgver"

@@ -1,0 +1,47 @@
+From 3d47146a1dc8be37e91d9669a04c7f81dfda7f35 Mon Sep 17 00:00:00 2001
+From: Vladislav Nepogodin <nepogodin.vlad@gmail.com>
+Date: Tue, 2 Apr 2024 01:34:29 +0400
+Subject: [PATCH] =?UTF-8?q?=F0=9F=9A=A7=20disable=20plymouth=20on=20zfs+en?=
+ =?UTF-8?q?cryption?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+---
+ src/modules/bootloader/main.py  | 9 +++++++--
+ src/modules/initcpiocfg/main.py | 5 +++++
+ src/modules/plymouthcfg/main.py | 7 +++++++
+ 3 files changed, 19 insertions(+), 2 deletions(-)
+
+diff --git a/src/modules/bootloader/main.py b/src/modules/bootloader/main.py
+index 0eb7dab47..3ed6dafe8 100644
+--- a/src/modules/bootloader/main.py
++++ b/src/modules/bootloader/main.py
+@@ -183,6 +183,11 @@ def get_kernel_params(uuid):
+                 libcalamares.utils.warning("Internal error handling zfs dataset")
+                 raise Exception("Internal zfs data missing, please contact your distribution")
+ 
++        if is_zfs_root(partition) and cryptdevice_params:
++            libcalamares.utils.debug("Disabling quite and splash on zfs+encryption..")
++            kernel_params.remove("quiet")
++            kernel_params.remove("splash")
++
+     if cryptdevice_params:
+         kernel_params.extend(cryptdevice_params)
+     else:
+diff --git a/src/modules/initcpiocfg/main.py b/src/modules/initcpiocfg/main.py
+index 13a281bb3..fb3d62d93 100644
+--- a/src/modules/initcpiocfg/main.py
++++ b/src/modules/initcpiocfg/main.py
+@@ -240,6 +240,11 @@ def find_initcpio_features(partitions, root_mount_point):
+     else:
+         hooks.append("fsck")
+ 
++    # remove plymouth hook for zfs with encryption
++    if uses_zfs and encrypt_hook:
++        libcalamares.utils.debug("removing plymouth from initramfs")
++        hooks.remove("plymouth")
++
+     return hooks, modules, files, binaries
+ 
+ 
