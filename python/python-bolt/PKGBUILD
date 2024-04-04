@@ -10,19 +10,21 @@ shopt -s extglob
 pkgbase=python
 pkgname=(python python-tests)
 pkgver=3.11.8
-pkgrel=2
+pkgrel=5
 _pybasever=${pkgver%.*}
 pkgdesc="The Python programming language"
 arch=('x86_64')
 license=('custom')
 url="https://www.python.org/"
 depends=('bzip2' 'expat' 'gdbm' 'libffi' 'libnsl' 'libxcrypt' 'openssl' 'zlib' 'tzdata')
-makedepends=('tk' 'sqlite' 'bluez-libs' 'mpdecimal' 'llvm-bolt' 'gdb' 'xorg-server-xvfb' 'ttf-font')
+makedepends=('tk' 'sqlite' 'bluez-libs' 'mpdecimal' 'llvm' 'llvm-bolt' 'gdb' 'xorg-server-xvfb' 'ttf-font')
 source=("https://www.python.org/ftp/python/${pkgver%rc*}/Python-${pkgver}.tar.xz"{,.asc}
+         python-expat-2.6.patch::https://github.com/python/cpython/pull/115289.patch
         "bolt2.patch"
         EXTERNALLY-MANAGED)
 sha512sums=('434e727fa370def348838fd84acb69b4d309cfb03f61bf5069150164e9ca005637ac01dfbf997f445607d4e28d02c8bed0858b36589240ccadaa4c14c19f2320'
             'SKIP'
+            '0868854a6b2647706a3c98443fbacf275fe31f85c7cb78301db46e395c17cac9a02512cf0db40b981eae9ffe9d9d5fc8e0a83635adb0e2545ca134d9830cd1e0'
             '034411efc61c4ce674e61c2d835f7537d1aa4c539636a780543deb392755063a70dd07da73fb30ec9a46c5284fefc469f88e09549ee7659567414f8e44666f47'
             '62a6fbfbaeaa3ba7c54e109d9c3b7f67e73bb21986da4c1fcc5d28cca83d71e0fcae28e1fc70ee8ddce7dea8cd0b64e18d1031dae3a2eae5eaa379c53efd53a0')
 validpgpkeys=('0D96DF4D4110E5C43FBFB17F2D347EA6AA65421D'  # Ned Deily (Python release signing key) <nad@python.org>
@@ -31,6 +33,7 @@ validpgpkeys=('0D96DF4D4110E5C43FBFB17F2D347EA6AA65421D'  # Ned Deily (Python re
 
 prepare() {
   cd Python-${pkgver}
+  patch -Np1 -i ../python-expat-2.6.patch
 
   # FS#23997
   sed -i -e "s|^#.* /usr/local/bin/python|#!/usr/bin/python|" Lib/cgi.py
@@ -97,9 +100,10 @@ check() {
 }
 
 package_python() {
-  optdepends=('python-setuptools'
-              'python-pip'
-              'sqlite'
+  optdepends=('python-setuptools: for building Python packages using tooling that is usually bundled with Python'
+              'python-pip: for installing Python packages using tooling that is usually bundled with Python'
+              'python-pipx: for installing Python software not packaged on Arch Linux'
+              'sqlite: for a default database integration'
               'mpdecimal: for decimal'
               'xz: for lzma'
               'tk: for tkinter')
@@ -127,9 +131,6 @@ package_python() {
   install -dm755 "${pkgdir}"/usr/lib/python${_pybasever}/Tools/{i18n,scripts}
   install -m755 Tools/i18n/{msgfmt,pygettext}.py "${pkgdir}"/usr/lib/python${_pybasever}/Tools/i18n/
   install -m755 Tools/scripts/{README,*py} "${pkgdir}"/usr/lib/python${_pybasever}/Tools/scripts/
-
-  # License
-  install -Dm644 LICENSE "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE"
 
   # PEP668
   install -Dm644 "$srcdir"/EXTERNALLY-MANAGED -t "${pkgdir}/usr/lib/python${_pybasever}/"
