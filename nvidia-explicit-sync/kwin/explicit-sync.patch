@@ -1,4 +1,4 @@
-From f843969c0802835b34414330715e2b22599c9ca0 Mon Sep 17 00:00:00 2001
+From 0fa69f6d335aea4d6270f8b7c04a4abddfc9ec2c Mon Sep 17 00:00:00 2001
 From: Xaver Hugl <xaver.hugl@gmail.com>
 Date: Wed, 22 Nov 2023 19:51:24 +0100
 Subject: [PATCH] wayland: implement linux-drm-syncobj-v1
@@ -17,7 +17,7 @@ performance improvements with Mesa too.
  src/core/graphicsbuffer.cpp                   |   5 +
  src/core/graphicsbuffer.h                     |   5 +
  src/core/renderbackend.cpp                    |  11 +
- src/core/renderbackend.h                      |   5 +
+ src/core/renderbackend.h                      |   6 +
  src/core/syncobjtimeline.cpp                  |  70 +++++
  src/core/syncobjtimeline.h                    |  69 +++++
  .../scenes/opengl/abstract_egl_backend.cpp    |   5 +
@@ -34,17 +34,17 @@ performance improvements with Mesa too.
  src/scene/surfaceitem_wayland.h               |   1 +
  src/scene/workspacescene_opengl.cpp           |   2 +-
  src/wayland/CMakeLists.txt                    |   6 +
- src/wayland/linux_drm_syncobj_v1.cpp          | 153 +++++++++++
+ src/wayland/linux_drm_syncobj_v1.cpp          | 153 ++++++++++
  src/wayland/linux_drm_syncobj_v1.h            |  73 +++++
- .../protocols/linux-drm-syncobj-v1.xml        | 251 ++++++++++++++++++
- src/wayland/surface.cpp                       |  15 ++
+ .../protocols/linux-drm-syncobj-v1.xml        | 261 ++++++++++++++++++
+ src/wayland/surface.cpp                       |  15 +
  src/wayland/surface.h                         |   4 +
  src/wayland/surface_p.h                       |   5 +
  src/wayland/transaction.cpp                   |  18 +-
  src/wayland/transaction_p.h                   |  14 +
  src/wayland_server.cpp                        |  17 ++
  src/wayland_server.h                          |   7 +
- 36 files changed, 815 insertions(+), 7 deletions(-)
+ 36 files changed, 826 insertions(+), 7 deletions(-)
  create mode 100644 src/core/syncobjtimeline.cpp
  create mode 100644 src/core/syncobjtimeline.h
  create mode 100644 src/wayland/linux_drm_syncobj_v1.cpp
@@ -52,10 +52,10 @@ performance improvements with Mesa too.
  create mode 100644 src/wayland/protocols/linux-drm-syncobj-v1.xml
 
 diff --git a/src/CMakeLists.txt b/src/CMakeLists.txt
-index 262973f7cda..746017aca5c 100644
+index 4e0db4fe9a9..0130caf3b8e 100644
 --- a/src/CMakeLists.txt
 +++ b/src/CMakeLists.txt
-@@ -71,6 +71,7 @@ target_sources(kwin PRIVATE
+@@ -73,6 +73,7 @@ target_sources(kwin PRIVATE
      core/session_logind.cpp
      core/session_noop.cpp
      core/shmgraphicsbufferallocator.cpp
@@ -64,7 +64,7 @@ index 262973f7cda..746017aca5c 100644
      cursorsource.cpp
      dbusinterface.cpp
 diff --git a/src/backends/drm/drm_egl_backend.cpp b/src/backends/drm/drm_egl_backend.cpp
-index 6573ff32fde..0c267358298 100644
+index cfb7a482a03..943407e1d9b 100644
 --- a/src/backends/drm/drm_egl_backend.cpp
 +++ b/src/backends/drm/drm_egl_backend.cpp
 @@ -9,6 +9,7 @@
@@ -75,7 +75,7 @@ index 6573ff32fde..0c267358298 100644
  #include "drm_abstract_output.h"
  #include "drm_backend.h"
  #include "drm_egl_cursor_layer.h"
-@@ -192,6 +193,21 @@ DrmGpu *EglGbmBackend::gpu() const
+@@ -199,6 +200,21 @@ DrmGpu *EglGbmBackend::gpu() const
      return m_backend->primaryGpu();
  }
  
@@ -98,10 +98,10 @@ index 6573ff32fde..0c267358298 100644
  
  #include "moc_drm_egl_backend.cpp"
 diff --git a/src/backends/drm/drm_egl_backend.h b/src/backends/drm/drm_egl_backend.h
-index 32132f50bf4..3c53d0b2f1f 100644
+index 43c431f07be..4a47e900cd3 100644
 --- a/src/backends/drm/drm_egl_backend.h
 +++ b/src/backends/drm/drm_egl_backend.h
-@@ -62,6 +62,9 @@ public:
+@@ -63,6 +63,9 @@ public:
      EglDisplay *displayForGpu(DrmGpu *gpu);
      std::shared_ptr<EglContext> contextForGpu(DrmGpu *gpu);
  
@@ -112,10 +112,10 @@ index 32132f50bf4..3c53d0b2f1f 100644
      bool initializeEgl();
      bool initRenderingContext();
 diff --git a/src/backends/drm/drm_gpu.cpp b/src/backends/drm/drm_gpu.cpp
-index 24bfe046777..607dbf15d03 100644
+index 45d9e784edd..a9137f963f4 100644
 --- a/src/backends/drm/drm_gpu.cpp
 +++ b/src/backends/drm/drm_gpu.cpp
-@@ -77,6 +77,9 @@ DrmGpu::DrmGpu(DrmBackend *backend, const QString &devNode, int fd, dev_t device
+@@ -76,6 +76,9 @@ DrmGpu::DrmGpu(DrmBackend *backend, const QString &devNode, int fd, dev_t device
      m_addFB2ModifiersSupported = drmGetCap(fd, DRM_CAP_ADDFB2_MODIFIERS, &capability) == 0 && capability == 1;
      qCDebug(KWIN_DRM) << "drmModeAddFB2WithModifiers is" << (m_addFB2ModifiersSupported ? "supported" : "not supported") << "on GPU" << m_devNode;
  
@@ -125,7 +125,7 @@ index 24bfe046777..607dbf15d03 100644
      // find out what driver this kms device is using
      DrmUniquePtr<drmVersion> version(drmGetVersion(fd));
      m_isI915 = strstr(version->name, "i915");
-@@ -688,6 +691,11 @@ bool DrmGpu::asyncPageflipSupported() const
+@@ -692,6 +695,11 @@ bool DrmGpu::asyncPageflipSupported() const
      return m_asyncPageflipSupported;
  }
  
@@ -138,7 +138,7 @@ index 24bfe046777..607dbf15d03 100644
  {
      return m_isI915;
 diff --git a/src/backends/drm/drm_gpu.h b/src/backends/drm/drm_gpu.h
-index e387b17209e..ffc4f14e349 100644
+index 656c435fa27..d4fc59c4f16 100644
 --- a/src/backends/drm/drm_gpu.h
 +++ b/src/backends/drm/drm_gpu.h
 @@ -77,6 +77,7 @@ public:
@@ -148,8 +148,8 @@ index e387b17209e..ffc4f14e349 100644
 +    bool syncObjTimelinesSupported() const;
      bool isI915() const;
      bool isNVidia() const;
-     bool isAmdgpu() const;
-@@ -146,6 +147,7 @@ private:
+     gbm_device *gbmDevice() const;
+@@ -144,6 +145,7 @@ private:
      bool m_isRemoved = false;
      bool m_isActive = true;
      bool m_forceModeset = false;
@@ -246,7 +246,7 @@ index 98276385cec..5bbf37d9a4b 100644
  
  #include "moc_renderbackend.cpp"
 diff --git a/src/core/renderbackend.h b/src/core/renderbackend.h
-index b902a28984a..682e35aa0b8 100644
+index b902a28984a..fbb306e0252 100644
 --- a/src/core/renderbackend.h
 +++ b/src/core/renderbackend.h
 @@ -8,6 +8,7 @@
@@ -257,15 +257,16 @@ index b902a28984a..682e35aa0b8 100644
  
  #include <QObject>
  
-@@ -26,6 +27,7 @@ class SurfacePixmapX11;
+@@ -26,6 +27,8 @@ class SurfacePixmapX11;
  class SurfaceTexture;
  class PresentationFeedback;
  class RenderLoop;
++class DrmDevice;
 +class SyncTimeline;
  
  class PresentationFeedback
  {
-@@ -88,6 +90,9 @@ public:
+@@ -88,6 +91,9 @@ public:
  
      virtual std::unique_ptr<SurfaceTexture> createSurfaceTextureX11(SurfacePixmapX11 *pixmap);
      virtual std::unique_ptr<SurfaceTexture> createSurfaceTextureWayland(SurfacePixmap *pixmap);
@@ -427,7 +428,7 @@ index 00000000000..465f791dd58
 +};
 +}
 diff --git a/src/platformsupport/scenes/opengl/abstract_egl_backend.cpp b/src/platformsupport/scenes/opengl/abstract_egl_backend.cpp
-index 5328ac4d5eb..adb93cf3994 100644
+index 4e227aef462..4ad2064148b 100644
 --- a/src/platformsupport/scenes/opengl/abstract_egl_backend.cpp
 +++ b/src/platformsupport/scenes/opengl/abstract_egl_backend.cpp
 @@ -13,6 +13,7 @@
@@ -438,7 +439,7 @@ index 5328ac4d5eb..adb93cf3994 100644
  #include "wayland_server.h"
  // kwin libs
  #include "opengl/eglimagetexture.h"
-@@ -215,9 +216,13 @@ void AbstractEglBackend::initWayland()
+@@ -217,9 +218,13 @@ void AbstractEglBackend::initWayland()
          .formatTable = includeShaderConversions(filterFormats({}, true)),
      });
  
@@ -453,7 +454,7 @@ index 5328ac4d5eb..adb93cf3994 100644
  
  void AbstractEglBackend::initClientExtensions()
 diff --git a/src/platformsupport/scenes/opengl/abstract_egl_backend.h b/src/platformsupport/scenes/opengl/abstract_egl_backend.h
-index b8550f36f3d..58c7f824231 100644
+index 0abd331ed6b..1f77898db50 100644
 --- a/src/platformsupport/scenes/opengl/abstract_egl_backend.h
 +++ b/src/platformsupport/scenes/opengl/abstract_egl_backend.h
 @@ -34,7 +34,7 @@ public:
@@ -502,7 +503,7 @@ index 3318f4da187..e0749561826 100644
      /**
       * @brief Sets the backend initialization to failed.
 diff --git a/src/scene/item.cpp b/src/scene/item.cpp
-index f7c97cab60e..1e3e0df8d52 100644
+index d5675677c43..35fbd58f24e 100644
 --- a/src/scene/item.cpp
 +++ b/src/scene/item.cpp
 @@ -6,6 +6,7 @@
@@ -513,7 +514,7 @@ index f7c97cab60e..1e3e0df8d52 100644
  #include "scene/scene.h"
  #include "utils/common.h"
  
-@@ -475,7 +476,6 @@ void Item::setPresentationHint(PresentationModeHint hint)
+@@ -461,7 +462,6 @@ void Item::setPresentationHint(PresentationModeHint hint)
  {
      m_presentationHint = hint;
  }
@@ -522,7 +523,7 @@ index f7c97cab60e..1e3e0df8d52 100644
  
  #include "moc_item.cpp"
 diff --git a/src/scene/item.h b/src/scene/item.h
-index 3e6b0e4b26a..9e1ac3eeddb 100644
+index 5e9e4f1c92a..b77fc91c64b 100644
 --- a/src/scene/item.h
 +++ b/src/scene/item.h
 @@ -22,6 +22,7 @@ namespace KWin
@@ -534,7 +535,7 @@ index 3e6b0e4b26a..9e1ac3eeddb 100644
  /**
   * The Item class is the base class for items in the scene.
 diff --git a/src/scene/itemrenderer_opengl.cpp b/src/scene/itemrenderer_opengl.cpp
-index abf11d21dcd..72b565a36c5 100644
+index 44ec0918e33..490b0b019a4 100644
 --- a/src/scene/itemrenderer_opengl.cpp
 +++ b/src/scene/itemrenderer_opengl.cpp
 @@ -8,7 +8,9 @@
@@ -572,7 +573,7 @@ index abf11d21dcd..72b565a36c5 100644
  }
  
  QVector4D ItemRendererOpenGL::modulate(float opacity, float brightness) const
-@@ -181,6 +192,7 @@ void ItemRendererOpenGL::createRenderNode(Item *item, RenderContext *context)
+@@ -173,6 +184,7 @@ void ItemRendererOpenGL::createRenderNode(Item *item, RenderContext *context)
                  .coordinateType = UnnormalizedCoordinates,
                  .scale = scale,
                  .colorDescription = item->colorDescription(),
@@ -580,7 +581,7 @@ index abf11d21dcd..72b565a36c5 100644
              });
          }
      } else if (auto decorationItem = qobject_cast<DecorationItem *>(item)) {
-@@ -195,6 +207,7 @@ void ItemRendererOpenGL::createRenderNode(Item *item, RenderContext *context)
+@@ -187,6 +199,7 @@ void ItemRendererOpenGL::createRenderNode(Item *item, RenderContext *context)
                  .coordinateType = UnnormalizedCoordinates,
                  .scale = scale,
                  .colorDescription = item->colorDescription(),
@@ -588,7 +589,7 @@ index abf11d21dcd..72b565a36c5 100644
              });
          }
      } else if (auto surfaceItem = qobject_cast<SurfaceItem *>(item)) {
-@@ -210,6 +223,7 @@ void ItemRendererOpenGL::createRenderNode(Item *item, RenderContext *context)
+@@ -202,6 +215,7 @@ void ItemRendererOpenGL::createRenderNode(Item *item, RenderContext *context)
                      .coordinateType = NormalizedCoordinates,
                      .scale = scale,
                      .colorDescription = item->colorDescription(),
@@ -596,7 +597,7 @@ index abf11d21dcd..72b565a36c5 100644
                  });
              }
          }
-@@ -224,6 +238,7 @@ void ItemRendererOpenGL::createRenderNode(Item *item, RenderContext *context)
+@@ -216,6 +230,7 @@ void ItemRendererOpenGL::createRenderNode(Item *item, RenderContext *context)
                  .coordinateType = NormalizedCoordinates,
                  .scale = scale,
                  .colorDescription = item->colorDescription(),
@@ -604,7 +605,7 @@ index abf11d21dcd..72b565a36c5 100644
              });
          }
      }
-@@ -414,6 +429,9 @@ void ItemRendererOpenGL::renderItem(const RenderTarget &renderTarget, const Rend
+@@ -407,6 +422,9 @@ void ItemRendererOpenGL::renderItem(const RenderTarget &renderTarget, const Rend
                  contents.planes[plane]->unbind();
              }
          }
@@ -615,7 +616,7 @@ index abf11d21dcd..72b565a36c5 100644
      if (shader) {
          ShaderManager::instance()->popShader();
 diff --git a/src/scene/itemrenderer_opengl.h b/src/scene/itemrenderer_opengl.h
-index 74b78b311a6..fb6c8c1b083 100644
+index c35839335c6..11ab8cea386 100644
 --- a/src/scene/itemrenderer_opengl.h
 +++ b/src/scene/itemrenderer_opengl.h
 @@ -10,9 +10,13 @@
@@ -640,7 +641,7 @@ index 74b78b311a6..fb6c8c1b083 100644
      };
  
      struct RenderContext
-@@ -42,7 +47,7 @@ public:
+@@ -41,7 +46,7 @@ public:
          const qreal renderTargetScale;
      };
  
@@ -649,7 +650,7 @@ index 74b78b311a6..fb6c8c1b083 100644
  
      void beginFrame(const RenderTarget &renderTarget, const RenderViewport &viewport) override;
      void endFrame() override;
-@@ -59,6 +64,8 @@ private:
+@@ -58,6 +63,8 @@ private:
      void visualizeFractional(const RenderViewport &viewport, const QRegion &region, const RenderContext &renderContext);
  
      bool m_blendingEnabled = false;
@@ -695,10 +696,10 @@ index 5dfcfd0ad16..769542037b5 100644
  
  class KWIN_EXPORT SurfaceTexture
 diff --git a/src/scene/surfaceitem_wayland.cpp b/src/scene/surfaceitem_wayland.cpp
-index eabc4836cc7..c9960b83ccb 100644
+index 82863c3a456..6f16c47142f 100644
 --- a/src/scene/surfaceitem_wayland.cpp
 +++ b/src/scene/surfaceitem_wayland.cpp
-@@ -44,6 +44,7 @@ SurfaceItemWayland::SurfaceItemWayland(SurfaceInterface *surface, Scene *scene,
+@@ -41,6 +41,7 @@ SurfaceItemWayland::SurfaceItemWayland(SurfaceInterface *surface, Scene *scene,
              this, &SurfaceItemWayland::handleColorDescriptionChanged);
      connect(surface, &SurfaceInterface::presentationModeHintChanged,
              this, &SurfaceItemWayland::handlePresentationModeHintChanged);
@@ -706,7 +707,7 @@ index eabc4836cc7..c9960b83ccb 100644
  
      SubSurfaceInterface *subsurface = surface->subSurface();
      if (subsurface) {
-@@ -187,6 +188,11 @@ void SurfaceItemWayland::handlePresentationModeHintChanged()
+@@ -184,6 +185,11 @@ void SurfaceItemWayland::handlePresentationModeHintChanged()
      setPresentationHint(m_surface->presentationModeHint());
  }
  
@@ -719,7 +720,7 @@ index eabc4836cc7..c9960b83ccb 100644
      : SurfacePixmap(Compositor::self()->backend()->createSurfaceTextureWayland(this), parent)
      , m_item(item)
 diff --git a/src/scene/surfaceitem_wayland.h b/src/scene/surfaceitem_wayland.h
-index 7e3c7a09803..8e652e252de 100644
+index ab31192cb9a..c428f1ea417 100644
 --- a/src/scene/surfaceitem_wayland.h
 +++ b/src/scene/surfaceitem_wayland.h
 @@ -48,6 +48,7 @@ private Q_SLOTS:
@@ -1014,10 +1015,10 @@ index 00000000000..c66c10a1e76
 +}
 diff --git a/src/wayland/protocols/linux-drm-syncobj-v1.xml b/src/wayland/protocols/linux-drm-syncobj-v1.xml
 new file mode 100644
-index 00000000000..4690d65ffbe
+index 00000000000..2c491eaf43a
 --- /dev/null
 +++ b/src/wayland/protocols/linux-drm-syncobj-v1.xml
-@@ -0,0 +1,251 @@
+@@ -0,0 +1,261 @@
 +<?xml version="1.0" encoding="UTF-8"?>
 +<protocol name="linux_drm_syncobj_v1">
 +  <copyright>
@@ -1062,9 +1063,9 @@ index 00000000000..4690d65ffbe
 +    By contrast, with explicit synchronization, DRM synchronization object
 +    timeline points mark when the asynchronous operations are complete. When
 +    submitting a buffer, the client provides a timeline point which will be
-+    waited on before the compositor accesses the buffer. The client can also
-+    provide a timeline point that the compositor will signal when it no longer
-+    needs to access the buffer contents for the purposes of the surface commit.
++    waited on before the compositor accesses the buffer, and another timeline
++    point that the compositor will signal when it no longer needs to access the
++    buffer contents for the purposes of the surface commit.
 +
 +    Linux DRM synchronization objects are documented at:
 +    https://dri.freedesktop.org/docs/drm/gpu/drm-mm.html#drm-sync-objects
@@ -1154,11 +1155,22 @@ index 00000000000..4690d65ffbe
 +      Explicit synchronization is guaranteed to be supported for buffers
 +      created with any version of the linux-dmabuf protocol. Compositors are
 +      free to support explicit synchronization for additional buffer types.
++      If at surface commit time the attached buffer does not support explicit
++      synchronization, an unsupported_buffer error is raised.
 +
 +      As long as the wp_linux_drm_syncobj_surface_v1 object is alive, the
 +      compositor may ignore implicit synchronization for buffers attached and
 +      committed to the wl_surface. The delivery of wl_buffer.release events
 +      for buffers attached to the surface becomes undefined.
++
++      Clients must set both acquire and release points if and only if a
++      non-null buffer is attached in the same surface commit. See the
++      no_buffer, no_acquire_point and no_release_point protocol errors.
++
++      If at surface commit time the acquire and release DRM syncobj timelines
++      are identical, the acquire point value must be strictly less than the
++      release point value, or else the conflicting_points protocol error is
++      raised.
 +    </description>
 +
 +    <request name="destroy" type="destructor">
@@ -1178,12 +1190,12 @@ index 00000000000..4690d65ffbe
 +      <entry name="unsupported_buffer" value="2"
 +        summary="the buffer does not support explicit synchronization"/>
 +      <entry name="no_buffer" value="3" summary="no buffer was attached"/>
-+      <entry name="conflicting_points" value="4"
++      <entry name="no_acquire_point" value="4"
++        summary="no acquire timeline point was set"/>
++      <entry name="no_release_point" value="5"
++        summary="no release timeline point was set"/>
++      <entry name="conflicting_points" value="6"
 +        summary="acquire and release timeline points are in conflict"/>
-+      <entry name="no_acquire_point" value="5"
-+        summary="no acquire timeline point was set"/>
-+      <entry name="no_release_point" value="6"
-+        summary="no acquire timeline point was set"/>
 +    </enum>
 +
 +    <request name="set_acquire_point">
@@ -1205,19 +1217,11 @@ index 00000000000..4690d65ffbe
 +        If the associated wl_surface was destroyed, a no_surface error is
 +        raised.
 +
-+        If at surface commit time the attached buffer does not support explicit
-+        synchronization, an unsupported_buffer error is raised.
-+
 +        If at surface commit time there is a pending acquire timeline point set
 +        but no pending buffer attached, a no_buffer error is raised. If at
 +        surface commit time there is a pending buffer attached but no pending
 +        acquire timeline point set, the no_acquire_point protocol error is
 +        raised.
-+
-+        The acquire timeline point set in a commit must be different from the
-+        release timeline point. If at surface commit time, both the DRM syncobj
-+        and the point value are identical, the conflicting_points protocol
-+        error is raised.
 +      </description>
 +      <arg name="timeline" type="object" interface="wp_linux_drm_syncobj_timeline_v1"/>
 +      <arg name="point_hi" type="uint" summary="high 32 bits of the point value"/>
@@ -1232,8 +1236,23 @@ index 00000000000..4690d65ffbe
 +
 +        Once the timeline point is signaled, and assuming the associated buffer
 +        is not pending release from other wl_surface.commit requests, no
-+        additional explicit or implicit synchronization is required to safely
-+        re-use the buffer.
++        additional explicit or implicit synchronization with the compositor is
++        required to safely re-use the buffer.
++
++        Note that clients cannot rely on the release point being always
++        signaled after the acquire point: compositors may release buffers
++        without ever reading from them. In addition, the compositor may use
++        different presentation paths for different commits, which may have
++        different release behavior. As a result, the compositor may signal the
++        release points in a different order than the client committed them.
++
++        Because signaling a timeline point also signals every previous point,
++        it is generally not safe to use the same timeline object for the
++        release points of multiple buffers. The out-of-order signaling
++        described above may lead to a release point being signaled before the
++        compositor has finished reading. To avoid this, it is strongly
++        recommended that each buffer should use a separate timeline for its
++        release points.
 +
 +        The 64-bit unsigned value combined from point_hi and point_lo is the
 +        point value.
@@ -1249,19 +1268,11 @@ index 00000000000..4690d65ffbe
 +        If the associated wl_surface was destroyed, a no_surface error is
 +        raised.
 +
-+        If at surface commit time the attached buffer does not support explicit
-+        synchronization, an unsupported_buffer error is raised.
-+
 +        If at surface commit time there is a pending release timeline point set
 +        but no pending buffer attached, a no_buffer error is raised. If at
 +        surface commit time there is a pending buffer attached but no pending
 +        release timeline point set, the no_release_point protocol error is
 +        raised.
-+
-+        The release timeline point set in a commit must be different from the
-+        acquire timeline point. If at surface commit time, both the DRM syncobj
-+        and the point value are identical, the conflicting_points protocol
-+        error is raised.
 +      </description>
 +      <arg name="timeline" type="object" interface="wp_linux_drm_syncobj_timeline_v1"/>
 +      <arg name="point_hi" type="uint" summary="high 32 bits of the point value"/>
@@ -1270,10 +1281,10 @@ index 00000000000..4690d65ffbe
 +  </interface>
 +</protocol>
 diff --git a/src/wayland/surface.cpp b/src/wayland/surface.cpp
-index 9beb517cda1..138d37e7578 100644
+index 23f981f2f81..c181fbe3832 100644
 --- a/src/wayland/surface.cpp
 +++ b/src/wayland/surface.cpp
-@@ -344,6 +344,10 @@ void SurfaceInterfacePrivate::surface_commit(Resource *resource)
+@@ -342,6 +342,10 @@ void SurfaceInterfacePrivate::surface_commit(Resource *resource)
  {
      const bool sync = subsurface.handle && subsurface.handle->isSynchronized();
  
@@ -1284,7 +1295,7 @@ index 9beb517cda1..138d37e7578 100644
      Transaction *transaction;
      if (sync) {
          if (!subsurface.transaction) {
-@@ -520,6 +524,8 @@ void SurfaceState::mergeInto(SurfaceState *target)
+@@ -518,6 +522,8 @@ void SurfaceState::mergeInto(SurfaceState *target)
          target->offset = offset;
          target->damage = damage;
          target->bufferDamage = bufferDamage;
@@ -1293,7 +1304,7 @@ index 9beb517cda1..138d37e7578 100644
          target->bufferIsSet = true;
      }
      if (viewport.sourceGeometryIsSet) {
-@@ -602,6 +608,7 @@ void SurfaceInterfacePrivate::applyState(SurfaceState *next)
+@@ -600,6 +606,7 @@ void SurfaceInterfacePrivate::applyState(SurfaceState *next)
      const bool visibilityChanged = bufferChanged && bool(current->buffer) != bool(next->buffer);
      const bool colorDescriptionChanged = next->colorDescriptionIsSet;
      const bool presentationModeHintChanged = next->presentationModeHintIsSet;
@@ -1301,7 +1312,7 @@ index 9beb517cda1..138d37e7578 100644
  
      const QSizeF oldSurfaceSize = surfaceSize;
      const QSize oldBufferSize = bufferSize;
-@@ -691,6 +698,9 @@ void SurfaceInterfacePrivate::applyState(SurfaceState *next)
+@@ -689,6 +696,9 @@ void SurfaceInterfacePrivate::applyState(SurfaceState *next)
      if (presentationModeHintChanged) {
          Q_EMIT q->presentationModeHintChanged();
      }
@@ -1311,7 +1322,7 @@ index 9beb517cda1..138d37e7578 100644
  
      if (bufferChanged) {
          if (current->buffer && (!current->damage.isEmpty() || !current->bufferDamage.isEmpty())) {
-@@ -1181,6 +1191,11 @@ void SurfaceInterface::traverseTree(std::function<void(SurfaceInterface *surface
+@@ -1179,6 +1189,11 @@ void SurfaceInterface::traverseTree(std::function<void(SurfaceInterface *surface
      }
  }
  
@@ -1353,7 +1364,7 @@ index 597f06774f8..8ec77a3ccde 100644
      /**
       * Emitted when the Surface has been committed.
 diff --git a/src/wayland/surface_p.h b/src/wayland/surface_p.h
-index c83098ede95..2db879ecfbd 100644
+index f78bd107b44..a8a624700f7 100644
 --- a/src/wayland/surface_p.h
 +++ b/src/wayland/surface_p.h
 @@ -28,6 +28,7 @@ class FractionalScaleV1Interface;
@@ -1381,7 +1392,7 @@ index c83098ede95..2db879ecfbd 100644
  
      struct
      {
-@@ -170,6 +174,7 @@ public:
+@@ -169,6 +173,7 @@ public:
      TearingControlV1Interface *tearing = nullptr;
      FrogColorManagementSurfaceV1 *frogColorManagement = nullptr;
      XXColorSurfaceV2 *xxColorSurface = nullptr;
@@ -1449,7 +1460,7 @@ index 5bcf148aaad..0f8ac19bcfd 100644
 +
  } // namespace KWin
 diff --git a/src/wayland_server.cpp b/src/wayland_server.cpp
-index 416910b1114..40c3a74880a 100644
+index 2b02eb2fa69..037b633fc6c 100644
 --- a/src/wayland_server.cpp
 +++ b/src/wayland_server.cpp
 @@ -41,6 +41,7 @@
@@ -1460,7 +1471,7 @@ index 416910b1114..40c3a74880a 100644
  #include "wayland/linuxdmabufv1clientbuffer.h"
  #include "wayland/lockscreen_overlay_v1.h"
  #include "wayland/output.h"
-@@ -821,6 +822,22 @@ QString WaylandServer::socketName() const
+@@ -811,6 +812,22 @@ QString WaylandServer::socketName() const
      return QString();
  }
  
@@ -1484,7 +1495,7 @@ index 416910b1114..40c3a74880a 100644
  WaylandServer::LockScreenPresentationWatcher::LockScreenPresentationWatcher(WaylandServer *server)
  {
 diff --git a/src/wayland_server.h b/src/wayland_server.h
-index d4dc7d1e413..8bf7733ca55 100644
+index 8eb6f31a176..60dc67d9670 100644
 --- a/src/wayland_server.h
 +++ b/src/wayland_server.h
 @@ -58,6 +58,8 @@ class XdgSurfaceWindow;
@@ -1496,7 +1507,7 @@ index d4dc7d1e413..8bf7733ca55 100644
  
  class KWIN_EXPORT WaylandServer : public QObject
  {
-@@ -230,6 +232,10 @@ public:
+@@ -226,6 +228,10 @@ public:
          return m_xdgActivationIntegration;
      }
  
@@ -1507,7 +1518,7 @@ index d4dc7d1e413..8bf7733ca55 100644
  Q_SIGNALS:
      void windowAdded(KWin::Window *);
      void windowRemoved(KWin::Window *);
-@@ -290,6 +296,7 @@ private:
+@@ -284,6 +290,7 @@ private:
      TearingControlManagerV1Interface *m_tearingControlInterface = nullptr;
      XwaylandShellV1Interface *m_xwaylandShell = nullptr;
      PresentationTime *m_presentationTime = nullptr;
