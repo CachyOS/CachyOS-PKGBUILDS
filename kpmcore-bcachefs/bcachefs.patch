@@ -1,0 +1,441 @@
+From a5ffeb0348f159b8cf56c3e0fcf9574cbd083cd3 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Andrius=20=C5=A0tikonas?= <andrius@stikonas.eu>
+Date: Thu, 21 Mar 2024 22:15:51 +0000
+Subject: [PATCH] Initial support for bcachefs.
+
+BUG: 477544
+---
+ src/fs/CMakeLists.txt                |   2 +
+ src/fs/bcachefs.cpp                  | 161 +++++++++++++++++++++++++++
+ src/fs/bcachefs.h                    | 113 +++++++++++++++++++
+ src/fs/btrfs.cpp                     |   3 +-
+ src/fs/filesystem.cpp                |   4 +-
+ src/fs/filesystem.h                  |   1 +
+ src/fs/filesystemfactory.cpp         |   3 +
+ src/fs/luks.cpp                      |   1 +
+ src/plugins/sfdisk/sfdiskbackend.cpp |   1 +
+ src/util/externalcommand_whitelist.h |   1 +
+ 10 files changed, 288 insertions(+), 2 deletions(-)
+ create mode 100644 src/fs/bcachefs.cpp
+ create mode 100644 src/fs/bcachefs.h
+
+diff --git a/src/fs/CMakeLists.txt b/src/fs/CMakeLists.txt
+index f408b718..4df6016c 100644
+--- a/src/fs/CMakeLists.txt
++++ b/src/fs/CMakeLists.txt
+@@ -12,6 +12,7 @@
+ 
+ set(FS_SRC
+     fs/apfs.cpp
++    fs/bcachefs.cpp
+     fs/bitlocker.cpp
+     fs/btrfs.cpp
+     fs/exfat.cpp
+@@ -51,6 +52,7 @@ set(FS_SRC
+ 
+ set(FS_LIB_HDRS
+     fs/apfs.h
++    fs/btrfs.h
+     fs/bitlocker.h
+     fs/btrfs.h
+     fs/exfat.h
+diff --git a/src/fs/bcachefs.cpp b/src/fs/bcachefs.cpp
+new file mode 100644
+index 00000000..80f1db67
+--- /dev/null
++++ b/src/fs/bcachefs.cpp
+@@ -0,0 +1,161 @@
++/*
++    SPDX-FileCopyrightText: 2024 Andrius Å tikonas <andrius@stikonas.eu>
++
++    SPDX-License-Identifier: GPL-3.0-or-later
++*/
++
++#include "fs/bcachefs.h"
++
++#include "util/externalcommand.h"
++#include "util/capacity.h"
++#include "util/report.h"
++
++#include <QRegularExpression>
++#include <QString>
++#include <QStringList>
++#include <QTemporaryDir>
++
++#include <KLocalizedString>
++
++namespace FS
++{
++FileSystem::CommandSupportType bcachefs::m_GetUsed = FileSystem::cmdSupportNone;
++FileSystem::CommandSupportType bcachefs::m_GetLabel = FileSystem::cmdSupportNone;
++FileSystem::CommandSupportType bcachefs::m_Create = FileSystem::cmdSupportNone;
++FileSystem::CommandSupportType bcachefs::m_Grow = FileSystem::cmdSupportNone;
++FileSystem::CommandSupportType bcachefs::m_Shrink = FileSystem::cmdSupportNone;
++FileSystem::CommandSupportType bcachefs::m_Move = FileSystem::cmdSupportNone;
++FileSystem::CommandSupportType bcachefs::m_Check = FileSystem::cmdSupportNone;
++FileSystem::CommandSupportType bcachefs::m_Copy = FileSystem::cmdSupportNone;
++FileSystem::CommandSupportType bcachefs::m_Backup = FileSystem::cmdSupportNone;
++FileSystem::CommandSupportType bcachefs::m_SetLabel = FileSystem::cmdSupportNone;
++FileSystem::CommandSupportType bcachefs::m_UpdateUUID = FileSystem::cmdSupportNone;
++FileSystem::CommandSupportType bcachefs::m_GetUUID = FileSystem::cmdSupportNone;
++
++bcachefs::bcachefs(qint64 firstsector, qint64 lastsector, qint64 sectorsused, const QString& label, const QVariantMap& features) :
++    FileSystem(firstsector, lastsector, sectorsused, label, features, FileSystem::Type::Bcachefs)
++{
++}
++
++void bcachefs::init()
++{
++    m_Create = findExternal(QStringLiteral("bcachefs")) ? cmdSupportFileSystem : cmdSupportNone;
++    m_SetLabel = m_Grow = m_Check = m_Create;
++    m_Shrink = cmdSupportNone;
++
++    m_Copy = (m_Check != cmdSupportNone) ? cmdSupportCore : cmdSupportNone;
++    m_Move = (m_Check != cmdSupportNone) ? cmdSupportCore : cmdSupportNone;
++
++    m_GetUsed = cmdSupportCore;
++
++    m_GetLabel = cmdSupportCore;
++    m_Backup = cmdSupportCore;
++    m_GetUUID = cmdSupportCore;
++}
++
++bool bcachefs::supportToolFound() const
++{
++    return
++        m_GetUsed != cmdSupportNone &&
++        m_GetLabel != cmdSupportNone &&
++        m_SetLabel != cmdSupportNone &&
++        m_Create != cmdSupportNone &&
++        m_Check != cmdSupportNone &&
++//        m_UpdateUUID != cmdSupportNone &&
++        m_Grow != cmdSupportNone &&
++//        m_Shrink != cmdSupportNone &&
++        m_Copy != cmdSupportNone &&
++        m_Move != cmdSupportNone &&
++        m_Backup != cmdSupportNone &&
++        m_GetUUID != cmdSupportNone;
++}
++
++FileSystem::SupportTool bcachefs::supportToolName() const
++{
++    return SupportTool(QStringLiteral("bcachefs"), QUrl(QStringLiteral("https://bcachefs.org/")));
++}
++
++qint64 bcachefs::minCapacity() const
++{
++    return 32 * Capacity::unitFactor(Capacity::Unit::Byte, Capacity::Unit::MiB);
++}
++
++qint64 bcachefs::maxCapacity() const
++{
++    return Capacity::unitFactor(Capacity::Unit::Byte, Capacity::Unit::EiB);
++}
++
++int bcachefs::maxLabelLength() const
++{
++    return 255;
++}
++
++// qint64 bcachefs::readUsedCapacity(const QString& deviceNode) const
++// {
++//     return -1;
++// }
++
++bool bcachefs::check(Report& report, const QString& deviceNode) const
++{
++    ExternalCommand cmd(report, QStringLiteral("bcachefs"), { QStringLiteral("fsck"), QStringLiteral("-f"), QStringLiteral("-y"), deviceNode });
++    return cmd.run(-1) && cmd.exitCode() == 0;
++}
++
++bool bcachefs::create(Report& report, const QString& deviceNode)
++{
++    ExternalCommand cmd(report, QStringLiteral("bcachefs"), { QStringLiteral("format"), deviceNode });
++    return cmd.run(-1) && cmd.exitCode() == 0;
++}
++
++bool bcachefs::createWithLabel(Report& report, const QString& deviceNode, const QString& label)
++{
++    ExternalCommand cmd(report, QStringLiteral("bcachefs"), { QStringLiteral("format"), QStringLiteral("--fs_label="), label, deviceNode });
++    return cmd.run(-1) && cmd.exitCode() == 0;
++}
++
++bool bcachefs::resize(Report& report, const QString& deviceNode, qint64 length) const
++{
++    QTemporaryDir tempDir;
++    if (!tempDir.isValid()) {
++        report.line() << xi18nc("@info:progress", "Resizing Bcachefs file system on partition <filename>%1</filename> failed: Could not create temp dir.", deviceNode);
++        return false;
++    }
++
++    bool rval = false;
++
++    ExternalCommand mountCmd(report, QStringLiteral("mount"),
++                             { QStringLiteral("--verbose"),  QStringLiteral("--types"), QStringLiteral("bcachefs"), deviceNode, tempDir.path() });
++
++    if (mountCmd.run(-1) && mountCmd.exitCode() == 0) {
++        ExternalCommand resizeCmd(report, QStringLiteral("bcachefs"),
++                                  { QStringLiteral("device"), QStringLiteral("resize"), deviceNode, QString::number(length) });
++
++        if (resizeCmd.run(-1) && resizeCmd.exitCode() == 0)
++            rval = true;
++        else
++            report.line() << xi18nc("@info:progress", "Resizing Bcachefs file system on partition <filename>%1</filename> failed: bcachefs device resize command failed.", deviceNode);
++
++        ExternalCommand unmountCmd(report, QStringLiteral("umount"), { tempDir.path() });
++
++        if (!unmountCmd.run(-1) && unmountCmd.exitCode() == 0)
++            report.line() << xi18nc("@info:progress", "<warning>Resizing Bcachefs file system on partition <filename>%1</filename>: Unmount failed.</warning>", deviceNode);
++    }
++    else
++        report.line() << xi18nc("@info:progress", "Resizing Bcachefs file system on partition <filename>%1</filename> failed: Initial mount failed.", deviceNode);
++
++    return rval;
++}
++
++bool bcachefs::resizeOnline(Report& report, const QString& deviceNode, const QString& mountPoint, qint64 length) const
++{
++    Q_UNUSED(mountPoint)
++    ExternalCommand resizeCmd(report, QStringLiteral("bcachefs"),
++                              { QStringLiteral("device"), QStringLiteral("resize"), deviceNode, QString::number(length) });
++
++    if (resizeCmd.run(-1) && resizeCmd.exitCode() == 0)
++        return true;
++
++    report.line() << xi18nc("@info:progress", "Resizing Bcachefs file system on partition <filename>%1</filename> failed: bcachefs device resize command failed.", deviceNode);
++    return false;
++}
++}
+diff --git a/src/fs/bcachefs.h b/src/fs/bcachefs.h
+new file mode 100644
+index 00000000..d0d1bf5d
+--- /dev/null
++++ b/src/fs/bcachefs.h
+@@ -0,0 +1,113 @@
++/*
++    SPDX-FileCopyrightText: 2024 Andrius Å tikonas <andrius@stikonas.eu>
++
++    SPDX-License-Identifier: GPL-3.0-or-later
++*/
++
++#ifndef KPMCORE_BCACHEFS_H
++#define KPMCORE_BCACHEFS_H
++
++#include "util/libpartitionmanagerexport.h"
++
++#include "fs/filesystem.h"
++
++#include <QtGlobal>
++
++class Report;
++
++class QString;
++
++namespace FS
++{
++/** An BCACHEFS file system.
++*/
++class LIBKPMCORE_EXPORT bcachefs : public FileSystem
++{
++public:
++    bcachefs(qint64 firstsector, qint64 lastsector, qint64 sectorsused, const QString& label, const QVariantMap& features = {});
++
++public:
++    void init() override;
++
++    // qint64 readUsedCapacity(const QString& deviceNode) const override;
++    bool check(Report& report, const QString& deviceNode) const override;
++    bool create(Report& report, const QString& deviceNode) override;
++    bool createWithLabel(Report& report, const QString& deviceNode, const QString& label) override;
++    bool resize(Report& report, const QString& deviceNode, qint64 length) const override;
++    bool resizeOnline(Report& report, const QString& deviceNode, const QString& mountPoint, qint64 length) const override;
++    // bool writeLabel(Report& report, const QString& deviceNode, const QString& newLabel) override;
++    QString posixPermissions() const override { return implPosixPermissions();  };
++    void setPosixPermissions(const QString& permissions) override { implSetPosixPermissions(permissions); };
++
++    CommandSupportType supportGetUsed() const override {
++        return m_GetUsed;
++    }
++    CommandSupportType supportGetLabel() const override {
++        return m_GetLabel;
++    }
++    CommandSupportType supportCreate() const override {
++        return m_Create;
++    }
++    CommandSupportType supportCreateWithFeatures() const override {
++        return m_Create;
++    }
++    CommandSupportType supportGrow() const override {
++        return m_Grow;
++    }
++    CommandSupportType supportGrowOnline() const override {
++        return m_Grow;
++    }
++    CommandSupportType supportShrink() const override {
++        return m_Shrink;
++    }
++    CommandSupportType supportShrinkOnline() const override {
++        return m_Shrink;
++    }
++    CommandSupportType supportMove() const override {
++        return m_Move;
++    }
++    CommandSupportType supportCheck() const override {
++        return m_Check;
++    }
++    CommandSupportType supportCopy() const override {
++        return m_Copy;
++    }
++    CommandSupportType supportBackup() const override {
++        return m_Backup;
++    }
++    CommandSupportType supportSetLabel() const override {
++        return m_SetLabel;
++    }
++    CommandSupportType supportSetLabelOnline() const override {
++        return m_SetLabel;
++    }
++    CommandSupportType supportUpdateUUID() const override {
++        return m_UpdateUUID;
++    }
++    CommandSupportType supportGetUUID() const override {
++        return m_GetUUID;
++    }
++
++    qint64 minCapacity() const override;
++    qint64 maxCapacity() const override;
++    int maxLabelLength() const override;
++    SupportTool supportToolName() const override;
++    bool supportToolFound() const override;
++
++public:
++    static CommandSupportType m_GetUsed;
++    static CommandSupportType m_GetLabel;
++    static CommandSupportType m_Create;
++    static CommandSupportType m_Grow;
++    static CommandSupportType m_Shrink;
++    static CommandSupportType m_Move;
++    static CommandSupportType m_Check;
++    static CommandSupportType m_Copy;
++    static CommandSupportType m_Backup;
++    static CommandSupportType m_SetLabel;
++    static CommandSupportType m_UpdateUUID;
++    static CommandSupportType m_GetUUID;
++};
++}
++
++#endif
+diff --git a/src/fs/btrfs.cpp b/src/fs/btrfs.cpp
+index 2096a3bc..351ceff3 100644
+--- a/src/fs/btrfs.cpp
++++ b/src/fs/btrfs.cpp
+@@ -185,7 +185,8 @@ bool btrfs::resize(Report& report, const QString& deviceNode, qint64 length) con
+ 
+         if (!unmountCmd.run(-1) && unmountCmd.exitCode() == 0)
+             report.line() << xi18nc("@info:progress", "<warning>Resizing Btrfs file system on partition <filename>%1</filename>: Unmount failed.</warning>", deviceNode);
+-    } else
++    }
++    else
+         report.line() << xi18nc("@info:progress", "Resizing Btrfs file system on partition <filename>%1</filename> failed: Initial mount failed.", deviceNode);
+ 
+     return rval;
+diff --git a/src/fs/filesystem.cpp b/src/fs/filesystem.cpp
+index 743527d2..fb668d0d 100644
+--- a/src/fs/filesystem.cpp
++++ b/src/fs/filesystem.cpp
+@@ -70,7 +70,8 @@ const std::vector<QColor> FileSystem::defaultColorCode =
+     QColor( 255,100,100 ), // linux_raid_member
+     QColor( 110,20,50 ),   // bitlocker
+     QColor( 255,155,174 ), // apfs
+-    QColor( 0,170,255 ), // minix
++    QColor( 0,170,255 ),   // minix
++    QColor( 100,170,255 ), // bcachefs
+ }
+ };
+ 
+@@ -536,6 +537,7 @@ static const KLocalizedString* typeNames()
+         kxi18nc("@item filesystem name", "BitLocker"),
+         kxi18nc("@item filesystem name", "apfs"),
+         kxi18nc("@item filesystem name", "minix"),
++        kxi18nc("@item filesystem name", "bcachefs"),
+     };
+ 
+     return s;
+diff --git a/src/fs/filesystem.h b/src/fs/filesystem.h
+index 724d7b17..0f760aac 100644
+--- a/src/fs/filesystem.h
++++ b/src/fs/filesystem.h
+@@ -93,6 +93,7 @@ public:
+         BitLocker,
+         Apfs,
+         Minix,
++        Bcachefs,
+ 
+         __lastType
+     };
+diff --git a/src/fs/filesystemfactory.cpp b/src/fs/filesystemfactory.cpp
+index 329490c5..17980516 100644
+--- a/src/fs/filesystemfactory.cpp
++++ b/src/fs/filesystemfactory.cpp
+@@ -16,6 +16,7 @@
+ #include "fs/filesystem.h"
+ 
+ #include "fs/apfs.h"
++#include "fs/bcachefs.h"
+ #include "fs/bitlocker.h"
+ #include "fs/btrfs.h"
+ #include "fs/exfat.h"
+@@ -60,6 +61,7 @@ void FileSystemFactory::init()
+ {
+     FileSystems fileSystems;
+     fileSystems.insert(FileSystem::Type::Apfs, new FS::apfs(-1, -1, -1, QString()));
++    fileSystems.insert(FileSystem::Type::Bcachefs, new FS::bcachefs(-1, -1, -1, QString()));
+     fileSystems.insert(FileSystem::Type::BitLocker, new FS::bitlocker(-1, -1, -1, QString()));
+     fileSystems.insert(FileSystem::Type::Btrfs, new FS::btrfs(-1, -1, -1, QString()));
+     fileSystems.insert(FileSystem::Type::Exfat, new FS::exfat(-1, -1, -1, QString()));
+@@ -118,6 +120,7 @@ FileSystem* FileSystemFactory::create(FileSystem::Type t, qint64 firstsector, qi
+ 
+     switch (t) {
+     case FileSystem::Type::Apfs:            fs = new FS::apfs           (firstsector, lastsector, sectorsused, label, features); break;
++    case FileSystem::Type::Bcachefs:        fs = new FS::bcachefs       (firstsector, lastsector, sectorsused, label, features); break;
+     case FileSystem::Type::BitLocker:       fs = new FS::bitlocker      (firstsector, lastsector, sectorsused, label, features); break;
+     case FileSystem::Type::Btrfs:           fs = new FS::btrfs          (firstsector, lastsector, sectorsused, label, features); break;
+     case FileSystem::Type::Exfat:           fs = new FS::exfat          (firstsector, lastsector, sectorsused, label, features); break;
+diff --git a/src/fs/luks.cpp b/src/fs/luks.cpp
+index 18c9ea79..accfc528 100644
+--- a/src/fs/luks.cpp
++++ b/src/fs/luks.cpp
+@@ -648,6 +648,7 @@ bool luks::canEncryptType(FileSystem::Type type)
+ {
+     switch (type)
+     {
++        case Type::Bcachefs:
+         case Type::Btrfs:
+         case Type::F2fs:
+         case Type::Ext2:
+diff --git a/src/plugins/sfdisk/sfdiskbackend.cpp b/src/plugins/sfdisk/sfdiskbackend.cpp
+index 4f75c278..f540a134 100644
+--- a/src/plugins/sfdisk/sfdiskbackend.cpp
++++ b/src/plugins/sfdisk/sfdiskbackend.cpp
+@@ -628,6 +628,7 @@ FileSystem::Type SfdiskBackend::fileSystemNameToType(const QString& name, const
+     else if (name == QStringLiteral("BitLocker")) rval = FileSystem::Type::BitLocker;
+     else if (name == QStringLiteral("apfs")) rval = FileSystem::Type::Apfs;
+     else if (name == QStringLiteral("minix")) rval = FileSystem::Type::Minix;
++    else if (name == QStringLiteral("bcachefs")) rval = FileSystem::Type::Bcachefs;
+ 
+     return rval;
+ }
+diff --git a/src/util/externalcommand_whitelist.h b/src/util/externalcommand_whitelist.h
+index d1b3fe2a..ef39cd96 100644
+--- a/src/util/externalcommand_whitelist.h
++++ b/src/util/externalcommand_whitelist.h
+@@ -30,6 +30,7 @@ QStringLiteral("umount"),
+ QStringLiteral("smartctl"),
+ 
+ // FileSystem utilties
++QStringLiteral("bcachefs"),
+ QStringLiteral("btrfs"),
+ QStringLiteral("mkfs.btrfs"),
+ QStringLiteral("btrfstune"),
+-- 
+GitLab
