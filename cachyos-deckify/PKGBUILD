@@ -1,0 +1,37 @@
+# Maintainer: Peter Jung <admin@ptr1337.dev>
+
+pkgname=cachyos-deckify
+pkgver=1
+pkgrel=1
+arch=('any')
+license=('GPL-3.0-later')
+pkgdesc='CachyOS - Deckify!'
+source=(git+https://github.com/CachyOS/CachyOS-Deckify)
+install="$pkgname.install"
+sha256sums=('SKIP')
+depends=('gamescope' 'mangohud' 'cachyos-gaming-meta' 'gamescope-session-steam-git' 'chimeraos-device-quirks-git'
+         'inputplumber' 'asusctl' 'scx-scheds')
+
+
+
+package() {
+
+	install -Dm644 ${srcdir}/steam-deckify/virtualkbd.conf -t ${pkgdir}/etc/sddm.conf.d
+	install -Dm755 ${srcdir}/steam-deckify/steamos-gamemode.desktop -t ${pkgdir}/etc/skel/Desktop
+	install -Dm644 ${srcdir}/steam-deckify/org.neroreflex.host.policy -t ${pkgdir}/usr/share/polkit-1/actions
+	install -Dm644 ${srcdir}/steam-deckify/org.neroreflex.priv.write.policy -t ${pkgdir}/usr/share/polkit-1/actions
+	install -Dm644 ${srcdir}/steam-deckify/org.neroreflex.session.select.policy -t ${pkgdir}/usr/share/polkit-1/actions
+	install -Dm644 ${srcdir}/steam-deckify/steamdeck-gaming-return.svg -t ${pkgdir}/usr/share/icons/hicolor/64x64/apps
+	install -Dm755 ${srcdir}/steam-deckify/steamos-priv-write -t ${pkgdir}/usr/bin/steamos-polkit-helpers
+	install -Dm755 ${srcdir}/steam-deckify/os-session-select -t ${pkgdir}/usr/lib
+	install -Dm755 ${srcdir}/steam-deckify/steamos-set-hostname -t ${pkgdir}/usr/bin/steamos-polkit-helpers
+	install -Dm755 ${srcdir}/steam-deckify/steamos-set-timezone -t ${pkgdir}/usr/bin/steamos-polkit-helpers
+	install -Dm755 ${srcdir}/steam-deckify/gamescope-wayland-teardown-workaround -t ${pkgdir}/usr/bin
+	install -Dm755 ${srcdir}/steam-deckify/startplasma-steamos-oneshot -t ${pkgdir}/usr/bin
+	install -Dm755 ${srcdir}/steam-deckify/plasma-steamos-oneshot.desktop -t ${pkgdir}/usr/share/xsessions
+	install -Dm755 ${srcdir}/steam-deckify/org.kde.kuserfeedback-console.desktop -t ${pkgdir}/usr/local/share/applications
+	install -Dm755 ${srcdir}/steam-deckify/steamos-gamemode.desktop -t ${pkgdir}/usr/local/share/applications
+	install -Dm755 ${srcdir}/steam-deckify/qdbusviewer.desktop -t ${pkgdir}/usr/local/share/applications
+	install -Dm755 ${srcdir}/steam-deckify/org.freedesktop.IBus.Setup.desktop -t ${pkgdir}/usr/local/share/applications
+
+}
