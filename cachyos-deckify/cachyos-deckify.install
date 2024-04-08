@@ -1,5 +1,20 @@
 SERVICES=("bluetoothd" "inputplumber")
 
+
+update_user() {
+  # edit user name
+  export LANG=C
+  if VAR=$(id -nu 1000) && [[ ! -z ${VAR} ]]; then
+     msg "Setting User=${VAR} in /etc/sddm.conf.d/steam-deckify.conf"
+  elif VAR=$(id -nu 1001) && [[ ! -z ${VAR} ]]; then
+     msg "Setting User=${VAR} in /etc/sddm.conf.d/steam-deckify.conf"
+  else
+     msg "No user found: setting 'User=' in /etc/sddm.conf.d/steam-deckify.conf"
+  fi
+  sed -ri "s|^(User=).*|User=${VAR}|" /etc/sddm.conf.d/steam-deckify.conf
+}
+
+
 post_install() {
     echo "Enabling services..."
     for service in "${SERVICES[@]}"; do
@@ -35,6 +50,9 @@ post_install() {
   fi
   [[ -e "$TMP_PKG" ]] && rm "$TMP_PKG"
   [[ -e "$OUTPUT_FILE" ]] && rm "$OUTPUT_FILE"
+
+  # Update users sddm config to reflect the changes
+  update_user
 }
 
 post_upgrade() {
@@ -48,4 +66,6 @@ post_upgrade() {
             systemctl enable "$service" --now
         fi
     done
+  # Update users sddm config to reflect the changes
+  update_user
 }
