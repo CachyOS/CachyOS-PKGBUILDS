@@ -98,7 +98,7 @@ rate_mirror_ex() {
     _exitcode=$?
     if [[ "${_exitcode}" -eq 0 ]]; then
         if [ ! -f "${mirrorlist_path}" ]; then
-            die "${mirrorlist_path} doesn't exist! You must install "${mirrorlist_path##*/}". Run sudo pacman -S ${mirrorlist_path##*/}" 
+            die "${mirrorlist_path} doesn't exist! You must install "${mirrorlist_path##*/}". Run sudo pacman -S ${mirrorlist_path##*/}"
         fi
         cat "${mirrorlist_path}" > "${mirrorlist_path}-backup"
         cat "${TMPFILE}" > "${mirrorlist_path}"
@@ -129,7 +129,7 @@ rate_mirror_ex_cos() {
     _exitcode=$?
     if [[ "${_exitcode}" -eq 0 ]]; then
         if [ ! -f "${mirrorlist_path}" ]; then
-            die "${mirrorlist_path} doesn't exist! You must install "${mirrorlist_path##*/}". Run sudo pacman -S ${mirrorlist_path##*/}" 
+            die "${mirrorlist_path} doesn't exist! You must install "${mirrorlist_path##*/}". Run sudo pacman -S ${mirrorlist_path##*/}"
         fi
         cat "${mirrorlist_path}" > "${mirrorlist_path}-backup"
         cat "${TMPFILE}" > "${mirrorlist_path}"
@@ -148,5 +148,6 @@ rate_mirror_ex_cos cachyos "${MIRRORS_DEFAULT_DIR}/cachyos-mirrorlist"
 
 cp -f --backup=simple --suffix="-backup" "${MIRRORS_DEFAULT_DIR}/cachyos-mirrorlist" "${MIRRORS_DEFAULT_DIR}/cachyos-v3-mirrorlist"
 cp -f --backup=simple --suffix="-backup" "${MIRRORS_DEFAULT_DIR}/cachyos-mirrorlist" "${MIRRORS_DEFAULT_DIR}/cachyos-v4-mirrorlist"
-sed -i 's|/repo/$arch/|/repo/$arch_v3/|g' "${MIRRORS_DEFAULT_DIR}/cachyos-v3-mirrorlist"
-sed -i 's|/repo/$arch/|/repo/$arch_v4/|g' "${MIRRORS_DEFAULT_DIR}/cachyos-v4-mirrorlist"
+
+sed -i 's|/$arch/|/$arch_v3/|g' "${MIRRORS_DEFAULT_DIR}/cachyos-v3-mirrorlist"
+sed -i 's|/$arch/|/$arch_v4/|g' "${MIRRORS_DEFAULT_DIR}/cachyos-v4-mirrorlist"
