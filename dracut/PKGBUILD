@@ -3,8 +3,8 @@
 # Contributor: SoulHarsh007 <admin@soulharsh007.dev>
 
 pkgname=dracut
-pkgver=060
-pkgrel=2.1
+pkgver=101
+pkgrel=1.1
 pkgdesc="An event driven initramfs infrastructure"
 arch=('x86_64')
 url="https://github.com/dracut-ng/dracut-ng"
@@ -72,8 +72,6 @@ optdepends=(
 provides=('initramfs')
 backup=('etc/dracut.conf' 'etc/dracut-cachyos.conf')
 source=("${pkgname}-${pkgver}::git+${url}#tag=${pkgver}"
-  "dracut-systemd-255-pcrphase.patch::https://github.com/dracut-ng/dracut-ng/commit/b63e90ab4e34b35ba0ce009992b0fc019eca3761.patch"
-  "dracut-systemd-255-hibernate-resume.patch::https://github.com/dracutdevs/dracut/pull/2527/commits/a2fe89116db4b286fbf515f26bd1773b5e6ee8ad.patch"
   "dracut-rebuild"
   "dracut-install"
   "dracut-remove"
@@ -83,9 +81,7 @@ source=("${pkgname}-${pkgver}::git+${url}#tag=${pkgver}"
   "snapshot-overlay.sh"
   "module-setup.sh")
 
-sha512sums=('8dbdd67d0b86555aac4c2f315c809861c82358d3899ecdf3008e6203b9f32eac2e8a969fe972e9ce63316aeb0d3242e0e997d21c24bee8666ef3d3e7ddda067e'
-            '6b00c3d37440feb294219477f79edcbb074b69863e0234edbc7966df11cb6e7d51cf1ea3c086b3014748f6e96bbeab5e4f1916c3b14316e1b2a8aa1e4f4ee563'
-            'bba154e13463fb759e1cfd5f461b2b4e786ad8c6f4cacacbd918e911efc7d5a5368300676d6e6d8e9b7b2f4333314886bb1e34daac9f0c73c1c441baf7918063'
+sha512sums=('4096f2ba6725f3d5d27f75cdec9f75af42007c86ac0fa8414457ab71ec21a5b76b28597eca3fd77a7eeabd1b62f1c002fda0e38543cbf4b272d30300f3f545e5'
             '6457ce228e78e1d7f07eafec6f37484264004e53e170b357093d2a92c024588bc28a4c4664539e7ca42a6e6838f156ca7cb047f3b8c927228d6ead2a43786d2f'
             'f298693ee1a637329b1a38c746151c2ae8d2ae431f894c3001f55d812a2a20a68907ffa0b04ba748c18a2898cc30e0f49e75d0d13c7dd453129304f3cfd4621e'
             '13e3faab40ae0e13f7933fcf5e1b028b4af2010d91b5d6c4dcda164bc9ab62cdcdde21f4945f28f564546a8700bd285cca6a19f1575fcf1925dbde54fba9078a'
