@@ -1,48 +1,42 @@
-# Maintainer: martiuk <me at martinke dot mp>
+# Maintainer: Antonin Décimo <antonin dot decimo at gmail dot com>
+# Contributor: AndyRTR <andyrtr@archlinux.org>
 
 pkgname=xorg-xwayland
-pkgver=23.2.4.r387.ga57b44948
-pkgrel=1
+pkgver=23.2.6
+pkgrel=2
 arch=('x86_64')
-license=('custom')
+license=(
+    LicenseRef-Adobe-Display-PostScript
+    BSD-3-Clause
+    LicenseRef-DEC-3-Clause
+    HPND
+    LicenseRef-HPND-sell-MIT-disclaimer-xserver
+    HPND-sell-variant
+    ICU
+    ISC
+    MIT
+    MIT-open-group
+    NTP
+    SGI-B-2.0
+    SMLNJ
+    X11
+    X11-distribute-modifications-variant
+)
 groups=('xorg')
 url="https://xorg.freedesktop.org"
-pkgdesc="Run X clients under Wayland with explicit sync patch"
-depends=('nettle' 'libegl' 'libepoxy' 'systemd-libs' 'libxfont2'
-         'pixman' 'xorg-server-common' 'libxcvt')
-makedepends=('meson' 'git'
-             'xorgproto'
-             'xtrans'
-             'pixman' 'libxkbfile' 'libxfont2' 'dbus'
-             'xorg-font-util'
-             'wayland'
-             'wayland-protocols'
-             'libdrm' 'libepoxy'
-             'systemd'
-             'egl-wayland'
-)
-source=(
-  "xserver::git+https://gitlab.freedesktop.org/xorg/xserver.git"
-  "https://gitlab.freedesktop.org/xorg/xserver/-/merge_requests/967.patch"
-)
-b2sums=('SKIP'
-        '4750a1ed167ffcc638ba77eb6f07e2a0923b4a37e0243c3e8837dce89e50031309b2efca98240688a1ec52b9a08a2c376e38d83b49c6627276a84ec9c453bc1f')
-provides=('xorg-xwayland' 'xorg-server-xwayland' 'xorg-server-xwayland-git')
-conflicts=('xorg-xwayland' 'xorg-server-xwayland' 'xorg-server-xwayland-git')
-
-pkgver() {
-  cd xserver
-  local branch=origin/xwayland-23.2
-  local head=$(git rev-parse --short HEAD)
-  local tag=$(git describe --abbrev=0 "$branch")
-  local revisions=$(git rev-list "${tag}..HEAD" --count)
-  printf "%s.r%d.g%s" "$(echo "$tag" | sed 's/^xwayland.//')" "$revisions" "$head"
-}
-
-prepare() {
-  cd xserver
-  patch -Np1 -i "${srcdir}/967.patch"
-}
+pkgdesc="Run X clients under Wayland (Including 967 MR)"
+depends=('nettle' 'libepoxy' 'systemd-libs' 'libxfont2' 
+         'pixman' 'xorg-server-common' 'libxcvt' 'mesa'
+         'libglvnd' 'libxau' 'wayland' 'libdrm' 'libtirpc'
+         'libxshmfence' 'glibc')
+makedepends=('meson' 'xorgproto' 'xtrans' 'libxkbfile' 'dbus'
+             'xorg-font-util' 'wayland-protocols' 'mesa-libgl'
+             'systemd' 'egl-wayland')
+source=("xserver::git+https://gitlab.freedesktop.org/xorg/xserver.git")
+sha256sums=('SKIP')
+provides=('xorg-server-xwayland')
+conflicts=('xorg-server-xwayland')
+replaces=('xorg-server-xwayland')
 
 build() {
 
@@ -51,6 +45,7 @@ build() {
     -D xvfb=false \
     -D xnest=false \
     -D xcsecurity=true \
+    -D dri3=true \
     -D xorg=false \
     -D xephyr=false \
     -D xwayland=true \
@@ -63,16 +58,17 @@ build() {
     -D xkb_dir=/usr/share/X11/xkb \
     -D xkb_output_dir=/var/lib/xkb
 
+  # Print config
+  meson configure build
   ninja -C build
 }
 
 package() {
-
-  # bin + manpage + .pc file
-  install -m755 -Dt "${pkgdir}"/usr/bin build/hw/xwayland/Xwayland
-  install -m644 -Dt "${pkgdir}"/usr/share/man/man1 build/hw/xwayland/Xwayland.1
-  install -m644 -Dt "${pkgdir}"/usr/lib/pkgconfig build/meson-private/xwayland.pc
-
+  DESTDIR="${pkgdir}" ninja -C build install
+  # xorg-server-common file /usr/lib/xorg/protocol.txt
+  rm "${pkgdir}"/usr/lib/xorg/protocol.txt
+  rmdir "${pkgdir}"/usr/lib/xorg
+  rm "${pkgdir}"/usr/share/man/man1/Xserver.1
   # license
   install -m644 -Dt "${pkgdir}/usr/share/licenses/${pkgname}" xserver/COPYING
 }
