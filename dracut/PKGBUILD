@@ -4,7 +4,7 @@
 
 pkgname=dracut
 pkgver=101
-pkgrel=1.1
+pkgrel=1.2
 pkgdesc="An event driven initramfs infrastructure"
 arch=('x86_64')
 url="https://github.com/dracut-ng/dracut-ng"
@@ -105,6 +105,13 @@ prepare() {
     echo "Applying patch $src..."
     patch -Np1 <"../$src"
   done
+
+  # remove dracut modules not meant for arch x86_64
+  for f in 45ifcfg 80cms 81cio_ignore 90ppcmac 91zipl \
+    95dasd 95dasd_mod 95dasd_rules 95dcssblk 95fcoe* \
+    95qeth_rules 95zfcp 95zfcp_rules 95znet; do
+    rm -rf modules.d/$f
+  done
 }
 
 build() {
@@ -113,6 +120,7 @@ build() {
   cd ${pkgname}-${pkgver}
 
   ./configure \
+    --enable-dracut-cpio \
     --sysconfdir=${sysconfdir} \
     --prefix=${prefix} \
     --libdir=${prefix}/lib \
