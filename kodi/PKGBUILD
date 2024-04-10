@@ -19,7 +19,7 @@
 
 pkgbase=kodi
 pkgname=('kodi' 'kodi-gles' 'kodi-eventclients' 'kodi-tools-texturepacker' 'kodi-dev')
-pkgver=20.5
+pkgver=21.0
 pkgrel=2
 arch=('x86_64')
 url="https://kodi.tv"
@@ -33,7 +33,7 @@ makedepends=(
   'pipewire' 'python-pycryptodomex' 'python-pillow' 'python-pybluez'
   'python-simplejson' 'shairplay' 'smbclient' 'sndio' 'spdlog' 'taglib'
   'tinyxml' 'swig' 'upower' 'giflib' 'rapidjson' 'ghostscript' 'meson' 'gtest'
-  'graphviz' 'pcre'
+  'graphviz' 'pcre' 'tinyxml2' 'libdisplay-info'
   # wayland
   'wayland-protocols' 'waylandpp' 'libxkbcommon'
   # gbm
@@ -41,12 +41,12 @@ makedepends=(
 )
 options=(!lto)
 
-_codename=Nexus
+_codename=Omega
 
 _libdvdcss_version="1.4.3-Next-Nexus-Alpha2-2"
 _libdvdnav_version="6.1.1-Next-Nexus-Alpha2-2"
 _libdvdread_version="6.1.3-Next-Nexus-Alpha2-2"
-_ffmpeg_version="4.4.1-Nexus-Alpha1"
+_ffmpeg_version="6.0.1"
 _crossguid_version="ca1bf4b810e2d188d04cb6286f957008ee1b7681"
 _fstrcmp_version="0.7.D001"
 _flatbuffers_version="23.3.3"
@@ -57,14 +57,11 @@ source=(
   "$pkgbase-libdvdcss-$_libdvdcss_version.tar.gz::https://github.com/xbmc/libdvdcss/archive/$_libdvdcss_version.tar.gz"
   "$pkgbase-libdvdnav-$_libdvdnav_version.tar.gz::https://github.com/xbmc/libdvdnav/archive/$_libdvdnav_version.tar.gz"
   "$pkgbase-libdvdread-$_libdvdread_version.tar.gz::https://github.com/xbmc/libdvdread/archive/$_libdvdread_version.tar.gz"
-  "$pkgbase-ffmpeg-$_ffmpeg_version.tar.gz::https://github.com/xbmc/FFmpeg/archive/$_ffmpeg_version.tar.gz"
+  "$pkgbase-ffmpeg-$_ffmpeg_version.tar.gz::https://ffmpeg.org/releases/ffmpeg-$_ffmpeg_version.tar.gz"
   "$pkgbase-crossguid-$_crossguid_version.tar.gz::https://mirrors.kodi.tv/build-deps/sources/crossguid-$_crossguid_version.tar.gz"
   "$pkgbase-fstrcmp-$_fstrcmp_version.tar.gz::https://mirrors.kodi.tv/build-deps/sources/fstrcmp-$_fstrcmp_version.tar.gz"
   "$pkgbase-flatbuffers-$_flatbuffers_version.tar.gz::https://mirrors.kodi.tv/build-deps/sources/flatbuffers-$_flatbuffers_version.tar.gz"
   "$pkgbase-libudfread-$_libudfread_version.tar.gz::https://mirrors.kodi.tv/build-deps/sources/libudfread-$_libudfread_version.tar.gz"
-  'https://github.com/xbmc/xbmc/commit/35be40daa39965a9ea5b3569eb7d515e6a14da5d.patch'  # flatbuffers 23.3.3
-  '0001-ffmpeg-fix-build-with-binutils-update.patch'  # binutils >=2.41
-  'https://github.com/xbmc/xbmc/pull/23227.patch'  # thread priority crash
 )
 noextract=(
   "$pkgbase-libdvdcss-$_libdvdcss_version.tar.gz"
@@ -76,18 +73,15 @@ noextract=(
   "$pkgbase-flatbuffers-$_flatbuffers_version.tar.gz"
   "$pkgbase-libudfread-$_libudfread_version.tar.gz"
 )
-sha512sums=('a47a54ca11e1d3daeddea8c1ae716cd4461e3441de43a026a920c709b2ff5c7e0acc2a5fd4ac8c15f0da1940bd7f21a65eff32203ad8e167603c1576b21d4dcc'
+sha512sums=('9c2ca6b6e72197d2b1c26a47cf4ddc209318fcaa5a30ea20475ecc5518c7d1395c2e9cf3e3a75a13334b0505e7b417acdb0d76a20567a0c86841b3e69232625b'
             'd3be3bfc13c5ea56d8db745c2aab090c99760684fe4c8f62a13d266feb319e9180ceeecf8116bfd2ed90d9accba2c11dbbf93b61ad00f69a40812ebf4eabcdda'
             '51e6fc033121241354a5f0b3fc9a430577ae3ff6bb7f31445aa548ef4893037fb80eea3b2c6774c81e9ebaf9c45e9b490c98c2c65eb38f9f7daba84b236f7e1d'
             '629a41157d07b8ec0ea1fe89ae5ec48f63047472a862782b805c531ae31a0376fc4dc15175f8280c3ef91d7fa977bacebb1b51232640034a34bab2293210fc5e'
-            '8beb04d577b5251e74b0d52f4d130997a8ba94bbd488c7c8309e6b45095c27807e150212888ce3a384b23dff52f8df1a7bde5407bae924ddc363f8125c0616c5'
+            '945e34840092dc0fd3824eb1af2be79868af2afb4fe13159b19a9bcfc464cc4d53243c13ff065199290e9393ddbf4b1c5c8abccf83a31a31d6c7490e499fd1fc'
             'f0a80d8e99b10473bcfdfde3d1c5fd7b766959819f0d1c0595ac84ce46db9007a5fbfde9a55aca60530c46cb7f8ef4c7e472c6191559ded92f868589c141ccaf'
             'aaeb0227afd5ada5955cbe6a565254ff88d2028d677d199c00e03b7cb5de1f2c69b18e6e8b032e452350a8eda7081807b01765adbeb8476eaf803d9de6e5509c'
             '4066c94f2473c7ea16917d29a613e16f840a329089c88e0bdbdb999aef3442ba00abfd2aa92266fa9c067e399dc88e6f0ccac40dc151378857e665638e78bbf0'
-            '3069feb5db40288beb5b112b285186162a704f0fdd3cf67a17fd4eeea015f2cfcfbb455b7aa7c3d79d00fd095a3fd11cffc7b121dce94d99c3b06a509a8977d2'
-            'c05888d1ad11f9a33a578ddd2fdb705ccd385178f93f68c6af66d9361a16664f2efec7e92c3bdc2c5c93a979e973e6448ffd2b26dab6d120e1ce8a5ceb2bd948'
-            '6de9e7673022e74428a55ca1e761bdb70e0b6432faa3dae7a2306c197bc52616bffdc138073496c51aebee537079cfd768845f233d688eeea5440dfb5ba163ec'
-            '8c0eeb8dbc1e644b39bcdc98a47c6dfb78c206d19db7bc9597f4046eed000d515ac986a6c6806dd8f83f28fdf7ed84cfb295ee0652c769496d603b1f7529578d')
+            '3069feb5db40288beb5b112b285186162a704f0fdd3cf67a17fd4eeea015f2cfcfbb455b7aa7c3d79d00fd095a3fd11cffc7b121dce94d99c3b06a509a8977d2')
 
 prepare() {
   [[ -d "$srcdir/kodi-build" ]] && rm -rf "$srcdir/kodi-build"
@@ -98,21 +92,14 @@ prepare() {
   cd "xbmc-$pkgver-$_codename"
 
   rm -rf system/certs # remove not needed cacert
-
-  # flatbuffers 23.3.3
-  patch -p1 -i "$srcdir/35be40daa39965a9ea5b3569eb7d515e6a14da5d.patch"
-  # fix build with binutils >=2.41
-  patch -p1 -i "$srcdir/0001-ffmpeg-fix-build-with-binutils-update.patch"
-  # potential fix for thread priority crash
-  # https://gitlab.archlinux.org/archlinux/packaging/packages/kodi/-/issues/3
-  patch -p1 -i "$srcdir/23227.patch"
 }
 
 build() {
   # NOTE: do we still need this?
   CFLAGS=${CFLAGS/-Wp,-D_GLIBCXX_ASSERTIONS}
   CXXFLAGS=${CXXFLAGS/-Wp,-D_GLIBCXX_ASSERTIONS}
-  export LDFLAGS="-Wl,-O1 -Wl,--sort-common -Wl,--as-needed -Wl,-z,relro -Wl,-z,now"
+  # disable https://rfc.archlinux.page/0023-pack-relative-relocs/
+  export LDFLAGS=${LDFLAGS/-Wl,-z,pack-relative-relocs}
 
   _cmake_common_args=(
     -DCMAKE_BUILD_TYPE=Release
@@ -163,9 +150,6 @@ build() {
     -DUDFREAD_URL="$srcdir/$pkgbase-libudfread-$_libudfread_version.tar.gz"
   )
 
-  # https://github.com/google/flatbuffers/issues/7404
-  CXXFLAGS+=' -Wno-error=restrict'
-
   echo "building kodi"
   cd "$srcdir/kodi-build"
   cmake \
@@ -194,7 +178,7 @@ package_kodi() {
     'mariadb-libs' 'mesa' 'libpipewire' 'python-pillow' 'python-pycryptodomex'
     'python-simplejson' 'shairplay' 'smbclient' 'sndio' 'spdlog' 'sqlite'
     'taglib' 'tinyxml' 'libxrandr' 'libxkbcommon' 'waylandpp' 'libinput'
-    'pcre'
+    'pcre' 'tinyxml2' 'libdisplay-info'
   )
   optdepends=(
     'afpfs-ng: Apple shares support'
@@ -240,7 +224,7 @@ package_kodi-gles() {
     'mariadb-libs' 'mesa' 'libpipewire' 'python-pillow' 'python-pycryptodomex'
     'python-simplejson' 'shairplay' 'smbclient' 'sndio' 'spdlog' 'sqlite'
     'taglib' 'tinyxml' 'libxrandr' 'libxkbcommon' 'waylandpp' 'libinput'
-    'pcre'
+    'pcre' 'tinyxml2' 'libdisplay-info'
   )
   optdepends=(
     'afpfs-ng: Apple shares support'
