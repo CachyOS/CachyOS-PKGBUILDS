@@ -1,4 +1,4 @@
-From 0f8a40adf418c3bbb7a4f6736b10f2df2048eafd Mon Sep 17 00:00:00 2001
+From 71563ffc9b6feba5f4c5dfa8123d91ea6a6e01b3 Mon Sep 17 00:00:00 2001
 From: Xaver Hugl <xaver.hugl@gmail.com>
 Date: Wed, 22 Nov 2023 19:51:24 +0100
 Subject: [PATCH 1/2] wayland: implement linux-drm-syncobj-v1
@@ -18,8 +18,8 @@ performance improvements with Mesa too.
  src/core/graphicsbuffer.h                     |   8 +
  src/core/renderbackend.cpp                    |  11 +
  src/core/renderbackend.h                      |   5 +
- src/core/syncobjtimeline.cpp                  |  66 +++++
- src/core/syncobjtimeline.h                    |  69 +++++
+ src/core/syncobjtimeline.cpp                  |  76 +++++++
+ src/core/syncobjtimeline.h                    |  72 +++++++
  src/opengl/eglnativefence.cpp                 |   5 +
  src/opengl/eglnativefence.h                   |   1 +
  .../scenes/opengl/abstract_egl_backend.cpp    |   5 +
@@ -35,24 +35,22 @@ performance improvements with Mesa too.
  src/scene/surfaceitem_wayland.h               |   1 +
  src/scene/workspacescene_opengl.cpp           |   2 +-
  src/wayland/CMakeLists.txt                    |   8 +
- src/wayland/linux_drm_syncobj_v1.cpp          | 183 ++++++++++++
- src/wayland/linux_drm_syncobj_v1.h            |  63 +++++
+ src/wayland/linux_drm_syncobj_v1.cpp          | 190 ++++++++++++++++++
+ src/wayland/linux_drm_syncobj_v1.h            |  63 ++++++
  src/wayland/linux_drm_syncobj_v1_p.h          |  32 +++
- .../protocols/linux-drm-syncobj-v1.xml        | 261 ++++++++++++++++++
- src/wayland/surface.cpp                       |  19 ++
+ src/wayland/surface.cpp                       |  20 ++
  src/wayland/surface.h                         |   8 +
- src/wayland/surface_p.h                       |   5 +
- src/wayland/transaction.cpp                   |  24 +-
- src/wayland/transaction_p.h                   |  15 +
+ src/wayland/surface_p.h                       |   9 +
+ src/wayland/transaction.cpp                   |  27 ++-
+ src/wayland/transaction_p.h                   |  15 ++
  src/wayland_server.cpp                        |  17 ++
  src/wayland_server.h                          |   7 +
- 38 files changed, 900 insertions(+), 6 deletions(-)
+ 37 files changed, 667 insertions(+), 6 deletions(-)
  create mode 100644 src/core/syncobjtimeline.cpp
  create mode 100644 src/core/syncobjtimeline.h
  create mode 100644 src/wayland/linux_drm_syncobj_v1.cpp
  create mode 100644 src/wayland/linux_drm_syncobj_v1.h
  create mode 100644 src/wayland/linux_drm_syncobj_v1_p.h
- create mode 100644 src/wayland/protocols/linux-drm-syncobj-v1.xml
 
 diff --git a/src/CMakeLists.txt b/src/CMakeLists.txt
 index 4e0db4fe9a9..0130caf3b8e 100644
@@ -115,7 +113,7 @@ index 43c431f07be..4a47e900cd3 100644
      bool initializeEgl();
      bool initRenderingContext();
 diff --git a/src/backends/drm/drm_gpu.cpp b/src/backends/drm/drm_gpu.cpp
-index 45d9e784edd..3f42231ed2c 100644
+index c5d258a2d7c..7141ed8beac 100644
 --- a/src/backends/drm/drm_gpu.cpp
 +++ b/src/backends/drm/drm_gpu.cpp
 @@ -76,6 +76,9 @@ DrmGpu::DrmGpu(DrmBackend *backend, const QString &devNode, int fd, dev_t device
@@ -128,7 +126,7 @@ index 45d9e784edd..3f42231ed2c 100644
      // find out what driver this kms device is using
      DrmUniquePtr<drmVersion> version(drmGetVersion(fd));
      m_isI915 = strstr(version->name, "i915");
-@@ -692,6 +695,11 @@ bool DrmGpu::asyncPageflipSupported() const
+@@ -699,6 +702,11 @@ bool DrmGpu::asyncPageflipSupported() const
      return m_asyncPageflipSupported;
  }
  
@@ -141,7 +139,7 @@ index 45d9e784edd..3f42231ed2c 100644
  {
      return m_isI915;
 diff --git a/src/backends/drm/drm_gpu.h b/src/backends/drm/drm_gpu.h
-index 656c435fa27..d4fc59c4f16 100644
+index 0cc6b2126a3..c8dbde47af7 100644
 --- a/src/backends/drm/drm_gpu.h
 +++ b/src/backends/drm/drm_gpu.h
 @@ -77,6 +77,7 @@ public:
@@ -151,8 +149,8 @@ index 656c435fa27..d4fc59c4f16 100644
 +    bool syncObjTimelinesSupported() const;
      bool isI915() const;
      bool isNVidia() const;
-     gbm_device *gbmDevice() const;
-@@ -144,6 +145,7 @@ private:
+     bool isVmwgfx() const;
+@@ -146,6 +147,7 @@ private:
      bool m_isRemoved = false;
      bool m_isActive = true;
      bool m_forceModeset = false;
@@ -291,10 +289,10 @@ index b902a28984a..682e35aa0b8 100644
  } // namespace KWin
 diff --git a/src/core/syncobjtimeline.cpp b/src/core/syncobjtimeline.cpp
 new file mode 100644
-index 00000000000..78311e5b950
+index 00000000000..1918a0475c3
 --- /dev/null
 +++ b/src/core/syncobjtimeline.cpp
-@@ -0,0 +1,66 @@
+@@ -0,0 +1,76 @@
 +/*
 +    SPDX-FileCopyrightText: 2024 Xaver Hugl <xaver.hugl@gmail.com>
 +
@@ -317,6 +315,16 @@ index 00000000000..78311e5b950
 +SyncReleasePoint::~SyncReleasePoint()
 +{
 +    m_timeline->signal(m_timelinePoint);
++}
++
++SyncTimeline *SyncReleasePoint::timeline() const
++{
++    return m_timeline.get();
++}
++
++uint64_t SyncReleasePoint::timelinePoint() const
++{
++    return m_timelinePoint;
 +}
 +
 +SyncTimeline::SyncTimeline(int drmFd, uint32_t handle)
@@ -363,10 +371,10 @@ index 00000000000..78311e5b950
 +}
 diff --git a/src/core/syncobjtimeline.h b/src/core/syncobjtimeline.h
 new file mode 100644
-index 00000000000..d0a71caf2da
+index 00000000000..cffdb75e330
 --- /dev/null
 +++ b/src/core/syncobjtimeline.h
-@@ -0,0 +1,69 @@
+@@ -0,0 +1,72 @@
 +/*
 +    SPDX-FileCopyrightText: 2024 Xaver Hugl <xaver.hugl@gmail.com>
 +
@@ -395,6 +403,9 @@ index 00000000000..d0a71caf2da
 +public:
 +    explicit SyncReleasePoint(const std::shared_ptr<SyncTimeline> &timeline, uint64_t timelinePoint);
 +    ~SyncReleasePoint();
++
++    SyncTimeline *timeline() const;
++    uint64_t timelinePoint() const;
 +
 +private:
 +    const std::shared_ptr<SyncTimeline> m_timeline;
@@ -763,7 +774,7 @@ index 3a024f56bd9..aabee9be151 100644
  {
  }
 diff --git a/src/wayland/CMakeLists.txt b/src/wayland/CMakeLists.txt
-index 41ee1c5581a..9d2add111fc 100644
+index 41ee1c5581a..6f52d266489 100644
 --- a/src/wayland/CMakeLists.txt
 +++ b/src/wayland/CMakeLists.txt
 @@ -231,6 +231,10 @@ ecm_add_qtwayland_server_protocol_kde(WaylandProtocols_xml
@@ -771,7 +782,7 @@ index 41ee1c5581a..9d2add111fc 100644
      BASENAME xx-color-management-v2
  )
 +ecm_add_qtwayland_server_protocol_kde(WaylandProtocols_xml
-+    PROTOCOL ${PROJECT_SOURCE_DIR}/src/wayland/protocols/linux-drm-syncobj-v1.xml
++    PROTOCOL ${WaylandProtocols_DATADIR}/staging/linux-drm-syncobj/linux-drm-syncobj-v1.xml
 +    BASENAME linux-drm-syncobj-v1
 +)
  
@@ -808,10 +819,10 @@ index 41ee1c5581a..9d2add111fc 100644
  
 diff --git a/src/wayland/linux_drm_syncobj_v1.cpp b/src/wayland/linux_drm_syncobj_v1.cpp
 new file mode 100644
-index 00000000000..04b93b1a12a
+index 00000000000..589ccd78c3b
 --- /dev/null
 +++ b/src/wayland/linux_drm_syncobj_v1.cpp
-@@ -0,0 +1,183 @@
+@@ -0,0 +1,190 @@
 +/*
 +    KWin - the KDE window manager
 +    This file is part of the KDE project.
@@ -941,7 +952,9 @@ index 00000000000..04b93b1a12a
 +        return;
 +    }
 +    const uint64_t point = (uint64_t(point_hi) << 32) | point_lo;
-+    SurfaceInterfacePrivate::get(m_surface)->pending->acquireFd = timeline->timeline()->eventFd(point);
++    const auto priv = SurfaceInterfacePrivate::get(m_surface);
++    priv->pending->acquirePoint.timeline = timeline->timeline();
++    priv->pending->acquirePoint.point = point;
 +}
 +
 +void LinuxDrmSyncObjSurfaceV1::wp_linux_drm_syncobj_surface_v1_set_release_point(Resource *resource, wl_resource *timeline_resource, uint32_t point_hi, uint32_t point_lo)
@@ -973,15 +986,20 @@ index 00000000000..04b93b1a12a
 +bool LinuxDrmSyncObjSurfaceV1::maybeEmitProtocolErrors()
 +{
 +    const auto priv = SurfaceInterfacePrivate::get(m_surface);
-+    if (!priv->pending->bufferIsSet && !priv->pending->acquireFd.isValid() && !priv->pending->releasePoint) {
++    if (!priv->pending->bufferIsSet && !priv->pending->acquirePoint.timeline && !priv->pending->releasePoint) {
 +        return false;
 +    }
-+    if (!priv->pending->acquireFd.isValid()) {
++    if (!priv->pending->acquirePoint.timeline) {
 +        wl_resource_post_error(resource()->handle, error_no_acquire_point, "explicit sync is used, but no acquire point is set");
 +        return true;
 +    }
 +    if (!priv->pending->releasePoint) {
 +        wl_resource_post_error(resource()->handle, error_no_release_point, "explicit sync is used, but no release point is set");
++        return true;
++    }
++    if (priv->pending->acquirePoint.timeline.get() == priv->pending->releasePoint->timeline()
++        && priv->pending->acquirePoint.point >= priv->pending->releasePoint->timelinePoint()) {
++        wl_resource_post_error(resource()->handle, error_conflicting_points, "acquire and release points are on the same timeline and acquire >= release");
 +        return true;
 +    }
 +    if (!priv->pending->buffer) {
@@ -1102,275 +1120,8 @@ index 00000000000..6efbc12ee30
 +    const std::shared_ptr<SyncTimeline> m_timeline;
 +};
 +}
-diff --git a/src/wayland/protocols/linux-drm-syncobj-v1.xml b/src/wayland/protocols/linux-drm-syncobj-v1.xml
-new file mode 100644
-index 00000000000..2c491eaf43a
---- /dev/null
-+++ b/src/wayland/protocols/linux-drm-syncobj-v1.xml
-@@ -0,0 +1,261 @@
-+<?xml version="1.0" encoding="UTF-8"?>
-+<protocol name="linux_drm_syncobj_v1">
-+  <copyright>
-+    Copyright 2016 The Chromium Authors.
-+    Copyright 2017 Intel Corporation
-+    Copyright 2018 Collabora, Ltd
-+    Copyright 2021 Simon Ser
-+
-+    Permission is hereby granted, free of charge, to any person obtaining a
-+    copy of this software and associated documentation files (the "Software"),
-+    to deal in the Software without restriction, including without limitation
-+    the rights to use, copy, modify, merge, publish, distribute, sublicense,
-+    and/or sell copies of the Software, and to permit persons to whom the
-+    Software is furnished to do so, subject to the following conditions:
-+
-+    The above copyright notice and this permission notice (including the next
-+    paragraph) shall be included in all copies or substantial portions of the
-+    Software.
-+
-+    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-+    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-+    FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
-+    THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-+    LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
-+    FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
-+    DEALINGS IN THE SOFTWARE.
-+  </copyright>
-+
-+  <description summary="protocol for providing explicit synchronization">
-+    This protocol allows clients to request explicit synchronization for
-+    buffers. It is tied to the Linux DRM synchronization object framework.
-+
-+    Synchronization refers to co-ordination of pipelined operations performed
-+    on buffers. Most GPU clients will schedule an asynchronous operation to
-+    render to the buffer, then immediately send the buffer to the compositor
-+    to be attached to a surface.
-+
-+    With implicit synchronization, ensuring that the rendering operation is
-+    complete before the compositor displays the buffer is an implementation
-+    detail handled by either the kernel or userspace graphics driver.
-+
-+    By contrast, with explicit synchronization, DRM synchronization object
-+    timeline points mark when the asynchronous operations are complete. When
-+    submitting a buffer, the client provides a timeline point which will be
-+    waited on before the compositor accesses the buffer, and another timeline
-+    point that the compositor will signal when it no longer needs to access the
-+    buffer contents for the purposes of the surface commit.
-+
-+    Linux DRM synchronization objects are documented at:
-+    https://dri.freedesktop.org/docs/drm/gpu/drm-mm.html#drm-sync-objects
-+
-+    Warning! The protocol described in this file is currently in the testing
-+    phase. Backward compatible changes may be added together with the
-+    corresponding interface version bump. Backward incompatible changes can
-+    only be done by creating a new major version of the extension.
-+  </description>
-+
-+  <interface name="wp_linux_drm_syncobj_manager_v1" version="1">
-+    <description summary="global for providing explicit synchronization">
-+      This global is a factory interface, allowing clients to request
-+      explicit synchronization for buffers on a per-surface basis.
-+
-+      See wp_linux_drm_syncobj_surface_v1 for more information.
-+    </description>
-+
-+    <request name="destroy" type="destructor">
-+      <description summary="destroy explicit synchronization factory object">
-+        Destroy this explicit synchronization factory object. Other objects
-+        shall not be affected by this request.
-+      </description>
-+    </request>
-+
-+    <enum name="error">
-+      <entry name="surface_exists" value="0"
-+        summary="the surface already has a synchronization object associated"/>
-+      <entry name="invalid_timeline" value="1"
-+        summary="the timeline object could not be imported"/>
-+    </enum>
-+
-+    <request name="get_surface">
-+      <description summary="extend surface interface for explicit synchronization">
-+        Instantiate an interface extension for the given wl_surface to provide
-+        explicit synchronization.
-+
-+        If the given wl_surface already has an explicit synchronization object
-+        associated, the surface_exists protocol error is raised.
-+
-+        Graphics APIs, like EGL or Vulkan, that manage the buffer queue and
-+        commits of a wl_surface themselves, are likely to be using this
-+        extension internally. If a client is using such an API for a
-+        wl_surface, it should not directly use this extension on that surface,
-+        to avoid raising a surface_exists protocol error.
-+      </description>
-+      <arg name="id" type="new_id" interface="wp_linux_drm_syncobj_surface_v1"
-+        summary="the new synchronization surface object id"/>
-+      <arg name="surface" type="object" interface="wl_surface"
-+        summary="the surface"/>
-+    </request>
-+
-+    <request name="import_timeline">
-+      <description summary="import a DRM syncobj timeline">
-+        Import a DRM synchronization object timeline.
-+
-+        If the FD cannot be imported, the invalid_timeline error is raised.
-+      </description>
-+      <arg name="id" type="new_id" interface="wp_linux_drm_syncobj_timeline_v1"/>
-+      <arg name="fd" type="fd" summary="drm_syncobj file descriptor"/>
-+    </request>
-+  </interface>
-+
-+  <interface name="wp_linux_drm_syncobj_timeline_v1" version="1">
-+    <description summary="synchronization object timeline">
-+      This object represents an explicit synchronization object timeline
-+      imported by the client to the compositor.
-+    </description>
-+
-+    <request name="destroy" type="destructor">
-+      <description summary="destroy the timeline">
-+        Destroy the synchronization object timeline. Other objects are not
-+        affected by this request, in particular timeline points set by
-+        set_acquire_point and set_release_point are not unset.
-+      </description>
-+    </request>
-+  </interface>
-+
-+  <interface name="wp_linux_drm_syncobj_surface_v1" version="1">
-+    <description summary="per-surface explicit synchronization">
-+      This object is an add-on interface for wl_surface to enable explicit
-+      synchronization.
-+
-+      Each surface can be associated with only one object of this interface at
-+      any time.
-+
-+      Explicit synchronization is guaranteed to be supported for buffers
-+      created with any version of the linux-dmabuf protocol. Compositors are
-+      free to support explicit synchronization for additional buffer types.
-+      If at surface commit time the attached buffer does not support explicit
-+      synchronization, an unsupported_buffer error is raised.
-+
-+      As long as the wp_linux_drm_syncobj_surface_v1 object is alive, the
-+      compositor may ignore implicit synchronization for buffers attached and
-+      committed to the wl_surface. The delivery of wl_buffer.release events
-+      for buffers attached to the surface becomes undefined.
-+
-+      Clients must set both acquire and release points if and only if a
-+      non-null buffer is attached in the same surface commit. See the
-+      no_buffer, no_acquire_point and no_release_point protocol errors.
-+
-+      If at surface commit time the acquire and release DRM syncobj timelines
-+      are identical, the acquire point value must be strictly less than the
-+      release point value, or else the conflicting_points protocol error is
-+      raised.
-+    </description>
-+
-+    <request name="destroy" type="destructor">
-+      <description summary="destroy the surface synchronization object">
-+        Destroy this surface synchronization object.
-+
-+        Any timeline point set by this object with set_acquire_point or
-+        set_release_point since the last commit may be discarded by the
-+        compositor. Any timeline point set by this object before the last
-+        commit will not be affected.
-+      </description>
-+    </request>
-+
-+    <enum name="error">
-+      <entry name="no_surface" value="1"
-+        summary="the associated wl_surface was destroyed"/>
-+      <entry name="unsupported_buffer" value="2"
-+        summary="the buffer does not support explicit synchronization"/>
-+      <entry name="no_buffer" value="3" summary="no buffer was attached"/>
-+      <entry name="no_acquire_point" value="4"
-+        summary="no acquire timeline point was set"/>
-+      <entry name="no_release_point" value="5"
-+        summary="no release timeline point was set"/>
-+      <entry name="conflicting_points" value="6"
-+        summary="acquire and release timeline points are in conflict"/>
-+    </enum>
-+
-+    <request name="set_acquire_point">
-+      <description summary="set the acquire timeline point">
-+        Set the timeline point that must be signalled before the compositor may
-+        sample from the buffer attached with wl_surface.attach.
-+
-+        The 64-bit unsigned value combined from point_hi and point_lo is the
-+        point value.
-+
-+        The acquire point is double-buffered state, and will be applied on the
-+        next wl_surface.commit request for the associated surface. Thus, it
-+        applies only to the buffer that is attached to the surface at commit
-+        time.
-+
-+        If an acquire point has already been attached during the same commit
-+        cycle, the new point replaces the old one.
-+
-+        If the associated wl_surface was destroyed, a no_surface error is
-+        raised.
-+
-+        If at surface commit time there is a pending acquire timeline point set
-+        but no pending buffer attached, a no_buffer error is raised. If at
-+        surface commit time there is a pending buffer attached but no pending
-+        acquire timeline point set, the no_acquire_point protocol error is
-+        raised.
-+      </description>
-+      <arg name="timeline" type="object" interface="wp_linux_drm_syncobj_timeline_v1"/>
-+      <arg name="point_hi" type="uint" summary="high 32 bits of the point value"/>
-+      <arg name="point_lo" type="uint" summary="low 32 bits of the point value"/>
-+    </request>
-+
-+    <request name="set_release_point">
-+      <description summary="set the release timeline point">
-+        Set the timeline point that must be signalled by the compositor when it
-+        has finished its usage of the buffer attached with wl_surface.attach
-+        for the relevant commit.
-+
-+        Once the timeline point is signaled, and assuming the associated buffer
-+        is not pending release from other wl_surface.commit requests, no
-+        additional explicit or implicit synchronization with the compositor is
-+        required to safely re-use the buffer.
-+
-+        Note that clients cannot rely on the release point being always
-+        signaled after the acquire point: compositors may release buffers
-+        without ever reading from them. In addition, the compositor may use
-+        different presentation paths for different commits, which may have
-+        different release behavior. As a result, the compositor may signal the
-+        release points in a different order than the client committed them.
-+
-+        Because signaling a timeline point also signals every previous point,
-+        it is generally not safe to use the same timeline object for the
-+        release points of multiple buffers. The out-of-order signaling
-+        described above may lead to a release point being signaled before the
-+        compositor has finished reading. To avoid this, it is strongly
-+        recommended that each buffer should use a separate timeline for its
-+        release points.
-+
-+        The 64-bit unsigned value combined from point_hi and point_lo is the
-+        point value.
-+
-+        The release point is double-buffered state, and will be applied on the
-+        next wl_surface.commit request for the associated surface. Thus, it
-+        applies only to the buffer that is attached to the surface at commit
-+        time.
-+
-+        If a release point has already been attached during the same commit
-+        cycle, the new point replaces the old one.
-+
-+        If the associated wl_surface was destroyed, a no_surface error is
-+        raised.
-+
-+        If at surface commit time there is a pending release timeline point set
-+        but no pending buffer attached, a no_buffer error is raised. If at
-+        surface commit time there is a pending buffer attached but no pending
-+        release timeline point set, the no_release_point protocol error is
-+        raised.
-+      </description>
-+      <arg name="timeline" type="object" interface="wp_linux_drm_syncobj_timeline_v1"/>
-+      <arg name="point_hi" type="uint" summary="high 32 bits of the point value"/>
-+      <arg name="point_lo" type="uint" summary="low 32 bits of the point value"/>
-+    </request>
-+  </interface>
-+</protocol>
 diff --git a/src/wayland/surface.cpp b/src/wayland/surface.cpp
-index 23f981f2f81..0f3681471e9 100644
+index 23f981f2f81..6a33c5fca10 100644
 --- a/src/wayland/surface.cpp
 +++ b/src/wayland/surface.cpp
 @@ -13,6 +13,7 @@
@@ -1392,16 +1143,17 @@ index 23f981f2f81..0f3681471e9 100644
      Transaction *transaction;
      if (sync) {
          if (!subsurface.transaction) {
-@@ -518,6 +523,8 @@ void SurfaceState::mergeInto(SurfaceState *target)
+@@ -518,6 +523,9 @@ void SurfaceState::mergeInto(SurfaceState *target)
          target->offset = offset;
          target->damage = damage;
          target->bufferDamage = bufferDamage;
-+        target->acquireFd = std::move(acquireFd);
++        target->acquirePoint.timeline = std::exchange(acquirePoint.timeline, nullptr);
++        target->acquirePoint.point = acquirePoint.point;
 +        target->releasePoint = std::move(releasePoint);
          target->bufferIsSet = true;
      }
      if (viewport.sourceGeometryIsSet) {
-@@ -600,6 +607,7 @@ void SurfaceInterfacePrivate::applyState(SurfaceState *next)
+@@ -600,6 +608,7 @@ void SurfaceInterfacePrivate::applyState(SurfaceState *next)
      const bool visibilityChanged = bufferChanged && bool(current->buffer) != bool(next->buffer);
      const bool colorDescriptionChanged = next->colorDescriptionIsSet;
      const bool presentationModeHintChanged = next->presentationModeHintIsSet;
@@ -1409,7 +1161,7 @@ index 23f981f2f81..0f3681471e9 100644
  
      const QSizeF oldSurfaceSize = surfaceSize;
      const QSize oldBufferSize = bufferSize;
-@@ -608,6 +616,9 @@ void SurfaceInterfacePrivate::applyState(SurfaceState *next)
+@@ -608,6 +617,9 @@ void SurfaceInterfacePrivate::applyState(SurfaceState *next)
  
      next->mergeInto(current.get());
      bufferRef = current->buffer;
@@ -1419,7 +1171,7 @@ index 23f981f2f81..0f3681471e9 100644
      scaleOverride = pendingScaleOverride;
  
      if (current->buffer) {
-@@ -689,6 +700,9 @@ void SurfaceInterfacePrivate::applyState(SurfaceState *next)
+@@ -689,6 +701,9 @@ void SurfaceInterfacePrivate::applyState(SurfaceState *next)
      if (presentationModeHintChanged) {
          Q_EMIT q->presentationModeHintChanged();
      }
@@ -1429,7 +1181,7 @@ index 23f981f2f81..0f3681471e9 100644
  
      if (bufferChanged) {
          if (current->buffer && (!current->damage.isEmpty() || !current->bufferDamage.isEmpty())) {
-@@ -1179,6 +1193,11 @@ void SurfaceInterface::traverseTree(std::function<void(SurfaceInterface *surface
+@@ -1179,6 +1194,11 @@ void SurfaceInterface::traverseTree(std::function<void(SurfaceInterface *surface
      }
  }
  
@@ -1475,7 +1227,7 @@ index 597f06774f8..80d1fa55708 100644
      /**
       * Emitted when the Surface has been committed.
 diff --git a/src/wayland/surface_p.h b/src/wayland/surface_p.h
-index f78bd107b44..a8a624700f7 100644
+index f78bd107b44..775f9d7bd2e 100644
 --- a/src/wayland/surface_p.h
 +++ b/src/wayland/surface_p.h
 @@ -28,6 +28,7 @@ class FractionalScaleV1Interface;
@@ -1494,16 +1246,20 @@ index f78bd107b44..a8a624700f7 100644
      qint32 bufferScale = 1;
      OutputTransform bufferTransform = OutputTransform::Normal;
      wl_list frameCallbacks;
-@@ -71,6 +73,8 @@ struct SurfaceState
+@@ -71,6 +73,12 @@ struct SurfaceState
      PresentationModeHint presentationHint = PresentationModeHint::VSync;
      ColorDescription colorDescription = ColorDescription::sRGB;
      std::unique_ptr<PresentationTimeFeedback> presentationFeedback;
-+    FileDescriptor acquireFd;
++    struct
++    {
++        std::shared_ptr<SyncTimeline> timeline;
++        uint64_t point = 0;
++    } acquirePoint;
 +    std::shared_ptr<SyncReleasePoint> releasePoint;
  
      struct
      {
-@@ -169,6 +173,7 @@ public:
+@@ -169,6 +177,7 @@ public:
      TearingControlV1Interface *tearing = nullptr;
      FrogColorManagementSurfaceV1 *frogColorManagement = nullptr;
      XXColorSurfaceV2 *xxColorSurface = nullptr;
@@ -1512,18 +1268,20 @@ index f78bd107b44..a8a624700f7 100644
      struct
      {
 diff --git a/src/wayland/transaction.cpp b/src/wayland/transaction.cpp
-index 93004ba863d..bba0088ed3c 100644
+index 93004ba863d..fcd19d4036f 100644
 --- a/src/wayland/transaction.cpp
 +++ b/src/wayland/transaction.cpp
-@@ -6,6 +6,7 @@
+@@ -5,7 +5,9 @@
+ */
  
  #include "wayland/transaction.h"
++#include "core/syncobjtimeline.h"
  #include "utils/filedescriptor.h"
 +#include "wayland/clientconnection.h"
  #include "wayland/subcompositor.h"
  #include "wayland/surface_p.h"
  #include "wayland/transaction_p.h"
-@@ -76,6 +77,23 @@ bool TransactionDmaBufLocker::arm()
+@@ -76,6 +78,24 @@ bool TransactionDmaBufLocker::arm()
      return !m_pending.isEmpty();
  }
  
@@ -1533,6 +1291,7 @@ index 93004ba863d..bba0088ed3c 100644
 +    , m_eventFd(std::move(eventFd))
 +    , m_notifier(m_eventFd.get(), QSocketNotifier::Type::Read)
 +{
++    transaction->lock();
 +    connect(&m_notifier, &QSocketNotifier::activated, this, &TransactionEventFdLocker::unlock);
 +    // when the client quits, the eventfd may never be signaled
 +    connect(m_client, &ClientConnection::aboutToBeDestroyed, this, &TransactionEventFdLocker::unlock);
@@ -1547,14 +1306,15 @@ index 93004ba863d..bba0088ed3c 100644
  Transaction::Transaction()
  {
  }
-@@ -248,7 +266,11 @@ void Transaction::commit()
+@@ -248,7 +268,12 @@ void Transaction::commit()
      for (TransactionEntry &entry : m_entries) {
          if (entry.state->bufferIsSet && entry.state->buffer) {
              // Avoid applying the transaction until all graphics buffers have become idle.
 -            if (auto locker = TransactionDmaBufLocker::get(entry.state->buffer)) {
-+            if (entry.state->acquireFd.isValid()) {
-+                if (entry.surface) {
-+                    new TransactionEventFdLocker(this, std::move(entry.state->acquireFd), entry.surface->client());
++            if (entry.state->acquirePoint.timeline) {
++                auto eventFd = entry.state->acquirePoint.timeline->eventFd(entry.state->acquirePoint.point);
++                if (entry.surface && eventFd.isValid()) {
++                    new TransactionEventFdLocker(this, std::move(eventFd), entry.surface->client());
 +                }
 +            } else if (auto locker = TransactionDmaBufLocker::get(entry.state->buffer)) {
                  locker->add(this);
@@ -1655,7 +1415,7 @@ index 8eb6f31a176..60dc67d9670 100644
 GitLab
 
 
-From 7b1f3c8c7549d4510abd892afc152367374f9ff5 Mon Sep 17 00:00:00 2001
+From 4a93ced37a63761e8df45442e7d5448d1d82af87 Mon Sep 17 00:00:00 2001
 From: Xaver Hugl <xaver.hugl@gmail.com>
 Date: Sat, 6 Apr 2024 18:51:01 +0200
 Subject: [PATCH 2/2] core/syncobjtimeline: make explicit sync use
@@ -1665,12 +1425,13 @@ This brings some performance benefits, because the application can potentially r
 the buffer earlier, and it simplifies the code a bit
 ---
  src/core/syncobjtimeline.cpp      | 63 +++++++++++++++++++++++++------
- src/core/syncobjtimeline.h        | 24 ++----------
+ src/core/syncobjtimeline.h        | 28 ++++----------
  src/scene/itemrenderer_opengl.cpp |  5 ++-
- 3 files changed, 59 insertions(+), 33 deletions(-)
+ src/wayland/surface.h             |  6 ++-
+ 4 files changed, 67 insertions(+), 35 deletions(-)
 
 diff --git a/src/core/syncobjtimeline.cpp b/src/core/syncobjtimeline.cpp
-index 78311e5b950..6978c1b8f04 100644
+index 1918a0475c3..437902644e2 100644
 --- a/src/core/syncobjtimeline.cpp
 +++ b/src/core/syncobjtimeline.cpp
 @@ -6,8 +6,24 @@
@@ -1738,8 +1499,8 @@ index 78311e5b950..6978c1b8f04 100644
 +    }
  }
  
- SyncTimeline::SyncTimeline(int drmFd, uint32_t handle)
-@@ -50,17 +98,8 @@ void SyncTimeline::signal(uint64_t timelinePoint)
+ SyncTimeline *SyncReleasePoint::timeline() const
+@@ -60,17 +108,8 @@ void SyncTimeline::signal(uint64_t timelinePoint)
      drmSyncobjTimelineSignal(m_drmFd, &m_handle, &timelinePoint, 1);
  }
  
@@ -1760,7 +1521,7 @@ index 78311e5b950..6978c1b8f04 100644
  }
  }
 diff --git a/src/core/syncobjtimeline.h b/src/core/syncobjtimeline.h
-index d0a71caf2da..20a6c7bba94 100644
+index cffdb75e330..4ced3e06272 100644
 --- a/src/core/syncobjtimeline.h
 +++ b/src/core/syncobjtimeline.h
 @@ -7,11 +7,8 @@
@@ -1775,10 +1536,14 @@ index d0a71caf2da..20a6c7bba94 100644
  
  namespace KWin
  {
-@@ -27,9 +24,12 @@ public:
-     explicit SyncReleasePoint(const std::shared_ptr<SyncTimeline> &timeline, uint64_t timelinePoint);
-     ~SyncReleasePoint();
+@@ -30,9 +27,16 @@ public:
+     SyncTimeline *timeline() const;
+     uint64_t timelinePoint() const;
  
++    /**
++     * Adds the fence of a graphics job that this release point should wait for
++     * before the timeline point is signaled
++     */
 +    void addReleaseFence(const FileDescriptor &fd);
 +
  private:
@@ -1788,7 +1553,7 @@ index d0a71caf2da..20a6c7bba94 100644
  };
  
  class KWIN_EXPORT SyncTimeline
-@@ -44,26 +44,10 @@ public:
+@@ -47,26 +51,10 @@ public:
      FileDescriptor eventFd(uint64_t timelinePoint) const;
  
      void signal(uint64_t timelinePoint);
@@ -1832,6 +1597,23 @@ index 3fee3863f2c..ffcc6de3914 100644
          }
      }
      m_releasePoints.clear();
+diff --git a/src/wayland/surface.h b/src/wayland/surface.h
+index 80d1fa55708..152f1accc10 100644
+--- a/src/wayland/surface.h
++++ b/src/wayland/surface.h
+@@ -344,8 +344,10 @@ public:
+     void setPreferredColorDescription(const ColorDescription &descr);
+ 
+     /**
+-     * @returns the release point that should be referenced as long as the buffer on this surface
+-     *          is, or may still be used by the compositor
++     * Returns the current release point for the buffer on this surface. The buffer keeps the
++     * release point referenced as long as it's referenced itself; for synchronization on the
++     * GPU side, the compositor has to either keep the release point referenced as long as the
++     * GPU task is running, or add a fence for each GPU task to the release point
+      */
+     std::shared_ptr<SyncReleasePoint> bufferReleasePoint() const;
+ 
 -- 
 GitLab
 
