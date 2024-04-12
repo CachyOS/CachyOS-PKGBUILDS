@@ -84,7 +84,7 @@ build() {
 
   sed -i -e '/^release:/{n;s/-D/-DCMAKE_SKIP_RPATH=ON -D/}' Makefile
 
-  cd "${srcdir}/${_pkgname}/subprojects/wlroots"
+  cd "${srcdir}/${_pkgname}/subprojects/wlroots-hyprland"
   meson setup \
       --prefix="${srcdir}/tmpwlr" \
       --buildtype plain \
@@ -130,11 +130,11 @@ package() {
   mkdir -p "${pkgdir}/usr/share/hyprland"
 
   find src \( -name '*.h' -o -name '*.hpp' \) -exec install -Dm0644 {} "$pkgdir/usr/include/hyprland/{}" \;
-  pushd subprojects/wlroots/include
-  find . -name '*.h' -exec install -Dm0644 {} "$pkgdir/usr/include/hyprland/wlroots/{}" \;
+  pushd subprojects/wlroots-hyprland/include
+  find . -name '*.h' -exec install -Dm0644 {} "$pkgdir/usr/include/hyprland/wlroots-hyprland/{}" \;
   popd
-  pushd subprojects/wlroots/build/include
-  find . -name '*.h' -exec install -Dm0644 {} "$pkgdir/usr/include/hyprland/wlroots/{}" \;
+  pushd subprojects/wlroots-hyprland/build/include
+  find . -name '*.h' -exec install -Dm0644 {} "$pkgdir/usr/include/hyprland/wlroots-hyprland/{}" \;
   popd
   mkdir -p "$pkgdir/usr/include/hyprland/protocols"
   cp protocols/*-protocol.h "$pkgdir/usr/include/hyprland/protocols"
@@ -145,5 +145,5 @@ package() {
   install -Dm0644 -t "$pkgdir/usr/share/wayland-sessions" "example/$_pkgname.desktop"
   install -Dm0644 -t "$pkgdir/usr/share/$pkgname" "example/$_pkgname.conf"
   install -Dm0644 -t "$pkgdir/usr/share/licenses/$pkgname/" LICENSE
-  install -Dm0755 -t "$pkgdir/usr/lib" "$srcdir/hyprland/subprojects/wlroots/build/libwlroots.so.13032"
+  install -Dm0755 -t "$pkgdir/usr/lib" "$srcdir/hyprland/subprojects/wlroots-hyprland/build/libwlroots.a"
 }
