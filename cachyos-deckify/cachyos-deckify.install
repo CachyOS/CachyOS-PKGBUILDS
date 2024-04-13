@@ -1,4 +1,4 @@
-SERVICES=("bluetoothd" "inputplumber")
+SERVICES=("bluetoothd" "inputplumber" "steam-powerbuttond" "scx")
 
 
 update_user() {
@@ -14,6 +14,9 @@ update_user() {
   sed -ri "s|^(User=).*|User=${VAR}|" /etc/sddm.conf.d/steam-deckify.conf
 }
 
+scx_lavd_default() {
+  sed -i 's/SCX_SCHEDULER=scx_rusty/SCX_SCHEDULER=scx_lavd/' /etc/default/scx
+}
 
 post_install() {
     echo "Enabling services..."
@@ -53,6 +56,8 @@ post_install() {
 
   # Update users sddm config to reflect the changes
   update_user
+  # Use scx_lavd as default scheduler
+  scx_lavd_default
 }
 
 post_upgrade() {
