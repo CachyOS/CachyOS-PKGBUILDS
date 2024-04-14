@@ -8,7 +8,7 @@ arch=(aarch64 x86_64 x86_64_v3)
 url="https://github.com/cachyos/packageinstaller"
 license=(GPLv3)
 depends=('qt6-base' 'polkit')
-makedepends=('cmake' 'ninja' 'git' 'polkit-qt6' 'qt6-tools')
+makedepends=('cmake' 'ninja' 'git' 'polkit-qt6' 'qt6-tools' 'clang' 'llvm')
 groups=('cachyos')
 source=("packageinstaller-$pkgver.tar.gz::$url/archive/v$pkgver.tar.gz")
 sha256sums=('de09d350aaaf8dff431041c46edd2cafe32dd8f74f09de8200425e6b123719d0')
@@ -20,6 +20,12 @@ build() {
   cd ${srcdir}/packageinstaller-${pkgver}
 
   _cpuCount=$(grep -c -w ^processor /proc/cpuinfo)
+
+  export AR=llvm-ar
+  export CC=clang
+  export CXX=clang++
+  export NM=llvm-nm
+  export RANLIB=llvm-ranlib
 
   cmake -S . -Bbuild \
         -GNinja \
