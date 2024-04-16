@@ -3,17 +3,20 @@
 
 _pkgname="hyprland"
 pkgname="${_pkgname}-git"
-pkgver=0.36.0.r4127.7ce781e8
+pkgver=0.39.1.r4460.fe7b748e
 pkgrel=1
 pkgdesc='a highly customizable dynamic tiling Wayland compositor'
 arch=(x86_64 aarch64)
 url="https://github.com/hyprwm/Hyprland"
 license=(BSD)
 depends=(
-  cairo
-  gcc-libs
-  glibc
+  cairo # libcairo.so
+  gcc-libs # libgcc_s.so libstdc++.so
+  glibc # libc.so libm.so
+  glib2
   glslang
+  hyprcursor
+  hyprlang
   libdisplay-info
   libdrm
   libglvnd
@@ -30,20 +33,19 @@ depends=(
   pixman
   polkit
   seatd
-  tomlplusplus
   systemd-libs
+  tomlplusplus
   vulkan-icd-loader
   vulkan-validation-layers
-  hyprlang
-  hyprcursor
   wayland
   wayland-protocols
   xcb-proto
   xcb-util
-  xcb-util-errors
+  xcb-util-errors # libxcb-errors.so
+  xcb-util-image
   xcb-util-keysyms
-  xcb-util-renderutil
-  xcb-util-wm
+  xcb-util-renderutil # libxcb-render-util.so
+  xcb-util-wm # libxcb-ewmh.so  libxcb-icccm.so
   xorg-xinput
   xorg-xwayland
 )
@@ -57,6 +59,9 @@ makedepends=(
   vulkan-headers
   xorgproto
 )
+optdepends=('cmake: to build and install plugins using hyprpm'
+            'cpio: to build and install plugins using hyprpm'
+            'meson: to build and install plugins using hyprpm')
 source=("${_pkgname}::git+https://github.com/hyprwm/Hyprland.git"
         runtime-xwayland-disable.patch
 )
