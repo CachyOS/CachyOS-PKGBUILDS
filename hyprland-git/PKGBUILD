@@ -3,7 +3,7 @@
 
 _pkgname="hyprland"
 pkgname="${_pkgname}-git"
-pkgver=0.39.1.r4460.fe7b748e
+pkgver=0.39.1.r4462.e57a2d7e
 pkgrel=1
 pkgdesc='a highly customizable dynamic tiling Wayland compositor'
 arch=(x86_64 aarch64)
@@ -145,6 +145,11 @@ package() {
   cp protocols/*-protocol.h "$pkgdir/usr/include/hyprland/protocols"
 
   install -Dm0644 -t "$pkgdir/usr/share/pkgconfig" build/hyprland.pc
+  for cmd in hyprctl hyprpm; do
+    install -Dm0644 "$cmd/$cmd.bash" "$pkgdir/usr/share/bash-completion/completions/$cmd"
+    install -Dm0644 "$cmd/$cmd.zsh" "$pkgdir/usr/share/zsh/site-fuctions/_$cmd"
+    install -Dm0644 -t "$pkgdir/usr/share/fish/vendor_completions.d/" "$cmd/$cmd.fish"
+  done
   install -Dm0755 -t "$pkgdir/usr/bin" build/Hyprland build/hyprpm/hyprpm hyprctl/hyprctl
   install -Dm0644 -t "$pkgdir/usr/share/$pkgname" assets/*.png
   install -Dm0644 -t "$pkgdir/usr/share/wayland-sessions" "example/$_pkgname.desktop"
