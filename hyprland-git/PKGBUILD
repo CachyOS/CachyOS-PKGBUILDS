@@ -147,7 +147,7 @@ package() {
   install -Dm0644 -t "$pkgdir/usr/share/pkgconfig" build/hyprland.pc
   for cmd in hyprctl hyprpm; do
     install -Dm0644 "$cmd/$cmd.bash" "$pkgdir/usr/share/bash-completion/completions/$cmd"
-    install -Dm0644 "$cmd/$cmd.zsh" "$pkgdir/usr/share/zsh/site-fuctions/_$cmd"
+    install -Dm0644 "$cmd/$cmd.zsh" "$pkgdir/usr/share/zsh/site-functions/_$cmd"
     install -Dm0644 -t "$pkgdir/usr/share/fish/vendor_completions.d/" "$cmd/$cmd.fish"
   done
   install -Dm0755 -t "$pkgdir/usr/bin" build/Hyprland build/hyprpm/hyprpm hyprctl/hyprctl
