@@ -20,7 +20,8 @@ depends=('bzip2' 'expat' 'gdbm' 'libffi' 'libnsl' 'libxcrypt' 'openssl' 'zlib' '
 makedepends=('tk' 'sqlite' 'bluez-libs' 'mpdecimal' 'llvm' 'gdb' 'xorg-server-xvfb' 'ttf-font')
 source=("https://www.python.org/ftp/python/${pkgver%rc*}/Python-${pkgver}.tar.xz"{,.asc}
         python-expat-2.6.patch::https://github.com/python/cpython/pull/115289.patch
-        EXTERNALLY-MANAGED)
+        EXTERNALLY-MANAGED
+        0001-change-bolt-to-perf.patch)
 sha512sums=('2ccfae7b9f95d8e15ea85d3f66eea5f6a8fdcaffc0b405095fecb33efc0df50b831c1215542910ced948b54e6de1f7242b0b8b9afc5f89079451c552430d7d9f'
             'SKIP'
             '0868854a6b2647706a3c98443fbacf275fe31f85c7cb78301db46e395c17cac9a02512cf0db40b981eae9ffe9d9d5fc8e0a83635adb0e2545ca134d9830cd1e0'
@@ -33,6 +34,7 @@ validpgpkeys=('0D96DF4D4110E5C43FBFB17F2D347EA6AA65421D'  # Ned Deily (Python re
 prepare() {
   cd Python-${pkgver}
   patch -Np1 -i ../python-expat-2.6.patch
+  patch -Np1 -i ../0001-change-bolt-to-perf.patch
 
   # FS#23997
   sed -i -e "s|^#.* /usr/local/bin/python|#!/usr/bin/python|" Lib/cgi.py
