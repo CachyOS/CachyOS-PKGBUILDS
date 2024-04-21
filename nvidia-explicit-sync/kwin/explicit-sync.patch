@@ -1,12 +1,14 @@
-From 71563ffc9b6feba5f4c5dfa8123d91ea6a6e01b3 Mon Sep 17 00:00:00 2001
+From e1791de663807bc93c09418481cb844c7daeb8f7 Mon Sep 17 00:00:00 2001
 From: Xaver Hugl <xaver.hugl@gmail.com>
 Date: Wed, 22 Nov 2023 19:51:24 +0100
-Subject: [PATCH 1/2] wayland: implement linux-drm-syncobj-v1
+Subject: [PATCH 1/5] wayland: implement linux-drm-syncobj-v1
 
 linux-drm-syncobj-v1 allows drivers and apps to synchronize KWin's buffer access
 to their rendering, and synchronize their rendering to KWin's buffer release. This
 fixes severe glitches with the proprietary NVidia driver and allows for some
 performance improvements with Mesa too.
+
+(cherry picked from commit 32addf4d599135678a5120470bc27a881f34a3d9)
 ---
  src/CMakeLists.txt                            |   1 +
  src/backends/drm/drm_egl_backend.cpp          |  16 ++
@@ -18,8 +20,8 @@ performance improvements with Mesa too.
  src/core/graphicsbuffer.h                     |   8 +
  src/core/renderbackend.cpp                    |  11 +
  src/core/renderbackend.h                      |   5 +
- src/core/syncobjtimeline.cpp                  |  76 +++++++
- src/core/syncobjtimeline.h                    |  72 +++++++
+ src/core/syncobjtimeline.cpp                  |  83 ++++++
+ src/core/syncobjtimeline.h                    |  72 +++++
  src/opengl/eglnativefence.cpp                 |   5 +
  src/opengl/eglnativefence.h                   |   1 +
  .../scenes/opengl/abstract_egl_backend.cpp    |   5 +
@@ -35,25 +37,27 @@ performance improvements with Mesa too.
  src/scene/surfaceitem_wayland.h               |   1 +
  src/scene/workspacescene_opengl.cpp           |   2 +-
  src/wayland/CMakeLists.txt                    |   8 +
- src/wayland/linux_drm_syncobj_v1.cpp          | 190 ++++++++++++++++++
- src/wayland/linux_drm_syncobj_v1.h            |  63 ++++++
+ src/wayland/linux_drm_syncobj_v1.cpp          | 190 +++++++++++++
+ src/wayland/linux_drm_syncobj_v1.h            |  63 +++++
  src/wayland/linux_drm_syncobj_v1_p.h          |  32 +++
+ .../protocols/linux-drm-syncobj-v1.xml        | 261 ++++++++++++++++++
  src/wayland/surface.cpp                       |  20 ++
  src/wayland/surface.h                         |   8 +
  src/wayland/surface_p.h                       |   9 +
- src/wayland/transaction.cpp                   |  27 ++-
- src/wayland/transaction_p.h                   |  15 ++
+ src/wayland/transaction.cpp                   |  27 +-
+ src/wayland/transaction_p.h                   |  15 +
  src/wayland_server.cpp                        |  17 ++
  src/wayland_server.h                          |   7 +
- 37 files changed, 667 insertions(+), 6 deletions(-)
+ 38 files changed, 935 insertions(+), 6 deletions(-)
  create mode 100644 src/core/syncobjtimeline.cpp
  create mode 100644 src/core/syncobjtimeline.h
  create mode 100644 src/wayland/linux_drm_syncobj_v1.cpp
  create mode 100644 src/wayland/linux_drm_syncobj_v1.h
  create mode 100644 src/wayland/linux_drm_syncobj_v1_p.h
+ create mode 100644 src/wayland/protocols/linux-drm-syncobj-v1.xml
 
 diff --git a/src/CMakeLists.txt b/src/CMakeLists.txt
-index 4e0db4fe9a9..0130caf3b8e 100644
+index 4e0db4fe9a..0130caf3b8 100644
 --- a/src/CMakeLists.txt
 +++ b/src/CMakeLists.txt
 @@ -73,6 +73,7 @@ target_sources(kwin PRIVATE
@@ -65,7 +69,7 @@ index 4e0db4fe9a9..0130caf3b8e 100644
      cursorsource.cpp
      dbusinterface.cpp
 diff --git a/src/backends/drm/drm_egl_backend.cpp b/src/backends/drm/drm_egl_backend.cpp
-index cfb7a482a03..943407e1d9b 100644
+index cfb7a482a0..943407e1d9 100644
 --- a/src/backends/drm/drm_egl_backend.cpp
 +++ b/src/backends/drm/drm_egl_backend.cpp
 @@ -9,6 +9,7 @@
@@ -99,7 +103,7 @@ index cfb7a482a03..943407e1d9b 100644
  
  #include "moc_drm_egl_backend.cpp"
 diff --git a/src/backends/drm/drm_egl_backend.h b/src/backends/drm/drm_egl_backend.h
-index 43c431f07be..4a47e900cd3 100644
+index 43c431f07b..4a47e900cd 100644
 --- a/src/backends/drm/drm_egl_backend.h
 +++ b/src/backends/drm/drm_egl_backend.h
 @@ -63,6 +63,9 @@ public:
@@ -113,7 +117,7 @@ index 43c431f07be..4a47e900cd3 100644
      bool initializeEgl();
      bool initRenderingContext();
 diff --git a/src/backends/drm/drm_gpu.cpp b/src/backends/drm/drm_gpu.cpp
-index c5d258a2d7c..7141ed8beac 100644
+index c5d258a2d7..7141ed8bea 100644
 --- a/src/backends/drm/drm_gpu.cpp
 +++ b/src/backends/drm/drm_gpu.cpp
 @@ -76,6 +76,9 @@ DrmGpu::DrmGpu(DrmBackend *backend, const QString &devNode, int fd, dev_t device
@@ -139,7 +143,7 @@ index c5d258a2d7c..7141ed8beac 100644
  {
      return m_isI915;
 diff --git a/src/backends/drm/drm_gpu.h b/src/backends/drm/drm_gpu.h
-index 0cc6b2126a3..c8dbde47af7 100644
+index 0cc6b2126a..c8dbde47af 100644
 --- a/src/backends/drm/drm_gpu.h
 +++ b/src/backends/drm/drm_gpu.h
 @@ -77,6 +77,7 @@ public:
@@ -159,7 +163,7 @@ index 0cc6b2126a3..c8dbde47af7 100644
      gbm_device *m_gbmDevice;
      FileDescriptor m_gbmFd;
 diff --git a/src/compositor_wayland.cpp b/src/compositor_wayland.cpp
-index f63ead77964..69916e9d348 100644
+index f63ead7796..69916e9d34 100644
 --- a/src/compositor_wayland.cpp
 +++ b/src/compositor_wayland.cpp
 @@ -86,7 +86,7 @@ bool WaylandCompositor::attemptOpenGLCompositing()
@@ -172,7 +176,7 @@ index f63ead77964..69916e9d348 100644
  
      qCDebug(KWIN_CORE) << "OpenGL compositing has been successfully initialized";
 diff --git a/src/core/graphicsbuffer.cpp b/src/core/graphicsbuffer.cpp
-index f234d09fa9f..e83fcd7bf8a 100644
+index f234d09fa9..e83fcd7bf8 100644
 --- a/src/core/graphicsbuffer.cpp
 +++ b/src/core/graphicsbuffer.cpp
 @@ -40,6 +40,7 @@ void GraphicsBuffer::unref()
@@ -196,7 +200,7 @@ index f234d09fa9f..e83fcd7bf8a 100644
  {
      const auto info = FormatInfo::get(format);
 diff --git a/src/core/graphicsbuffer.h b/src/core/graphicsbuffer.h
-index cacf49dde5a..2e046e58de0 100644
+index cacf49dde5..2e046e58de 100644
 --- a/src/core/graphicsbuffer.h
 +++ b/src/core/graphicsbuffer.h
 @@ -16,6 +16,8 @@
@@ -229,7 +233,7 @@ index cacf49dde5a..2e046e58de0 100644
  
  /**
 diff --git a/src/core/renderbackend.cpp b/src/core/renderbackend.cpp
-index 98276385cec..5bbf37d9a4b 100644
+index 98276385ce..5bbf37d9a4 100644
 --- a/src/core/renderbackend.cpp
 +++ b/src/core/renderbackend.cpp
 @@ -7,6 +7,7 @@
@@ -258,7 +262,7 @@ index 98276385cec..5bbf37d9a4b 100644
  
  #include "moc_renderbackend.cpp"
 diff --git a/src/core/renderbackend.h b/src/core/renderbackend.h
-index b902a28984a..682e35aa0b8 100644
+index b902a28984..682e35aa0b 100644
 --- a/src/core/renderbackend.h
 +++ b/src/core/renderbackend.h
 @@ -8,6 +8,7 @@
@@ -289,10 +293,10 @@ index b902a28984a..682e35aa0b8 100644
  } // namespace KWin
 diff --git a/src/core/syncobjtimeline.cpp b/src/core/syncobjtimeline.cpp
 new file mode 100644
-index 00000000000..1918a0475c3
+index 0000000000..3e2c100370
 --- /dev/null
 +++ b/src/core/syncobjtimeline.cpp
-@@ -0,0 +1,76 @@
+@@ -0,0 +1,83 @@
 +/*
 +    SPDX-FileCopyrightText: 2024 Xaver Hugl <xaver.hugl@gmail.com>
 +
@@ -344,7 +348,14 @@ index 00000000000..1918a0475c3
 +    if (!ret.isValid()) {
 +        return {};
 +    }
-+    if (drmSyncobjEventfd(m_drmFd, m_handle, timelinePoint, ret.get(), 0) != 0) {
++    struct drm_syncobj_eventfd args
++    {
++        .handle = m_handle,
++        .flags = 0,
++        .point = timelinePoint,
++        .fd = ret.get(),
++    };
++    if (drmIoctl(m_drmFd, DRM_IOCTL_SYNCOBJ_EVENTFD, &args) != 0) {
 +        return {};
 +    }
 +    return ret;
@@ -371,7 +382,7 @@ index 00000000000..1918a0475c3
 +}
 diff --git a/src/core/syncobjtimeline.h b/src/core/syncobjtimeline.h
 new file mode 100644
-index 00000000000..cffdb75e330
+index 0000000000..cffdb75e33
 --- /dev/null
 +++ b/src/core/syncobjtimeline.h
 @@ -0,0 +1,72 @@
@@ -448,7 +459,7 @@ index 00000000000..cffdb75e330
 +};
 +}
 diff --git a/src/opengl/eglnativefence.cpp b/src/opengl/eglnativefence.cpp
-index e68098bc768..13c42ade543 100644
+index e68098bc76..13c42ade54 100644
 --- a/src/opengl/eglnativefence.cpp
 +++ b/src/opengl/eglnativefence.cpp
 @@ -51,6 +51,11 @@ const FileDescriptor &EGLNativeFence::fileDescriptor() const
@@ -464,7 +475,7 @@ index e68098bc768..13c42ade543 100644
  {
      return eglWaitSync(m_display->handle(), m_sync, 0) == EGL_TRUE;
 diff --git a/src/opengl/eglnativefence.h b/src/opengl/eglnativefence.h
-index d5f6bdbbba2..05c248ff8e0 100644
+index d5f6bdbbba..05c248ff8e 100644
 --- a/src/opengl/eglnativefence.h
 +++ b/src/opengl/eglnativefence.h
 @@ -27,6 +27,7 @@ public:
@@ -476,7 +487,7 @@ index d5f6bdbbba2..05c248ff8e0 100644
  
      static EGLNativeFence importFence(EglDisplay *display, FileDescriptor &&fd);
 diff --git a/src/platformsupport/scenes/opengl/abstract_egl_backend.cpp b/src/platformsupport/scenes/opengl/abstract_egl_backend.cpp
-index 4e227aef462..4ad2064148b 100644
+index 4e227aef46..4ad2064148 100644
 --- a/src/platformsupport/scenes/opengl/abstract_egl_backend.cpp
 +++ b/src/platformsupport/scenes/opengl/abstract_egl_backend.cpp
 @@ -13,6 +13,7 @@
@@ -502,7 +513,7 @@ index 4e227aef462..4ad2064148b 100644
  
  void AbstractEglBackend::initClientExtensions()
 diff --git a/src/platformsupport/scenes/opengl/abstract_egl_backend.h b/src/platformsupport/scenes/opengl/abstract_egl_backend.h
-index 0abd331ed6b..1f77898db50 100644
+index 0abd331ed6..1f77898db5 100644
 --- a/src/platformsupport/scenes/opengl/abstract_egl_backend.h
 +++ b/src/platformsupport/scenes/opengl/abstract_egl_backend.h
 @@ -34,7 +34,7 @@ public:
@@ -515,7 +526,7 @@ index 0abd331ed6b..1f77898db50 100644
  
      bool testImportBuffer(GraphicsBuffer *buffer) override;
 diff --git a/src/platformsupport/scenes/opengl/openglbackend.cpp b/src/platformsupport/scenes/opengl/openglbackend.cpp
-index 92ca501d96e..0bb6de64021 100644
+index 92ca501d96..0bb6de6402 100644
 --- a/src/platformsupport/scenes/opengl/openglbackend.cpp
 +++ b/src/platformsupport/scenes/opengl/openglbackend.cpp
 @@ -93,6 +93,10 @@ bool OpenGLBackend::checkGraphicsReset()
@@ -530,7 +541,7 @@ index 92ca501d96e..0bb6de64021 100644
  
  #include "moc_openglbackend.cpp"
 diff --git a/src/platformsupport/scenes/opengl/openglbackend.h b/src/platformsupport/scenes/opengl/openglbackend.h
-index 3318f4da187..e0749561826 100644
+index 3318f4da18..e074956182 100644
 --- a/src/platformsupport/scenes/opengl/openglbackend.h
 +++ b/src/platformsupport/scenes/opengl/openglbackend.h
 @@ -19,6 +19,7 @@ namespace KWin
@@ -551,7 +562,7 @@ index 3318f4da187..e0749561826 100644
      /**
       * @brief Sets the backend initialization to failed.
 diff --git a/src/scene/item.h b/src/scene/item.h
-index 5e9e4f1c92a..b77fc91c64b 100644
+index 5e9e4f1c92..b77fc91c64 100644
 --- a/src/scene/item.h
 +++ b/src/scene/item.h
 @@ -22,6 +22,7 @@ namespace KWin
@@ -563,7 +574,7 @@ index 5e9e4f1c92a..b77fc91c64b 100644
  /**
   * The Item class is the base class for items in the scene.
 diff --git a/src/scene/itemrenderer_opengl.cpp b/src/scene/itemrenderer_opengl.cpp
-index 44ec0918e33..3fee3863f2c 100644
+index 44ec0918e3..3fee3863f2 100644
 --- a/src/scene/itemrenderer_opengl.cpp
 +++ b/src/scene/itemrenderer_opengl.cpp
 @@ -8,7 +8,9 @@
@@ -644,7 +655,7 @@ index 44ec0918e33..3fee3863f2c 100644
      if (shader) {
          ShaderManager::instance()->popShader();
 diff --git a/src/scene/itemrenderer_opengl.h b/src/scene/itemrenderer_opengl.h
-index c35839335c6..11ab8cea386 100644
+index c35839335c..11ab8cea38 100644
 --- a/src/scene/itemrenderer_opengl.h
 +++ b/src/scene/itemrenderer_opengl.h
 @@ -10,9 +10,13 @@
@@ -688,7 +699,7 @@ index c35839335c6..11ab8cea386 100644
      struct
      {
 diff --git a/src/scene/surfaceitem.cpp b/src/scene/surfaceitem.cpp
-index 4404dbc3c6c..f04053f3566 100644
+index 4404dbc3c6..f04053f356 100644
 --- a/src/scene/surfaceitem.cpp
 +++ b/src/scene/surfaceitem.cpp
 @@ -270,6 +270,11 @@ std::chrono::nanoseconds SurfaceItem::frameTimeEstimation() const
@@ -704,7 +715,7 @@ index 4404dbc3c6c..f04053f3566 100644
  {
  }
 diff --git a/src/scene/surfaceitem.h b/src/scene/surfaceitem.h
-index 5dfcfd0ad16..f6c8ca5d56d 100644
+index 5dfcfd0ad1..f6c8ca5d56 100644
 --- a/src/scene/surfaceitem.h
 +++ b/src/scene/surfaceitem.h
 @@ -38,6 +38,8 @@ public:
@@ -725,7 +736,7 @@ index 5dfcfd0ad16..f6c8ca5d56d 100644
  
  class KWIN_EXPORT SurfaceTexture
 diff --git a/src/scene/surfaceitem_wayland.cpp b/src/scene/surfaceitem_wayland.cpp
-index 82863c3a456..6f16c47142f 100644
+index 82863c3a45..6f16c47142 100644
 --- a/src/scene/surfaceitem_wayland.cpp
 +++ b/src/scene/surfaceitem_wayland.cpp
 @@ -41,6 +41,7 @@ SurfaceItemWayland::SurfaceItemWayland(SurfaceInterface *surface, Scene *scene,
@@ -749,7 +760,7 @@ index 82863c3a456..6f16c47142f 100644
      : SurfacePixmap(Compositor::self()->backend()->createSurfaceTextureWayland(this), parent)
      , m_item(item)
 diff --git a/src/scene/surfaceitem_wayland.h b/src/scene/surfaceitem_wayland.h
-index ab31192cb9a..c428f1ea417 100644
+index ab31192cb9..c428f1ea41 100644
 --- a/src/scene/surfaceitem_wayland.h
 +++ b/src/scene/surfaceitem_wayland.h
 @@ -48,6 +48,7 @@ private Q_SLOTS:
@@ -761,7 +772,7 @@ index ab31192cb9a..c428f1ea417 100644
  protected:
      std::unique_ptr<SurfacePixmap> createPixmap() override;
 diff --git a/src/scene/workspacescene_opengl.cpp b/src/scene/workspacescene_opengl.cpp
-index 3a024f56bd9..aabee9be151 100644
+index 3a024f56bd..aabee9be15 100644
 --- a/src/scene/workspacescene_opengl.cpp
 +++ b/src/scene/workspacescene_opengl.cpp
 @@ -40,7 +40,7 @@ namespace KWin
@@ -774,7 +785,7 @@ index 3a024f56bd9..aabee9be151 100644
  {
  }
 diff --git a/src/wayland/CMakeLists.txt b/src/wayland/CMakeLists.txt
-index 41ee1c5581a..6f52d266489 100644
+index 41ee1c5581..9d2add111f 100644
 --- a/src/wayland/CMakeLists.txt
 +++ b/src/wayland/CMakeLists.txt
 @@ -231,6 +231,10 @@ ecm_add_qtwayland_server_protocol_kde(WaylandProtocols_xml
@@ -782,7 +793,7 @@ index 41ee1c5581a..6f52d266489 100644
      BASENAME xx-color-management-v2
  )
 +ecm_add_qtwayland_server_protocol_kde(WaylandProtocols_xml
-+    PROTOCOL ${WaylandProtocols_DATADIR}/staging/linux-drm-syncobj/linux-drm-syncobj-v1.xml
++    PROTOCOL ${PROJECT_SOURCE_DIR}/src/wayland/protocols/linux-drm-syncobj-v1.xml
 +    BASENAME linux-drm-syncobj-v1
 +)
  
@@ -819,7 +830,7 @@ index 41ee1c5581a..6f52d266489 100644
  
 diff --git a/src/wayland/linux_drm_syncobj_v1.cpp b/src/wayland/linux_drm_syncobj_v1.cpp
 new file mode 100644
-index 00000000000..589ccd78c3b
+index 0000000000..589ccd78c3
 --- /dev/null
 +++ b/src/wayland/linux_drm_syncobj_v1.cpp
 @@ -0,0 +1,190 @@
@@ -1015,7 +1026,7 @@ index 00000000000..589ccd78c3b
 +}
 diff --git a/src/wayland/linux_drm_syncobj_v1.h b/src/wayland/linux_drm_syncobj_v1.h
 new file mode 100644
-index 00000000000..ff6ddbe0340
+index 0000000000..ff6ddbe034
 --- /dev/null
 +++ b/src/wayland/linux_drm_syncobj_v1.h
 @@ -0,0 +1,63 @@
@@ -1084,7 +1095,7 @@ index 00000000000..ff6ddbe0340
 +}
 diff --git a/src/wayland/linux_drm_syncobj_v1_p.h b/src/wayland/linux_drm_syncobj_v1_p.h
 new file mode 100644
-index 00000000000..6efbc12ee30
+index 0000000000..6efbc12ee3
 --- /dev/null
 +++ b/src/wayland/linux_drm_syncobj_v1_p.h
 @@ -0,0 +1,32 @@
@@ -1120,8 +1131,275 @@ index 00000000000..6efbc12ee30
 +    const std::shared_ptr<SyncTimeline> m_timeline;
 +};
 +}
+diff --git a/src/wayland/protocols/linux-drm-syncobj-v1.xml b/src/wayland/protocols/linux-drm-syncobj-v1.xml
+new file mode 100644
+index 0000000000..2c491eaf43
+--- /dev/null
++++ b/src/wayland/protocols/linux-drm-syncobj-v1.xml
+@@ -0,0 +1,261 @@
++<?xml version="1.0" encoding="UTF-8"?>
++<protocol name="linux_drm_syncobj_v1">
++  <copyright>
++    Copyright 2016 The Chromium Authors.
++    Copyright 2017 Intel Corporation
++    Copyright 2018 Collabora, Ltd
++    Copyright 2021 Simon Ser
++
++    Permission is hereby granted, free of charge, to any person obtaining a
++    copy of this software and associated documentation files (the "Software"),
++    to deal in the Software without restriction, including without limitation
++    the rights to use, copy, modify, merge, publish, distribute, sublicense,
++    and/or sell copies of the Software, and to permit persons to whom the
++    Software is furnished to do so, subject to the following conditions:
++
++    The above copyright notice and this permission notice (including the next
++    paragraph) shall be included in all copies or substantial portions of the
++    Software.
++
++    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
++    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
++    FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
++    THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
++    LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
++    FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
++    DEALINGS IN THE SOFTWARE.
++  </copyright>
++
++  <description summary="protocol for providing explicit synchronization">
++    This protocol allows clients to request explicit synchronization for
++    buffers. It is tied to the Linux DRM synchronization object framework.
++
++    Synchronization refers to co-ordination of pipelined operations performed
++    on buffers. Most GPU clients will schedule an asynchronous operation to
++    render to the buffer, then immediately send the buffer to the compositor
++    to be attached to a surface.
++
++    With implicit synchronization, ensuring that the rendering operation is
++    complete before the compositor displays the buffer is an implementation
++    detail handled by either the kernel or userspace graphics driver.
++
++    By contrast, with explicit synchronization, DRM synchronization object
++    timeline points mark when the asynchronous operations are complete. When
++    submitting a buffer, the client provides a timeline point which will be
++    waited on before the compositor accesses the buffer, and another timeline
++    point that the compositor will signal when it no longer needs to access the
++    buffer contents for the purposes of the surface commit.
++
++    Linux DRM synchronization objects are documented at:
++    https://dri.freedesktop.org/docs/drm/gpu/drm-mm.html#drm-sync-objects
++
++    Warning! The protocol described in this file is currently in the testing
++    phase. Backward compatible changes may be added together with the
++    corresponding interface version bump. Backward incompatible changes can
++    only be done by creating a new major version of the extension.
++  </description>
++
++  <interface name="wp_linux_drm_syncobj_manager_v1" version="1">
++    <description summary="global for providing explicit synchronization">
++      This global is a factory interface, allowing clients to request
++      explicit synchronization for buffers on a per-surface basis.
++
++      See wp_linux_drm_syncobj_surface_v1 for more information.
++    </description>
++
++    <request name="destroy" type="destructor">
++      <description summary="destroy explicit synchronization factory object">
++        Destroy this explicit synchronization factory object. Other objects
++        shall not be affected by this request.
++      </description>
++    </request>
++
++    <enum name="error">
++      <entry name="surface_exists" value="0"
++        summary="the surface already has a synchronization object associated"/>
++      <entry name="invalid_timeline" value="1"
++        summary="the timeline object could not be imported"/>
++    </enum>
++
++    <request name="get_surface">
++      <description summary="extend surface interface for explicit synchronization">
++        Instantiate an interface extension for the given wl_surface to provide
++        explicit synchronization.
++
++        If the given wl_surface already has an explicit synchronization object
++        associated, the surface_exists protocol error is raised.
++
++        Graphics APIs, like EGL or Vulkan, that manage the buffer queue and
++        commits of a wl_surface themselves, are likely to be using this
++        extension internally. If a client is using such an API for a
++        wl_surface, it should not directly use this extension on that surface,
++        to avoid raising a surface_exists protocol error.
++      </description>
++      <arg name="id" type="new_id" interface="wp_linux_drm_syncobj_surface_v1"
++        summary="the new synchronization surface object id"/>
++      <arg name="surface" type="object" interface="wl_surface"
++        summary="the surface"/>
++    </request>
++
++    <request name="import_timeline">
++      <description summary="import a DRM syncobj timeline">
++        Import a DRM synchronization object timeline.
++
++        If the FD cannot be imported, the invalid_timeline error is raised.
++      </description>
++      <arg name="id" type="new_id" interface="wp_linux_drm_syncobj_timeline_v1"/>
++      <arg name="fd" type="fd" summary="drm_syncobj file descriptor"/>
++    </request>
++  </interface>
++
++  <interface name="wp_linux_drm_syncobj_timeline_v1" version="1">
++    <description summary="synchronization object timeline">
++      This object represents an explicit synchronization object timeline
++      imported by the client to the compositor.
++    </description>
++
++    <request name="destroy" type="destructor">
++      <description summary="destroy the timeline">
++        Destroy the synchronization object timeline. Other objects are not
++        affected by this request, in particular timeline points set by
++        set_acquire_point and set_release_point are not unset.
++      </description>
++    </request>
++  </interface>
++
++  <interface name="wp_linux_drm_syncobj_surface_v1" version="1">
++    <description summary="per-surface explicit synchronization">
++      This object is an add-on interface for wl_surface to enable explicit
++      synchronization.
++
++      Each surface can be associated with only one object of this interface at
++      any time.
++
++      Explicit synchronization is guaranteed to be supported for buffers
++      created with any version of the linux-dmabuf protocol. Compositors are
++      free to support explicit synchronization for additional buffer types.
++      If at surface commit time the attached buffer does not support explicit
++      synchronization, an unsupported_buffer error is raised.
++
++      As long as the wp_linux_drm_syncobj_surface_v1 object is alive, the
++      compositor may ignore implicit synchronization for buffers attached and
++      committed to the wl_surface. The delivery of wl_buffer.release events
++      for buffers attached to the surface becomes undefined.
++
++      Clients must set both acquire and release points if and only if a
++      non-null buffer is attached in the same surface commit. See the
++      no_buffer, no_acquire_point and no_release_point protocol errors.
++
++      If at surface commit time the acquire and release DRM syncobj timelines
++      are identical, the acquire point value must be strictly less than the
++      release point value, or else the conflicting_points protocol error is
++      raised.
++    </description>
++
++    <request name="destroy" type="destructor">
++      <description summary="destroy the surface synchronization object">
++        Destroy this surface synchronization object.
++
++        Any timeline point set by this object with set_acquire_point or
++        set_release_point since the last commit may be discarded by the
++        compositor. Any timeline point set by this object before the last
++        commit will not be affected.
++      </description>
++    </request>
++
++    <enum name="error">
++      <entry name="no_surface" value="1"
++        summary="the associated wl_surface was destroyed"/>
++      <entry name="unsupported_buffer" value="2"
++        summary="the buffer does not support explicit synchronization"/>
++      <entry name="no_buffer" value="3" summary="no buffer was attached"/>
++      <entry name="no_acquire_point" value="4"
++        summary="no acquire timeline point was set"/>
++      <entry name="no_release_point" value="5"
++        summary="no release timeline point was set"/>
++      <entry name="conflicting_points" value="6"
++        summary="acquire and release timeline points are in conflict"/>
++    </enum>
++
++    <request name="set_acquire_point">
++      <description summary="set the acquire timeline point">
++        Set the timeline point that must be signalled before the compositor may
++        sample from the buffer attached with wl_surface.attach.
++
++        The 64-bit unsigned value combined from point_hi and point_lo is the
++        point value.
++
++        The acquire point is double-buffered state, and will be applied on the
++        next wl_surface.commit request for the associated surface. Thus, it
++        applies only to the buffer that is attached to the surface at commit
++        time.
++
++        If an acquire point has already been attached during the same commit
++        cycle, the new point replaces the old one.
++
++        If the associated wl_surface was destroyed, a no_surface error is
++        raised.
++
++        If at surface commit time there is a pending acquire timeline point set
++        but no pending buffer attached, a no_buffer error is raised. If at
++        surface commit time there is a pending buffer attached but no pending
++        acquire timeline point set, the no_acquire_point protocol error is
++        raised.
++      </description>
++      <arg name="timeline" type="object" interface="wp_linux_drm_syncobj_timeline_v1"/>
++      <arg name="point_hi" type="uint" summary="high 32 bits of the point value"/>
++      <arg name="point_lo" type="uint" summary="low 32 bits of the point value"/>
++    </request>
++
++    <request name="set_release_point">
++      <description summary="set the release timeline point">
++        Set the timeline point that must be signalled by the compositor when it
++        has finished its usage of the buffer attached with wl_surface.attach
++        for the relevant commit.
++
++        Once the timeline point is signaled, and assuming the associated buffer
++        is not pending release from other wl_surface.commit requests, no
++        additional explicit or implicit synchronization with the compositor is
++        required to safely re-use the buffer.
++
++        Note that clients cannot rely on the release point being always
++        signaled after the acquire point: compositors may release buffers
++        without ever reading from them. In addition, the compositor may use
++        different presentation paths for different commits, which may have
++        different release behavior. As a result, the compositor may signal the
++        release points in a different order than the client committed them.
++
++        Because signaling a timeline point also signals every previous point,
++        it is generally not safe to use the same timeline object for the
++        release points of multiple buffers. The out-of-order signaling
++        described above may lead to a release point being signaled before the
++        compositor has finished reading. To avoid this, it is strongly
++        recommended that each buffer should use a separate timeline for its
++        release points.
++
++        The 64-bit unsigned value combined from point_hi and point_lo is the
++        point value.
++
++        The release point is double-buffered state, and will be applied on the
++        next wl_surface.commit request for the associated surface. Thus, it
++        applies only to the buffer that is attached to the surface at commit
++        time.
++
++        If a release point has already been attached during the same commit
++        cycle, the new point replaces the old one.
++
++        If the associated wl_surface was destroyed, a no_surface error is
++        raised.
++
++        If at surface commit time there is a pending release timeline point set
++        but no pending buffer attached, a no_buffer error is raised. If at
++        surface commit time there is a pending buffer attached but no pending
++        release timeline point set, the no_release_point protocol error is
++        raised.
++      </description>
++      <arg name="timeline" type="object" interface="wp_linux_drm_syncobj_timeline_v1"/>
++      <arg name="point_hi" type="uint" summary="high 32 bits of the point value"/>
++      <arg name="point_lo" type="uint" summary="low 32 bits of the point value"/>
++    </request>
++  </interface>
++</protocol>
 diff --git a/src/wayland/surface.cpp b/src/wayland/surface.cpp
-index 23f981f2f81..6a33c5fca10 100644
+index 23f981f2f8..6a33c5fca1 100644
 --- a/src/wayland/surface.cpp
 +++ b/src/wayland/surface.cpp
 @@ -13,6 +13,7 @@
@@ -1194,7 +1472,7 @@ index 23f981f2f81..6a33c5fca10 100644
  
  #include "moc_surface.cpp"
 diff --git a/src/wayland/surface.h b/src/wayland/surface.h
-index 597f06774f8..80d1fa55708 100644
+index 597f06774f..80d1fa5570 100644
 --- a/src/wayland/surface.h
 +++ b/src/wayland/surface.h
 @@ -32,6 +32,7 @@ class SlideInterface;
@@ -1227,7 +1505,7 @@ index 597f06774f8..80d1fa55708 100644
      /**
       * Emitted when the Surface has been committed.
 diff --git a/src/wayland/surface_p.h b/src/wayland/surface_p.h
-index f78bd107b44..775f9d7bd2e 100644
+index f78bd107b4..775f9d7bd2 100644
 --- a/src/wayland/surface_p.h
 +++ b/src/wayland/surface_p.h
 @@ -28,6 +28,7 @@ class FractionalScaleV1Interface;
@@ -1268,7 +1546,7 @@ index f78bd107b44..775f9d7bd2e 100644
      struct
      {
 diff --git a/src/wayland/transaction.cpp b/src/wayland/transaction.cpp
-index 93004ba863d..fcd19d4036f 100644
+index 93004ba863..fcd19d4036 100644
 --- a/src/wayland/transaction.cpp
 +++ b/src/wayland/transaction.cpp
 @@ -5,7 +5,9 @@
@@ -1321,7 +1599,7 @@ index 93004ba863d..fcd19d4036f 100644
              }
          }
 diff --git a/src/wayland/transaction_p.h b/src/wayland/transaction_p.h
-index 5bcf148aaad..29a9921e81f 100644
+index 5bcf148aaa..29a9921e81 100644
 --- a/src/wayland/transaction_p.h
 +++ b/src/wayland/transaction_p.h
 @@ -33,4 +33,19 @@ private:
@@ -1345,7 +1623,7 @@ index 5bcf148aaad..29a9921e81f 100644
 +
  } // namespace KWin
 diff --git a/src/wayland_server.cpp b/src/wayland_server.cpp
-index 2b02eb2fa69..037b633fc6c 100644
+index 2b02eb2fa6..037b633fc6 100644
 --- a/src/wayland_server.cpp
 +++ b/src/wayland_server.cpp
 @@ -41,6 +41,7 @@
@@ -1380,7 +1658,7 @@ index 2b02eb2fa69..037b633fc6c 100644
  WaylandServer::LockScreenPresentationWatcher::LockScreenPresentationWatcher(WaylandServer *server)
  {
 diff --git a/src/wayland_server.h b/src/wayland_server.h
-index 8eb6f31a176..60dc67d9670 100644
+index 8eb6f31a17..60dc67d967 100644
 --- a/src/wayland_server.h
 +++ b/src/wayland_server.h
 @@ -58,6 +58,8 @@ class XdgSurfaceWindow;
@@ -1415,14 +1693,16 @@ index 8eb6f31a176..60dc67d9670 100644
 GitLab
 
 
-From 4a93ced37a63761e8df45442e7d5448d1d82af87 Mon Sep 17 00:00:00 2001
+From 489761e5d772ad11d195c3eb679f6747d1aa2e46 Mon Sep 17 00:00:00 2001
 From: Xaver Hugl <xaver.hugl@gmail.com>
 Date: Sat, 6 Apr 2024 18:51:01 +0200
-Subject: [PATCH 2/2] core/syncobjtimeline: make explicit sync use
+Subject: [PATCH 2/5] core/syncobjtimeline: make explicit sync use
  SYNC_IOC_MERGE instead of waiting on the CPU side
 
 This brings some performance benefits, because the application can potentially reuse
 the buffer earlier, and it simplifies the code a bit
+
+(cherry picked from commit 4c6000b3e1829da5f0ccb81bbccfee37fb28cd24)
 ---
  src/core/syncobjtimeline.cpp      | 63 +++++++++++++++++++++++++------
  src/core/syncobjtimeline.h        | 28 ++++----------
@@ -1431,7 +1711,7 @@ the buffer earlier, and it simplifies the code a bit
  4 files changed, 67 insertions(+), 35 deletions(-)
 
 diff --git a/src/core/syncobjtimeline.cpp b/src/core/syncobjtimeline.cpp
-index 1918a0475c3..437902644e2 100644
+index 3e2c100370..1152e89572 100644
 --- a/src/core/syncobjtimeline.cpp
 +++ b/src/core/syncobjtimeline.cpp
 @@ -6,8 +6,24 @@
@@ -1500,7 +1780,7 @@ index 1918a0475c3..437902644e2 100644
  }
  
  SyncTimeline *SyncReleasePoint::timeline() const
-@@ -60,17 +108,8 @@ void SyncTimeline::signal(uint64_t timelinePoint)
+@@ -67,17 +115,8 @@ void SyncTimeline::signal(uint64_t timelinePoint)
      drmSyncobjTimelineSignal(m_drmFd, &m_handle, &timelinePoint, 1);
  }
  
@@ -1521,7 +1801,7 @@ index 1918a0475c3..437902644e2 100644
  }
  }
 diff --git a/src/core/syncobjtimeline.h b/src/core/syncobjtimeline.h
-index cffdb75e330..4ced3e06272 100644
+index cffdb75e33..4ced3e0627 100644
 --- a/src/core/syncobjtimeline.h
 +++ b/src/core/syncobjtimeline.h
 @@ -7,11 +7,8 @@
@@ -1582,7 +1862,7 @@ index cffdb75e330..4ced3e06272 100644
 -};
  }
 diff --git a/src/scene/itemrenderer_opengl.cpp b/src/scene/itemrenderer_opengl.cpp
-index 3fee3863f2c..ffcc6de3914 100644
+index 3fee3863f2..ffcc6de391 100644
 --- a/src/scene/itemrenderer_opengl.cpp
 +++ b/src/scene/itemrenderer_opengl.cpp
 @@ -53,7 +53,10 @@ void ItemRendererOpenGL::endFrame()
@@ -1598,7 +1878,7 @@ index 3fee3863f2c..ffcc6de3914 100644
      }
      m_releasePoints.clear();
 diff --git a/src/wayland/surface.h b/src/wayland/surface.h
-index 80d1fa55708..152f1accc10 100644
+index 80d1fa5570..152f1accc1 100644
 --- a/src/wayland/surface.h
 +++ b/src/wayland/surface.h
 @@ -344,8 +344,10 @@ public:
@@ -1614,6 +1894,134 @@ index 80d1fa55708..152f1accc10 100644
       */
      std::shared_ptr<SyncReleasePoint> bufferReleasePoint() const;
  
+-- 
+GitLab
+
+
+From eef4cbe0278e81c33b496932400854a74a08bfa4 Mon Sep 17 00:00:00 2001
+From: Xaver Hugl <xaver.hugl@gmail.com>
+Date: Tue, 16 Apr 2024 13:51:42 +0200
+Subject: [PATCH 3/5] wayland_server: guard against DRM_IOCTL_SYNCOBJ_EVENTFD
+ being broken
+
+...either because it's not implemented, or because it's buggy.
+
+(cherry picked from commit 26afbfb6fa030c3dadf6a22309686f96ca033f59)
+---
+ src/wayland_server.cpp | 10 ++++++++++
+ 1 file changed, 10 insertions(+)
+
+diff --git a/src/wayland_server.cpp b/src/wayland_server.cpp
+index 037b633fc6..d9240f0e8c 100644
+--- a/src/wayland_server.cpp
++++ b/src/wayland_server.cpp
+@@ -19,6 +19,7 @@
+ #include "layershellv1window.h"
+ #include "main.h"
+ #include "options.h"
++#include "utils/kernel.h"
+ #include "utils/serviceutils.h"
+ #include "virtualdesktops.h"
+ #include "wayland/appmenu.h"
+@@ -820,6 +821,15 @@ LinuxDrmSyncObjV1Interface *WaylandServer::linuxSyncObj() const
+ void WaylandServer::setRenderBackend(RenderBackend *backend)
+ {
+     if (backend->supportsTimelines()) {
++        // ensure the DRM_IOCTL_SYNCOBJ_EVENTFD ioctl is supported
++        const auto linuxVersion = linuxKernelVersion();
++        if (linuxVersion.majorVersion() < 6 && linuxVersion.minorVersion() < 6) {
++            return;
++        }
++        // also ensure the implementation isn't totally broken, see https://lists.freedesktop.org/archives/dri-devel/2024-January/439101.html
++        if (linuxVersion.majorVersion() == 6 && (linuxVersion.minorVersion() == 7 || (linuxVersion.minorVersion() == 6 && linuxVersion.patchVersion() < 19))) {
++            return;
++        }
+         if (!m_linuxDrmSyncObj) {
+             m_linuxDrmSyncObj = new LinuxDrmSyncObjV1Interface(m_display, m_display);
+         }
+-- 
+GitLab
+
+
+From 2e9ecb0edf137309fb526adc7c8504e8c669b17f Mon Sep 17 00:00:00 2001
+From: Erik Kurzinger <ekurzinger@nvidia.com>
+Date: Tue, 16 Apr 2024 14:44:50 -0700
+Subject: [PATCH 4/5] core/syncobjtimeline: import release fence at correct
+ timeline point
+
+SyncTimeline::moveInto imports the provided fence to the syncobj by
+calling drmSyncobjImportSyncFile. However, that function assumes the
+syncobj a binary syncobj, meaning the fence will be imported at timeline
+point 0, not at the intended timeline point.
+
+Since there is no timeline equivalent of drmSyncobjImportSyncFile, to
+achieve the correct behavior we create a temporary binary syncobj,
+import the fence into that, and then use drmSyncobjTransfer to transfer
+the fence to the desired timeline point on the destination syncobj.
+
+Signed-off-by: Erik Kurzinger <ekurzinger@nvidia.com>
+(cherry picked from commit 9ca7b9b1cf292e790223419dc197737f875109d4)
+---
+ src/core/syncobjtimeline.cpp | 6 +++++-
+ 1 file changed, 5 insertions(+), 1 deletion(-)
+
+diff --git a/src/core/syncobjtimeline.cpp b/src/core/syncobjtimeline.cpp
+index 1152e89572..80054e9348 100644
+--- a/src/core/syncobjtimeline.cpp
++++ b/src/core/syncobjtimeline.cpp
+@@ -117,6 +117,10 @@ void SyncTimeline::signal(uint64_t timelinePoint)
+ 
+ void SyncTimeline::moveInto(uint64_t timelinePoint, const FileDescriptor &fd)
+ {
+-    drmSyncobjImportSyncFile(m_drmFd, m_handle, fd.get());
++    uint32_t tempHandle = 0;
++    drmSyncobjCreate(m_drmFd, 0, &tempHandle);
++    drmSyncobjImportSyncFile(m_drmFd, tempHandle, fd.get());
++    drmSyncobjTransfer(m_drmFd, m_handle, timelinePoint, tempHandle, 0, 0);
++    drmSyncobjDestroy(m_drmFd, tempHandle);
+ }
+ }
+-- 
+GitLab
+
+
+From 463ae633e878004b1799f618641a0c44573c10f4 Mon Sep 17 00:00:00 2001
+From: Xaver Hugl <xaver.hugl@gmail.com>
+Date: Wed, 17 Apr 2024 03:26:34 +0200
+Subject: [PATCH 5/5] wayland/surface: fix the change signal for release points
+ not being emitted
+
+(cherry picked from commit eed7943939524895225ab4cf4eb3a1fa880b42bf)
+---
+ src/wayland/surface.cpp | 2 +-
+ src/wayland/surface_p.h | 1 -
+ 2 files changed, 1 insertion(+), 2 deletions(-)
+
+diff --git a/src/wayland/surface.cpp b/src/wayland/surface.cpp
+index 6a33c5fca1..6a77e98d0e 100644
+--- a/src/wayland/surface.cpp
++++ b/src/wayland/surface.cpp
+@@ -608,7 +608,7 @@ void SurfaceInterfacePrivate::applyState(SurfaceState *next)
+     const bool visibilityChanged = bufferChanged && bool(current->buffer) != bool(next->buffer);
+     const bool colorDescriptionChanged = next->colorDescriptionIsSet;
+     const bool presentationModeHintChanged = next->presentationModeHintIsSet;
+-    const bool bufferReleasePointChanged = next->releasePointIsSet;
++    const bool bufferReleasePointChanged = next->bufferIsSet && current->releasePoint != next->releasePoint;
+ 
+     const QSizeF oldSurfaceSize = surfaceSize;
+     const QSize oldBufferSize = bufferSize;
+diff --git a/src/wayland/surface_p.h b/src/wayland/surface_p.h
+index 775f9d7bd2..7bcf95c0be 100644
+--- a/src/wayland/surface_p.h
++++ b/src/wayland/surface_p.h
+@@ -59,7 +59,6 @@ struct SurfaceState
+     bool contentTypeIsSet = false;
+     bool presentationModeHintIsSet = false;
+     bool colorDescriptionIsSet = false;
+-    bool releasePointIsSet = false;
+     qint32 bufferScale = 1;
+     OutputTransform bufferTransform = OutputTransform::Normal;
+     wl_list frameCallbacks;
 -- 
 GitLab
 
