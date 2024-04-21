@@ -2,12 +2,14 @@
 # Maintainer: loathingkernel <loathingkernel _a_ gmail _d_ com>
 
 pkgname=proton-cachyos
-_srctag=9.0-20240320
+_srctag=9.0-20240411
+_branch=cachyos_9.0_20240411
 _commit=
 pkgver=9.0
 _geckover=2.47.4
 _monover=9.0.0
-pkgrel=8
+_xaliaver=0.4.1
+pkgrel=11
 pkgdesc="Compatibility tool for Steam Play based on Wine and additional components, experimental branch with extra CachyOS flavour"
 url="https://github.com/cachyos/proton-cachyos"
 arch=(x86_64 x86_64_v3)
@@ -47,7 +49,7 @@ depends+=(
 )
 
 makedepends=(autoconf bison perl flex mingw-w64-gcc
-  git wget rsync mingw-w64-tools lld nasm
+  git wget rsync unzip mingw-w64-tools lld nasm
   meson cmake fontforge afdko python-pefile
   glslang vulkan-headers
   clang
@@ -92,9 +94,10 @@ optdepends=(
 provides=('proton')
 install=${pkgname}.install
 source=(
-    proton::git+https://github.com/CachyOS/proton-cachyos.git#branch=experimental_9.0
+    proton::git+https://github.com/CachyOS/proton-cachyos.git#branch=${_branch}
     https://dl.winehq.org/wine/wine-gecko/${_geckover}/wine-gecko-${_geckover}-x86{,_64}.tar.xz
     https://github.com/madewokherd/wine-mono/releases/download/wine-mono-${_monover}/wine-mono-${_monover}-x86.tar.xz
+    https://github.com/madewokherd/xalia/releases/download/xalia-${_xaliaver}/xalia-${_xaliaver}-net48-mono.zip
     server-Enable-link-time-optimization.patch
     amd-fsr.patch
     optimization.patch
@@ -107,6 +110,7 @@ source=(
 noextract=(
     wine-gecko-${_geckover}-{x86,x86_64}.tar.xz
     wine-mono-${_monover}-x86.tar.xz
+    xalia-${_xaliaver}-net48-mono.zip
 )
 
 _make_wrappers () {
@@ -141,17 +145,6 @@ EOF
 }
 
 _backports=(
-420235c1882727468a1af290b798f5a4c6198826
-6c11af2dde8d759b43f4b52932fe0638d8da155a
-0225689d620778123982f87ebf4f9143f1976028
-fadcad39fa1ce8654464346c6becc1d53d666744
-081e5e187bf050765f6205e98791208e31a41df2
-7d124b292023cd1a794ece194e831f695df73c74
-1db4b8d3b5827557edbbf5bbd728e5cb78a42b94
-fd7761295cd08440ed0450dcfd5ab88e29e3acc4
-a8bc34f612c78658565389e27a6e1b99b2a1b072
-017e694cf3f57bda7b382c86fc8caf6b8f74b0a8
-0ed61be66b8a87ad45959f006548673ac53e7b60
 )
 
 prepare() {
@@ -167,12 +160,13 @@ prepare() {
     [ ! -d contrib ] && mkdir -p contrib
     mv "$srcdir"/wine-gecko-${_geckover}-x86{,_64}.tar.xz contrib/
     mv "$srcdir"/wine-mono-${_monover}-x86.tar.xz contrib/
+    mv "$srcdir"/xalia-${_xaliaver}-net48-mono.zip contrib/
 
     # Explicitly set origin URL for submodules using relative paths
     git remote set-url origin https://github.com/ValveSoftware/Proton.git
     git submodule update --init --filter=tree:0 --recursive
 
-    for rustlib in gst-plugins-rs media-converter; do
+    for rustlib in gst-plugins-rs; do
     pushd $rustlib
         export RUSTUP_TOOLCHAIN=stable
         export CARGO_HOME="${SRCDEST}"/proton-cargo
@@ -299,12 +293,13 @@ sha256sums=('SKIP'
             '2cfc8d5c948602e21eff8a78613e1826f2d033df9672cace87fed56e8310afb6'
             'fd88fc7e537d058d7a8abf0c1ebc90c574892a466de86706a26d254710a82814'
             'd73d440c08ebd67c93fbd6534f4f1b4e98aa07342f9c7d98c8aaeb74755eb9cf'
+            'a652c3289fb444efb2fbd8b5757484e21ffe6a537b3a3f9a0fbb04a9a10afcba'
             '369193510b9309fc9cb80fc204220599583677a59976c7f434c2a33871b0cbe1'
             'f619015fa7c8c782023f46b2752d34726fcfec0c62746675f88ce0a3cfa6cc76'
             '2f30e393b5e6c371a68ad6b5b6693d35412d30ba7e3963bc65a650c9c29ff569'
             '7b36b2ddf9e61d095f44aa7f7d41107addbbf9c435f338840718af3fd426f53f'
             '36e601bf53a3e938bffd0b6f02432930a53a652b732a503aa29944c043def690'
             'aca568c20741784b0a9ae4628e97eff1e9b1a4643974bd8c36ae0d692450f2c3'
-            '27d4d636566623a598ec958457fe2efd7d38d79aa1a55dea226bf18d413ca126'
+            '25776bc421be4a083c64f1fd232bbd67e24bde6ad9975281ad716dc2ce4d7888'
             '416350c345db4c680f825d89b0eea79dbef668f671b18f7f792bbeb4b9e59e18')
 
