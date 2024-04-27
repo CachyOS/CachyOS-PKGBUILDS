@@ -20,7 +20,7 @@
 pkgbase=kodi
 pkgname=('kodi' 'kodi-gles' 'kodi-eventclients' 'kodi-tools-texturepacker' 'kodi-dev')
 pkgver=21.0
-pkgrel=2
+pkgrel=4
 arch=('x86_64')
 url="https://kodi.tv"
 license=('GPL2')
@@ -34,6 +34,9 @@ makedepends=(
   'python-simplejson' 'shairplay' 'smbclient' 'sndio' 'spdlog' 'taglib'
   'tinyxml' 'swig' 'upower' 'giflib' 'rapidjson' 'ghostscript' 'meson' 'gtest'
   'graphviz' 'pcre' 'tinyxml2' 'libdisplay-info'
+  # cmake/scripts/linux/Install.cmake calls distutils
+  # python 3.12 does no longer come with distutils on board
+  'python-setuptools'
   # wayland
   'wayland-protocols' 'waylandpp' 'libxkbcommon'
   # gbm
