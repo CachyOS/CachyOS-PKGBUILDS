@@ -42,7 +42,7 @@ _python_optimize() {
 }
 
 pkgver() {
-    cd llvm-project/llvm
+    cd llvm-project/cmake/Modules
 
     # This will almost match the output of `llvm-config --version` when the
     # LLVM_APPEND_VC_REV cmake flag is turned on. The only difference is
@@ -51,7 +51,7 @@ pkgver() {
             'BEGIN { ORS="." ; i=0 } \
              /set\(LLVM_VERSION_/ { print $2 ; i++ ; if (i==2) ORS="" } \
              END { print "\n" }' \
-             CMakeLists.txt)_r$(git rev-list --count HEAD).$(git rev-parse --short HEAD)
+             LLVMVersion.cmake)_r$(git rev-list --count HEAD).$(git rev-parse --short HEAD)
     echo "$_pkgver"
 }
 
@@ -59,7 +59,6 @@ prepare() {
 	cd llvm-project
 }
 build() {
-    
     export CFLAGS+=" ${CPPFLAGS}"
     export CXXFLAGS+=" ${CPPFLAGS}"
     cmake \
@@ -94,6 +93,15 @@ build() {
     ninja -C _build $NINJAFLAGS
 }
 
+check() {
+    ninja -C _build $NINJAFLAGS check-llvm
+    ninja -C _build $NINJAFLAGS check-clang
+    ninja -C _build $NINJAFLAGS check-clang-tools
+    ninja -C _build $NINJAFLAGS check-polly
+    ninja -C _build $NINJAFLAGS check-lld
+    ninja -C _build $NINJAFLAGS check-lldb
+}
+
 package_llvm-git() {
     pkgdesc="LLVM development version. includes clang and many other tools"
     depends=("llvm-libs-git=$pkgver-$pkgrel" 'perl')
@@ -102,13 +110,14 @@ package_llvm-git() {
               llvm compiler-rt clang lldb polly lld )
     # A package always provides itself, so there's no need to provide llvm-git
     conflicts=('llvm' 'compiler-rt' 'clang' 'lldb' 'polly' 'lld')
-    
+
     DESTDIR="$pkgdir" ninja -C _build $NINJAFLAGS install
+
     # Include lit for running lit-based tests in other projects
     pushd llvm-project/llvm/utils/lit
     python setup.py install --root="$pkgdir" -O1
     popd
-    
+
     # Move analyzer scripts out of /usr/libexec
     mv "$pkgdir"/usr/libexec/{ccc,c++}-analyzer "$pkgdir"/usr/lib/clang/
     mv "$pkgdir"/usr/libexec/analyze-{cc,c++} "$pkgdir"/usr/lib/clang/
@@ -120,7 +129,6 @@ package_llvm-git() {
     mv -f "$pkgdir"/usr/lib/lib{LLVM,LTO,Remarks}*.so* "$srcdir"
     mv -f "$pkgdir"/usr/lib/LLVMgold.so "$srcdir"
 
-#	mv -rf "$pkgdir"/usr/lib/libbolt_rt_* 
         # Needed for multilib (https://bugs.archlinux.org/task/29951)
         # Header stub is taken from Fedora
         mv "$pkgdir"/usr/include/llvm/Config/llvm-config{,-64}.h
@@ -160,7 +168,7 @@ package_llvm-libs-git() {
     # https://bugs.archlinux.org/task/28479
     install -d "$pkgdir"/usr/lib/bfd-plugins
     ln -s ../LLVMgold.so "$pkgdir"/usr/lib/bfd-plugins/LLVMgold.so
-    
+
     cd llvm-project/
     install -Dm644 llvm/LICENSE.TXT "$pkgdir"/usr/share/licenses/$pkgname/llvm-LICENSE
     install -Dm644 clang/LICENSE.TXT "$pkgdir"/usr/share/licenses/$pkgname/clang-LICENSE
