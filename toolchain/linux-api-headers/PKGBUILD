@@ -7,18 +7,24 @@
 
 pkgname=linux-api-headers
 pkgver=6.7
-pkgrel=1
+pkgrel=2
 pkgdesc='Kernel headers sanitized for use in userspace'
 arch=(any)
 url='https://www.gnu.org/software/libc'
 license=(GPL-2.0-only)
 makedepends=(rsync)
-source=(https://www.kernel.org/pub/linux/kernel/v${pkgver:0:1}.x/linux-${pkgver}.tar.{xz,sign})
+source=(https://www.kernel.org/pub/linux/kernel/v${pkgver:0:1}.x/linux-${pkgver}.tar.{xz,sign}
+		ntsync.patch)
 sha256sums=('ef31144a2576d080d8c31698e83ec9f66bf97c677fa2aaf0d5bbb9f3345b1069'
-            'SKIP')
+            'SKIP'
+            '22290e03201d12e579f113f879448cc2d0f89dbefe3800cc1fb38596c120128b')
 validpgpkeys=('ABAF11C65A2970B130ABE3C479BE3E4300411886'   # Linus Torvalds
               '647F28654894E3BD457199BE38DBBDC86092693E')  # Greg Kroah-Hartman
 
+prepare(){
+	cd linux-$pkgver
+	patch -Np1 < ../ntsync.patch
+}
 build() {
   cd linux-$pkgver
 
