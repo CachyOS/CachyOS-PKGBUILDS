@@ -42,7 +42,7 @@ index dd5e69f..0b6f6e4 100644
  	for bin in $(BOLT_BINARIES); do \
 -	  @MERGE_FDATA@ $${bin}.*.fdata > "$${bin}.fdata"; \
 -	  rm -f $${bin}.*.fdata; \
-+	  @PERF2BOLT@ $${bin} -p perf.data -o "$${bin}.fdata"; \
++	  @PERF2BOLT@ $${bin} -p perf.data -o "$${bin}.fdata" -ignore-build-id; \
  	done
 +	rm -f perf.data; \
  	# Run bolt against the merged data to produce an optimized binary.
