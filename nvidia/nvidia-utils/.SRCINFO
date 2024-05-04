@@ -1,0 +1,51 @@
+pkgbase = nvidia-utils
+	pkgver = 550.78
+	pkgrel = 3
+	url = http://www.nvidia.com/
+	arch = x86_64
+	license = custom
+	makedepends = patchelf
+	options = !strip
+	source = nvidia-drm-outputclass.conf
+	source = nvidia-utils.sysusers
+	source = nvidia.rules
+	source = https://us.download.nvidia.com/XFree86/Linux-x86_64/550.78/NVIDIA-Linux-x86_64-550.78.run
+	source = make-modeset-fbdev-default.patch
+	source = 0001-NVIDIA-take-modeset-ownership-early.patch
+	sha512sums = de7116c09f282a27920a1382df84aa86f559e537664bb30689605177ce37dc5067748acf9afd66a3269a6e323461356592fdfc624c86523bf105ff8fe47d3770
+	sha512sums = 4b3ad73f5076ba90fe0b3a2e712ac9cde76f469cd8070280f960c3ce7dc502d1927f525ae18d008075c8f08ea432f7be0a6c3a7a6b49c361126dcf42f97ec499
+	sha512sums = d0f98ac887b170e2f8bdc450bc1b78cbbcb637ff0db6a8afb63cafdf4306d40b6c03d2bf80394036620be2a3e5b5fc2c1be16919d0aa84217f0b722c505f40da
+	sha512sums = 02c69e2699cd20c99bf147139920ce4708c0e4224b7234c499481996e45a879f29ebe1e5eb0e94f756bf8290d2a019050dd92add9ad375ea3bd5e21704823249
+	sha512sums = 73a3734aa0dd4df3cfba9dd7153f9b82981c4a4e86df0c804fb966280c02af8c39ad649bfa3d4119b82709974a40eaab67d357c586b2414c66113929a47628e9
+	sha512sums = b258e6177c95c1f3ce7c9800ac8ca7718eaba7e16e222ea0d574dad464f120d3d0340c2709540d8cdd54e1ccce25e9c9188c8ed5ab4997dfe9aaf2fd1b5907ed
+
+pkgname = nvidia-utils
+	pkgdesc = NVIDIA drivers utilities
+	install = nvidia-utils.install
+	depends = libglvnd
+	depends = egl-wayland
+	optdepends = nvidia-settings: configuration tool
+	optdepends = xorg-server: Xorg support
+	optdepends = xorg-server-devel: nvidia-xconfig
+	optdepends = opencl-nvidia: OpenCL support
+	provides = vulkan-driver
+	provides = opengl-driver
+	provides = nvidia-libgl
+	conflicts = nvidia-libgl
+	replaces = nvidia-libgl
+
+pkgname = opencl-nvidia
+	pkgdesc = OpenCL implemention for NVIDIA
+	depends = zlib
+	optdepends = opencl-headers: headers necessary for OpenCL development
+	provides = opencl-driver
+
+pkgname = nvidia-dkms
+	pkgdesc = NVIDIA drivers - module sources
+	depends = dkms
+	depends = nvidia-utils=550.78
+	depends = libglvnd
+	provides = NVIDIA-MODULE
+	provides = nvidia
+	conflicts = NVIDIA-MODULE
+	conflicts = nvidia
