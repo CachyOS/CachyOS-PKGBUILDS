@@ -1,17 +1,19 @@
 # Maintainer: Peter Jung <admin@ptr1337.dev>
 
 pkgname=jupiter-fan-control
-pkgver=1
+_srctag=20240118.1
+pkgver=${_srctag//-/.}
 pkgrel=1
 arch=('any')
 license=('GPL-3.0-later')
 pkgdesc='CachyOS - Deckify Steam Deck Fan Control'
-source=(git+https://gitlab.com/evlaV/jupiter-fan-control#commit=535aebd2b579f74962c91dc2a8b3e334ba65ca1b)
+source=("git+https://gitlab.com/evlaV/jupiter-fan-control.git#tag=$_srctag")
 #install="$pkgname.install"
 options=(!strip !debug)
 sha256sums=('aee1f3a549a6265056463bb8a9c4e1180dc08e3c56a55482a0b2a7f98873e84c')
-makedepends=(git)
+depends=('python3' 'python-pyaml')
+sha512sums=(SKIP)
+makedepends=('git' 'rsync' 'openssh')
 package() {
-  install -d "$pkgdir/usr"
-  cp -rf "${srcdir}/CachyOS-Deckify/usr" "$pkgdir"
+   rsync -a --exclude 'README.md' "$srcdir"/jupiter-fan-control/* "$pkgdir"
 }
