@@ -1,0 +1,19 @@
+# Maintainer: Peter Jung <admin@ptr1337.dev>
+
+pkgname=jupiter-hw-support
+pkgver=1
+pkgrel=1
+arch=('any')
+license=('GPL-3.0-later')
+pkgdesc='CachyOS - Deckify Steam Deck HW Support'
+source=(git+https://gitlab.com/evlaV/jupiter-hw-support#commit=eb91bebf4c2e5229db071720250d80286368e4e2)
+#install="$pkgname.install"
+options=(!strip !debug)
+sha256sums=('4b1389870bc37a2d093b1e3002c729f59ee8dedb7559901e2c2232a0cc6c8f2c')
+makedepends=(git)
+package() {
+  install -d "$pkgdir/etc"
+  cp -rf "${srcdir}/CachyOS-Deckify/etc" "$pkgdir"
+  install -d "$pkgdir/usr"
+  cp -rf "${srcdir}/CachyOS-Deckify/usr" "$pkgdir"
+}
