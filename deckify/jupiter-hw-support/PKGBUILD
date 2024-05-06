@@ -4,7 +4,7 @@ pkgname=jupiter-hw-support
 _srctag=jupiter-20240423.1
 _srcver=${_srctag#jupiter-}
 pkgver=${_srcver//-/.}
-pkgrel=1
+pkgrel=2
 arch=('any')
 license=('MIT')
 depends=('python-evdev'
@@ -23,6 +23,14 @@ source=("git+https://gitlab.com/evlaV/jupiter-hw-support.git#tag=$_srctag")
 options=(!strip !debug)
 sha256sums=('SKIP')
 package() {
+  rm -rf "$srcdir"/jupiter-hw-support/bin/jupiter-biosupdate
+  rm -rf "$srcdir"/jupiter-hw-support/steam-http-loader
+  rm -rf "$srcdir"/jupiter-hw-support/steamos-select-branch
+  rm -rf "$srcdir"/jupiter-hw-support/steamos-session-select
+  rm -rf "$srcdir"/jupiter-hw-support/steamos-update
+  rm -rf "$srcdir"/jupiter-hw-support/steamos-polkit-helpers/jupiter-biosupdate
+  rm -rf "$srcdir"/jupiter-hw-support/steamos-polkit-helpers/steamos-select-branch
+  rm -rf "$srcdir"/jupiter-hw-support/steamos-polkit-helpers/steamos-update
   rsync -a "$srcdir"/jupiter-hw-support/* "$pkgdir"
 
   cd $pkgdir/usr/share/steamos/
