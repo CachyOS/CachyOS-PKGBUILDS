@@ -21,7 +21,7 @@ url='https://www.gnu.org/software/libc'
 license=(GPL-2.0-or-later LGPL-2.1-or-later)
 makedepends=(git gd lib32-gcc-libs python)
 options=(staticlibs !lto)
-source=(git+https://sourceware.org/git/glibc.git#commit=${_commit}
+source=("git+https://sourceware.org/git/glibc.git#commit=${_commit}"
         locale.gen.txt
         locale-gen
         lib32-glibc.conf
@@ -69,6 +69,11 @@ build() {
       --disable-werror
   )
 
+
+  # _FORTIFY_SOURCE=3 causes testsuite build failure and is unnecessary during
+  # actual builds (support is built-in via --enable-fortify-source).
+  CFLAGS=${CFLAGS/-Wp,-D_FORTIFY_SOURCE=3/}
+
   (
     cd glibc-build
 
@@ -76,11 +81,6 @@ build() {
     echo "rtlddir=/usr/lib" >> configparms
     echo "sbindir=/usr/bin" >> configparms
     echo "rootsbindir=/usr/bin" >> configparms
-
-    # Credits @allanmcrae
-    # https://github.com/allanmcrae/toolchain/blob/f18604d70c5933c31b51a320978711e4e6791cf1/glibc/PKGBUILD
-    # remove fortify for building libraries
-    CFLAGS=${CFLAGS/-Wp,-D_FORTIFY_SOURCE=3/}
 
     "${srcdir}"/glibc/configure \
         --libdir=/usr/lib \
@@ -124,16 +124,15 @@ build() {
 _skip_test() {
   test=${1}
   file=${2}
-  sed -i "/\b${test} /d" "${srcdir}"/glibc/${file}
+  sed -i "/\b${test} /d" "${srcdir}/glibc/${file}"
 }
 
 check() (
   cd glibc-build
 
   # adjust/remove buildflags that cause false-positive testsuite failures
-  sed -i '/FORTIFY/d' configparms                                     # failure to build testsuite
   sed -i 's/-Werror=format-security/-Wformat-security/' config.make   # failure to build testsuite
-  sed -i '/CFLAGS/s/-fno-plt//' config.make                           # 16 failures
+  sed -i '/CFLAGS/s/-fno-plt//' config.make                           # 27 failures
   sed -i '/CFLAGS/s/-fexceptions//' config.make                       # 1 failure
 
   # The following tests fail due to restrictions in the Arch build system
