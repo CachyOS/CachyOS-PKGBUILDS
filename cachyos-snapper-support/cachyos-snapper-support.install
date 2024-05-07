@@ -4,17 +4,17 @@ post_install() {
 	/usr/bin/systemctl enable --now snapper-cleanup.timer
 	#/usr/bin/systemctl enable snapper-timeline.timer
 
-	echo "Creating snapper config for root"
-	/usr/bin/snapper create-config --template cachyos-root @
-	echo "Creating snapper config for home directory"
-	/usr/bin/snapper create-config --template cachyos-home @home
+	echo "Creating snapper config for root subvolume"
+	/usr/bin/snapper -c root create-config --template cachyos-root /
+	echo "Creating snapper config for home subvolume"
+	/usr/bin/snapper -c home create-config --template cachyos-home /home
 
 }
 
 pre_remove() {
 	echo "Deleting snapper configs"
-	/usr/bin/snapper delete-config @
-	/usr/bin/snapper delete-config @home
+	/usr/bin/snapper -c root delete-config
+	/usr/bin/snapper -c home delete-config
 	echo "Disabling related snapper services"
 	/usr/bin/systemctl disable --now snapper-cleanup.timer
 	#/usr/bin/systemctl disable snapper-timeline.timer
