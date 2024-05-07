@@ -5,9 +5,9 @@ post_install() {
 	#/usr/bin/systemctl enable snapper-timeline.timer
 
 	echo "Creating snapper config for root"
-	/usr/bin/snapper create-config --template cachyos @
+	/usr/bin/snapper create-config --template cachyos-root @
 	echo "Creating snapper config for home directory"
-	/usr/bin/snapper create-config --template 
+	/usr/bin/snapper create-config --template cachyos-home @home
 
 }
 
