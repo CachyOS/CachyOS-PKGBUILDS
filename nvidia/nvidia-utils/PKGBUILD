@@ -6,7 +6,7 @@
 pkgbase=nvidia-utils
 pkgname=('nvidia-utils' 'opencl-nvidia' 'nvidia-dkms')
 pkgver=550.78
-pkgrel=3
+pkgrel=4
 arch=('x86_64')
 url="http://www.nvidia.com/"
 license=('custom')
@@ -43,6 +43,13 @@ prepare() {
     bsdtar -xf nvidia-persistenced-init.tar.bz2
     patch -Np1 < ../make-modeset-fbdev-default.patch
     patch -Np1 < ../0001-NVIDIA-take-modeset-ownership-early.patch
+
+    echo "Applying nvidia-patch..."
+
+    # NVENC/NvFBC
+    sed -i 's/\xe8\x25\x54\xfe\xff\x85\xc0\x41\x89\xc4/\xe8\x25\x54\xfe\xff\x29\xc0\x41\x89\xc4/g' "libnvidia-encode.so.${pkgver}"
+    sed -i 's/\x83\xfe\x01\x73\x08\x48/\x83\xfe\x01\x90\x90\x48/' "libnvidia-fbc.so.${pkgver}"
+
     cd kernel
 
     sed -i "s/__VERSION_STRING/${pkgver}/" dkms.conf
