@@ -1,0 +1,21 @@
+# Maintainer: Nekoh
+
+pkgname=cachyos-snapper-support
+pkgver=1.0.0
+pkgrel=1
+pkgdesc='CachyOS package that handles snapper configs.'
+arch=(any)
+url='https://github.com/CachyOS/CachyOS-PKGBUILDS/cachyos-snapper-support'
+license=(GPL3)
+depends=(snapper snap-pac)
+makedepends=(git)
+conflicts=(timeshift)
+source=('snapper-template-root-cachyos' 'snapper-template-home-cachyos')
+sha512sums=('4324709fcc479b6c083ea7aaf8b040e2f38d298a301c6ad89df1c8b72bb03abb93b06a2cad17b152a6304ce7cc3fe7c28065b4e1a29482b6d9b95eef8ac4d7b9'
+			'791edd32cd1145d86e109349cfab4ff7912043c679055beef1d4048bfca4943ff541e99515f4d19fa6b7d805d4768cf9f08cdd40603666271f59a14a29f8f30b')
+install="$pkgname".install
+
+package() {
+	install -Dm644 snapper-template-root-cachyos "$pkgdir/etc/snapper/config-templates/cachyos-root"
+	install -Dm644 snapper-template-home-cachyos "$pkgdir/etc/snapper/config-templates/cachyos-home"
+}
