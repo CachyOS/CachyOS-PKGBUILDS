@@ -21,10 +21,11 @@ pkgbase = gcc
 	makedepends = libisl
 	makedepends = libmpc
 	makedepends = python
+	makedepends = rust
 	makedepends = zstd
 	options = !emptydirs
 	options = !lto
-	source = git+https://sourceware.org/git/gcc.git#commit=c6141ad24f73cf1771e33c7d7edf1d80d8df70b8
+	source = git+https://sourceware.org/git/gcc.git#commit=43b730b9134af60a8f1c5b107d625f7127ff23c5
 	source = c89
 	source = c99
 	source = gcc-ada-repro.patch
@@ -32,7 +33,7 @@ pkgbase = gcc
 	validpgpkeys = 86CFFCA918CF3AF47147588051E8B148A9999C34
 	validpgpkeys = 13975A70E63C361C73AE69EF6EEB81F8981C74C7
 	validpgpkeys = D3A93CAD751C2AF4F8C7AD516C35B99309B5FA62
-	sha256sums = 10bdac0effd3b7e46e68db4594619f1ebbbdcb8a840f7f7ac1f5c34aa8ac39c0
+	sha256sums = 51024affcbc17f4ba5528ad9aad112a9b4d367d796a44b0bc59e3403a4c82ddd
 	sha256sums = de48736f6e4153f03d0a5d38ceb6c6fdb7f054e8f47ddd6af0a3dbf14f27b931
 	sha256sums = 2513c6d9984dd0a2058557bf00f06d8d5181734e41dcfe07be7ed86f2959622a
 	sha256sums = 1773f5137f08ac1f48f0f7297e324d5d868d55201c03068670ee4602babdef2f
@@ -120,6 +121,11 @@ pkgname = gcc-objc
 	depends = libisl.so
 	provides = gcc-objc-multilib
 	replaces = gcc-objc-multilib
+
+pkgname = gcc-rust
+	pkgdesc = Rust frontend for GCC
+	depends = gcc=14.1.1-1
+	depends = libisl.so
 
 pkgname = lto-dump
 	pkgdesc = Dump link time optimization object files

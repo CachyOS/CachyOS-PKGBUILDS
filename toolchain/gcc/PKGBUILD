@@ -7,11 +7,17 @@
 # toolchain build order: linux-api-headers->glibc->binutils->gcc->glibc->binutils->gcc
 # NOTE: libtool requires rebuilt with each new gcc version
 
-pkgname=(gcc gcc-libs lib32-gcc-libs gcc-ada gcc-d gcc-fortran gcc-go gcc-m2 gcc-objc lto-dump libgccjit)
+# ENABLE x86-64-v3 ASFLAGS optimization
+_optimize_v3=${_optimize_v3-y}
+
+# ENABLE x86-64-v4 ASFLAGS optimization
+_optimize_v4=${_optimize_v4-}
+
+pkgname=(gcc gcc-libs lib32-gcc-libs gcc-ada gcc-d gcc-fortran gcc-go gcc-m2 gcc-objc gcc-rust lto-dump libgccjit)
 pkgver=14.1.1
 _release=14.1.1
 _majorver=${_release%%.*}
-_commit=c6141ad24f73cf1771e33c7d7edf1d80d8df70b8
+_commit=43b730b9134af60a8f1c5b107d625f7127ff23c5
 pkgrel=1
 pkgdesc='The GNU Compiler Collection'
 arch=(x86_64)
@@ -28,6 +34,7 @@ makedepends=(
   libisl
   libmpc
   python
+  rust
   zstd
 )
 checkdepends=(
@@ -47,12 +54,13 @@ validpgpkeys=(F3691687D867B81B51CE07D9BBE43771487328A9  # bpiotrowski@archlinux.
               86CFFCA918CF3AF47147588051E8B148A9999C34  # evangelos@foutrelis.com
               13975A70E63C361C73AE69EF6EEB81F8981C74C7  # richard.guenther@gmail.com
               D3A93CAD751C2AF4F8C7AD516C35B99309B5FA62) # Jakub Jelinek <jakub@redhat.com>
-sha256sums=('10bdac0effd3b7e46e68db4594619f1ebbbdcb8a840f7f7ac1f5c34aa8ac39c0'
+sha256sums=('51024affcbc17f4ba5528ad9aad112a9b4d367d796a44b0bc59e3403a4c82ddd'
             'de48736f6e4153f03d0a5d38ceb6c6fdb7f054e8f47ddd6af0a3dbf14f27b931'
             '2513c6d9984dd0a2058557bf00f06d8d5181734e41dcfe07be7ed86f2959622a'
             '1773f5137f08ac1f48f0f7297e324d5d868d55201c03068670ee4602babdef2f')
 pkgver() {
-  echo "${_release}+g${_commit:0:11}"
+  cd gcc
+  echo "$(cat gcc/BASE-VER)+$(git describe --tags | sed 's/[^-]*-[^-]*-//;s/[^-]*-/r&/;s/-/+/g;s/_/./')"
 }
 
 prepare() {
@@ -114,8 +122,16 @@ build() {
   export CFLAGS+=" -fno-semantic-interposition"
   export CXXLAGS+=" -fno-semantic-interposition"
 
+  if [ -n "$_optimize_v3" ]; then
+    export ASFLAGS="-D__AVX__=1 -D__AVX2__=1 -msse2avx -D__FMA__=1 "
+  elif [-n "$_optimize_v4" ]; then
+    export ASFLAGS="-D__AVX__=1 -D__AVX2__=1 -D__AVX512__=1 -msse2avx -D__FMA__=1 "
+  else
+    unset AFLAGS
+  fi
+
   "$srcdir/gcc/configure" \
-    --enable-languages=ada,c,c++,d,fortran,go,lto,m2,objc,obj-c++ \
+    --enable-languages=ada,c,c++,d,fortran,go,lto,m2,objc,obj-c++,rust \
     --enable-bootstrap \
     "${_confflags[@]:?_confflags unset}"
 
@@ -473,21 +489,20 @@ package_gcc-m2() {
     "$pkgdir/usr/share/licenses/$pkgname/"
 }
 
-#package_gcc-rust() {
-#  pkgdesc="Rust frontend for GCC"
-#  depends=("gcc=$pkgver-$pkgrel" libisl.so)
-#
-#  cd gcc-build
-#  make -C gcc DESTDIR="$pkgdir" rust.install-{common,man,info}
-#
-#  install -Dm755 gcc/gccrs "$pkgdir"/usr/bin/gccrs
-#  install -Dm755 gcc/rust1 "$pkgdir"/"$_libdir"/rust1
-#
-#  # Install Runtime Library Exception
-#  install -d "$pkgdir/usr/share/licenses/$pkgname/"
-#  ln -s /usr/share/licenses/gcc-libs/RUNTIME.LIBRARY.EXCEPTION \
-#    "$pkgdir/usr/share/licenses/$pkgname/"
-#}
+package_gcc-rust() {
+ pkgdesc="Rust frontend for GCC"
+ depends=("gcc=$pkgver-$pkgrel" libisl.so)
+
+ cd gcc-build
+ make -C gcc DESTDIR="$pkgdir" rust.install-{common,man,info}
+
+ install -Dm755 gcc/gccrs "$pkgdir"/usr/bin/gccrs
+
+  # Install Runtime Library Exception
+ install -d "$pkgdir/usr/share/licenses/$pkgname/"
+ ln -s /usr/share/licenses/gcc-libs/RUNTIME.LIBRARY.EXCEPTION \
+   "$pkgdir/usr/share/licenses/$pkgname/"
+}
 
 package_lto-dump() {
   pkgdesc="Dump link time optimization object files"
