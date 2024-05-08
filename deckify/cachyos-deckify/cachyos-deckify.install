@@ -55,9 +55,10 @@ post_install() {
   [[ -e "$OUTPUT_FILE" ]] && rm "$OUTPUT_FILE"
 
   # Update users sddm config to reflect the changes
-  update_user
+  # update_user
   # Use scx_lavd as default scheduler
   scx_lavd_default
+  echo "If you are installing this without the CachyOS Installation, please update your username in the /etc/sddm.conf.d/*"
 }
 
 post_upgrade() {
@@ -72,6 +73,6 @@ post_upgrade() {
         fi
     done
   # Update users sddm config to reflect the changes
-  echo "Updating User SDDM config"
-  update_user
+  # echo "Updating User SDDM config"
+  # update_user
 }
