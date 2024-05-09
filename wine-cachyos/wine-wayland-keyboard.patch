@@ -1,0 +1,37 @@
+From cb8ce40df74c568bbfcac45cf7727342f8303710 Mon Sep 17 00:00:00 2001
+From: Peter Jung <admin@ptr1337.dev>
+Date: Thu, 9 May 2024 22:01:02 +0200
+Subject: [PATCH] wayland: Add fixes for keyboard
+
+Signed-off-by: Peter Jung <admin@ptr1337.dev>
+---
+ dlls/winewayland.drv/wayland_pointer.c | 3 +++
+ dlls/winewayland.drv/waylanddrv.h      | 1 +
+ 2 files changed, 4 insertions(+)
+
+diff --git a/dlls/winewayland.drv/wayland_pointer.c b/dlls/winewayland.drv/wayland_pointer.c
+index fad75c8506c..54dd7931b6e 100644
+--- a/dlls/winewayland.drv/wayland_pointer.c
++++ b/dlls/winewayland.drv/wayland_pointer.c
+@@ -670,6 +670,9 @@ static void wayland_set_cursor(HWND hwnd, HCURSOR hcursor, BOOL use_hcursor)
+     if ((surface = wayland_surface_lock_hwnd(hwnd)))
+     {
+         scale = surface->window.scale;
++        if (use_hcursor) surface->hcursor = hcursor;
++        else hcursor = surface->hcursor;
++        use_hcursor = TRUE;
+         pthread_mutex_unlock(&surface->mutex);
+     }
+     else
+diff --git a/dlls/winewayland.drv/waylanddrv.h b/dlls/winewayland.drv/waylanddrv.h
+index 0883c43f1ff..f030f6fc6a0 100644
+--- a/dlls/winewayland.drv/waylanddrv.h
++++ b/dlls/winewayland.drv/waylanddrv.h
+@@ -201,6 +201,7 @@ struct wayland_surface
+     struct wayland_window_config window;
+     struct wayland_client_surface *client;
+     int buffer_width, buffer_height;
++    HCURSOR hcursor;
+ };
+ 
+ struct wayland_shm_buffer

@@ -1,0 +1,23 @@
+From 5867e17eb11b90fb04ce767f4bafe2155102a7c3 Mon Sep 17 00:00:00 2001
+From: Peter Jung <admin@ptr1337.dev>
+Date: Thu, 9 May 2024 21:59:56 +0200
+Subject: [PATCH] Makefile: Enable LTO Optimization
+
+Signed-off-by: Peter Jung <admin@ptr1337.dev>
+---
+ server/Makefile.in | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/server/Makefile.in b/server/Makefile.in
+index a98615cce72..c53a264e999 100644
+--- a/server/Makefile.in
++++ b/server/Makefile.in
+@@ -49,6 +49,7 @@ SOURCES = \
+ 	wineserver.man.in \
+ 	winstation.c
+ 
+-UNIX_LIBS = $(LDEXECFLAGS) $(RT_LIBS) $(INOTIFY_LIBS) $(PROCSTAT_LIBS)
++UNIX_LIBS = $(LDEXECFLAGS) $(RT_LIBS) $(INOTIFY_LIBS) $(PROCSTAT_LIBS) -flto=auto -flto-partition=one -fdevirtualize-at-ltrans $(CFLAGS)
++EXTRADEFS = -flto=auto -flto-partition=one -fdevirtualize-at-ltrans
+ 
+ unicode_EXTRADEFS = -DNLSDIR="\"${nlsdir}\"" -DBIN_TO_NLSDIR=\"`${MAKEDEP} -R ${bindir} ${nlsdir}`\"
