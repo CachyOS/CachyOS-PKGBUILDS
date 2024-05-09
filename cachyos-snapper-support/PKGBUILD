@@ -2,7 +2,7 @@
 
 pkgname=cachyos-snapper-support
 pkgver=1.0.0
-pkgrel=1
+pkgrel=2
 pkgdesc='CachyOS package that handles snapper configs.'
 arch=(any)
 url='https://github.com/CachyOS/CachyOS-PKGBUILDS/cachyos-snapper-support'
@@ -16,6 +16,6 @@ sha512sums=('44b2027a7e772fbe5f499d1a387d68ec873747774b89b0dfd0967a9bb5b4991c917
 install="$pkgname".install
 
 package() {
-	install -Dm644 snapper-template-root-cachyos "$pkgdir/etc/snapper/config-templates/cachyos-root"
-	install -Dm644 snapper-template-home-cachyos "$pkgdir/etc/snapper/config-templates/cachyos-home"
+	install -Dm644 snapper-template-root-cachyos "$pkgdir/etc/snapper/config/root"
+	install -Dm644 snapper-template-home-cachyos "$pkgdir/etc/snapper/config/home"
 }
