@@ -18,10 +18,16 @@ depends=('python-evdev'
 optdepends=('grub-steamos')
 makedepends=('rsync' 'git' 'openssh' 'xorg-xcursorgen')
 pkgdesc='CachyOS - Deckify Steam Deck HW Support'
-source=("git+https://gitlab.com/evlaV/jupiter-hw-support.git#tag=$_srctag")
+source=("git+https://gitlab.com/evlaV/jupiter-hw-support.git#tag=$_srctag"
+        "pythonhid.patch")
 #install="$pkgname.install"
 options=(!strip !debug)
-sha256sums=('SKIP')
+sha256sums=('SKIP'
+            '05f7a3d1fcff857aad4e5a8dae400f6acbf32c7e505db347f441dd33a6601df4')
+prepare() {
+  patch --directory=$pkgname --forward --strip=1 --input=../pythonhid.patch
+}
+
 package() {
   rm -rf "$srcdir"/jupiter-hw-support/usr/bin/jupiter-biosupdate
   rm -rf "$srcdir"/jupiter-hw-support/usr/bin/steam-http-loader
