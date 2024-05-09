@@ -9,7 +9,7 @@ pkgver=9.0
 _geckover=2.47.4
 _monover=9.1.0
 _xaliaver=0.4.1
-pkgrel=12
+pkgrel=13
 pkgdesc="Compatibility tool for Steam Play based on Wine and additional components, experimental branch with extra CachyOS flavour"
 url="https://github.com/cachyos/proton-cachyos"
 arch=(x86_64 x86_64_v3)
@@ -107,6 +107,7 @@ source=(
     disable-fastsync.patch
     wayland-upstream.patch
     apex-fix.patch
+    media-converter.patch
 )
 noextract=(
     wine-gecko-${_geckover}-{x86,x86_64}.tar.xz
@@ -201,6 +202,8 @@ prepare() {
 #    patch -Np1 -i "$srcdir"/fastsync.patch
     echo "Wine: Fixup Apex"
     patch -Np1 -i "$srcdir"/apex-fix.patch
+    echo "Wine: Add env var for media converter"
+    patch -Np1 -i "$srcdir"/media-converter.patch
     cd $srcdir/proton/dxvk
     echo "dxvk: Enable Reflex"
     patch -Np1 -i "$srcdir"/dxvk-reflex.patch
@@ -302,5 +305,6 @@ sha256sums=('SKIP'
             'aca568c20741784b0a9ae4628e97eff1e9b1a4643974bd8c36ae0d692450f2c3'
             '25776bc421be4a083c64f1fd232bbd67e24bde6ad9975281ad716dc2ce4d7888'
             '416350c345db4c680f825d89b0eea79dbef668f671b18f7f792bbeb4b9e59e18'
-            'a35e3484d386531aa26f6a7d1ea8e73f92ff6328c689e802c5de7e2f0f50ab11')
+            'a35e3484d386531aa26f6a7d1ea8e73f92ff6328c689e802c5de7e2f0f50ab11'
+            'b211d9fbbf454b580ffe5a9fba8d8c57d14507def5a84afc37966805623df272')
 
