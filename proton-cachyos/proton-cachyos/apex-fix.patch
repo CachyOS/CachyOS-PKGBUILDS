@@ -1,0 +1,96 @@
+From 4683fb12f5d079da7f99d4b17ce0a4ce72f90049 Mon Sep 17 00:00:00 2001
+From: Paul Gofman <pgofman@codeweavers.com>
+Date: Tue, 7 May 2024 15:25:50 -0600
+Subject: [PATCH] bcrypt: Support RSA/PKCS1 signatures with unspecified hash
+ algorithm.
+
+CW-Bug-Id: #23773
+---
+ dlls/bcrypt/gnutls.c       | 17 +++++++++++------
+ dlls/bcrypt/tests/bcrypt.c | 19 +++++++++++++++++++
+ 2 files changed, 30 insertions(+), 6 deletions(-)
+
+diff --git a/dlls/bcrypt/gnutls.c b/dlls/bcrypt/gnutls.c
+index 115219a64f6..0a921279458 100644
+--- a/dlls/bcrypt/gnutls.c
++++ b/dlls/bcrypt/gnutls.c
+@@ -2263,9 +2263,9 @@ static NTSTATUS pubkey_set_rsa_pss_params( gnutls_pubkey_t key, gnutls_digest_al
+ static NTSTATUS key_asymmetric_verify( void *args )
+ {
+ #ifdef GNUTLS_VERIFY_ALLOW_BROKEN
+-    static const unsigned int verify_flags = GNUTLS_VERIFY_ALLOW_BROKEN;
++    unsigned int verify_flags = GNUTLS_VERIFY_ALLOW_BROKEN;
+ #else
+-    static const unsigned int verify_flags = 0;
++    unsigned int verify_flags = 0;
+ #endif
+     const struct key_asymmetric_verify_params *params = args;
+     struct key *key = params->key;
+@@ -2306,8 +2306,12 @@ static NTSTATUS key_asymmetric_verify( void *args )
+             BCRYPT_PKCS1_PADDING_INFO *info = params->padding;
+ 
+             if (!info) return STATUS_INVALID_PARAMETER;
+-            if (!info->pszAlgId) return STATUS_INVALID_SIGNATURE;
+-            if ((hash_alg = get_digest_from_id(info->pszAlgId)) == GNUTLS_DIG_UNKNOWN)
++            if (!info->pszAlgId)
++            {
++                hash_alg = GNUTLS_DIG_UNKNOWN;
++                verify_flags |= GNUTLS_VERIFY_USE_TLS1_RSA;
++            }
++            else if ((hash_alg = get_digest_from_id(info->pszAlgId)) == GNUTLS_DIG_UNKNOWN)
+             {
+                 FIXME( "hash algorithm %s not supported\n", debugstr_w(info->pszAlgId) );
+                 return STATUS_NOT_SUPPORTED;
+@@ -2498,12 +2502,13 @@ static NTSTATUS key_asymmetric_sign( void *args )
+     {
+         BCRYPT_PKCS1_PADDING_INFO *pad = params->padding;
+ 
+-        if (!pad || !pad->pszAlgId)
++        if (!pad)
+         {
+             WARN( "padding info not found\n" );
+             return STATUS_INVALID_PARAMETER;
+         }
+-        if ((hash_alg = get_digest_from_id( pad->pszAlgId )) == GNUTLS_DIG_UNKNOWN)
++        if (!pad->pszAlgId) hash_alg = GNUTLS_DIG_UNKNOWN;
++        else if ((hash_alg = get_digest_from_id( pad->pszAlgId )) == GNUTLS_DIG_UNKNOWN)
+         {
+             FIXME( "hash algorithm %s not recognized\n", debugstr_w(pad->pszAlgId) );
+             return STATUS_NOT_SUPPORTED;
+diff --git a/dlls/bcrypt/tests/bcrypt.c b/dlls/bcrypt/tests/bcrypt.c
+index 511ee7634b6..06dc0182d78 100644
+--- a/dlls/bcrypt/tests/bcrypt.c
++++ b/dlls/bcrypt/tests/bcrypt.c
+@@ -2696,6 +2696,21 @@ static void test_RSA(void)
+     ret = BCryptVerifySignature(key, &pad, hash, sizeof(hash), sig, len, BCRYPT_PAD_PKCS1);
+     ok(!ret, "BCryptVerifySignature failed: %#lx\n", ret);
+ 
++    pad.pszAlgId = NULL;
++    memset(sig, 0, sizeof(sig));
++    len = 0;
++    ret = BCryptSignHash(key, &pad, hash, sizeof(hash), sig, sizeof(sig), &len, BCRYPT_PAD_PKCS1);
++    ok(!ret, "got %#lx\n", ret);
++    ok(len == 256, "got %lu\n", len);
++
++    pad.pszAlgId = BCRYPT_SHA1_ALGORITHM;
++    ret = BCryptVerifySignature(key, &pad, hash, sizeof(hash), sig, len, BCRYPT_PAD_PKCS1);
++    ok(ret == STATUS_INVALID_SIGNATURE, "BCryptVerifySignature failed: %#lx, len %ld\n", ret, len);
++
++    pad.pszAlgId = NULL;
++    ret = BCryptVerifySignature(key, &pad, hash, sizeof(hash), sig, len, BCRYPT_PAD_PKCS1);
++    ok(!ret, "BCryptVerifySignature failed: %#lx, len %ld\n", ret, len);
++
+     pad_pss.pszAlgId = BCRYPT_SHA384_ALGORITHM;
+     pad_pss.cbSalt = 48;
+     memset(sig_pss, 0, sizeof(sig_pss));
+@@ -2843,6 +2858,10 @@ static void test_RSA_SIGN(void)
+     ret = BCryptExportKey(key, NULL, BCRYPT_RSAPRIVATE_BLOB, buf2, sizeof(buf2), &size, 0);
+     ok(ret == STATUS_INVALID_PARAMETER, "got %#lx\n", ret);
+ 
++    pad.pszAlgId = NULL;
++    ret = BCryptVerifySignature(key, &pad, rsaHash, sizeof(rsaHash), rsaSignature, sizeof(rsaSignature), BCRYPT_PAD_PKCS1);
++    ok(ret == STATUS_INVALID_SIGNATURE, "BCryptVerifySignature failed: %#lx\n", ret);
++
+     pad.pszAlgId = BCRYPT_SHA1_ALGORITHM;
+     ret = BCryptVerifySignature(key, &pad, rsaHash, sizeof(rsaHash), rsaSignature, sizeof(rsaSignature), BCRYPT_PAD_PKCS1);
+     ok(!ret, "BCryptVerifySignature failed: %#lx\n", ret);

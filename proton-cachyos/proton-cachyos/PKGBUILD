@@ -9,7 +9,7 @@ pkgver=9.0
 _geckover=2.47.4
 _monover=9.1.0
 _xaliaver=0.4.1
-pkgrel=11
+pkgrel=12
 pkgdesc="Compatibility tool for Steam Play based on Wine and additional components, experimental branch with extra CachyOS flavour"
 url="https://github.com/cachyos/proton-cachyos"
 arch=(x86_64 x86_64_v3)
@@ -40,9 +40,9 @@ depends=(
   steam-native-runtime
   cabextract
 
-  winesync-dkms
-  winesync-header
-  winesync-udev-rule
+#  winesync-dkms
+#  winesync-header
+#  winesync-udev-rule
 )
 depends+=(
   wayland          lib32-wayland
@@ -106,6 +106,7 @@ source=(
     fastsync.patch
     disable-fastsync.patch
     wayland-upstream.patch
+    apex-fix.patch
 )
 noextract=(
     wine-gecko-${_geckover}-{x86,x86_64}.tar.xz
@@ -177,8 +178,8 @@ prepare() {
     done
 
     cd $srcdir/proton
-    echo "Disable Fastsync as default"
-
+#    echo "Disable Fastsync as default"
+#    patch -Np1 -i "$srcdir"/disable-fastsync.patch
 # Manually apply backport, to not depend on the latest srctag from loathing
  local _c _l
   for _c in "${_backports[@]}"; do
@@ -186,8 +187,6 @@ prepare() {
     git log --oneline "${_l}" "${_c}"
     git cherry-pick --mainline 1 --no-commit "${_c}"
   done
-    patch -Np1 -i "$srcdir"/disable-fastsync.patch
-
     cd $srcdir/proton/wine
     echo "Wine: Enable LTO for wineserver"
     patch -Np1 -i "$srcdir"/server-Enable-link-time-optimization.patch
@@ -197,12 +196,13 @@ prepare() {
     patch -Np1 -i "$srcdir"/wine-reflex.patch
     echo "Add upstream patch for wine wayland"
     patch -Np1 -i "$srcdir"/wayland-upstream.patch
-    echo "Wine: Enable Fastsync/NTSync"
-    patch -Np1 -i "$srcdir"/fastsync.patch
-
+## Dropped due failures with GCC 14
+#    echo "Wine: Enable Fastsync/NTSync"
+#    patch -Np1 -i "$srcdir"/fastsync.patch
+    echo "Wine: Fixup Apex"
+    patch -Np1 -i "$srcdir"/apex-fix.patch
     cd $srcdir/proton/dxvk
     echo "dxvk: Enable Reflex"
-    git checkout 037d0fa1ad093065b18dad968d5898cbcd143e0e
     patch -Np1 -i "$srcdir"/dxvk-reflex.patch
 
 
@@ -301,5 +301,6 @@ sha256sums=('SKIP'
             '36e601bf53a3e938bffd0b6f02432930a53a652b732a503aa29944c043def690'
             'aca568c20741784b0a9ae4628e97eff1e9b1a4643974bd8c36ae0d692450f2c3'
             '25776bc421be4a083c64f1fd232bbd67e24bde6ad9975281ad716dc2ce4d7888'
-            '416350c345db4c680f825d89b0eea79dbef668f671b18f7f792bbeb4b9e59e18')
+            '416350c345db4c680f825d89b0eea79dbef668f671b18f7f792bbeb4b9e59e18'
+            'a35e3484d386531aa26f6a7d1ea8e73f92ff6328c689e802c5de7e2f0f50ab11')
 
