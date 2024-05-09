@@ -1,0 +1,41 @@
+diff --git a/bin_steam.sh b/bin_steam.sh
+index fb81d47..134f94e 100755
+--- a/bin_steam.sh
++++ b/bin_steam.sh
+@@ -26,6 +26,12 @@ export STEAMSCRIPT_VERSION=1.0.0.79
+ # Set up domain for script localization
+ export TEXTDOMAIN=steam
+ 
++
++if [[ "$XDG_CURRENT_DESKTOP" != "gamescope" ]]; then
++    # Set this for desktop mode because otherwise steam/steamdeck controller input and some other controller inputs break
++    export LD_PRELOAD=/usr/lib/steam/libextest.so
++fi
++
+ function show_message()
+ {
+ 	style=$1
+@@ -200,6 +206,22 @@ fi
+ 
+ # go to the install directory and run the client
+ cp "$LAUNCHSTEAMBOOTSTRAPFILE" "$LAUNCHSTEAMDIR/bootstrap.tar.xz"
+-cd "$LAUNCHSTEAMDIR"
++
++STEAMDEV="$LAUNCHSTEAMDIR"/steam_dev.cfg
++
++if [[ ! -f "$STEAMDEV" ]]; then
++  touch "$STEAMDEV"
++fi
++
++if [[ -f "$STEAMDEV" ]]; then
++  if [[ -z $(cat "$STEAMDEV" | grep "nClientDownloadEnableHTTP2PlatformLinux") ]]; then
++	echo "@nClientDownloadEnableHTTP2PlatformLinux 0" >> "$STEAMDEV"
++  fi
++
++  if [[ -z $(cat "$STEAMDEV" | grep "fDownloadRateImprovementToAddAnotherConnection") ]]; then
++	echo "@fDownloadRateImprovementToAddAnotherConnection 1.0" >> "$STEAMDEV"
++  fi
++fi
++
+ 
+ exec "$LAUNCHSTEAMDIR/$STEAMBOOTSTRAP" "$@"
