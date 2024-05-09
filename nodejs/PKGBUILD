@@ -10,7 +10,7 @@
 pkgname=nodejs
 pkgver=22.0.0
 _commit=12fb157f79da8c094a54bc99370994941c28c235
-pkgrel=1
+pkgrel=2
 pkgdesc='Evented I/O for V8 javascript'
 arch=('x86_64')
 url='https://nodejs.org/'
