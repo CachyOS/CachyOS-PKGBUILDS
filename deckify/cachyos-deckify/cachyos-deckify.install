@@ -18,12 +18,7 @@ scx_lavd_default() {
   sed -i 's/SCX_SCHEDULER=scx_rusty/SCX_SCHEDULER=scx_lavd/' /etc/default/scx
 }
 
-post_install() {
-    echo "Enabling services..."
-    for service in "${SERVICES[@]}"; do
-        systemctl enable "$service" --now
-    done
-
+steamos_steam() {
   # Grab the steam bootstrap for first boot
 
   URL="https://steamdeck-packages.steamos.cloud/archlinux-mirror/jupiter-main/os/x86_64/steam-jupiter-stable-1.0.0.78-1.2-x86_64.pkg.tar.zst"
@@ -53,6 +48,12 @@ post_install() {
   fi
   [[ -e "$TMP_PKG" ]] && rm "$TMP_PKG"
   [[ -e "$OUTPUT_FILE" ]] && rm "$OUTPUT_FILE"
+}
+post_install() {
+    echo "Enabling services..."
+    for service in "${SERVICES[@]}"; do
+        systemctl enable "$service" --now
+    done
 
   # Update users sddm config to reflect the changes
   # update_user
