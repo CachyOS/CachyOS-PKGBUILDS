@@ -7,6 +7,11 @@
 # toolchain build order: linux-api-headers->glibc->binutils->gcc->glibc->binutils->gcc
 # NOTE: libtool requires rebuilt with each new gcc version
 
+# ENABLE x86-64-v3 ASFLAGS optimization
+_optimize_v3=${_optimize_v3-y}
+
+# ENABLE x86-64-v4 ASFLAGS optimization
+_optimize_v4=${_optimize_v4-}
 
 pkgname=(gcc gcc-libs lib32-gcc-libs gcc-ada gcc-d gcc-fortran gcc-go gcc-m2 gcc-objc gcc-rust lto-dump libgccjit)
 pkgver=14.1.1+r1+g43b730b9134
@@ -115,6 +120,13 @@ build() {
   export CFLAGS+=" -fno-semantic-interposition"
   export CXXLAGS+=" -fno-semantic-interposition"
 
+  if [ -n "$_optimize_v3" ]; then
+    export ASFLAGS="-D__AVX__=1 -D__AVX2__=1 -msse2avx -D__FMA__=1 "
+  elif [-n "$_optimize_v4" ]; then
+    export ASFLAGS="-D__AVX__=1 -D__AVX2__=1 -D__AVX512__=1 -msse2avx -D__FMA__=1 "
+  else
+    unset AFLAGS
+  fi
 
   "$srcdir/gcc/configure" \
     --enable-languages=ada,c,c++,d,fortran,go,lto,m2,objc,obj-c++,rust \
@@ -359,15 +371,15 @@ package_gcc-ada() {
   ln -s gcc "$pkgdir/usr/bin/gnatgcc"
 
   # insist on dynamic linking, but keep static libraries because gnatmake complains
-  mv "$pkgdir"/${_libdir}/adalib/libgna{rl,t}-${_majorver}.so "$pkgdir/usr/lib"
-  ln -s libgnarl-${_majorver}.so "$pkgdir/usr/lib/libgnarl.so"
-  ln -s libgnat-${_majorver}.so "$pkgdir/usr/lib/libgnat.so"
+  mv "$pkgdir"/${_libdir}/adalib/libgna{rl,t}-${pkgver%%.*}.so "$pkgdir/usr/lib"
+  ln -s libgnarl-${pkgver%%.*}.so "$pkgdir/usr/lib/libgnarl.so"
+  ln -s libgnat-${pkgver%%.*}.so "$pkgdir/usr/lib/libgnat.so"
   rm -f "$pkgdir"/${_libdir}/adalib/libgna{rl,t}.so
 
   install -d "$pkgdir/usr/lib32/"
-  mv "$pkgdir"/${_libdir}/32/adalib/libgna{rl,t}-${_majorver}.so "$pkgdir/usr/lib32"
-  ln -s libgnarl-${_majorver}.so "$pkgdir/usr/lib32/libgnarl.so"
-  ln -s libgnat-${_majorver}.so "$pkgdir/usr/lib32/libgnat.so"
+  mv "$pkgdir"/${_libdir}/32/adalib/libgna{rl,t}-${pkgver%%.*}.so "$pkgdir/usr/lib32"
+  ln -s libgnarl-${pkgver%%.*}.so "$pkgdir/usr/lib32/libgnarl.so"
+  ln -s libgnat-${pkgver%%.*}.so "$pkgdir/usr/lib32/libgnat.so"
   rm -f "$pkgdir"/${_libdir}/32/adalib/libgna{rl,t}.so
 
   # Install Runtime Library Exception
