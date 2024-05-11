@@ -9,9 +9,22 @@ pkgrel=2
 pkgdesc='Zstandard - Fast real-time compression algorithm'
 url='https://facebook.github.io/zstd/'
 arch=(x86_64)
-license=(BSD GPL2)
-depends=(glibc gcc-libs zlib xz lz4)
-makedepends=(cmake gtest ninja)
+license=(
+  BSD-3-Clause
+  GPL-2.0-only
+)
+depends=(
+  glibc
+  gcc-libs
+  zlib
+  xz
+  lz4
+)
+makedepends=(
+  cmake
+  gtest
+  ninja
+)
 provides=(libzstd.so)
 source=(https://github.com/facebook/zstd/releases/download/v${pkgver}/zstd-${pkgver}.tar.zst{,.sig})
 sha256sums=('4aa8dd1c1115c0fd6b6b66c35c7f6ce7bd58cc1dfd3e4f175b45b39e84b14352'
