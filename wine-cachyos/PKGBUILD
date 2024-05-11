@@ -6,36 +6,37 @@
 # Contributor: Giovanni Scafora <giovanni@archlinux.org>
 
 pkgname=wine-cachyos
-_srctag=9-4
-_commit=e664ad5c3bdb4b6bc20882232cc88eb00784295f
+_srctag=9-5
 pkgver=${_srctag//-/.}
-pkgrel=2
+pkgrel=1
 epoch=1
 
 _pkgbasever=${pkgver/rc/-rc}
 _winever=$_pkgbasever
 #_winever=${_pkgbasever%.*}
 
-source=(wine-cachyos::git+https://github.com/loathingKernel/wine-ge-custom.git#commit=${_commit}
+source=(wine-cachyos::git+https://github.com/loathingKernel/wine-ge-custom.git#tag=GE-Proton${_srctag}
+        30-win32-aliases.conf
+        wine-binfmt.conf)
+source+=(
         wine-wmclass.patch
         wine-isolate_home.patch
-        30-win32-aliases.conf
-        wine-binfmt.conf
-        wineserver-lto.patch::https://github.com/CachyOS/wine-cachyos/commit/5867e17eb11b90fb04ce767f4bafe2155102a7c3.patch
-        reflex-support.patch::https://github.com/CachyOS/wine-cachyos/commit/bcc05a52a412e23358a72e2ad71d407961ae185f.patch
-        wine-wayland-keyboard.patch::https://github.com/CachyOS/wine-cachyos/commit/cb8ce40df74c568bbfcac45cf7727342f8303710.patch)
-b2sums=('b9900815880a830a99cdee8b405b04a8b2ebf07c8ef12d4b600ff9d2fba9ba83c32ec82014d5c7e33e0db50e7cd11cab5e2e93bfc9c8950b31517c7e030e31d4'
-        'ed9571038af601688e1fe36ebd20d89f124d9cc27046147d70a784603b93d804f37807c72bf6a8196022b4c225b879fb503b0bec51f5ad442d233d307cf73e8c'
-        'ea368cd61338e96844137db10f11666bc85e1c2a64249c4c1179235125448e56d41bff386f1ba4fe305b4f7d90735ac582acf25ed6eacfda100f53adf64c69ea'
+        wineserver-lto.patch
+        reflex-support.patch
+        wine-wayland-keyboard.patch
+)
+b2sums=('acfd7161ab86adbfb743258689dc5925a48c98ef17db979abef0135135cfe776025341caf7e049189394c965f5a2b88ab446ba671b841166bc553b1825d61b2f'
         '45db34fb35a679dc191b4119603eba37b8008326bd4f7d6bd422fbbb2a74b675bdbc9f0cc6995ed0c564cf088b7ecd9fbe2d06d42ff8a4464828f3c4f188075b'
         'e9de76a32493c601ab32bde28a2c8f8aded12978057159dd9bf35eefbf82f2389a4d5e30170218956101331cf3e7452ae82ad0db6aad623651b0cc2174a61588'
+        'ed9571038af601688e1fe36ebd20d89f124d9cc27046147d70a784603b93d804f37807c72bf6a8196022b4c225b879fb503b0bec51f5ad442d233d307cf73e8c'
+        'ea368cd61338e96844137db10f11666bc85e1c2a64249c4c1179235125448e56d41bff386f1ba4fe305b4f7d90735ac582acf25ed6eacfda100f53adf64c69ea'
         '764319ff1652fea9101ceed5d221f82ad4ab95261c61becd02734d4c2da6365f5ee874ed09261c75e60885c42d2745db8095ae6e65fb875502f0b361109d6fa6'
         'e3f0bc6a2bbd45311ebd0ae27558525e784dce6f0f08c81e806ffc84fda97c01a049753861af66ebe43f0e60c8a989e012f23a58d64daf899d3ae061ac89a1ab'
         'bf0f2d51695728db5854c0b16f21a4126274155c6697ca131a7beda6a6887b109291e33b0e1a556083825e93f9c752e44f2df25f2552960f9af0f15b36ff908c')
 validpgpkeys=(5AC1A08B03BD7A313E0A955AF5E6E9EEB9461DD7
               DA23579A74D4AD9AF9D3F945CEFAC8EAAF17519D)
 
-pkgdesc="A compatibility layer for running Windows programs - GloriousEggroll branch - with CachyOS patches"
+pkgdesc="A compatibility layer for running Windows programs, with extra CachyOS flavor"
 url="https://github.com/GloriousEggroll/wine-ge-custom"
 arch=(x86_64 x86_64_v3)
 options=(!staticlibs !lto !debug)
@@ -129,9 +130,9 @@ prepare() {
       patch -Np1 -i "$srcdir"/wineserver-lto.patch
       patch -Np1 -i "$srcdir"/reflex-support.patch
       patch -Np1 -i "$srcdir"/wine-wayland-keyboard.patch
-      git config user.email "makepkg@aur.not"
-      git config user.name "makepkg aur"
-      git tag wine-ge-9.0 --annotate -m "$pkgver"
+      git config user.email "wine@cachyos.org"
+      git config user.name "wine cachyos"
+      git tag wine-cachyos-9.0 --annotate -m "$pkgver"
       ./tools/make_specfiles
       ./tools/make_requests
       ./dlls/winevulkan/make_vulkan
@@ -153,8 +154,8 @@ build() {
   # From Proton
   OPTIMIZE_FLAGS="-O3 -march=$march -mtune=$mtune -mfpmath=sse -pipe -fno-semantic-interposition"
   SANITY_FLAGS="-fwrapv -fno-strict-aliasing"
-  TEMPORARY_FLAGS="-Wno-incompatible-pointer-types"
-  COMMON_FLAGS="$OPTIMIZE_FLAGS $SANITY_FLAGS $TEMPORARY_FLAGS -s"
+  WARNING_FLAGS="-Wno-incompatible-pointer-types"
+  COMMON_FLAGS="$OPTIMIZE_FLAGS $SANITY_FLAGS $WARNING_FLAGS -s"
 
   export LDFLAGS="-Wl,-O1,--sort-common,--as-needed"
   export CROSSLDFLAGS="$LDFLAGS -Wl,--file-alignment,4096"
