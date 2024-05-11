@@ -1,16 +1,17 @@
 # Maintainer: Vladislav Nepogodin <nepogodin.vlad@gmail.com>
 
 pkgname=cachyos-cli-installer-new
-pkgver=0.6.0
-pkgrel=2
+pkgver=0.7.0
+pkgrel=1
 pkgdesc='New CLI installer for CachyOS'
 arch=('x86_64')
 license=(GPLv3)
 url="https://github.com/cachyos/new-cli-installer"
-depends=('fzf' 'gawk' 'chwd')
-makedepends=('meson' 'ninja' 'git')
-source=("${pkgname}::git+$url.git")
-sha512sums=('SKIP')
+depends=('fzf' 'gawk' 'chwd' 'cachyos-rate-mirrors' 'curl')
+makedepends=('cmake' 'ninja' 'git')
+_commit=70773e825ebd299986697be39e55eb2f3b1fec39
+source=("${pkgname}::git+$url.git#commit=${_commit}")
+sha512sums=('7f13a19fe01fce09cc94a7c2044cf660a2d54044a26126fbb7eeb0e0976ea3f87879872621346ec555c000b3518859666e7d241f8881fdcadcb35a991b9a9e92')
 options=(strip)
 
 build() {
@@ -21,20 +22,31 @@ build() {
 
   _cpuCount=$(grep -c -w ^processor /proc/cpuinfo)
 
-  meson --prefix        /usr \
-        --libexecdir    lib \
-        --sbindir       bin \
-        --buildtype     release \
-        -D              b_pie=true \
-        -D              devenv=false \
-        build
+  #meson --prefix        /usr \
+  #      --libexecdir    lib \
+  #      --sbindir       bin \
+  #      --buildtype     release \
+  #      -D              b_pie=true \
+  #      -D              devenv=false \
+  #      build
   #meson --buildtype=release --prefix=/usr build
-  meson compile -C build --jobs $_cpuCount
+  #meson compile -C build --jobs $_cpuCount
+
+  cmake -S . -Bbuild \
+        -GNinja \
+        -DCMAKE_BUILD_TYPE=Release \
+        -DCMAKE_INSTALL_PREFIX=/usr \
+        -DCMAKE_INSTALL_LIBDIR=lib \
+        -DENABLE_DEVENV=OFF
+  cmake --build build --parallel $_cpuCount
 }
 
 package() {
-  cd ${srcdir}/$pkgname/build
-  DESTDIR="${pkgdir}" meson install
+  cd ${srcdir}/$pkgname
+  #DESTDIR="${pkgdir}" meson install
+  DESTDIR="${pkgdir}" cmake --build build --target install
+
+  install -Dm644 LICENSE "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE"
 }
 
 # vim:set sw=2 sts=2 et:
