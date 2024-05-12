@@ -1,0 +1,74 @@
+# Maintainer: Sven-Hendrik Haase <svenstaro@archlinux.org>
+pkgname=nvidia-open-dkms
+pkgver=550.78
+pkgrel=3
+pkgdesc="NVIDIA open kernel modules"
+arch=('x86_64')
+url="https://github.com/NVIDIA/open-gpu-kernel-modules"
+depends=("nvidia-utils=${pkgver}" 'libglvnd')
+makedepends=('linux-cachyos-headers')
+license=('GPL')
+source=("$pkgname-$pkgver.tar.gz::https://github.com/NVIDIA/open-gpu-kernel-modules/archive/refs/tags/${pkgver}.tar.gz"
+        nvidia-open-gcc-ibt-sls.patch
+        0001-NVIDIA-take-modeset-ownership-early.patch
+        make-modeset-fbdev-default.patch)
+sha512sums=('2226b29d7606d92fc78bcc7489c88e44f5b675dc108843654c24cd56b075c318c3bc7df24acb0d3d82c57f6d5924701971a7864213fe2d76a1fae209f36b6da8'
+            '263c4c5e75ef8cb8ca2641c022dfaf8bd9222fadf68ed15120b0ae7dd9cc901a04ce2e55625d513a0995759c9d82dfbdc4c33d4751159124915d7404b1400e34'
+            '3f300ca01ca7cdc946c5570b1eeb8bfba607a53f2b1fb946cc1988b75d6389b438c5e2ff426a3de9d6e858bcedc1132128f168d6b2ba4088851462222f361fc5'
+            'f19a7d52c6e7f5bd6818658c2b11adaaf4ad05016ec0acc73a42417748ed4bf81b8394c077a6f5aba9dfcf6ab01a578692ed1e9d3c2ab583fdaa56166bba05f2')
+
+prepare() {
+  cd open-gpu-kernel-modules-${pkgver}
+  msg2 "Take modeset early - fixes issue when nvidia modules are not included in initramfs"
+  patch -Np1 < "$srcdir"/0001-NVIDIA-take-modeset-ownership-early.patch
+  msg2  "Put modeset and fbdev=1 as default"
+  patch -Np1 < "$srcdir"/make-modeset-fbdev-default.patch
+
+  # Attempt to make this reproducible
+  sed -i "s/^HOSTNAME.*/HOSTNAME = echo archlinux"/ utils.mk
+  sed -i "s/^WHOAMI.*/WHOAMI = echo archlinux-builder"/ utils.mk
+  sed -i "s/^DATE.*/DATE = date -r version.mk"/ utils.mk
+
+  sed -i "s/__VERSION_STRING/${pkgver}/" kernel-open/dkms.conf
+  sed -i 's/__JOBS/`nproc`/' kernel-open/dkms.conf
+  sed -i 's/__EXCLUDE_MODULES//' kernel-open/dkms.conf
+  sed -i 's/__DKMS_MODULES//' kernel-open/dkms.conf
+  sed -i '$i\
+BUILT_MODULE_NAME[0]="nvidia"\
+BUILT_MODULE_LOCATION[0]="kernel-open"\
+DEST_MODULE_LOCATION[0]="/kernel/drivers/video"\
+BUILT_MODULE_NAME[1]="nvidia-uvm"\
+BUILT_MODULE_LOCATION[1]="kernel-open"\
+DEST_MODULE_LOCATION[1]="/kernel/drivers/video"\
+BUILT_MODULE_NAME[2]="nvidia-modeset"\
+BUILT_MODULE_LOCATION[2]="kernel-open"\
+DEST_MODULE_LOCATION[2]="/kernel/drivers/video"\
+BUILT_MODULE_NAME[3]="nvidia-drm"\
+BUILT_MODULE_LOCATION[3]="kernel-open"\
+DEST_MODULE_LOCATION[3]="/kernel/drivers/video"\
+BUILT_MODULE_NAME[4]="nvidia-peermem"\
+BUILT_MODULE_LOCATION[4]="kernel-open"\
+DEST_MODULE_LOCATION[4]="/kernel/drivers/video"' kernel-open/dkms.conf
+
+  # Clean version for later copying for DKMS
+  cp -r ../open-gpu-kernel-modules-${pkgver} "$srcdir"/open-gpu-kernel-modules-dkms
+}
+
+package_nvidia-open-dkms() {
+  depends+=('dkms')
+  conflicts=('nvidia-open' 'NVIDIA-MODULE')
+  provides=('nvidia-open' 'NVIDIA-MODULE')
+
+  install -dm 755 "${pkgdir}"/usr/src
+  # cp -dr --no-preserve='ownership' kernel-open "${pkgdir}/usr/src/nvidia-$pkgver"
+  cp -dr --no-preserve='ownership' open-gpu-kernel-modules-dkms "${pkgdir}/usr/src/nvidia-$pkgver"
+  mv "${pkgdir}/usr/src/nvidia-$pkgver/kernel-open/dkms.conf" "${pkgdir}/usr/src/nvidia-$pkgver/dkms.conf"
+
+  # Force module to load even on unsupported GPUs
+  mkdir -p "$pkgdir"/usr/lib/modprobe.d
+  echo "options nvidia NVreg_OpenRmEnableUnsupportedGpus=1" > "$pkgdir"/usr/lib/modprobe.d/nvidia-open.conf
+
+  install -Dm644 open-gpu-kernel-modules-${pkgver}/COPYING "$pkgdir"/usr/share/licenses/$pkgname
+}
+
+# vim:set sw=2 et:
