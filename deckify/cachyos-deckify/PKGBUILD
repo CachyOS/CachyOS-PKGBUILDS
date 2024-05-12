@@ -2,7 +2,7 @@
 
 pkgname=cachyos-deckify
 pkgver=1
-pkgrel=18
+pkgrel=19
 arch=('any')
 license=('GPL-3.0-later')
 pkgdesc='CachyOS - Deckify!'
@@ -10,9 +10,19 @@ source=(git+https://github.com/CachyOS/CachyOS-Deckify#commit=c7408ba29f43fb72ac
 install="$pkgname.install"
 options=(!strip !debug)
 sha256sums=('7d61f0264e3837a193fa1c29576cbaa9a6efadfc972ed78990442e39953466c0')
-depends=('gamescope-session-git' 'mangohud' 'cachyos-gaming-meta' 'jq' 'dmidecode' 'glew' 'glfw' 'glxinfo' 'curl' 'tar'
-         'scx-scheds' 'qt5-tools' 'hhd' 'hhd-ui' 'adjustor' 'gamescope-session-steam-git' 'jupiter-hw-support' 'jupiter-fan-control' 'gamescope-plus')
-
+depends=('gamescope-session-git' 'mangohud' 'jq' 'dmidecode' 'glew' 'glfw' 'glxinfo' 'curl' 'tar'
+         'scx-scheds' 'qt5-tools' 'hhd' 'hhd-ui' 'adjustor' 'gamescope-session-steam-git' 'jupiter-hw-support' 'jupiter-fan-control' 'gamescope-plus'
+         # Common dependecies
+         wine-staging giflib lib32-giflib libpng lib32-libpng libldap lib32-libldap gnutls
+         lib32-gnutls mpg123 lib32-mpg123 openal lib32-openal v4l-utils lib32-v4l-utils
+         libpulse lib32-libpulse libgpg-error lib32-libgpg-error alsa-plugins lib32-alsa-plugins
+         alsa-lib lib32-alsa-lib libjpeg-turbo lib32-libjpeg-turbo sqlite lib32-sqlite libxcomposite
+         lib32-libxcomposite libxinerama lib32-libgcrypt libgcrypt lib32-libxinerama ncurses
+         lib32-ncurses ocl-icd lib32-ocl-icd libxslt lib32-libxslt libva lib32-libva gtk3 lib32-gtk3
+         gst-plugins-base-libs lib32-gst-plugins-base-libs vulkan-icd-loader lib32-vulkan-icd-loader
+         bottles cups dosbox glfw lib32-opencl-icd-loader lib32-vkd3d lutris opencl-icd-loader samba
+         steam steam-native-runtime vkd3d wine-gecko wine-mono winetricks gamescope goverlay
+         mangohud lib32-mangohud ttf-liberation lib32-fontconfig wqy-zenhei)
 package() {
   install -d "$pkgdir/etc"
   cp -rf "${srcdir}/CachyOS-Deckify/etc" "$pkgdir"
