@@ -21,12 +21,14 @@ prepare() {
   cd open-gpu-kernel-modules-${pkgver}
   msg2 "Take modeset early - fixes issue when nvidia modules are not included in initramfs"
   patch -Np1 < "$srcdir"/0001-NVIDIA-take-modeset-ownership-early.patch
-  msg2  "Put modeset and fbdev=1 as default"
+  msg2 "Put modeset and fbdev=1 as default"
   patch -Np1 < "$srcdir"/make-modeset-fbdev-default.patch
+  msg2 "Patch NVIDIA module for IBT"
+  patch -Np1 < "$srcdir"/nvidia-open-gcc-ibt-sls.patch
 
   # Attempt to make this reproducible
-  sed -i "s/^HOSTNAME.*/HOSTNAME = echo archlinux"/ utils.mk
-  sed -i "s/^WHOAMI.*/WHOAMI = echo archlinux-builder"/ utils.mk
+  sed -i "s/^HOSTNAME.*/HOSTNAME = echo cachyos"/ utils.mk
+  sed -i "s/^WHOAMI.*/WHOAMI = echo cachybuilder"/ utils.mk
   sed -i "s/^DATE.*/DATE = date -r version.mk"/ utils.mk
 
   sed -i "s/__VERSION_STRING/${pkgver}/" kernel-open/dkms.conf
