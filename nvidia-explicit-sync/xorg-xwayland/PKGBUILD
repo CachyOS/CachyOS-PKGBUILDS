@@ -1,8 +1,8 @@
 # Maintainer: AndyRTR <andyrtr@archlinux.org>
 
 pkgname=xorg-xwayland
-pkgver=24.1
-pkgrel=2
+pkgver=24.1.0
+pkgrel=3
 arch=('x86_64')
 license=(
     LicenseRef-Adobe-Display-PostScript
@@ -31,10 +31,9 @@ depends=('nettle' 'libepoxy' 'systemd-libs' 'libxfont2'
 makedepends=('meson' 'xorgproto' 'xtrans' 'libxkbfile' 'dbus'
              'xorg-font-util' 'wayland-protocols' 'mesa-libgl'
              'systemd' 'egl-wayland')
-source=(git+https://gitlab.freedesktop.org/xorg/xserver.git#branch=xwayland-24.1
-        https://gitlab.freedesktop.org/xorg/xserver/-/merge_requests/1516.patch)
-sha512sums=('SKIP'
-            '8443c753648fa37dc445745631254df680165581d8bd21fbdefc9e63cac7eb3ac5d8ef84bfc580e70a0633100150c9b7b59f9331ad6981350bd8c82d3c60e5db')
+source=(https://xorg.freedesktop.org/archive/individual/xserver/xwayland-$pkgver.tar.xz{,.sig})
+sha512sums=('7592609ad112652cb870761f938f280802d7d3b4bbc82acc7bf741a763d862aa97bbbd7f78250c63a961d76be73fb55555832045514092d89e406839564f0003'
+            'SKIP')
 provides=('xorg-server-xwayland')
 conflicts=('xorg-server-xwayland')
 replaces=('xorg-server-xwayland')
@@ -43,12 +42,10 @@ validpgpkeys=('67DC86F2623FC5FD4BB5225D14706DBE1E4B4540') # "Olivier Fourdan <fo
 validpgpkeys+=('3C2C43D9447D5938EF4551EBE23B7E70B467F0BF') # Peter Hutterer (Who-T) <office@who-t.net>
 
 prepare() {
-	cd xserver
-	# Add patch for steam window
-	patch -Np1 < ../1516.patch
+	cd xwayland-$pkgver
 }
 build() {
-  arch-meson xserver build \
+  arch-meson xwayland-$pkgver build \
     -D ipv6=true \
     -D xvfb=false \
     -D xdmcp=false \
@@ -72,5 +69,5 @@ package() {
   rm "${pkgdir}"/usr/share/man/man1/Xserver.1
 
   # license
-  install -m644 -Dt "${pkgdir}/usr/share/licenses/${pkgname}" xserver/COPYING
+  install -m644 -Dt "${pkgdir}/usr/share/licenses/${pkgname}" xwayland-$pkgver/COPYING
 }
