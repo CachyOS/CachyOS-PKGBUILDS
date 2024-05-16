@@ -1,0 +1,14 @@
+[Unit]
+Description=STRayALLY service
+
+[Service]
+Type=simple
+Nice = -5
+Restart=always
+RestartSec=5
+WorkingDirectory=/usr/bin
+ExecStart=/usr/bin/stray-ally
+KillSignal=SIGTERM
+
+[Install]
+WantedBy=multi-user.target
