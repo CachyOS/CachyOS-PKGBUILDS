@@ -220,37 +220,38 @@ build() {
     ulimit -n 4096
 
     # Do 3-tier PGO
-    echo "Building instrumented browser..."
+#    echo "Building instrumented browser..."
+#
+#    cat >.mozconfig ../mozconfig - <<END
+#ac_add_options --enable-profile-generate
+#END
+#
+#    ./mach build
+#
+#    echo "Profiling instrumented browser..."
+#    ./mach package
+#    LLVM_PROFDATA=llvm-profdata \
+#        JARLOG_FILE="$PWD/jarlog" \
+#        xvfb-run -s "-screen 0 1920x1080x24 -nolisten local" \
+#        ./mach python build/pgo/profileserver.py
+#
+#    stat -c "Profile data found (%s bytes)" merged.profdata
+#    test -s merged.profdata
+#
+#    stat -c "Jar log found (%s bytes)" jarlog
+#    test -s jarlog
+#
+#    echo "Removing instrumented browser..."
+#    ./mach clobber
 
-    cat >.mozconfig ../mozconfig - <<END
-ac_add_options --enable-profile-generate
-END
+#    echo "Building optimized browser..."
 
-    ./mach build
-
-    echo "Profiling instrumented browser..."
-    ./mach package
-    LLVM_PROFDATA=llvm-profdata \
-        JARLOG_FILE="$PWD/jarlog" \
-        xvfb-run -s "-screen 0 1920x1080x24 -nolisten local" \
-        ./mach python build/pgo/profileserver.py
-
-    stat -c "Profile data found (%s bytes)" merged.profdata
-    test -s merged.profdata
-
-    stat -c "Jar log found (%s bytes)" jarlog
-    test -s jarlog
-
-    echo "Removing instrumented browser..."
-    ./mach clobber
-
-    echo "Building optimized browser..."
-
+    echo "Building not much optimized browser..."
     cat >.mozconfig ../mozconfig - <<END
 ac_add_options --enable-lto
-ac_add_options --enable-profile-use
-ac_add_options --with-pgo-profile-path=${PWD@Q}/merged.profdata
-ac_add_options --with-pgo-jarlog=${PWD@Q}/jarlog
+#ac_add_options --enable-profile-use
+#ac_add_options --with-pgo-profile-path=${PWD@Q}/merged.profdata
+#ac_add_options --with-pgo-jarlog=${PWD@Q}/jarlog
 END
 
     ./mach build
