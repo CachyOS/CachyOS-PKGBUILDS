@@ -1,6 +1,6 @@
 # Maintainer: Peter Jung <admin@ptr1337.dev>
 
-pkgname=cachyos-deckify
+pkgname=cachyos-handheld
 pkgver=1
 pkgrel=22
 arch=('any')
@@ -9,7 +9,8 @@ pkgdesc='CachyOS - Handheld!'
 source=(git+https://github.com/CachyOS/CachyOS-Handheld#commit=ca592ad86211404277d4ba266522a7363463d1d8)
 install="$pkgname.install"
 options=(!strip !debug)
-
+provides=('cachyos-deckify')
+replaces=('cachyos-deckify')
 sha256sums=('c4e70131d4c145f278d121fe995826951f550adfd1449b8588046e4cd67c7e47')
 depends=('gamescope-session-git' 'mangohud' 'jq' 'dmidecode' 'glew' 'glfw' 'glxinfo' 'curl' 'tar'
          'scx-scheds' 'qt5-tools' 'hhd' 'hhd-ui' 'adjustor' 'gamescope-session-steam-git' 'jupiter-hw-support' 'jupiter-fan-control' 'gamescope-plus'
