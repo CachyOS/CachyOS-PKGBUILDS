@@ -10,17 +10,13 @@ makedepends=('linux-cachyos-headers')
 license=('GPL')
 source=("$pkgname-$pkgver.tar.gz::https://github.com/NVIDIA/open-gpu-kernel-modules/archive/refs/tags/${pkgver}.tar.gz"
         nvidia-open-gcc-ibt-sls.patch
-        0001-NVIDIA-take-modeset-ownership-early.patch
         make-modeset-fbdev-default.patch)
-sha512sums=('2226b29d7606d92fc78bcc7489c88e44f5b675dc108843654c24cd56b075c318c3bc7df24acb0d3d82c57f6d5924701971a7864213fe2d76a1fae209f36b6da8'
+sha512sums=('2fd2e9b36c4d5c1ef10099e05625898bfec461e1b818f5d4ea5f8b4d01dd2dbaf014bccc0621fcd4295d5dc7fbe303f15c2ed8e975687e71a6ea1dae29d7ff3f'
             '263c4c5e75ef8cb8ca2641c022dfaf8bd9222fadf68ed15120b0ae7dd9cc901a04ce2e55625d513a0995759c9d82dfbdc4c33d4751159124915d7404b1400e34'
-            '3f300ca01ca7cdc946c5570b1eeb8bfba607a53f2b1fb946cc1988b75d6389b438c5e2ff426a3de9d6e858bcedc1132128f168d6b2ba4088851462222f361fc5'
             'f19a7d52c6e7f5bd6818658c2b11adaaf4ad05016ec0acc73a42417748ed4bf81b8394c077a6f5aba9dfcf6ab01a578692ed1e9d3c2ab583fdaa56166bba05f2')
 
 prepare() {
   cd open-gpu-kernel-modules-${pkgver}
-  msg2 "Take modeset early - fixes issue when nvidia modules are not included in initramfs"
-  patch -Np1 < "$srcdir"/0001-NVIDIA-take-modeset-ownership-early.patch
   msg2 "Put modeset and fbdev=1 as default"
   patch -Np1 < "$srcdir"/make-modeset-fbdev-default.patch
   msg2 "Patch NVIDIA module for IBT"
