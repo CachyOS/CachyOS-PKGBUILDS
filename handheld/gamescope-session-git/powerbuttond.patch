@@ -1,0 +1,28 @@
+From 20e94d57eb0821719c4455affc7af5e31eae60b5 Mon Sep 17 00:00:00 2001
+From: Nekoh <francisd246@hotmail.com>
+Date: Thu, 23 May 2024 19:29:23 -0400
+Subject: [PATCH] Add powerbuttond for galileo and jupiter
+
+---
+ usr/share/gamescope-session-plus/gamescope-session-plus | 8 ++++++++
+ 1 file changed, 8 insertions(+)
+
+diff --git a/usr/share/gamescope-session-plus/gamescope-session-plus b/usr/share/gamescope-session-plus/gamescope-session-plus
+index 00ba821..4d3673c 100755
+--- a/usr/share/gamescope-session-plus/gamescope-session-plus
++++ b/usr/share/gamescope-session-plus/gamescope-session-plus
+@@ -252,6 +252,14 @@ if command -v /usr/bin/ibus-daemon >/dev/null; then
+ 	/usr/bin/ibus-daemon -d -r --panel=disable --emoji-extension=disable
+ fi
+ 
++#Use powerbuttond on galileo/jupiter only
++SYS_ID="$(cat /sys/devices/virtual/dmi/id/product_name)"
++if [[ ":Jupiter:Galileo:" =~ ":$SYS_ID:" ]]; then
++	(while true; do
++		/usr/lib/hwsupport/powerbuttond
++	done) &
++fi
++
+ # If we have mangoapp binary start it
+ if command -v mangoapp >/dev/null; then
+ 	(while true; do
