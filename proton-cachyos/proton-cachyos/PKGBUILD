@@ -2,13 +2,13 @@
 # Maintainer: loathingkernel <loathingkernel _a_ gmail _d_ com>
 
 pkgname=proton-cachyos
-_srctag=9.0-20240509
+_srctag=9.0-20240522
 _commit=
-pkgver=9.0
+pkgver=${_srctag//-/.}
 _geckover=2.47.4
 _monover=9.1.0
 _xaliaver=0.4.2
-pkgrel=16
+pkgrel=1
 pkgdesc="Compatibility tool for Steam Play based on Wine and additional components, experimental branch with extra CachyOS flavour"
 url="https://github.com/cachyos/proton-cachyos"
 arch=(x86_64 x86_64_v3)
@@ -38,12 +38,10 @@ depends=(
   python
   steam-native-runtime
   cabextract
-
-  winesync-dkms
-  winesync-header
-  winesync-udev-rule
 )
 depends+=(
+  winesync-dkms
+  winesync-udev-rule
   wayland          lib32-wayland
 )
 
@@ -73,6 +71,9 @@ makedepends=(autoconf bison perl flex mingw-w64-gcc
   opencl-headers
   wayland-protocols
 )
+makedepends+=(
+  winesync-header
+)
 
 optdepends=(
   giflib                lib32-giflib
@@ -97,14 +98,8 @@ source=(
     https://dl.winehq.org/wine/wine-gecko/${_geckover}/wine-gecko-${_geckover}-x86{,_64}.tar.xz
     https://github.com/madewokherd/wine-mono/releases/download/wine-mono-${_monover}/wine-mono-${_monover}-x86.tar.xz
     https://github.com/madewokherd/xalia/releases/download/xalia-${_xaliaver}/xalia-${_xaliaver}-net48-mono.zip
-    server-Enable-link-time-optimization.patch
-    amd-fsr.patch
     dxvk-reflex.patch
-    wine-reflex.patch
-    fastsync.patch
     disable-fastsync.patch
-    wayland-upstream.patch
-    media-converter.patch
 )
 noextract=(
     wine-gecko-${_geckover}-{x86,x86_64}.tar.xz
@@ -143,9 +138,6 @@ EOF
     done
 }
 
-_backports=(
-)
-
 prepare() {
 
     # Provide wrappers to compiler tools
@@ -177,29 +169,6 @@ prepare() {
 
     echo "Disable Fastsync as default"
     patch -Np1 -i "$srcdir"/disable-fastsync.patch
-
-# Manually apply backport, to not depend on the latest srctag from loathing
- local _c _l
-  for _c in "${_backports[@]}"; do
-    if [[ "${_c}" == *..* ]]; then _l='--reverse'; else _l='--max-count=1'; fi
-    git log --oneline "${_l}" "${_c}"
-    git cherry-pick --mainline 1 --no-commit "${_c}"
-  done
-
-    cd $srcdir/proton-cachyos/wine
-    echo "Wine: Enable LTO for wineserver"
-    patch -Np1 -i "$srcdir"/server-Enable-link-time-optimization.patch
-    echo "Wine: FSR"
-    patch -Np1 -i "$srcdir"/amd-fsr.patch
-    echo "Wine: Enable Reflex"
-    patch -Np1 -i "$srcdir"/wine-reflex.patch
-    echo "Add upstream patch for wine wayland"
-    patch -Np1 -i "$srcdir"/wayland-upstream.patch
-## Dropped due failures with GCC 14
-    echo "Wine: Enable Fastsync/NTSync"
-    patch -Np1 -i "$srcdir"/fastsync.patch
-    echo "Wine: Add env var for media converter"
-    patch -Np1 -i "$srcdir"/media-converter.patch
 
     cd $srcdir/proton-cachyos/dxvk
     echo "dxvk: Enable Reflex"
@@ -253,8 +222,7 @@ package() {
     # For some unknown to me reason, 32bit vkd3d (not vkd3d-proton) always links
     # to libgcc_s_dw2-1.dll no matter what linker options I tried.
     # Copy the required dlls into the package, they will be copied later into the prefix
-    # by the patched proton script. Bundling the helps to avoid making mingw-w64-gcc package
-    # a runtime dependency.
+    # by the patched proton script. Bundle them to not depend on mingw-w64-gcc being installed.
     cp /usr/i686-w64-mingw32/bin/{libgcc_s_dw2-1.dll,libwinpthread-1.dll} \
         "$_compatdir/${pkgname}"/files/lib/vkd3d/
     cp /usr/x86_64-w64-mingw32/bin/{libgcc_s_seh-1.dll,libwinpthread-1.dll} \
@@ -287,17 +255,10 @@ package() {
         $(find "$_monodir" -iname "*x86_64.dll" -or -iname "*x86_64.exe")
 }
 
-sha256sums=('b22f030b48c0f8843a19c2027b97c200912c359c18b948106746b0240e7cabcf'
+sha256sums=('82422ad4d7fadaf065327560bc48b357996344cade5b2766508bd985ab7b2c73'
             '2cfc8d5c948602e21eff8a78613e1826f2d033df9672cace87fed56e8310afb6'
             'fd88fc7e537d058d7a8abf0c1ebc90c574892a466de86706a26d254710a82814'
             '601169d0203b291fbfd946b356a9538855e01de22abd470ded73baf312c88767'
             '50ce2cc85162343e62340b0ca7994ceba94592ab395fb99711e94e108e991f0c'
-            '369193510b9309fc9cb80fc204220599583677a59976c7f434c2a33871b0cbe1'
-            'f619015fa7c8c782023f46b2752d34726fcfec0c62746675f88ce0a3cfa6cc76'
             '7b36b2ddf9e61d095f44aa7f7d41107addbbf9c435f338840718af3fd426f53f'
-            '36e601bf53a3e938bffd0b6f02432930a53a652b732a503aa29944c043def690'
-            'aca568c20741784b0a9ae4628e97eff1e9b1a4643974bd8c36ae0d692450f2c3'
-            '25776bc421be4a083c64f1fd232bbd67e24bde6ad9975281ad716dc2ce4d7888'
-            '416350c345db4c680f825d89b0eea79dbef668f671b18f7f792bbeb4b9e59e18'
-            'b211d9fbbf454b580ffe5a9fba8d8c57d14507def5a84afc37966805623df272')
-
+            '25776bc421be4a083c64f1fd232bbd67e24bde6ad9975281ad716dc2ce4d7888')
