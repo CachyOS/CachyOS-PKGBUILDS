@@ -6,12 +6,12 @@ pkgrel=23
 arch=('any')
 license=('GPL-3.0-later')
 pkgdesc='CachyOS - Handheld!'
-source=(git+https://github.com/CachyOS/CachyOS-Handheld#commit=54208c94d9d52dd82838acd4348e8f8329b75b5b)
+source=(git+https://github.com/CachyOS/CachyOS-Handheld#commit=1b82e5f58203e82fb0bda436c5a368da05b814d9)
 install="$pkgname.install"
 options=(!strip !debug)
 provides=('cachyos-deckify')
 replaces=('cachyos-deckify')
-sha256sums=('4cf6e2e486aa8e5776928f14141f0836bf076f36524ccb18bdbade62456f4226')
+sha256sums=('85459c9392a15dfa86fb50a65e73bda487640e5eb80f5888f0ec2081653c6ce2')
 depends=('gamescope-session-git' 'mangohud' 'jq' 'dmidecode' 'glew' 'glfw' 'glxinfo' 'curl' 'tar'
          'scx-scheds' 'qt5-tools' 'hhd' 'hhd-ui' 'adjustor' 'gamescope-session-steam-git' 'jupiter-hw-support' 'jupiter-fan-control' 'gamescope-plus'
          # Common dependecies
@@ -27,7 +27,7 @@ depends=('gamescope-session-git' 'mangohud' 'jq' 'dmidecode' 'glew' 'glfw' 'glxi
          mangohud lib32-mangohud ttf-liberation lib32-fontconfig wqy-zenhei)
 package() {
   install -d "$pkgdir/etc"
-  cp -rf "${srcdir}/CachyOS-Deckify/etc" "$pkgdir"
+  cp -rf "${srcdir}/CachyOS-Handheld/etc" "$pkgdir"
   install -d "$pkgdir/usr"
-  cp -rf "${srcdir}/CachyOS-Deckify/usr" "$pkgdir"
+  cp -rf "${srcdir}/CachyOS-Handheld/usr" "$pkgdir"
 }
