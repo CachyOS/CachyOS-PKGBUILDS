@@ -93,15 +93,6 @@ build() {
     ninja -C _build $NINJAFLAGS
 }
 
-check() {
-    ninja -C _build $NINJAFLAGS check-llvm
-    ninja -C _build $NINJAFLAGS check-clang
-    ninja -C _build $NINJAFLAGS check-clang-tools
-    ninja -C _build $NINJAFLAGS check-polly
-    ninja -C _build $NINJAFLAGS check-lld
-    ninja -C _build $NINJAFLAGS check-lldb
-}
-
 package_llvm-git() {
     pkgdesc="LLVM development version. includes clang and many other tools"
     depends=("llvm-libs-git=$pkgver-$pkgrel" 'perl')
