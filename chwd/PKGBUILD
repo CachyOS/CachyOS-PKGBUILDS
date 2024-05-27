@@ -2,8 +2,8 @@
 # Contributor: Vasiliy Stelmachenok <ventureo@yandex.ru>
 
 pkgname=chwd
-pkgver=1.6.0
-pkgrel=2
+pkgver=1.6.1
+pkgrel=1
 pkgdesc="CachyOS Hardware Detection Tool"
 arch=(x86_64)
 url="https://github.com/cachyos/chwd"
@@ -15,7 +15,7 @@ replaces=('chwd-db')
 conflicts=('chwd-db')
 groups=('cachyos')
 source=("chwd-$pkgver.tar.gz::$url/archive/$pkgver.tar.gz")
-sha256sums=('137c361a8875d6527c4b11fabff55c8395f1901511a10c8f4ac462767f372b08')
+sha256sums=('96a0574ca87202d78ed4de696d13a707de7ec1238b94a0493333d6d5ed3c9ca9')
 
 prepare() {
   cd "$srcdir/$pkgname-$pkgver"
@@ -58,9 +58,6 @@ package() {
   install -Dm644 target/release/build/chwd-*/out/_chwd "$pkgdir/usr/share/zsh/site-functions/_chwd"
 
   install -d -m755 "$pkgdir"/var/lib/chwd/{db,local}/pci
-
-  # mask it for now
-  rm -rf profiles/pci/handhelds
 
   cp -r profiles/pci "$pkgdir"/var/lib/chwd/db/
 
