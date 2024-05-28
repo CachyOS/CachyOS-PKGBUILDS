@@ -1,0 +1,51 @@
+From 75db029a457bbcbd60ccf50d0eb601581e483115 Mon Sep 17 00:00:00 2001
+From: Vladislav Nepogodin <nepogodin.vlad@gmail.com>
+Date: Tue, 28 May 2024 14:40:59 +0400
+Subject: [PATCH] makechrootpkg: add paccache flag
+
+if the flag is given, then pass it to the arch-nspawn to build the
+package with.
+---
+ src/makechrootpkg.in | 8 +++++++-
+ 1 file changed, 7 insertions(+), 1 deletion(-)
+
+diff --git a/src/makechrootpkg.in b/src/makechrootpkg.in
+index 9df14e8..c63fe0f 100644
+--- a/src/makechrootpkg.in
++++ b/src/makechrootpkg.in
+@@ -73,6 +73,7 @@ usage() {
+ 	echo '           This is useful for rebuilds without dirtying the pristine'
+ 	echo '           chroot'
+ 	echo '-r <dir>   The chroot dir to use'
++	echo '-P <dir>   Set pacman cache'
+ 	echo '-I <pkg>   Install a package into the working copy of the chroot'
+ 	echo '-l <copy>  The directory to use as the working copy of the chroot'
+ 	echo '           Useful for maintaining multiple copies'
+@@ -287,7 +286,7 @@ move_products() {
+ }
+ # }}}
+ 
+-while getopts 'hcur:I:l:nCTD:d:U:x:' arg; do
++while getopts 'hcur:I:l:nCTD:d:U:x:P:' arg; do
+ 	case "$arg" in
+ 		c) clean_first=1 ;;
+ 		D) bindmounts_ro+=("--bind-ro=$OPTARG") ;;
+@@ -301,6 +300,7 @@ while getopts 'hcur:I:l:nCTD:d:U:x:P:' arg; do
+ 		T) temp_chroot=1; copy+="-$$" ;;
+ 		U) makepkg_user="$OPTARG" ;;
+ 		x) inspect="$OPTARG" ;;
++		P) cache_dirs+=("$OPTARG") ;;
+ 		h|*) usage ;;
+ 	esac
+ done
+@@ -389,6 +387,10 @@ nspawn_build_args=(
+ 	"${bindmounts_rw[@]}"
+ )
+ 
++if (( ${#cache_dirs[@]} != 0 )); then
++    nspawn_build_args+=("${cache_dirs[@]}")
++fi
++
+ if arch-nspawn "$copydir" \
+ 	"${nspawn_build_args[@]}" \
+ 	/chrootbuild "${makepkg_args[@]}"
