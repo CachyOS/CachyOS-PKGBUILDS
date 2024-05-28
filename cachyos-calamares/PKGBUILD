@@ -76,4 +76,6 @@ package() {
     cp -rf ${srcdir}/calamares/src/modules/*/*.conf "$pkgdir/etc/calamares/modules"
     cp -rf ${srcdir}/calamares/src/scripts "$pkgdir/etc/calamares"
     cp -rf ${srcdir}/calamares/src/images "$pkgdir/etc/calamares"
+    # Delete Desktop Entry to avoid confusion for users
+    rm -rf "$pkgdir/usr/share/applications"
 }
