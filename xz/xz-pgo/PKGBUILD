@@ -3,33 +3,28 @@
 # PGO Version: Laio Seman <laio [at] ieee.org>
 
 pkgname=xz
-pkgver=5.6.1
-pkgrel=3
+pkgver=5.6.2
+pkgrel=2
 pkgdesc='Library and command line tools for XZ and LZMA compressed files'
 arch=('x86_64')
 url='https://xz.tukaani.org/xz-utils/'
 license=('GPL' 'LGPL' 'custom')
 depends=('sh')
+makedepends=('git' 'po4a' 'doxygen')
 provides=('liblzma.so')
-validpgpkeys=('3690C240CE51B4670D30AD1C38EE757D69184620'  # Lasse Collin <lasse.collin@tukaani.org>
-              '22D465F2B4C173803B20C6DE59FCF207FEA7F445') # Jia Tan <jiat0218@gmail.com>
-source=("https://github.com/tukaani-project/xz/releases/download/v${pkgver}/xz-${pkgver}.tar.gz"{,.sig})
-sha256sums=('2398f4a8e53345325f44bdd9f0cc7401bd9025d736c6d43b372f4dea77bf75b8'
-            'SKIP')
-sha512sums=('8af100eb83288f032e4813be2bf8de7d733c8761f77f078776c1391709241ad8fe3192d107664786e2543677915c5eeb3fe7add5c53b48b50c10a9de7c9f4fda'
-            'SKIP')
+validpgpkeys=('3690C240CE51B4670D30AD1C38EE757D69184620') # Lasse Collin <lasse.collin@tukaani.org>
+source=("git+https://git.tukaani.org/xz.git#tag=v${pkgver}")
+sha256sums=('a71fcf56faa1f7d9e9708ca8d6a97906b929307d6a98d220018852eef37853c8')
+sha512sums=('f369f126dd3d538ef27ecce62e8ae01a2c9056eeb22c6b21d9a1d5e456f35330bc7f2bb0df525ad4a4f95ba84c0196c7c79ad768359786d3a73f876aa043f164')
 
 prepare() {
-	cd "${srcdir}/${pkgname}-${pkgver}"
-    rm -rf tests/files/bad-3-corrupt_lzma2.xz
-    rm -rf tests/files/bad-dict_size.lzma
-    rm -rf tests/files/good-2cat.xz
-    rm -rf tests/files/good-large_compressed.lzma
-    rm -rf tests/files/good-small_compressed.lzma
+  cd ${pkgname}
+
+  ./autogen.sh
 }
 
 build() {
-  cd "${srcdir}/${pkgname}-${pkgver}"
+  cd "${srcdir}/${pkgname}"
   export CFLAGS="${CFLAGS} -fprofile-generate -fprofile-update=atomic -fprofile-partial-training"
 
   ./configure \
@@ -52,17 +47,16 @@ build() {
 }
 
 check() {
-  cd "${srcdir}/${pkgname}-${pkgver}"
+  cd ${pkgname}
 
   make check
 }
 
 package() {
-  cd "${srcdir}/${pkgname}-${pkgver}"
+  cd ${pkgname}
 
   make DESTDIR="${pkgdir}" install
 
   install -d -m0755 "${pkgdir}/usr/share/licenses/xz/"
   ln -sf /usr/share/doc/xz/COPYING "${pkgdir}/usr/share/licenses/xz/"
-  ln -sf /usr/share/licenses/common/GPL2/license.txt "${pkgdir}/usr/share/doc/xz/COPYING.GPLv2"
 }
