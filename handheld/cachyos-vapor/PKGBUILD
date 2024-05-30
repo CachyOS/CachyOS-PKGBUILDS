@@ -1,0 +1,17 @@
+# Maintainer Peter Jung <admin@ptr1337.dev>
+
+pkgname=cachyos-vapor
+pkgver=1
+pkgrel=1
+arch=('any')
+url="https://github.com/CachyOS/cachyos-vapor"
+pkgdesc="SteamOS Vapor theme for CachyOS Handheld"
+license=('GPL2')
+depends=('kdialog')
+makedepends=('git' 'openssh')
+source=("git+https://github.com/CachyOS/cachyos-vapor.git")
+sha512sums=(SKIP)
+
+package() {
+  cp -R "$srcdir"/cachyos-vapor/* "$pkgdir"
+}
