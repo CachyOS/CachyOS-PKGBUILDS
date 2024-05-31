@@ -5,4 +5,10 @@
 # Run dracut for all the installed kernels
 
 # This script requires passing a valid file to regenerate all initrds so we pass a file we know will exist
+
+if [[ $EUID -ne 0 ]]; then
+	echo -e "\033[1;31mThis script needs to be run as root.\033[0m"
+	exit 1
+fi
+
 /usr/share/libalpm/scripts/dracut-install < "/usr/bin/dracut-rebuild"
