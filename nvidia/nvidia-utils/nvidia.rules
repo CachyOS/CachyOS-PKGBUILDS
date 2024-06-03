@@ -3,6 +3,6 @@
 # nvidia-modprobe in the udev rules to cover the Wayland/EGLStream and compute
 # case without a started display. In the case where vfio-pci is used
 # nvidia-modprobe should not be invoked.
-ACTION=="bind", ATTR{vendor}=="0x10de", ATTR{class}=="0x03[0-9]*", DRIVER=="nvidia", \
+ACTION=="add", ATTR{vendor}=="0x10de", ATTR{class}=="0x03[0-9]*", DRIVER=="nvidia", \
     RUN+="/usr/bin/nvidia-modprobe", \
     RUN+="/usr/bin/nvidia-modprobe -c0 -u"
