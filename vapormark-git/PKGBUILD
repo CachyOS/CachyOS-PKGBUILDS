@@ -1,0 +1,30 @@
+# Maintainer: Piotr Górski <lucjan.lucjanov@gmail.com>
+
+pkgname=vapormark-git
+gitname=vapormark
+pkgver=20240522.r101.gbf5e50e
+pkgrel=1
+pkgdesc="Benchmark framework for measuring performance metrics while running a program on Linux"
+arch=('x86_64')
+url="https://github.com/Igalia/vapormark"
+license=('GPL-2.0-only')
+depends=('schbench' 'mangohud' 'python' 'pandoc')
+makedepemds=('git')
+source=('git+https://github.com/Igalia/vapormark')
+sha512sums=('SKIP')
+
+pkgver() {
+  cd $gitname
+  echo "$(git show --format='%cI' -q main | sed 's/T.*//g;s/-//g').r$(git rev-list --count HEAD).g$(git rev-parse --short HEAD)"
+}
+
+build() {
+  cd $gitname
+  make
+}
+
+package() {
+  cd $gitname
+  install -Dm755 bin/* -t "$pkgdir/usr/bin/"
+  install -Dm644 LICENSE -t "$pkgdir/usr/share/licenses/$pkgname/"
+}
