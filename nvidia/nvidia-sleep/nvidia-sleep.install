@@ -5,6 +5,6 @@ post_install() {
     for service in "${SERVICES[@]}"; do
         systemctl enable "$service"
     done
-
+    mkinitcpio -P
     echo "Please reboot your system first to get a working sleep"
 }
