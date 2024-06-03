@@ -1,0 +1,10 @@
+SERVICES=("nvidia-suspend" "nvidia-hibernate" "nvidia-resume")
+
+post_install() {
+    echo "Enabling services..."
+    for service in "${SERVICES[@]}"; do
+        systemctl enable "$service"
+    done
+
+    echo "Please reboot your system first to get a working sleep"
+}
