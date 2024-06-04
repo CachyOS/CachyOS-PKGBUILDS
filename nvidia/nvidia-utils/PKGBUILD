@@ -6,7 +6,7 @@
 pkgbase=nvidia-utils
 pkgname=('nvidia-utils' 'opencl-nvidia' 'nvidia-dkms')
 pkgver=555.42.02
-pkgrel=5
+pkgrel=6
 arch=('x86_64')
 url="http://www.nvidia.com/"
 license=('custom')
@@ -253,6 +253,9 @@ package_nvidia-utils() {
 
     echo "blacklist nouveau" | install -Dm644 /dev/stdin "${pkgdir}/usr/lib/modprobe.d/${pkgname}.conf"
     echo "nvidia-uvm" | install -Dm644 /dev/stdin "${pkgdir}/usr/lib/modules-load.d/${pkgname}.conf"
+
+    # Fix sleep on NVIDIA and wayland
+    install -Dm644 "${srcdir}/nvidia-sleep.conf" "${pkgdir}/usr/lib/modprobe.d/nvidia-sleep.conf"
 
     create_links
 }
