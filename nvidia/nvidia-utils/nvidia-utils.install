@@ -1,3 +1,5 @@
+SERVICES=("nvidia-suspend" "nvidia-hibernate" "nvidia-resume")
+
 post_upgrade() {
   echo "If you run into trouble with CUDA not being available, run nvidia-modprobe first."
   echo "If you use GDM on Wayland, you might have to run systemctl enable --now nvidia-resume.service"
@@ -6,4 +8,9 @@ post_upgrade() {
 
 post_install() {
   post_upgrade
+
+    echo "Enabling services..."
+    for service in "${SERVICES[@]}"; do
+        systemctl enable "$service"
+    done
 }
