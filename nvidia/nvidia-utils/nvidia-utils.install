@@ -1,4 +1,3 @@
-SERVICES=("nvidia-suspend" "nvidia-hibernate" "nvidia-resume")
 
 post_upgrade() {
   echo "If you run into trouble with CUDA not being available, run nvidia-modprobe first."
@@ -10,7 +9,5 @@ post_install() {
   post_upgrade
 
     echo "Enabling services..."
-    for service in "${SERVICES[@]}"; do
-        systemctl enable "$service"
-    done
+    systemctl enable nvidia-resume nvidia-hibernate nvidia-suspend
 }
