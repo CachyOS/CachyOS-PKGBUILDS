@@ -3,7 +3,7 @@
 
 pkgname=chwd
 pkgver=1.7.0
-pkgrel=1
+pkgrel=2
 pkgdesc="CachyOS Hardware Detection Tool"
 arch=(x86_64)
 url="https://github.com/cachyos/chwd"
@@ -35,7 +35,7 @@ build() {
   export NM=llvm-nm
   export RANLIB=llvm-ranlib
 
-  export RUSTFLAGS="-Cembed-bitcode -C opt-level=3 -Ccodegen-units=1 -Clinker=clang -C link-arg=-flto -Clink-arg=-fuse-ld=/usr/bin/mold"
+  export RUSTFLAGS="-Cembed-bitcode -C opt-level=3 -Ccodegen-units=1 -Clinker=clang -C link-arg=-flto"
 
   cd scripts/chwd-kernel
   cargo build --release --frozen
