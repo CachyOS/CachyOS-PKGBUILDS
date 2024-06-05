@@ -35,7 +35,7 @@ build() {
   export NM=llvm-nm
   export RANLIB=llvm-ranlib
 
-  export RUSTFLAGS="-Cembed-bitcode -C opt-level=3 -Ccodegen-units=1 -Clinker=clang -C link-arg=-flto -C link-arg=-flto -Clink-arg=-fuse-ld=/usr/bin/ld.lld"
+  export RUSTFLAGS="-Cembed-bitcode -C opt-level=3 -Ccodegen-units=1 -Clinker=clang -C link-arg=-flto -Clink-arg=-fuse-ld=/usr/bin/ld.lld"
 
   cd scripts/chwd-kernel
   cargo build --release --frozen
