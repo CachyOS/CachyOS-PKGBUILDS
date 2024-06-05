@@ -2,16 +2,21 @@
 
 _gitname=CachyOS-Settings
 pkgname=cachyos-settings
-pkgver=43
-pkgrel=2
+pkgver=1.0.0
+pkgrel=1
+epoch=1
 groups=(cachyos)
 arch=('any')
 license=('GPL')
 makedepends=('coreutils')
 pkgdesc='CachyOS - Settings'
-source=("git+https://github.com/CachyOS/$_gitname#commit=4bb068a7b1a24185e2a38c59bf9b8b7f545625f5")
+source=("git+https://github.com/cachyos/CachyOS-Settings?signed#tag=$pkgver")
 install="$pkgname.install"
-sha256sums=('8c69b474c9b1f4bee95ba3915ab982c3b2ba89d4ee0a9e82e6f8a171133052b3')
+sha256sums=('3f8e074c06d29391429c917217623e69ff79273d5e68ff05a10f921a97b1483d')
+validpgpkeys=(
+  E8B9AA39F054E30E8290D492C3C4820857F654FE  # Peter Jung <admin@ptr1337.dev>
+)
+
 depends=(
     'zram-generator'
     'ananicy-cpp'
