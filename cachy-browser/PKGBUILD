@@ -102,6 +102,7 @@ source=(https://archive.mozilla.org/pub/firefox/releases/$pkgver/source/firefox-
         "git+https://github.com/cachyos/cachyos-browser-common.git#commit=${_common_commit}"
         "match.patch"
         "wasi-sysroot-path.patch"
+        "line-breakers-fix.patch"
         "https://gitlab.archlinux.org/archlinux/packaging/packages/firefox/-/raw/e514c7d363e18f645c1a1d1942fd2c99c0970b0c/0001-Bug-1882209-Update-encoding_rs-to-0.8.34-to-deal-wit.patch")
 sha256sums=('f63026359f678a5d45cea4c7744fcef512abbb58a5b016bbbb1c6ace723a263b'
             'SKIP'
@@ -230,6 +231,9 @@ END
     # patch -Np1 -i ../match.patch
     msg2 "explicitly set wasi sysroot path"
     patch -Np1 -i ../wasi-sysroot-path.patch
+
+    msg2 "fix linebreakers"
+    patch -Np1 -i ../line-breakers-fix.patch
 
     rm -f ${srcdir}/cachyos-browser-common/source_files/mozconfig
 }
