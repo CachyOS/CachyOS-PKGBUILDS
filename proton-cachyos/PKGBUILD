@@ -8,7 +8,7 @@ pkgver=${_srctag//-/.}
 _geckover=2.47.4
 _monover=9.1.0
 _xaliaver=0.4.2
-pkgrel=1
+pkgrel=2
 pkgdesc="Compatibility tool for Steam Play based on Wine and additional components, experimental branch with extra CachyOS flavour"
 url="https://github.com/cachyos/proton-cachyos"
 arch=(x86_64 x86_64_v3)
@@ -170,9 +170,10 @@ prepare() {
     echo "Disable Fastsync as default"
     patch -Np1 -i "$srcdir"/disable-fastsync.patch
 
-    cd $srcdir/proton-cachyos/dxvk
-    echo "dxvk: Enable Reflex"
-    patch -Np1 -i "$srcdir"/dxvk-reflex.patch
+    #echo "dxvk: Enable Reflex"
+    #pushd $srcdir/proton-cachyos/dxvk
+    #patch -Np1 -i "$srcdir"/dxvk-reflex.patch
+    #popd
 }
 
 build() {
