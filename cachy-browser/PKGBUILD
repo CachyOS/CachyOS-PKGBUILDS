@@ -31,7 +31,7 @@ depends=(
   glibc
   gtk3
   hicolor-icon-theme
-  #icu
+  icu
   libevent
   libjpeg
   libpulse
@@ -101,8 +101,6 @@ source=(https://archive.mozilla.org/pub/firefox/releases/$pkgver/source/firefox-
         "git+https://github.com/cachyos/cachyos-browser-settings.git#commit=${_settings_commit}"
         "git+https://github.com/cachyos/cachyos-browser-common.git#commit=${_common_commit}"
         "match.patch"
-        "wasi-sysroot-path.patch"
-        "line-breakers-fix.patch"
         "https://gitlab.archlinux.org/archlinux/packaging/packages/firefox/-/raw/e514c7d363e18f645c1a1d1942fd2c99c0970b0c/0001-Bug-1882209-Update-encoding_rs-to-0.8.34-to-deal-wit.patch")
 sha256sums=('f63026359f678a5d45cea4c7744fcef512abbb58a5b016bbbb1c6ace723a263b'
             'SKIP'
@@ -110,8 +108,6 @@ sha256sums=('f63026359f678a5d45cea4c7744fcef512abbb58a5b016bbbb1c6ace723a263b'
             '75678a5f90e1c99067e915cd61d5ebc86d01160e658bb0bd558fc0c8a31347f2'
             '451e0c4d0c96a8c6e2639815740b1dc7c5c15405f24757d877280aad97e6479b'
             '1fbb1971a1d0d4c875b1af0f9681601909cfbe4fe0cc2c2f42c523c84c934499'
-            '01f08544857d227c514c3b9ed4306c58c7f6e1fbdd3737686903cf765822a7d0'
-            '2d25c33cf4ee03ab64c2e53cc6aaf068619e054c48d2644a3d40f4f2f60499cf'
             '22c030ef8a047802ae56d20b1c2a6a3830e9a5ac4e5399163a2b57a1c09a20b2')
 validpgpkeys=('14F26682D0916CDD81E37B6D61B7B526D98F0353') # Mozilla Software Releases <release@mozilla.com>
 
@@ -123,7 +119,7 @@ prepare() {
     local _cachysettings_dir="${srcdir}/cachyos-browser-settings"
     local _patches_dir="${srcdir}/cachyos-browser-common/patches"
 
-    cat >../mozconfig <<END
+    cat >.mozconfig <<END
 ac_add_options --enable-application=browser
 mk_add_options MOZ_OBJDIR=${PWD@Q}/obj
 
@@ -133,9 +129,9 @@ ac_add_options --enable-hardening
 ac_add_options --enable-optimize
 ac_add_options --enable-rust-simd
 ac_add_options --enable-wasm-simd
-#ac_add_options --enable-linker=lld
+ac_add_options --enable-linker=lld
 ac_add_options --enable-lto=cross
-ac_add_options --enable-linker=gold
+#ac_add_options --enable-linker=gold
 ac_add_options --disable-install-strip
 ac_add_options --disable-elf-hack
 ac_add_options --disable-bootstrap
@@ -167,7 +163,7 @@ ac_add_options --with-system-nss
 ac_add_options --with-system-libvpx
 ac_add_options --with-system-webp
 ac_add_options --with-system-libevent
-#ac_add_options --with-system-icu
+ac_add_options --with-system-icu
 ac_add_options --with-system-zlib
 ac_add_options --with-system-jpeg
 
@@ -230,11 +226,6 @@ END
     #patch -Np1 -i ${srcdir}/0001-Bug-1882209-Update-encoding_rs-to-0.8.34-to-deal-wit.patch
     # msg2 "Match to system libs"
     # patch -Np1 -i ../match.patch
-    msg2 "explicitly set wasi sysroot path"
-    patch -Np1 -i ../wasi-sysroot-path.patch
-
-    msg2 "fix linebreakers"
-    patch -Np1 -i ../line-breakers-fix.patch
 
     rm -f ${srcdir}/cachyos-browser-common/source_files/mozconfig
 }
@@ -263,7 +254,7 @@ build() {
 
     echo "Building browser..."
 
-    xvfb-run -s "-screen 0 1920x1080x24 -nolisten local" ./mach build
+    xvfb-run -s "-screen 0 1920x1080x24 -nolisten local" ./mach build --priority normal
 }
 
 package() {
