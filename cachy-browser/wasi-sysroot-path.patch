@@ -1,0 +1,13 @@
+diff --git a/cachy-browser/firefox-126.0.1/toolkit/moz.configure b/cachy-browser/firefox-126.0.1/toolkit/moz.configure
+index 3e89ca7..b6f1b2b 100644
+--- a/cachy-browser/firefox-126.0.1/toolkit/moz.configure
++++ b/cachy-browser/firefox-126.0.1/toolkit/moz.configure
+@@ -2636,7 +2636,7 @@ with only_when(requires_wasm_sandboxing & compile_environment):
+         if wasi_sysroot:
+             log.info("Using wasi sysroot in %s", wasi_sysroot)
+             return ["--sysroot=%s" % wasi_sysroot]
+-        return []
++        return ['--sysroot=/usr/share/wasi-sysroot/']
+ 
+     set_config("WASI_SYSROOT", wasi_sysroot)
+ 

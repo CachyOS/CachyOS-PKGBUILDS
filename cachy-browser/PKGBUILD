@@ -101,6 +101,7 @@ source=(https://archive.mozilla.org/pub/firefox/releases/$pkgver/source/firefox-
         "git+https://github.com/cachyos/cachyos-browser-settings.git#commit=${_settings_commit}"
         "git+https://github.com/cachyos/cachyos-browser-common.git#commit=${_common_commit}"
         "match.patch"
+        "wasi-sysroot-path.patch"
         "https://gitlab.archlinux.org/archlinux/packaging/packages/firefox/-/raw/e514c7d363e18f645c1a1d1942fd2c99c0970b0c/0001-Bug-1882209-Update-encoding_rs-to-0.8.34-to-deal-wit.patch")
 sha256sums=('f63026359f678a5d45cea4c7744fcef512abbb58a5b016bbbb1c6ace723a263b'
             'SKIP'
@@ -108,6 +109,7 @@ sha256sums=('f63026359f678a5d45cea4c7744fcef512abbb58a5b016bbbb1c6ace723a263b'
             '75678a5f90e1c99067e915cd61d5ebc86d01160e658bb0bd558fc0c8a31347f2'
             '451e0c4d0c96a8c6e2639815740b1dc7c5c15405f24757d877280aad97e6479b'
             '1fbb1971a1d0d4c875b1af0f9681601909cfbe4fe0cc2c2f42c523c84c934499'
+            '9bef49fbacabc20adf975e638b43a9c488c0ba2fdf2947139f7efe5e1f294809'
             '22c030ef8a047802ae56d20b1c2a6a3830e9a5ac4e5399163a2b57a1c09a20b2')
 validpgpkeys=('14F26682D0916CDD81E37B6D61B7B526D98F0353') # Mozilla Software Releases <release@mozilla.com>
 
@@ -222,10 +224,13 @@ END
 
     msg2 "mozilla-nongnome-proxies"
     patch -Np1 -i ${_patches_dir}/kde/mozilla-nongnome-proxies.patch
-    msg2 "Fix build with new rust"
-    patch -Np1 -i ${srcdir}/0001-Bug-1882209-Update-encoding_rs-to-0.8.34-to-deal-wit.patch
+    #msg2 "Fix build with new rust"
+    #patch -Np1 -i ${srcdir}/0001-Bug-1882209-Update-encoding_rs-to-0.8.34-to-deal-wit.patch
     # msg2 "Match to system libs"
     # patch -Np1 -i ../match.patch
+    msg2 "explicitly set wasi sysroot path"
+    patch -Np1 -i ../wasi-sysroot-path.patch
+
     rm -f ${srcdir}/cachyos-browser-common/source_files/mozconfig
 }
 
