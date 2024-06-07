@@ -1,0 +1,25 @@
+From 1cddd37daaac97fab344e36078ce5aa9e14f573e Mon Sep 17 00:00:00 2001
+From: Antonio Rojas <arojas@archlinux.org>
+Date: Thu, 6 Jun 2024 11:04:51 +0200
+Subject: [PATCH] Intall appdata to non-deprecated path
+
+See https://www.freedesktop.org/software/appstream/docs/chap-Metadata.html#spec-component-location
+---
+ Makefile | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/Makefile b/Makefile
+index 34f239fcbaa17..3232ac2450033 100644
+--- a/Makefile
++++ b/Makefile
+@@ -396,8 +396,8 @@ endif
+ 	mkdir -p $(DESTDIR)$(datarootdir)/applications/
+ 	$(INSTALL_F) $(JULIAHOME)/contrib/julia.desktop $(DESTDIR)$(datarootdir)/applications/
+ 	# Install appdata file
+-	mkdir -p $(DESTDIR)$(datarootdir)/appdata/
+-	$(INSTALL_F) $(JULIAHOME)/contrib/julia.appdata.xml $(DESTDIR)$(datarootdir)/appdata/
++	mkdir -p $(DESTDIR)$(datarootdir)/metainfo/
++	$(INSTALL_F) $(JULIAHOME)/contrib/julia.appdata.xml $(DESTDIR)$(datarootdir)/metainfo/
+ 
+ 	# Update RPATH entries and JL_SYSTEM_IMAGE_PATH if $(private_libdir_rel) != $(build_private_libdir_rel)
+ ifneq ($(private_libdir_rel),$(build_private_libdir_rel))

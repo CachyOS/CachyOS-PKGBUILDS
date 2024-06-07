@@ -12,8 +12,8 @@
 
 pkgname=julia
 epoch=2
-pkgver=1.10.3
-pkgrel=3
+pkgver=1.10.4
+pkgrel=2
 arch=(x86_64)
 pkgdesc='High-level, high-performance, dynamic programming language'
 url='https://julialang.org/'
@@ -43,20 +43,24 @@ optdepends=('gnuplot: If using the Gaston Package from julia')
 source=(https://github.com/JuliaLang/julia/releases/download/v$pkgver/$pkgname-$pkgver-full.tar.gz{,.asc}
         c12e8515.patch
         julia-libgit2-1.7.patch::https://github.com/JuliaLang/julia/commit/2c4c068e.patch
+        julia-libgit2-1.8.patch
         julia-libunwind-1.6.patch
         julia-libcholmod-cuda.patch
         julia-suitesparse-7.patch
         julia-hardcoded-libs.patch
+        https://github.com/JuliaLang/julia/commit/1cddd37d.patch
         git+https://github.com/JuliaLang/Microbenchmarks.git)
 backup=(etc/julia/startup.jl)
-sha256sums=('d892b2123be64dacf9d05e4ccbad7f1797f6bf87c397a74804b011c8750f6c8f'
+sha256sums=('f32e5277f5d82a63824882cdebfac158199bb84814c3c019a3fecc3601586191'
             'SKIP'
             '2cc294b63e601d50341979fb936826bdba59de2165a5929eae927e152652f367'
             'b533dd999f019258cbcae1563f18715f41e42e0786b681150cb2c28f8a0da963'
+            'dc541120600e9c0574016a2738461ddb99be21fc8f763d4a3152169fd2f3bf54'
             '3c0c03eabb668e3242fcd3058c1011dfbb579cc1c5adc3ae1016531e711cc64e'
             'f69afd7db3fabe4b747afa2404e1202c1dcfe0f8c5fe5238e424eea737fa2a23'
             '0fd1a0c1fcbe7f583139ed3a4a87f77963f06876d69058fa3ffbedfaec609ee7'
             '02f0ae518dfd50c2b3abf95fa760de85298baf79d80c2f6f48ac182e58a736d7'
+            'fb0156e313fb58ea1ffca2d77f0ed677b6ab8895015203be7429981a877e1702'
             'SKIP')
 validpgpkeys=('3673DF529D9049477F76B37566E3C7DC03D6E495') # Julia (Binary signing key) <buildbot@julialang.org>
 
@@ -65,14 +69,15 @@ prepare() {
 
 # libunwind 1.6 compatibility
   patch -p1 -i ../julia-libunwind-1.6.patch
-# Ignore harmless test failure, needs investigation
-  sed -e '/int.jl/d' -i test/cmdlineargs.jl
+# Update metadata install path
+  patch -p1 -i ../1cddd37d.patch
 # Revert test that depends on patched gmp
   patch -Rp1 -i ../c12e8515.patch
 # Harmless test failure, needs investigation
   sed -e '/int.jl/d' -i test/cmdlineargs.jl
-# libgit2 1.7 compatibility
+# libgit2 1.8 compatibility
   patch -p1 -i ../julia-libgit2-1.7.patch
+  patch -p1 -i ../julia-libgit2-1.8.patch
 # Don't use libcholmod-cuda
   patch -p1 -i ../julia-libcholmod-cuda.patch
 # Don't hardcode library names
@@ -133,7 +138,6 @@ _make() {
 
   LD_LIBRARY_PATH="/usr/lib/mbedtls2" make "${make_options[@]}" "$@"
 }
-
 
 build() {
   export PROFILE_FILE=$(pwd)/profile.profraw
@@ -204,6 +208,5 @@ package() {
 
   rm -f "$STAGE2_DONE"/usr/lib/julia/libccalltest.so.debug # Remove debug testing library
   install -Dm644 ${srcdir}/${pkgname}-${pkgver}/LICENSE.md -t "$STAGE2_DONE"/usr/share/licenses/$pkgname
-  install -Dm644 contrib/julia.svg -t "$pkgdir"/usr/share/pixmaps
 
 }
