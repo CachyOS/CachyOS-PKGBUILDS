@@ -14,7 +14,7 @@ update_user() {
   #Update for autologin
   sed -ri "s|^(User=).*|User=${usr}|" /etc/sddm.conf.d/steam-deckify.conf
   #Update for decky loader
-  sed -ri "s|^(DECKY_USER=).*|DECKY_USER==${usr}|" /etc/environment.d/handheld.conf
+  sed -ri "s|^(DECKY_USER=).*|DECKY_USER=${usr}|" /etc/environment.d/handheld.conf
   sed -ri "s|^(DECKY_USER_HOME=).*|DECK_USER_HOME=/home/${usr}|" /etc/environment.d/handheld.conf
 }
 

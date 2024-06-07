@@ -1,0 +1,25 @@
+From e44f57acf67ea2dfc28193ea7859706c39f11c69 Mon Sep 17 00:00:00 2001
+From: Nekoh <francisd246@hotmail.com>
+Date: Wed, 5 Jun 2024 01:14:54 -0400
+Subject: [PATCH] Only automount sdcards and external usb devices
+
+---
+ usr/lib/udev/rules.d/99-steamos-automount.rules | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/usr/lib/udev/rules.d/99-steamos-automount.rules b/usr/lib/udev/rules.d/99-steamos-automount.rules
+index 49a5968..39cf0a3 100644
+--- a/usr/lib/udev/rules.d/99-steamos-automount.rules
++++ b/usr/lib/udev/rules.d/99-steamos-automount.rules
+@@ -1,7 +1,11 @@
+ # Originally from https://serverfault.com/a/767079
+ # Run a mount script through systemd on any mmcblk* and sd* activity
+ 
++#If device is not sda or sdcard, ignore.
+ KERNEL!="mmcblk*|sd*",          GOTO="steamos_automount_end"
++#If sda device is not usb, ignore.
++KERNEL=="sd*", ENV{ID_BUS}!="usb", GOTO="steamos_automount_end"
++#Do not automount crypto, raid or other special devices
+ ENV{ID_FS_USAGE}!="filesystem", GOTO="steamos_automount_end"
+ 
+ # The service expects to be asynchronous and shouldn't block udev rules

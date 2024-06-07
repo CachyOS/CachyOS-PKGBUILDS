@@ -1,7 +1,7 @@
 # Maintainer: Peter Jung <admin@ptr1337.dev>
 
 pkgname=jupiter-hw-support
-_srctag=jupiter-20240423.1
+_srctag=jupiter-20240603.1
 _srcver=${_srctag#jupiter-}
 pkgver=${_srcver//-/.}
 pkgrel=2
@@ -14,18 +14,28 @@ depends=('python-evdev'
          'alsa-utils' # for the sound workarounds
          'parted' 'e2fsprogs' # for sdcard formatting
          'udisks2>=2.9.4-1.1' # for mounting external drives with the 'as-user' option
+         'ntfs-3g' #To make sure NTFS-3G is installed on CachyOS
         )
 optdepends=('grub-steamos')
 makedepends=('rsync' 'git' 'openssh' 'xorg-xcursorgen')
 pkgdesc='CachyOS - Deckify Steam Deck HW Support'
 source=("git+https://gitlab.com/evlaV/jupiter-hw-support.git#tag=$_srctag"
-        "pythonhid.patch")
+        "pythonhid.patch"
+        "steamos-btrfs-automount.patch"
+        "cachyos-automount.patch"
+        "udev-automount-rules.patch")
 #install="$pkgname.install"
 options=(!strip !debug)
 sha256sums=('SKIP'
-            '05f7a3d1fcff857aad4e5a8dae400f6acbf32c7e505db347f441dd33a6601df4')
+            '05f7a3d1fcff857aad4e5a8dae400f6acbf32c7e505db347f441dd33a6601df4'
+            'fe064240bf77dabfa4d161b10c33c82385a0ca22a49350e70ab9301b0e98dc7b'
+            '75a96c5667218a11d5e6bbf9a3dbbe00e1d9dad44d6013b5751c5e68b77e40c8'
+            'd6b5636eb09d2190b10eb665238c30960babba96424fc9768e36966495fa795e')
 prepare() {
   patch --directory=$pkgname --forward --strip=1 --input=../pythonhid.patch
+  patch --directory=$pkgname --forward --strip=1 --input=../steamos-btrfs-automount.patch
+  patch --directory=$pkgname --forward --strip=1 --input=../cachyos-automount.patch
+  patch --directory=$pkgname --forward --strip=1 --input=../udev-automount-rules.patch
 }
 
 package() {
