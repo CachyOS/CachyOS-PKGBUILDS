@@ -25,8 +25,8 @@ pkgver() {
 }
 
 package() {
-	rm -rf "$srcdir"/gamescope-session-steam-git/usr/bin/steamos-polkit-helpers/jupiter-biosupdate
-	rm -rf "$srcdir"/gamescope-session-steam-git/usr/bin/jupiter-biosupdate
+	rm -f "$srcdir"/gamescope-session-steam-git/usr/bin/steamos-polkit-helpers/jupiter-biosupdate
+	rm -f "$srcdir"/gamescope-session-steam-git/usr/bin/jupiter-biosupdate
 	cd "$srcdir/${_gitdir}"
 	cp -rv "${srcdir}/${_gitdir}/usr" "${pkgdir}/usr"
 	install -Dm644 "${srcdir}/${_gitdir}/LICENSE" "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE"

@@ -40,13 +40,13 @@ prepare() {
 
 package() {
   #rm -rf "$srcdir"/jupiter-hw-support/usr/bin/jupiter-biosupdate
-  rm -rf "$srcdir"/jupiter-hw-support/usr/bin/steam-http-loader
-  rm -rf "$srcdir"/jupiter-hw-support/usr/bin/steamos-select-branch
-  rm -rf "$srcdir"/jupiter-hw-support/usr/bin/steamos-session-select
-  rm -rf "$srcdir"/jupiter-hw-support/usr/bin/steamos-update
+  rm -f "$srcdir"/jupiter-hw-support/usr/bin/steam-http-loader
+  rm -f "$srcdir"/jupiter-hw-support/usr/bin/steamos-select-branch
+  rm -f "$srcdir"/jupiter-hw-support/usr/bin/steamos-session-select
+  rm -f "$srcdir"/jupiter-hw-support/usr/bin/steamos-update
   #rm -rf "$srcdir"/jupiter-hw-support/usr/bin/steamos-polkit-helpers/jupiter-biosupdate
-  rm -rf "$srcdir"/jupiter-hw-support/usr/bin/steamos-polkit-helpers/steamos-select-branch
-  rm -rf "$srcdir"/jupiter-hw-support/usr/bin/steamos-polkit-helpers/steamos-update
+  rm -f "$srcdir"/jupiter-hw-support/usr/bin/steamos-polkit-helpers/steamos-select-branch
+  rm -f "$srcdir"/jupiter-hw-support/usr/bin/steamos-polkit-helpers/steamos-update
   rsync -a "$srcdir"/jupiter-hw-support/* "$pkgdir"
 
   cd $pkgdir/usr/share/steamos/
