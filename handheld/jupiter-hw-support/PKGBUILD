@@ -23,14 +23,16 @@ source=("git+https://gitlab.com/evlaV/jupiter-hw-support.git#tag=$_srctag"
         "pythonhid.patch"
         "steamos-btrfs-automount.patch"
         "cachyos-automount.patch"
-        "udev-automount-rules.patch")
+        "udev-automount-rules.patch"
+        "jupiter-biosupdate.patch")
 #install="$pkgname.install"
 options=(!strip !debug)
 sha256sums=('SKIP'
             '05f7a3d1fcff857aad4e5a8dae400f6acbf32c7e505db347f441dd33a6601df4'
             'fe064240bf77dabfa4d161b10c33c82385a0ca22a49350e70ab9301b0e98dc7b'
             '75a96c5667218a11d5e6bbf9a3dbbe00e1d9dad44d6013b5751c5e68b77e40c8'
-            'd6b5636eb09d2190b10eb665238c30960babba96424fc9768e36966495fa795e')
+            'd6b5636eb09d2190b10eb665238c30960babba96424fc9768e36966495fa795e'
+            '8710d2e3a9d1e61c059315bbce65e5bd6b08d9386a7c7c2b9d34002a6aee4422')
 prepare() {
   patch --directory=$pkgname --forward --strip=1 --input=../pythonhid.patch
   patch --directory=$pkgname --forward --strip=1 --input=../steamos-btrfs-automount.patch

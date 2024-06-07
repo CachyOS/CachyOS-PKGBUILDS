@@ -1,0 +1,27 @@
+From 5a6f5b169d4849f3df49e07dfbb9e08a332fd394 Mon Sep 17 00:00:00 2001
+From: Nekoh <francisd246@hotmail.com>
+Date: Fri, 7 Jun 2024 00:20:45 -0400
+Subject: [PATCH] Add check to ensure a bios update is not ran on
+ non-supporting hardware or when unit is masked
+
+---
+ usr/bin/jupiter-biosupdate | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/usr/bin/jupiter-biosupdate b/usr/bin/jupiter-biosupdate
+index c0665c4..d1d45f2 100755
+--- a/usr/bin/jupiter-biosupdate
++++ b/usr/bin/jupiter-biosupdate
+@@ -187,6 +187,12 @@ fi
+ # Die early if inhibited
+ [[ ! -f $BIOS_INHIBIT_FILE ]] || die "Bios updates inhibited, no action ($BIOS_INHIBIT_FILE)"
+ 
++# Finish early if service is masked or unit is not galileo/jupiter
++SYS_ID="$(cat /sys/devices/virtual/dmi/id/product_name)"
++if [[ $(systemctl is-enabled jupiter-biosupdate.service) == "masked" || ! ":Jupiter:Galileo:" =~ ":$SYS_ID:" ]] ; then
++  finish 0 no "Bios updates inhibited, no action (Service masked) or unit is not Galileo/Jupiter"
++fi
++
+ # Print action
+ modestring="Performing"
+ [[ -z $checkmode ]] || modestring="Checking for"
