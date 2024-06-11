@@ -1,5 +1,5 @@
 pkgname=systemd-boot-manager
-pkgver=10
+pkgver=11
 pkgrel=1
 pkgdesc='A simple tool to maintain systemd-boot & systemd-boot entries for CachyOS'
 arch=(any)
@@ -24,10 +24,13 @@ sha512sums=('b3f57e275eb472b0b9a1006d601cc62053e9184a7169228d0152b4df88d698f91a5
             '047da99a32b3cf1d9ff52ff347a0a8119f7c02a947d45c913c62d4c960d69aebcc240c1a466780bbcea08903361d8f33096d679e8aaac81d8a1f0c9fdf48f442'
             '91fc0f00fd1e6f39d1982994e26c997e51762eeb7bdcca29f6a0d50f6b32a9717acef62f7979e9cdbd170c148579d1c1e48929b0c8153103c01310cbd05abbbc'
             'ebd0c79def6f2d77b9eac63ca41460db5670220dd9ba033bd0c24017abc7f71da2250907f76cac0cc9cf10e219ef518b916aa547fafbba4715be4985cc278c50')
+
 package() {
   install -D -m755 "sdboot-manage" "${pkgdir}/usr/bin/sdboot-manage"
   install -D -m644 "sdboot-manage.conf" "${pkgdir}/etc/sdboot-manage.conf"
   install -D -m644 "sdboot-kernel-update.hook" "${pkgdir}/usr/share/libalpm/hooks/sdboot-kernel-update.hook"
   install -D -m644 "sdboot-kernel-remove.hook" "${pkgdir}/usr/share/libalpm/hooks/sdboot-kernel-remove.hook"
   install -D -m644 "sdboot-systemd-update.hook" "${pkgdir}/usr/share/libalpm/hooks/sdboot-systemd-update.hook"
+  mkdir -m 644 "${pkgdir}/etc/sdboot-manage.conf.d/"
+  mkdir -m 644 "${pkgdir}/usr/lib/sdboot-manage.conf.d/"
 }
