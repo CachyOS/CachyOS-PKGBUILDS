@@ -7,8 +7,8 @@
 pkgname=cachy-browser
 _pkgname=Cachy
 __pkgname=cachy
-pkgver=126.0.1
-pkgrel=2
+pkgver=127.0
+pkgrel=1
 pkgdesc="Community-maintained fork of Firefox, focused on privacy, security and freedom."
 arch=(x86_64 x86_64_v3)
 license=(
@@ -95,20 +95,18 @@ backup=('usr/lib/cachy-browser/cachyos.cfg'
         'usr/lib/cachy-browser/distribution/policies.json')
 
 _settings_commit=42b4b631a9187ac048944a2c9e7f7b8a991f29bd
-_common_commit=69327e7bb8caa1111e16952d7f23c2157f302cd4
+_common_commit=3bccba7d5bc3526740ff74693d74f57813b915b8
 source=(https://archive.mozilla.org/pub/firefox/releases/$pkgver/source/firefox-$pkgver.source.tar.xz{,.asc}
         $pkgname.desktop
         "git+https://github.com/cachyos/cachyos-browser-settings.git#commit=${_settings_commit}"
         "git+https://github.com/cachyos/cachyos-browser-common.git#commit=${_common_commit}"
-        "match.patch"
-        "https://gitlab.archlinux.org/archlinux/packaging/packages/firefox/-/raw/e514c7d363e18f645c1a1d1942fd2c99c0970b0c/0001-Bug-1882209-Update-encoding_rs-to-0.8.34-to-deal-wit.patch")
-sha256sums=('f63026359f678a5d45cea4c7744fcef512abbb58a5b016bbbb1c6ace723a263b'
+        "match.patch")
+sha256sums=('ea6b089ff046ca503978fdaf11ea123c64f66bbcdc4a968bed8f7c93e9994321'
             'SKIP'
             'de5c0deb9b6a4ebfaa933103cc6a65f1f43c9a456296d356cc54c7ca042d144c'
             '75678a5f90e1c99067e915cd61d5ebc86d01160e658bb0bd558fc0c8a31347f2'
-            '451e0c4d0c96a8c6e2639815740b1dc7c5c15405f24757d877280aad97e6479b'
-            '1fbb1971a1d0d4c875b1af0f9681601909cfbe4fe0cc2c2f42c523c84c934499'
-            '22c030ef8a047802ae56d20b1c2a6a3830e9a5ac4e5399163a2b57a1c09a20b2')
+            '2cbe83a42561052c5e1fff3ee3c83612fd3a6157d16a23ca620bf37d3fb40fce'
+            '1fbb1971a1d0d4c875b1af0f9681601909cfbe4fe0cc2c2f42c523c84c934499')
 validpgpkeys=('14F26682D0916CDD81E37B6D61B7B526D98F0353') # Mozilla Software Releases <release@mozilla.com>
 
 prepare() {
