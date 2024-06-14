@@ -3,7 +3,7 @@ SERVICES=("ananicy-cpp" "uksmd")
 post_install() {
     echo "Enabling services..."
     for service in "${SERVICES[@]}"; do
-        systemctl enable "$service" --now
+        systemctl enable "$service"
     done
 }
 
@@ -15,7 +15,7 @@ post_upgrade() {
         if systemctl is-active "$service" >/dev/null; then
             systemctl restart "$service"
         else
-            systemctl enable "$service" --now
+            systemctl enable "$service"
         fi
     done
 }
