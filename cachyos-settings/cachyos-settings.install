@@ -1,4 +1,4 @@
-SERVICES=("ananicy-cpp" "uksmd")
+SERVICES=("ananicy-cpp")
 
 post_install() {
     echo "Enabling services..."
@@ -18,4 +18,6 @@ post_upgrade() {
             systemctl enable "$service"
         fi
     done
+    echo "Disabling uksmd, managed now via systemd 256 MemoryKSM"
+    systemctl disable uksmd
 }
