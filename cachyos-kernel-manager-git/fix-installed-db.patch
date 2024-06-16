@@ -1,0 +1,22 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 52d5415..ba7883a 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -75,11 +75,12 @@ elseif(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -flto -fwhole-program -fuse-linker-plugin")
+ endif()
+ 
+-list(APPEND CMAKE_REQUIRED_LINK_OPTIONS "-lalpm")
+-check_symbol_exists(alpm_pkg_get_installed_db "alpm.h" HAVE_ALPM_INSTALLED_DB)
+-if(HAVE_ALPM_INSTALLED_DB)
+-    add_compile_options(-DHAVE_ALPM_INSTALLED_DB)
+-endif()
++#list(APPEND CMAKE_REQUIRED_LINK_OPTIONS "-lalpm")
++#check_symbol_exists(alpm_pkg_get_installed_db "alpm.h" HAVE_ALPM_INSTALLED_DB)
++#if(HAVE_ALPM_INSTALLED_DB)
++#    add_compile_options(-DHAVE_ALPM_INSTALLED_DB)
++#endif()
++add_compile_options(-DHAVE_ALPM_INSTALLED_DB)
+ 
+ # Link this 'library' to set the c++ standard / compile-time options requested
+ add_library(project_options INTERFACE)
