@@ -76,10 +76,12 @@ post_upgrade() {
         if systemctl is-active "$service" >/dev/null; then
             systemctl restart "$service"
         else
-            systemctl enable "$service" --now
+            systemctl enable "$service"
         fi
     done
    #Update files to reflect the changes
    echo "Updating Handheld Configs."
    update_user
+   # Disable LAVD for existing user
+   systemctl disable scx.service
 }
