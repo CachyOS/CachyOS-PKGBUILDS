@@ -15,7 +15,7 @@ post_upgrade() {
         if systemctl is-active "$service" >/dev/null; then
             systemctl restart "$service"
         else
-            systemctl enable "$service"
+            systemctl enable --now "$service"
         fi
     done
     echo "Disabling uksmd, managed now via systemd 256 MemoryKSM"
