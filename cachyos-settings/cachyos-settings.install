@@ -18,6 +18,8 @@ post_upgrade() {
             systemctl enable "$service"
         fi
     done
-    echo "Disabling uksmd, managed now via systemd 256 MemoryKSM"
-    systemctl disable uksmd
+    if systemctl is-enabled uksmd >/dev/null; then
+        echo "Disabling uksmd, managed now via systemd 256 MemoryKSM"
+        systemctl disable uksmd
+    fi
 }
