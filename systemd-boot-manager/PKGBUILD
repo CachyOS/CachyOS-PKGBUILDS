@@ -19,7 +19,7 @@ source=(
   $url/sdboot-systemd-update.hook
 )
 
-sha512sums=('b3f57e275eb472b0b9a1006d601cc62053e9184a7169228d0152b4df88d698f91a523153527136e0a9ad37c97296a92185acb4d2fc1875d9ce935e2fd03c9c4b'
+sha512sums=('6891bd3eb3153f122e32482432dd205d3308de60cfc34a064997e15f71a7a4ecfa226f3bb200750a97ee9bff7411f9d09c1785aaa26d6193d37af897f922e9c2'
             '63439b2a71571d22b0bf231732c9d4e56cb945203737d1cdc9d97f7d9f1bd6d2ef9b49fc46ab5da98f29d05e4c2fbc36183a430062d43b715602bc3e109826b8'
             '047da99a32b3cf1d9ff52ff347a0a8119f7c02a947d45c913c62d4c960d69aebcc240c1a466780bbcea08903361d8f33096d679e8aaac81d8a1f0c9fdf48f442'
             '91fc0f00fd1e6f39d1982994e26c997e51762eeb7bdcca29f6a0d50f6b32a9717acef62f7979e9cdbd170c148579d1c1e48929b0c8153103c01310cbd05abbbc'
@@ -31,6 +31,6 @@ package() {
   install -D -m644 "sdboot-kernel-update.hook" "${pkgdir}/usr/share/libalpm/hooks/sdboot-kernel-update.hook"
   install -D -m644 "sdboot-kernel-remove.hook" "${pkgdir}/usr/share/libalpm/hooks/sdboot-kernel-remove.hook"
   install -D -m644 "sdboot-systemd-update.hook" "${pkgdir}/usr/share/libalpm/hooks/sdboot-systemd-update.hook"
-  mkdir -m 644 "${pkgdir}/etc/sdboot-manage.conf.d/"
-  mkdir -m 644 "${pkgdir}/usr/lib/sdboot-manage.conf.d/"
+  mkdir -p -m 755 "${pkgdir}/etc/sdboot-manage.conf.d/"
+  mkdir -p -m 755 "${pkgdir}/usr/lib/sdboot-manage.conf.d/"
 }
