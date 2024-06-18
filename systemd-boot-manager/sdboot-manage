@@ -67,13 +67,13 @@ export LINUX_OPTIONS \
 # #APPENDED_LINUX_OPTIONS do not overwrite each other and instead get merged to be added to the end of the kernel cmdline
 # Firstly loads from /usr/lib/sdboot-manage.conf.d then /etc/sdboot-manage.conf.d
 # File should be loaded alphabetically
-ADDITIONAL_LINUX_OPTIONS=""
+CONSTRUCTED_LINUX_OPTIONS=""
 for file in /usr/lib/sdboot-manage.conf.d/*.conf /etc/sdboot-manage.conf.d/*.conf; do
     #Source files if exists
     [[ -f "${file}" ]] && . "${file}"
     #Check if variable is non empty if so append.
-    [[ -n "${APPENDED_LINUX_OPTIONS}" ]] && ADDITIONAL_LINUX_OPTIONS+=" ${APPENDED_LINUX_OPTIONS}"
-    #Delete variable so it gets set by next source
+    [[ -n "${APPENDED_LINUX_OPTIONS}" ]] && CONSTRUCTED_LINUX_OPTIONS+=" ${APPENDED_LINUX_OPTIONS}"
+    #Delete variable to be sure it gets set by next source
     unset APPENDED_LINUX_OPTIONS
 done;
 
@@ -219,7 +219,7 @@ generate_entries() {
                 # get the kernel location so the initrd can be written to the same location as the kernel
                 [[ $(dirname ${kernel}) == "/" ]] && kernelpath="" || kernelpath=$(dirname ${kernel})
 
-                echo -e "title\t${title}\nlinux\t${kernel}\n${initrd}initrd\t${kernelpath}$initramfs.img\noptions\t${sdoptions} ${LINUX_OPTIONS}${ADDITIONAL_LINUX_OPTIONS}" >"$(get_entry_root "$ESP")$entry.conf"
+                echo -e "title\t${title}\nlinux\t${kernel}\n${initrd}initrd\t${kernelpath}$initramfs.img\noptions\t${sdoptions} ${LINUX_OPTIONS}${CONSTRUCTED_LINUX_OPTIONS}" >"$(get_entry_root "$ESP")$entry.conf"
 
                 if [[ ${DISABLE_FALLBACK} != "yes" ]]; then
                     echo -e "title\t${title} (Fallback)\nlinux\t${kernel}\n${initrd}initrd\t${kernelpath}$initramfs-fallback.img\noptions\t${sdoptions} ${LINUX_FALLBACK_OPTIONS}" >"$(get_entry_root "$ESP")$entry-fallback.conf"
