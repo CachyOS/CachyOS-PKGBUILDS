@@ -1,0 +1,70 @@
+# Maintainer: Giancarlo Razzolini <grazzolini@archlinux.org>
+# Maintainer: Frederik Schwan <freswa at archlinux dot org>
+# Contributor: Bartłomiej Piotrowski <bpiotrowski@archlinux.org>
+# Contributor: Allan McRae <allan@archlinux.org>
+# Contributor: judd <jvinet@zeroflux.org>
+
+# NOTE: requires rebuilt with each new gcc version
+
+pkgname=libtool
+pkgver=2.5.0+14+g9a4a0261
+_commit=9a4a02615c9e7cbcfd690ed31874822a7d6aaea2
+pkgrel=2
+_gccver=14.1.1
+pkgdesc='A generic library support script'
+arch=(x86_64)
+url='https://www.gnu.org/software/libtool'
+license=('LGPL-2.0-or-later WITH Libtool-exception')
+depends=(sh tar glibc)
+makedepends=("gcc>=$_gccver" git help2man)
+checkdepends=(gcc-fortran)
+provides=("libltdl=$pkgver" "libtool-multilib=$pkgver")
+conflicts=(libltdl libtool-multilib)
+replaces=(libltdl libtool-multilib)
+source=(
+  git+https://git.savannah.gnu.org/git/libtool.git#commit=$_commit
+  git+https://git.savannah.gnu.org/git/gnulib.git
+  gnulib-bootstrap::git+https://github.com/gnulib-modules/bootstrap.git
+  disable-lto-link-order2.patch
+)
+b2sums=('5dab95beecf437bcfda13de7329af4686b099ee9f6e8a1ecea15d9d8dfc6e2f4082efe278ad542874b5089b97d0689c89512ea998ca9998a80e26343fd8a8017'
+        'SKIP'
+        'SKIP'
+        '9d1e0460b9ef56ba33ac498814b409d1b1d7c3e8ed41a3aed2a86d86341ed7051ca88a5adfa92bd87da968460514230058c3d490b58537d95722e68d7d1687ff')
+
+#pkgver() {
+#  cd libtool
+#  git describe --tags | sed 's/-/+/g;s/^v//'
+#}
+
+prepare() {
+  cd libtool
+
+  # test 67 is broken with lto
+  # this patch removes the -flto flag for this very test
+  # adapt when -ffat-lto-objects is enabled by Arch
+  patch -Np1 -i "${srcdir}"/disable-lto-link-order2.patch
+
+  git submodule init
+  git config --local submodule.gnulib.url "${srcdir}"/gnulib
+  git config --local submodule.gl-mod/bootstrap.url "${srcdir}"/gnulib-bootstrap
+  git -c protocol.file.allow=always submodule update
+
+  ./bootstrap
+}
+
+build() {
+  cd libtool
+  ./configure --prefix=/usr lt_cv_sys_lib_dlsearch_path_spec="/usr/lib /usr/lib32"
+  make
+}
+
+check() {
+  cd libtool
+  make check gl_public_submodule_commit=
+}
+
+package() {
+  cd libtool
+  make DESTDIR="$pkgdir" install
+}
