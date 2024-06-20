@@ -20,10 +20,10 @@
 pkgbase=kodi
 pkgname=('kodi' 'kodi-gles' 'kodi-eventclients' 'kodi-tools-texturepacker' 'kodi-dev')
 pkgver=21.0
-pkgrel=4
+pkgrel=6
 arch=('x86_64')
 url="https://kodi.tv"
-license=(GPL-2.0-or-later)
+license=('GPL2')
 makedepends=(
   'afpfs-ng' 'bluez-libs' 'cmake' 'curl' 'dav1d' 'doxygen' 'git' 'glew'
   'gperf' 'hicolor-icon-theme' 'java-runtime<21' 'fmt' 'libaacs' 'libass'
@@ -65,6 +65,7 @@ source=(
   "$pkgbase-fstrcmp-$_fstrcmp_version.tar.gz::https://mirrors.kodi.tv/build-deps/sources/fstrcmp-$_fstrcmp_version.tar.gz"
   "$pkgbase-flatbuffers-$_flatbuffers_version.tar.gz::https://mirrors.kodi.tv/build-deps/sources/flatbuffers-$_flatbuffers_version.tar.gz"
   "$pkgbase-libudfread-$_libudfread_version.tar.gz::https://mirrors.kodi.tv/build-deps/sources/libudfread-$_libudfread_version.tar.gz"
+  "https://github.com/xbmc/xbmc/commit/2bf5ab07731b3d4160196e6b8d9ab9e25bea2ef9.patch"
 )
 noextract=(
   "$pkgbase-libdvdcss-$_libdvdcss_version.tar.gz"
@@ -84,7 +85,8 @@ sha512sums=('9c2ca6b6e72197d2b1c26a47cf4ddc209318fcaa5a30ea20475ecc5518c7d1395c2
             'f0a80d8e99b10473bcfdfde3d1c5fd7b766959819f0d1c0595ac84ce46db9007a5fbfde9a55aca60530c46cb7f8ef4c7e472c6191559ded92f868589c141ccaf'
             'aaeb0227afd5ada5955cbe6a565254ff88d2028d677d199c00e03b7cb5de1f2c69b18e6e8b032e452350a8eda7081807b01765adbeb8476eaf803d9de6e5509c'
             '4066c94f2473c7ea16917d29a613e16f840a329089c88e0bdbdb999aef3442ba00abfd2aa92266fa9c067e399dc88e6f0ccac40dc151378857e665638e78bbf0'
-            '3069feb5db40288beb5b112b285186162a704f0fdd3cf67a17fd4eeea015f2cfcfbb455b7aa7c3d79d00fd095a3fd11cffc7b121dce94d99c3b06a509a8977d2')
+            '3069feb5db40288beb5b112b285186162a704f0fdd3cf67a17fd4eeea015f2cfcfbb455b7aa7c3d79d00fd095a3fd11cffc7b121dce94d99c3b06a509a8977d2'
+            '4593f7897d4045b4498af466967cd04c1192d0d263607f25ed2f56773e428f6349535a07dfc139e6e8340885a582bd0dfe1e7e39ad3947c38b4d1f08e3e11fe1')
 
 prepare() {
   [[ -d "$srcdir/kodi-build" ]] && rm -rf "$srcdir/kodi-build"
@@ -93,6 +95,8 @@ prepare() {
   mkdir "$srcdir/kodi-build-gles"
 
   cd "xbmc-$pkgver-$_codename"
+
+  patch -p1 -i "$srcdir/2bf5ab07731b3d4160196e6b8d9ab9e25bea2ef9.patch"
 
   rm -rf system/certs # remove not needed cacert
 }
