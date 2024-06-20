@@ -1,0 +1,51 @@
+diff --git a/src/joystick/linux/SDL_sysjoystick.c b/src/joystick/linux/SDL_sysjoystick.c
+index 75d2522..b020c9e 100644
+--- a/src/joystick/linux/SDL_sysjoystick.c
++++ b/src/joystick/linux/SDL_sysjoystick.c
+@@ -1683,7 +1683,45 @@ static int LINUX_JoystickRumble(SDL_Joystick *joystick, Uint16 low_frequency_rum
+ 
+ static int LINUX_JoystickRumbleTriggers(SDL_Joystick *joystick, Uint16 left_rumble, Uint16 right_rumble)
+ {
+-    return SDL_Unsupported();
++    struct input_event event;
++
++    SDL_AssertJoysticksLocked();
++
++    if (joystick->hwdata->ff_rumble) {
++        struct ff_effect *effect = &joystick->hwdata->effect;
++
++        effect->type = FF_RUMBLE;
++        effect->replay.length = SDL_MAX_RUMBLE_DURATION_MS;
++        effect->u.rumble.trigger_left = left_rumble;
++        effect->u.rumble.trigger_right = right_rumble;
++    } else if (joystick->hwdata->ff_sine) {
++        /* Scale and average the two rumble strengths */
++        Sint16 magnitude = (Sint16)(((left_rumble / 2) + (right_rumble / 2)) / 2);
++        struct ff_effect *effect = &joystick->hwdata->effect;
++
++        effect->type = FF_PERIODIC;
++        effect->replay.length = SDL_MAX_RUMBLE_DURATION_MS;
++        effect->u.periodic.waveform = FF_SINE;
++        effect->u.periodic.magnitude = magnitude;
++    } else {
++        return SDL_Unsupported();
++    }
++
++    if (ioctl(joystick->hwdata->fd, EVIOCSFF, &joystick->hwdata->effect) < 0) {
++        /* The kernel may have lost this effect, try to allocate a new one */
++        joystick->hwdata->effect.id = -1;
++        if (ioctl(joystick->hwdata->fd, EVIOCSFF, &joystick->hwdata->effect) < 0) {
++            return SDL_SetError("Couldn't update rumble effect: %s", strerror(errno));
++        }
++    }
++
++    event.type = EV_FF;
++    event.code = joystick->hwdata->effect.id;
++    event.value = 1;
++    if (write(joystick->hwdata->fd, &event, sizeof(event)) < 0) {
++        return SDL_SetError("Couldn't start rumble effect: %s", strerror(errno));
++    }
++    return 0;
+ }
+ 
+ static Uint32 LINUX_JoystickGetCapabilities(SDL_Joystick *joystick)
