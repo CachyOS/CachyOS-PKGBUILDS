@@ -2,13 +2,13 @@
 # Maintainer: loathingkernel <loathingkernel _a_ gmail _d_ com>
 
 pkgname=proton-cachyos
-_srctag=9.0-20240605
+_srctag=9.0-20240619
 _commit=
 pkgver=${_srctag//-/.}
 _geckover=2.47.4
 _monover=9.1.0
 _xaliaver=0.4.2
-pkgrel=2
+pkgrel=1
 pkgdesc="Compatibility tool for Steam Play based on Wine and additional components, experimental branch with extra CachyOS flavour"
 url="https://github.com/cachyos/proton-cachyos"
 arch=(x86_64 x86_64_v3)
@@ -47,7 +47,7 @@ depends+=(
 
 makedepends=(autoconf bison perl flex mingw-w64-gcc
   git wget rsync unzip mingw-w64-tools lld nasm
-  meson cmake fontforge afdko python-pefile
+  meson cmake fontforge afdko python-pefile glib2-devel
   glslang vulkan-headers
   clang
   giflib                lib32-giflib
@@ -256,7 +256,7 @@ package() {
         $(find "$_monodir" -iname "*x86_64.dll" -or -iname "*x86_64.exe")
 }
 
-sha256sums=('fe7d05fdeb25ec7d8fd0db5fef74dafa4057d9e638d2f1146f73cc80a4b6c379'
+sha256sums=('f9320899704635fa9b6eeb60f667bf8ae05dfccc40bd6bb61b980ddf57903e54'
             '2cfc8d5c948602e21eff8a78613e1826f2d033df9672cace87fed56e8310afb6'
             'fd88fc7e537d058d7a8abf0c1ebc90c574892a466de86706a26d254710a82814'
             '601169d0203b291fbfd946b356a9538855e01de22abd470ded73baf312c88767'
