@@ -1,0 +1,56 @@
+# Maintainer: Antonio Rojas <arojas@archlinux.org>
+# Contributor: tinywrkb <tinywrkb@gmail.com>
+
+pkgname=power-profiles-daemon
+pkgver=0.21
+pkgrel=2
+pkgdesc='Makes power profiles handling available over D-Bus'
+url='https://gitlab.freedesktop.org/upower/power-profiles-daemon'
+license=(GPL-3.0-only)
+arch=(x86_64)
+depends=(gcc-libs
+         glib2
+         glibc
+         libgudev
+         polkit
+         upower)
+optdepends=('python-gobject: for powerprofilesctl')
+makedepends=(meson glib2-devel)
+checkdepends=(python-dbusmock
+              python-isort
+              python-mccabe
+              umockdev)
+source=(https://gitlab.freedesktop.org/upower/power-profiles-daemon/-/archive/$pkgver/$pkgname-$pkgver.tar.gz
+        https://gitlab.freedesktop.org/upower/power-profiles-daemon/-/commit/2e00350f922261329c5203706dbb5dc4426972a6.patch
+        https://gitlab.freedesktop.org/upower/power-profiles-daemon/-/commit/ff7900812c5318f7c78fb5fff347f22e681e9f6c.patch
+        https://gitlab.freedesktop.org/upower/power-profiles-daemon/-/commit/05867e84a46c17b81fc8316d0080ba65ccf756e4.patch)
+sha256sums=('c15a368a59f2cae1474bdfccdd9357f06b0abc9eb7638a87f68c091aaf570349'
+            '4b747763e3ee7191d70501df07293f66d47bfe141ad5d8245acbf25376cfdc60'
+            '5d25aa1aaf37358c84950d0f9d4b70b4e1ed4032da798a0b917829084916e96e'
+            'ebaeaf4e5fbfe5b1af7e9741dca3d2c58ac8f1ed545c602bcdc1fabcc946640a')
+
+prepare() {
+  cd $pkgname-$pkgver
+  # Don't assume that turbo_pct is present
+  patch -Np1 < ../2e00350f922261329c5203706dbb5dc4426972a6.patch
+  # Apply additional systemd hardening options
+  patch -Np1 < ../ff7900812c5318f7c78fb5fff347f22e681e9f6c.patch
+  # Add support for core performance boost
+  patch -Np1 < ../05867e84a46c17b81fc8316d0080ba65ccf756e4.patch
+
+}
+build() {
+  meson $pkgname-$pkgver build \
+    --prefix /usr \
+    --libexec lib \
+    --sysconfdir /usr/share
+  meson compile -C build
+}
+
+check() {
+  meson test -C build
+}
+
+package() {
+  meson install -C build --destdir "$pkgdir"
+}
