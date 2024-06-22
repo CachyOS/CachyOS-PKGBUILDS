@@ -1,0 +1,121 @@
+# Maintainer: Joaquín Aramendía <samsagax at gmail dot com>
+# Co-Maintainer: Matthew Anderson <ruinairas1992 at gmail dot com>
+# Contributor: Maxime Gauduin <alucryd@archlinux.org>
+# Contributor: Giancarlo Razzolini <grazzolini@archlinux.org>
+# Contributor: Samuel "scrufulufugus" Monson <smonson@irbash.net>
+# Contributor: PedroHLC <root@pedrohlc.com>
+
+_pkgname=gamescope
+pkgname=gamescope-plus
+pkgver=3.14.18.plus1
+pkgrel=2
+pkgdesc='SteamOS session compositing window manager with added patches'
+arch=(x86_64)
+url=https://github.com/ChimeraOS/gamescope
+license=(BSD)
+conflicts=(gamescope)
+provides=(gamescope)
+depends=(
+  gcc-libs
+  glibc
+  glm
+  libavif
+  libcap.so
+  libdisplay-info.so
+  libglvnd
+  libdecor
+  libdrm
+  libinput
+  libpipewire-0.3.so
+  libpixman-1.so
+  libseat.so
+  libudev.so
+  libvulkan.so
+  libx11
+  libxcb
+  libxcomposite
+  libxdamage
+  libxext
+  libxfixes
+  libxkbcommon.so
+  libxmu
+  libxrender
+  libxres
+  libxtst
+  libxxf86vm
+  opengl-driver
+  openvr
+  sdl2
+  vulkan-icd-loader
+  wayland
+  xcb-util-errors
+  xcb-util-renderutil
+  xcb-util-wm
+  xorg-server-xwayland
+)
+
+makedepends=(
+  benchmark
+  git
+  glslang
+  meson
+  ninja
+  vulkan-headers
+  wayland-protocols
+)
+
+_tag=680e3a3675f7bc10472f79eafc6fffa6a8695c04
+source=("git+https://github.com/ChimeraOS/gamescope.git#commit=${_tag}"
+        "git+https://github.com/nothings/stb.git#commit=af1a5bc352164740c1cc1354942b1c6b72eacb8a"
+        "git+https://github.com/Joshua-Ashton/GamescopeShaders.git#tag=v0.1"
+        "git+https://github.com/Joshua-Ashton/reshade.git"
+        "git+https://github.com/KhronosGroup/SPIRV-Headers.git"
+        "0001-explicit-sync.patch")
+
+b2sums=('4291b52c1d7ee39f80a071f68ac2673b44cc5c150232ba588b30067530e359b37a2b3879a82cdad093525a3518e1d849e4b3a33975cafa584b61e736a8e07e52'
+        'db31478999287cc5b08cc7d98d1daa43a27b339b3ad975269710bd719d30e9f1cf5ee240ee7e2a8d8551f20fa46da14acd669cb207b26a18d79b360e718ff55b'
+        'ca268553bc3dacb5bd19553702cd454ea78ed97ab39d4397c5abf9a27d32633b63e0f7f7bf567b56066e6ecd979275330e629ba202a6d7721f0cd8166cd110dd'
+        'SKIP'
+        'SKIP'
+        '7f5bcb715a5a7ee634692156610c5b03c650aaf881b88f81057443d361a8b0d4bfec7165274c67ab66e81a159923d27fbc9b72430d90c5be9badc6d7108c092d')
+
+prepare() {
+  cd "$srcdir/$_pkgname"
+
+  msg2 "Block Explicit Sync, due being problematic"
+  patch -Np1 < ../0001-explicit-sync.patch
+
+  meson subprojects download
+  git submodule init src/reshade
+  git config submodule.src/reshade.url "$srcdir/reshade"
+  git submodule init thirdparty/SPIRV-Headers
+  git config submodule.thirdparty/SPIRV-Headers.url ../SPIRV-Headers
+  git -c protocol.file.allow=always submodule update
+
+  # make stb.wrap use our local clone
+  rm -rf subprojects/stb
+  git clone "$srcdir/stb" subprojects/stb
+  cp -av subprojects/packagefiles/stb/* subprojects/stb/ # patch from the .wrap we elided
+}
+
+pkgver() {
+  cd gamescope
+  git describe --tags | sed 's/\-/\./g'
+}
+
+build() {
+  export LDFLAGS="$LDFLAGS -lrt"
+  arch-meson gamescope build
+  ninja -C build
+}
+
+package() {
+  install -d "$pkgdir"/usr/share/gamescope/reshade
+  cp -r "$srcdir"/GamescopeShaders/* "$pkgdir"/usr/share/gamescope/reshade/
+  chmod -R 655 "$pkgdir"/usr/share/gamescope
+
+  meson install -C build --skip-subprojects --destdir="${pkgdir}"
+  install -Dm 644 gamescope/LICENSE -t "${pkgdir}"/usr/share/licenses/gamescope/
+}
+
+# vim: ts=2 sw=2 et:
