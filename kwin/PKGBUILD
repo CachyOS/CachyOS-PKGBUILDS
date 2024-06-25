@@ -3,9 +3,9 @@
 # Contributor: Andrea Scarpino <andrea@archlinux.org>
 
 pkgname=kwin
-pkgver=6.1.0
+pkgver=6.1.1
 _dirver=$(echo $pkgver | cut -d. -f1-3)
-pkgrel=5
+pkgrel=1
 pkgdesc='An easy to use, but flexible, composited Window Manager'
 arch=(x86_64)
 url='https://kde.org/plasma-desktop/'
@@ -83,7 +83,7 @@ groups=(plasma)
 source=(https://download.kde.org/stable/plasma/$_dirver/$pkgname-$pkgver.tar.xz{,.sig}
 		0001-backends-drm-support-tearing-with-atomic-modesetting.patch::https://invent.kde.org/plasma/kwin/-/commit/155c29b08f243c654630869e11a588e28d8199b1.patch)
 install=$pkgname.install
-sha256sums=('50affd6c5c23cc2c6a8c23d741a66b06f6679c82c7fd3cafea66a6b0643b4f2f'
+sha256sums=('50004065d1713025406f839bbb270987a5a41652c1e93579062ebc2e8d5c8264'
             'SKIP'
             '2642d2faa03a1777c3839ba71fb79c79963348a46e83f6fc024126085ee86301')
 validpgpkeys=('E0A3EB202F8E57528E13E72FD7574483BB57B18D'  # Jonathan Esk-Riddell <jr@jriddell.org>
@@ -93,8 +93,6 @@ validpgpkeys=('E0A3EB202F8E57528E13E72FD7574483BB57B18D'  # Jonathan Esk-Riddell
 prepare() {
   cd $pkgname-$pkgver
   patch -Np1 < ../0001-backends-drm-support-tearing-with-atomic-modesetting.patch
-  # Add fixes from 6.1.1 upstream
-  patch -Np1 < ../backport.patch
 }
 
 build() {
