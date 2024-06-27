@@ -1,19 +1,22 @@
 # Maintainer: Sven-Hendrik Haase <svenstaro@archlinux.org>
+
 pkgname=nvidia-open-dkms
 pkgver=555.58
-pkgrel=2
+pkgrel=3
 pkgdesc="NVIDIA open kernel modules"
 arch=('x86_64')
 url="https://github.com/NVIDIA/open-gpu-kernel-modules"
 depends=("nvidia-utils=${pkgver}" 'libglvnd')
 makedepends=('linux-cachyos-headers')
 license=(GPL-1.0-only)
-source=("$pkgname-$pkgver.tar.gz::https://github.com/cachyos/open-gpu-kernel-modules/archive/refs/tags/${pkgver}.tar.gz"
+source=("$pkgname-$pkgver.tar.gz::https://github.com/NVIDIA/open-gpu-kernel-modules/archive/refs/tags/${pkgver}.tar.gz"
         nvidia-open-gcc-ibt-sls.patch
-        make-modeset-fbdev-default.patch)
-sha512sums=('a8415eb96daa2cea8448fa2bcd2941f64b4740920ecd574b7d21fc7c674cc8abcae8fa818bbd50bf75a02f9d494fdeaaff3f11d98280d6558b7436f12daab09e'
+        make-modeset-fbdev-default.patch
+        gsp-fix-stutter.patch)
+sha512sums=('332a1722103ec9e95f6f3a353ead0ae2834d979b740076ff967fd3ba76d545a23fb352eddc593b8eacefc3263a04d40082c9f12e8a29acb53c9f4b33279ae7df'
             '263c4c5e75ef8cb8ca2641c022dfaf8bd9222fadf68ed15120b0ae7dd9cc901a04ce2e55625d513a0995759c9d82dfbdc4c33d4751159124915d7404b1400e34'
-            'f19a7d52c6e7f5bd6818658c2b11adaaf4ad05016ec0acc73a42417748ed4bf81b8394c077a6f5aba9dfcf6ab01a578692ed1e9d3c2ab583fdaa56166bba05f2')
+            'f19a7d52c6e7f5bd6818658c2b11adaaf4ad05016ec0acc73a42417748ed4bf81b8394c077a6f5aba9dfcf6ab01a578692ed1e9d3c2ab583fdaa56166bba05f2'
+            '2cf7bad184ee585999b2dc1254596b0b741827e9707367991c3c4327f25db68857b2c9a896b6f2bdf5f7f7702181c64def25c17a17f3272fdbbf6fd40a359585')
 
 prepare() {
   cd open-gpu-kernel-modules-${pkgver}
@@ -21,6 +24,8 @@ prepare() {
   patch -Np1 < "$srcdir"/make-modeset-fbdev-default.patch
   msg2 "Patch NVIDIA module for IBT"
   patch -Np1 < "$srcdir"/nvidia-open-gcc-ibt-sls.patch
+  msg2 "Patch gsp sutter"
+  patch -Np1 < "$srcdir"/gsp-fix-stutter.patch
 
   # Attempt to make this reproducible
   sed -i "s/^HOSTNAME.*/HOSTNAME = echo cachyos"/ utils.mk
