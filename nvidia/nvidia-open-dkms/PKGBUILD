@@ -1,21 +1,19 @@
 # Maintainer: Sven-Hendrik Haase <svenstaro@archlinux.org>
 pkgname=nvidia-open-dkms
-pkgver=555.52.04
-pkgrel=3
+pkgver=555.58
+pkgrel=2
 pkgdesc="NVIDIA open kernel modules"
 arch=('x86_64')
 url="https://github.com/NVIDIA/open-gpu-kernel-modules"
 depends=("nvidia-utils=${pkgver}" 'libglvnd')
 makedepends=('linux-cachyos-headers')
 license=(GPL-1.0-only)
-source=("$pkgname-$pkgver.tar.gz::https://github.com/NVIDIA/open-gpu-kernel-modules/archive/refs/tags/${pkgver}.tar.gz"
+source=("$pkgname-$pkgver.tar.gz::https://github.com/cachyos/open-gpu-kernel-modules/archive/refs/tags/${pkgver}.tar.gz"
         nvidia-open-gcc-ibt-sls.patch
-        make-modeset-fbdev-default.patch
-        gsp-fix-stutter.patch)
-sha512sums=('cedb61548abe81e60114cb7eefc8a3a334b5a034408840b188c62126fc3c683e764db8887d9ccde3bc0bc012f4c77ef17b57c5b1971acd8be515dc5d7b652e18'
+        make-modeset-fbdev-default.patch)
+sha512sums=('a8415eb96daa2cea8448fa2bcd2941f64b4740920ecd574b7d21fc7c674cc8abcae8fa818bbd50bf75a02f9d494fdeaaff3f11d98280d6558b7436f12daab09e'
             '263c4c5e75ef8cb8ca2641c022dfaf8bd9222fadf68ed15120b0ae7dd9cc901a04ce2e55625d513a0995759c9d82dfbdc4c33d4751159124915d7404b1400e34'
-            'f19a7d52c6e7f5bd6818658c2b11adaaf4ad05016ec0acc73a42417748ed4bf81b8394c077a6f5aba9dfcf6ab01a578692ed1e9d3c2ab583fdaa56166bba05f2'
-            '8caa8e237139fcafab7d33aeabad592091a01b113e9afea6375e8486ec5fd706bf3e9ec98db98944450910bec704d573faf8201dbe8fed639d920cf38d81562b')
+            'f19a7d52c6e7f5bd6818658c2b11adaaf4ad05016ec0acc73a42417748ed4bf81b8394c077a6f5aba9dfcf6ab01a578692ed1e9d3c2ab583fdaa56166bba05f2')
 
 prepare() {
   cd open-gpu-kernel-modules-${pkgver}
@@ -23,8 +21,6 @@ prepare() {
   patch -Np1 < "$srcdir"/make-modeset-fbdev-default.patch
   msg2 "Patch NVIDIA module for IBT"
   patch -Np1 < "$srcdir"/nvidia-open-gcc-ibt-sls.patch
-  msg2 "Fix Stutters, when GSP Firmware is used"
-  patch -Np1 < ../gsp-fix-stutter.patch
 
   # Attempt to make this reproducible
   sed -i "s/^HOSTNAME.*/HOSTNAME = echo cachyos"/ utils.mk
