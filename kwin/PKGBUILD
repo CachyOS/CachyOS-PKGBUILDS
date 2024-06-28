@@ -5,7 +5,7 @@
 pkgname=kwin
 pkgver=6.1.1.2
 _dirver=$(echo $pkgver | cut -d. -f1-3)
-pkgrel=3
+pkgrel=4
 pkgdesc='An easy to use, but flexible, composited Window Manager (CachyOS Version)'
 arch=(x86_64)
 url='https://kde.org/plasma-desktop/'
@@ -85,15 +85,17 @@ source=(https://download.kde.org/stable/plasma/$_dirver/$pkgname-$pkgver.tar.xz{
 		https://invent.kde.org/plasma/kwin/-/merge_requests/6016.patch
 		https://invent.kde.org/plasma/kwin/-/merge_requests/5986.patch
 		489117.patch::https://invent.kde.org/plasma/kwin/-/commit/deeeddb652d20086625a221788dff1926b26172f.patch
-		menubuttonfix.patch::https://invent.kde.org/plasma/kwin/-/commit/176e338c370bcee12037b34ae5ffaf2d3bcb8ec8.patch)
+		menubuttonfix.patch::https://invent.kde.org/plasma/kwin/-/commit/176e338c370bcee12037b34ae5ffaf2d3bcb8ec8.patch
+		https://invent.kde.org/plasma/kwin/-/merge_requests/5982.patch)
 install=$pkgname.install
 sha256sums=('1cf0e4d996ccd92a77b6a725610ca32a60c2fae08a98f8b72f2aaf1569464c39'
             'SKIP'
             '2642d2faa03a1777c3839ba71fb79c79963348a46e83f6fc024126085ee86301'
-            'fac5c701b44e0d7479619b177e6aa7e2cb8fe125ec978da9872ac79b531fd637'
-            'a51f6388b6526476904c07310cfdf4b03e0f77b7b854aa9ab6590f61ac1e4ac9'
+            '1b061a86f93814c6c27c5b27bdbb7034bcb08660b0775db8cf02f616eaf72011'
+            '6dc2df5d65d85f5147c8f1dcb986d752c593029db732bf66aac2bfcafcb9e344'
             'f8d364f3ca499e2438cf7a7174e84d1491626942e7937028df1dd43a3e517f0f'
-            '8115bceb0005fba4b48157253f04e55088f33c85fad66250f233372d05bb7055')
+            '8115bceb0005fba4b48157253f04e55088f33c85fad66250f233372d05bb7055'
+            '1a227f1daaeacb49c3e030bccc4143b80b6c2b747987d96f3f5431a1e5b602aa')
 validpgpkeys=('E0A3EB202F8E57528E13E72FD7574483BB57B18D'  # Jonathan Esk-Riddell <jr@jriddell.org>
               '0AAC775BB6437A8D9AF7A3ACFE0784117FBCE11D'  # Bhushan Shah <bshah@kde.org>
               'D07BD8662C56CB291B316EB2F5675605C74E02CF'  # David Edmundson <davidedmundson@kde.org>
@@ -110,6 +112,8 @@ prepare() {
   patch -Np1 < ../489117.patch
   # Mouse Double click, see https://bugs.kde.org/show_bug.cgi?id=488993
   patch -Np1 < ../menubuttonfix.patch
+  # core/renderloop: add some hysteresis to triple buffering
+  patch -Np1 < ../5982.patch
 }
 
 build() {
