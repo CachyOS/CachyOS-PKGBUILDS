@@ -5,8 +5,8 @@
 pkgname=kwin
 pkgver=6.1.1.2
 _dirver=$(echo $pkgver | cut -d. -f1-3)
-pkgrel=2
-pkgdesc='An easy to use, but flexible, composited Window Manager'
+pkgrel=3
+pkgdesc='An easy to use, but flexible, composited Window Manager (CachyOS Version)'
 arch=(x86_64)
 url='https://kde.org/plasma-desktop/'
 license=(LGPL-2.0-or-later)
@@ -81,18 +81,35 @@ makedepends=(extra-cmake-modules
 optdepends=('maliit-keyboard: virtual keyboard for kwin-wayland')
 groups=(plasma)
 source=(https://download.kde.org/stable/plasma/$_dirver/$pkgname-$pkgver.tar.xz{,.sig}
-		0001-backends-drm-support-tearing-with-atomic-modesetting.patch::https://invent.kde.org/plasma/kwin/-/commit/155c29b08f243c654630869e11a588e28d8199b1.patch)
+		0001-backends-drm-support-tearing-with-atomic-modesetting.patch::https://invent.kde.org/plasma/kwin/-/commit/155c29b08f243c654630869e11a588e28d8199b1.patch
+		https://invent.kde.org/plasma/kwin/-/merge_requests/6016.patch
+		https://invent.kde.org/plasma/kwin/-/merge_requests/5986.patch
+		489117.patch::https://invent.kde.org/plasma/kwin/-/commit/deeeddb652d20086625a221788dff1926b26172f.patch
+		menubuttonfix.patch::https://invent.kde.org/plasma/kwin/-/commit/176e338c370bcee12037b34ae5ffaf2d3bcb8ec8.patch)
 install=$pkgname.install
 sha256sums=('1cf0e4d996ccd92a77b6a725610ca32a60c2fae08a98f8b72f2aaf1569464c39'
             'SKIP'
-            '2642d2faa03a1777c3839ba71fb79c79963348a46e83f6fc024126085ee86301')
+            '2642d2faa03a1777c3839ba71fb79c79963348a46e83f6fc024126085ee86301'
+            'fac5c701b44e0d7479619b177e6aa7e2cb8fe125ec978da9872ac79b531fd637'
+            'a51f6388b6526476904c07310cfdf4b03e0f77b7b854aa9ab6590f61ac1e4ac9'
+            'f8d364f3ca499e2438cf7a7174e84d1491626942e7937028df1dd43a3e517f0f'
+            '8115bceb0005fba4b48157253f04e55088f33c85fad66250f233372d05bb7055')
 validpgpkeys=('E0A3EB202F8E57528E13E72FD7574483BB57B18D'  # Jonathan Esk-Riddell <jr@jriddell.org>
               '0AAC775BB6437A8D9AF7A3ACFE0784117FBCE11D'  # Bhushan Shah <bshah@kde.org>
               'D07BD8662C56CB291B316EB2F5675605C74E02CF'  # David Edmundson <davidedmundson@kde.org>
               '1FA881591C26B276D7A5518EEAAF29B42A678C20') # Marco Martin <notmart@gmail.com>
 prepare() {
   cd $pkgname-$pkgver
+  # Tearing
   patch -Np1 < ../0001-backends-drm-support-tearing-with-atomic-modesetting.patch
+  # Increase Max buffer size
+  patch -Np1 < ../6016.patch
+  # Per Screen Focus
+  patch -Np1 < ../5986.patch
+  # Panel fix, see https://bugs.kde.org/show_bug.cgi?id=489117
+  patch -Np1 < ../489117.patch
+  # Mouse Double click, see https://bugs.kde.org/show_bug.cgi?id=488993
+  patch -Np1 < ../menubuttonfix.patch
 }
 
 build() {
