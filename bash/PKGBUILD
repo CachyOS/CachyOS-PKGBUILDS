@@ -9,10 +9,10 @@ pkgname=bash
 _basever=5.2
 _patchlevel=026
 pkgver=${_basever}.${_patchlevel}
-pkgrel=3
+pkgrel=4
 pkgdesc='The GNU Bourne Again shell'
 arch=(x86_64)
-license=(GPL-3.0-or-later)
+license=('GPL-3.0-or-later')
 url='https://www.gnu.org/software/bash/bash.html'
 backup=(etc/bash.bash{rc,_logout} etc/skel/.bash{rc,_profile,_logout})
 depends=(readline libreadline.so glibc ncurses)
@@ -20,32 +20,32 @@ optdepends=('bash-completion: for tab completion')
 provides=('sh')
 install=bash.install
 source=(https://ftp.gnu.org/gnu/bash/bash-$_basever.tar.gz{,.sig}
-    dot.bashrc
-    dot.bash_profile
-    dot.bash_logout
-    system.bashrc
-    system.bash_logout)
+        dot.bashrc
+        dot.bash_profile
+        dot.bash_logout
+        system.bashrc
+        system.bash_logout)
 validpgpkeys=('7C0135FB088AAF6C66C650B9BB5869F064EA74AB') # Chet Ramey
 
 if [[ $((10#${_patchlevel})) -gt 0 ]]; then
-    for ((_p = 1; _p <= $((10#${_patchlevel})); _p++)); do
-        source=(${source[@]} https://ftp.gnu.org/gnu/bash/bash-$_basever-patches/bash${_basever//./}-$(printf "%03d" $_p){,.sig})
-    done
+  for (( _p=1; _p<=$((10#${_patchlevel})); _p++ )); do
+    source=(${source[@]} https://ftp.gnu.org/gnu/bash/bash-$_basever-patches/bash${_basever//.}-$(printf "%03d" $_p){,.sig})
+  done
 fi
 
 prepare() {
-    cd $pkgname-$_basever
+  cd $pkgname-$_basever
 
-    msg "Applying patches..."
-    for ((_p = 1; _p <= $((10#${_patchlevel})); _p++)); do
-        local patch="bash${_basever//./}-$(printf "%03d" $_p)"
-        msg2 "applying patch ${patch}"
-        patch -Np0 -i ../"${patch}"
-    done
+  msg "Applying patches..."
+  for (( _p=1; _p<=$((10#${_patchlevel})); _p++ )); do
+    local patch="bash${_basever//.}-$(printf "%03d" $_p)"
+    msg2 "applying patch ${patch}"
+    patch -Np0 -i ../"${patch}"
+  done
 }
 
 build() {
-    cd $pkgname-$_basever
+  cd $pkgname-$_basever
 
     _bashconfig=(-DDEFAULT_PATH_VALUE=\'\"/usr/local/sbin:/usr/local/bin:/usr/bin\"\'
         -DSTANDARD_UTILS_PATH=\'\"/usr/bin\"\'
@@ -82,23 +82,23 @@ build() {
 }
 
 check() {
-    make -C $pkgname-$_basever check
+  make -C $pkgname-$_basever check
 }
 
 package() {
-    make -C $pkgname-$_basever DESTDIR="$pkgdir" install
-    ln -s bash "$pkgdir/usr/bin/sh"
-    ln -s bash "$pkgdir/usr/bin/rbash"
+  make -C $pkgname-$_basever DESTDIR="$pkgdir" install
+  ln -s bash "$pkgdir/usr/bin/sh"
+  ln -s bash "$pkgdir/usr/bin/rbash"
 
-    # system-wide configuration files
-    install -Dm644 system.bashrc "$pkgdir/etc/bash.bashrc"
-    install -Dm644 system.bash_logout "$pkgdir/etc/bash.bash_logout"
+  # system-wide configuration files
+  install -Dm644 system.bashrc "$pkgdir/etc/bash.bashrc"
+  install -Dm644 system.bash_logout "$pkgdir/etc/bash.bash_logout"
 
-    # user configuration file skeletons
-    install -dm755 "$pkgdir/etc/skel/"
-    install -m644 dot.bashrc "$pkgdir/etc/skel/.bashrc"
-    install -m644 dot.bash_profile "$pkgdir/etc/skel/.bash_profile"
-    install -m644 dot.bash_logout "$pkgdir/etc/skel/.bash_logout"
+  # user configuration file skeletons
+  install -dm755 "$pkgdir/etc/skel/"
+  install -m644 dot.bashrc "$pkgdir/etc/skel/.bashrc"
+  install -m644 dot.bash_profile "$pkgdir/etc/skel/.bash_profile"
+  install -m644 dot.bash_logout "$pkgdir/etc/skel/.bash_logout"
 }
 
 sha256sums=('a139c166df7ff4471c5e0733051642ee5556c1cc8a4a78f145583c5c81ab32fb'
@@ -106,7 +106,7 @@ sha256sums=('a139c166df7ff4471c5e0733051642ee5556c1cc8a4a78f145583c5c81ab32fb'
             '959bc596166c9758fdd68836581f6b8f1d6fdb947d580bf24dce607998a077b8'
             'e149407c2bee17779caec70a7edd3d0000d172e7e4347429b80cb4d55bcec9c2'
             '4330edf340394d0dae50afb04ac2a621f106fe67fb634ec81c4bfb98be2a1eb5'
-            '51ceca7cd615ff4e2f8f3373a46ac7bfd453be70bbaddc074cb17f6db1ac7370'
+            '89053ee31f8607bf4371cba46864bda07c51625fd19c6806a9b7bbf526aaf7f4'
             '025bccfb374a3edce0ff8154d990689f30976b78f7a932dc9a6fcef81821811e'
             'f42f2fee923bc2209f406a1892772121c467f44533bedfe00a176139da5d310a'
             'SKIP'
