@@ -1,0 +1,27 @@
+# Maintainer: Peter Jung <admin@ptr1337.dev>
+# Maintainer: Tor Vic <torvic9 AT mailbox DOT org>
+
+pkgname='cachyos-benchmarker'
+pkgver=0.1.r0.g316f487
+pkgrel=1
+pkgdesc='A simple benchmarking script using stress-ng, perf, blender etc. (CachyOS Version)'
+url="https://github.com/cachyos/cachyos-benchmarker"
+arch=('x86_64')
+licence=('GPL-3.0-or-later')
+depends=('gcc' 'make' 'cmake' 'time' 'perf' 'unzip' 'bc'
+	     'nasm' 'inxi' 'argon2' 'wget' 'x265' 'xz' 'blender'
+	     'zlib' 'libdrm' 'git' 'python' 'primesieve' 'p7zip'
+	     'stress-ng' 'schbench' 'geekbench')
+source=(git+https://github.com/cachyos/cachyos-benchmarker.git)
+sha512sums=('SKIP')
+
+pkgver() {
+	cd $pkgname
+    git describe --long | sed 's/^v//;s/\([^-]*-g\)/r\1/;s/-/./g'
+}
+
+package() {
+	cd $pkgname
+	install -Dm755 $pkgname "$pkgdir/usr/bin/$pkgname"
+	install -Dm755 benchmark_scraper.py "$pkgdir/usr/bin/benchmark_scraper.py"
+}
