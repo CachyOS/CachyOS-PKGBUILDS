@@ -5,7 +5,7 @@
 pkgname=kwin
 pkgver=6.1.1.2
 _dirver=$(echo $pkgver | cut -d. -f1-3)
-pkgrel=5
+pkgrel=6
 pkgdesc='An easy to use, but flexible, composited Window Manager (CachyOS Version)'
 arch=(x86_64)
 url='https://kde.org/plasma-desktop/'
@@ -106,12 +106,6 @@ prepare() {
   patch -Np1 < ../0001-backends-drm-support-tearing-with-atomic-modesetting.patch
   # Increase Max buffer size
   patch -Np1 < ../6016.patch
-  # Per Screen Focus
-  patch -Np1 < ../5986.patch
-  # Panel fix, see https://bugs.kde.org/show_bug.cgi?id=489117
-  patch -Np1 < ../489117.patch
-  # Mouse Double click, see https://bugs.kde.org/show_bug.cgi?id=488993
-  patch -Np1 < ../menubuttonfix.patch
   # core/renderloop: add some hysteresis to triple buffering
   patch -Np1 < ../5982.patch
 }
