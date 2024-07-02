@@ -19,7 +19,7 @@ pkgname=('php'
          'php-sqlite'
          'php-tidy'
          'php-xsl')
-pkgver=8.3.8
+pkgver=8.3.9
 pkgrel=2
 arch=('x86_64')
 license=('PHP-3.01')
@@ -30,8 +30,8 @@ makedepends=('apache' 'aspell' 'enchant' 'gd' 'gmp' 'icu' 'libsodium' 'libxslt' 
 checkdepends=('procps-ng')
 source=("https://php.net/distributions/${pkgbase}-${pkgver}.tar.xz"{,.asc}
         'apache.patch' 'apache.conf' 'php-fpm.patch' 'php-fpm.tmpfiles' 'php.ini.patch' 'php-cachy.patch' '0005-Enable-hugepages.patch'
-        'https://raw.githubusercontent.com/SergiX44/php-benchmark-script/master/bench.php' 'method-visibility.patch')
-sha256sums=('aea358b56186f943c2bbd350c9005b9359133d47e954cfc561385319ae5bb8d7'
+        'https://raw.githubusercontent.com/SergiX44/php-benchmark-script/master/bench.php')
+sha256sums=('bf4d7b8ea60a356064f88485278bd6f941a230ec16f0fc401574ce1445ad6c77'
             'SKIP'
             '702b163c66c65af92dcad8d79f41bda84bcd5d863235fcf1497c33a86db9e4ca'
             '4a2add00d93fa991ccdf6356090264c1059c79935642afff6e8d4a2107fa037e'
@@ -40,8 +40,7 @@ sha256sums=('aea358b56186f943c2bbd350c9005b9359133d47e954cfc561385319ae5bb8d7'
             '73d7641022985a0b8aa1817c16935956ffde118cf61c4c349ed445d51d91af1b'
             '40de67e43a972159c54d948ef1bf4e94e2d0e96da1f21efc9002ba71f39b80ae'
             'faee19fff5f554638b28d3277388d6f3604738e8a2670f3e55562947e5678bbc'
-            'b3210ff1b679f03a3bac409b9da491def692254f8354e4d09515cd2409fea23f'
-            '083e2b17a49166fe6891a6d7f7baece9fce42f0db3192fdac1fd1975e226eba8')
+            'b3210ff1b679f03a3bac409b9da491def692254f8354e4d09515cd2409fea23f')
 validpgpkeys=('1198C0117593497A5EC5C199286AF1F9897469DC'
               '39B641343D8C104B2B146DC3F9C39DC0B9698544'
               'E60913E4DF209907D8E30D96659A97C9CF2A795A')
@@ -55,8 +54,6 @@ prepare() {
 	patch -p0 -i "${srcdir}/php.ini.patch"
 	patch -p0 -i "${srcdir}/php-cachy.patch"
 	patch -Np1 -i "${srcdir}/0005-Enable-hugepages.patch"
-	# Fix https://gitlab.archlinux.org/archlinux/packaging/packages/php/-/issues/3
-	patch -p1 -i "${srcdir}/method-visibility.patch"
 	autoconf
 
 	# Disable failing tests
