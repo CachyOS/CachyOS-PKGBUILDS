@@ -9,7 +9,7 @@ pkgname=bash
 _basever=5.2
 _patchlevel=026
 pkgver=${_basever}.${_patchlevel}
-pkgrel=4
+pkgrel=6
 pkgdesc='The GNU Bourne Again shell'
 arch=(x86_64)
 license=('GPL-3.0-or-later')
@@ -20,6 +20,11 @@ optdepends=('bash-completion: for tab completion')
 provides=('sh')
 install=bash.install
 source=(https://ftp.gnu.org/gnu/bash/bash-$_basever.tar.gz{,.sig}
+        bash-5.2_p15-configure-clang16.patch
+        bash-5.2_p15-random-ub.patch
+        bash-5.2_p21-configure-strtold.patch
+        bash-5.2_p21-wpointer-to-int.patch
+        bash-5.2_p26-memory-leaks.patch
         dot.bashrc
         dot.bash_profile
         dot.bash_logout
@@ -39,20 +44,26 @@ prepare() {
   msg "Applying patches..."
   for (( _p=1; _p<=$((10#${_patchlevel})); _p++ )); do
     local patch="bash${_basever//.}-$(printf "%03d" $_p)"
-    msg2 "applying patch ${patch}"
     patch -Np0 -i ../"${patch}"
   done
+  # add patches from gentoo, fixing various upstream reported issues
+  # https://gitweb.gentoo.org/repo/gentoo.git/tree/app-shells/bash/files
+  patch -Np0 -i ../bash-5.2_p15-configure-clang16.patch
+  patch -Np0 -i ../bash-5.2_p15-random-ub.patch
+  patch -Np0 -i ../bash-5.2_p21-configure-strtold.patch
+  patch -Np0 -i ../bash-5.2_p21-wpointer-to-int.patch
+  patch -Np0 -i ../bash-5.2_p26-memory-leaks.patch
 }
 
 build() {
   cd $pkgname-$_basever
 
-    _bashconfig=(-DDEFAULT_PATH_VALUE=\'\"/usr/local/sbin:/usr/local/bin:/usr/bin\"\'
-        -DSTANDARD_UTILS_PATH=\'\"/usr/bin\"\'
-        -DSYS_BASHRC=\'\"/etc/bash.bashrc\"\'
-        -DSYS_BASH_LOGOUT=\'\"/etc/bash.bash_logout\"\'
-        -DNON_INTERACTIVE_LOGIN_SHELLS)
-    export CFLAGS="${CFLAGS} ${_bashconfig[@]}"
+  _bashconfig=(-DDEFAULT_PATH_VALUE=\'\"/usr/local/sbin:/usr/local/bin:/usr/bin\"\'
+               -DSTANDARD_UTILS_PATH=\'\"/usr/bin\"\'
+               -DSYS_BASHRC=\'\"/etc/bash.bashrc\"\'
+               -DSYS_BASH_LOGOUT=\'\"/etc/bash.bash_logout\"\'
+               -DNON_INTERACTIVE_LOGIN_SHELLS)
+  export CFLAGS="${CFLAGS} ${_bashconfig[@]}"
     export CFLAGS="${CFLAGS} -fprofile-generate -fprofile-update=atomic -fprofile-partial-training"
 
     ./configure \
@@ -103,6 +114,11 @@ package() {
 
 sha256sums=('a139c166df7ff4471c5e0733051642ee5556c1cc8a4a78f145583c5c81ab32fb'
             'SKIP'
+            'b0ba61c471dc6728f101edc2f1accf1d066fdf6a56011b0265d0344a32900f21'
+            'd2b81eb19f691f129d3203db0ac6c1db441b8e832fb22fb7a6a30c2e9bd3b868'
+            '9038e9942e0d3b234e14bc082672b79875a7fc57a31f862f3194186aef32598c'
+            '77b1796ec4d70de4e838751004ee0b206e1edc719a45b692c6d5a1623ede64b9'
+            '5773374cfe1bdf80bffcad395ba29802fab06d1a66d84798ad65d55c8b65d1ba'
             '959bc596166c9758fdd68836581f6b8f1d6fdb947d580bf24dce607998a077b8'
             'e149407c2bee17779caec70a7edd3d0000d172e7e4347429b80cb4d55bcec9c2'
             '4330edf340394d0dae50afb04ac2a621f106fe67fb634ec81c4bfb98be2a1eb5'
