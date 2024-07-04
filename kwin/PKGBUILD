@@ -3,9 +3,9 @@
 # Contributor: Andrea Scarpino <andrea@archlinux.org>
 
 pkgname=kwin
-pkgver=6.1.1.2
+pkgver=6.1.2
 _dirver=$(echo $pkgver | cut -d. -f1-3)
-pkgrel=7
+pkgrel=2
 pkgdesc='An easy to use, but flexible, composited Window Manager (CachyOS Version)'
 arch=(x86_64)
 url='https://kde.org/plasma-desktop/'
@@ -82,30 +82,22 @@ optdepends=('maliit-keyboard: virtual keyboard for kwin-wayland')
 groups=(plasma)
 source=(https://download.kde.org/stable/plasma/$_dirver/$pkgname-$pkgver.tar.xz{,.sig}
 		0001-backends-drm-support-tearing-with-atomic-modesetting.patch::https://invent.kde.org/plasma/kwin/-/commit/155c29b08f243c654630869e11a588e28d8199b1.patch
-		https://invent.kde.org/plasma/kwin/-/merge_requests/6016.patch
-		https://invent.kde.org/plasma/kwin/-/merge_requests/5982.patch
-		disable-triple-buffering-nvidia.patch::https://invent.kde.org/plasma/kwin/-/commit/b437c65815b2898564748f3be48c4145671a750f.patch)
+		https://invent.kde.org/plasma/kwin/-/merge_requests/5982.patch)
 install=$pkgname.install
-sha256sums=('1cf0e4d996ccd92a77b6a725610ca32a60c2fae08a98f8b72f2aaf1569464c39'
+sha256sums=('82c582c83b01d42ac8dd6ca5fbc4b8daeea192b54dd1c859703e6f033455c00f'
             'SKIP'
             '2642d2faa03a1777c3839ba71fb79c79963348a46e83f6fc024126085ee86301'
-            '1b061a86f93814c6c27c5b27bdbb7034bcb08660b0775db8cf02f616eaf72011'
-            'de3cde7a6a77a950a96c15eb8861506c2be997a129eede1d23670e0a7b40e2ae'
-            '7f6171e793df41cbf57b659fef5e1d1e3c129f17041ee3d11cf17dce28a92ef5')
+            '8451770a04292df1c4f3aba0a81ee3717aa844d580b3d17445787180fbc1ea22')
 validpgpkeys=('E0A3EB202F8E57528E13E72FD7574483BB57B18D'  # Jonathan Esk-Riddell <jr@jriddell.org>
               '0AAC775BB6437A8D9AF7A3ACFE0784117FBCE11D'  # Bhushan Shah <bshah@kde.org>
               'D07BD8662C56CB291B316EB2F5675605C74E02CF'  # David Edmundson <davidedmundson@kde.org>
               '1FA881591C26B276D7A5518EEAAF29B42A678C20') # Marco Martin <notmart@gmail.com>
 prepare() {
   cd $pkgname-$pkgver
-  # Tearing
+  msg2 "Tearing"
   patch -Np1 < ../0001-backends-drm-support-tearing-with-atomic-modesetting.patch
-  # Increase Max buffer size, cherry picked from Plasma 6.1 branch
-  patch -Np1 < ../6016.patch
 #  # core/renderloop: add some hysteresis to triple buffering
 #  patch -Np1 < ../5982.patch
-  # Disable Triple Buffering on NVIDIA, cherry picked from Plasma 6.1 branch
-  patch -Np1 < ../disable-triple-buffering-nvidia.patch
 }
 
 build() {
