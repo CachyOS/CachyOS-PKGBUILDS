@@ -43,9 +43,9 @@ prepare() {
 build() {
   # Build options are derived from here https://github.com/WebAssembly/wasi-sdk/blob/main/Makefile
   # remove compiler options not supported by the wasm32-wasi target
-  export CFLAGS="$(echo $CFLAGS | sed "s/-mtune=generic//; s/-march=x86-64-v3//;
+  export CFLAGS="$(echo $CFLAGS | sed "s/-mtune=generic//; s/-march=x86-64-v3//; s/-mpclmul//;
   s/-fstack-clash-protection//; s/-fcf-protection//; s/-fexceptions//; s/-march=x86-64//")"
-  export CXXFLAGS="$(echo $CXXFLAGS | sed "s/-mtune=generic//; s/-march=x86-64-v3//;
+  export CXXFLAGS="$(echo $CXXFLAGS | sed "s/-mtune=generic//; s/-march=x86-64-v3//; s/-mpclmul//;
   s/-fstack-clash-protection//; s/-fcf-protection//; s/-fexceptions//; s/-march=x86-64//")"
 
   local target threads_flag threads_cflags
