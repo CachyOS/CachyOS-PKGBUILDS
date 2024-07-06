@@ -3,11 +3,14 @@
 pkgname=wasi-compiler-rt-git
 pkgver=19.0.0_r504090.8426b51e0e94
 pkgrel=1
+epoch=1
 pkgdesc='WASI LLVM compiler runtime'
 arch=('any')
 url='https://compiler-rt.llvm.org/'
 license=('Apache-2.0 WITH LLVM-exception')
-depends=('wasi-libc')
+provides=('wasi-compiler-rt')
+conflicts=('wasi-compiler-rt')
+depends=('wasi-libc-git')
 makedepends=('cmake' 'ninja' 'llvm' 'clang' 'lld')
 source=("llvm-project::git+https://github.com/llvm/llvm-project.git"
         WASI.cmake
