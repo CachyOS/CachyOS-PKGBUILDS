@@ -3,7 +3,7 @@
 
 pkgname=dkms
 pkgver=3.0.13
-pkgrel=1
+pkgrel=2
 pkgdesc='Dynamic Kernel Modules System'
 arch=('any')
 url='https://github.com/dell/dkms'
@@ -40,11 +40,6 @@ prepare() {
     fi
   done
 
-  # /usr move
-  msg2 '/usr move patching'
-  for i in dkms{.in,.8.in,_framework.conf,.bash-completion,_common.postinst}; do
-    sed -ri 's,/lib/modules,/usr/lib/modules,g' "$i"
-  done
 }
 
 package() {
@@ -64,6 +59,7 @@ package() {
   # we install them outside of $pkgdir
   make \
     DESTDIR="$pkgdir" \
+    MODDIR=/usr/lib/modules \
     SBIN=/usr/bin \
     KCONF=/../trash \
     LIBDIR=/../trash \
