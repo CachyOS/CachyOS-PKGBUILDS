@@ -1,0 +1,100 @@
+# Maintainer: Jan Alexander Steffens (heftig) <heftig@archlinux.org>
+
+pkgbase=pahole
+pkgname=(
+  pahole
+  ostra-cg
+)
+pkgver=1.27
+pkgrel=1
+epoch=1
+pkgdesc="Pahole and other DWARF utils"
+url="https://git.kernel.org/pub/scm/devel/pahole/pahole.git"
+arch=(x86_64)
+license=(GPL-2.0-only)
+makedepends=(
+  bash
+  cmake
+  glibc
+  libelf
+  ninja
+  python
+  python-matplotlib
+  zlib
+)
+source=(
+  https://fedorapeople.org/~acme/dwarves/dwarves-$pkgver.tar.{xz,sign}
+  0001-CMakeLists.txt-Install-ostra.py-into-Python3_SITELIB.patch
+  fix-kernel-lto.patch
+)
+b2sums=('0a0f8ec8bf26240e17dc3319e76e16299514d662a79b25c4c962f723127f55d185d557adba7230d23b2e2b38fc62044aaa3474a458dc3df2000260637f995121'
+        'SKIP'
+        '02962095407cdbf191428884b83c3392e39d4acdad0c6a952655daec8b871bab8962c3716c9479192118eef81afe412203ac46600a2d702733254c6d7219f7d2'
+        '73bed02bcf7dacb2c9e7bc129a537e298c9e96289a66dbea7b3cb75756a5fb6a2f8c7f4bdcf3240e5dd9a97058395516c7313a1b3fc0e92df3f6910ce9c71346')
+validpgpkeys=(
+  2DBF5BAA46FB4DED338A335BD65016F35352AA40  # Arnaldo Carvalho de Melo <acme@kernel.org>
+)
+
+prepare() {
+  cd dwarves-$pkgver
+
+  # https://bugs.archlinux.org/task/70013
+  patch -Np1 -i ../0001-CMakeLists.txt-Install-ostra.py-into-Python3_SITELIB.patch
+  patch -Np1 -i ../fix-kernel-lto.patch
+}
+
+build() {
+  local cmake_options=(
+    -D CMAKE_INSTALL_PREFIX=/usr
+    -D CMAKE_BUILD_TYPE=None
+    -D __LIB=lib
+  )
+
+  cmake -S dwarves-$pkgver -B build -G Ninja "${cmake_options[@]}"
+  cmake --build build
+}
+
+check() {
+  ctest --test-dir build --output-on-failure --stop-on-failure -j$(nproc)
+}
+
+_pick() {
+  local p="$1" f d; shift
+  for f; do
+    d="$srcdir/$p/${f#$pkgdir/}"
+    mkdir -p "$(dirname "$d")"
+    mv "$f" "$d"
+    rmdir -p --ignore-fail-on-non-empty "$(dirname "$f")"
+  done
+}
+
+package_pahole() {
+  depends=(
+    bash
+    glibc
+    libelf
+    zlib
+  )
+  optdepends=('ostra-cg: Generate call graphs from encoded traces')
+  provides=(libdwarves{,_emit,_reorganize}.so)
+
+  DESTDIR="$pkgdir" cmake --install build
+
+  _pick ostra "$pkgdir"/usr/{bin/ostra-cg,lib/python*}
+}
+
+package_ostra-cg() {
+  pkgdesc="Generate call graphs from encoded traces"
+  depends=(
+    pahole
+    python
+    python-matplotlib
+  )
+
+  mv ostra/* "$pkgdir"
+
+  python -m compileall -d /usr/lib "$pkgdir/usr/lib"
+  python -O -m compileall -d /usr/lib "$pkgdir/usr/lib"
+}
+
+# vim:set sw=2 sts=-1 et:
