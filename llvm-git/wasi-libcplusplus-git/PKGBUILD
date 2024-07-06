@@ -176,7 +176,10 @@ package_wasi-libc++-git() {
 
   # symlink wasm32 target to default location
   ln -f "${pkgdir}"/usr/share/wasi-sysroot/include/wasm32-unknown-wasi/c++/v1/__config_site \
-       "${pkgdir}"/usr/share/wasi-sysroot/include/c++/v1/__config_site
+        "${pkgdir}"/usr/share/wasi-sysroot/include/c++/v1/__config_site
+
+  ln -f "${pkgdir}"/usr/share/wasi-sysroot/lib/wasm32-unknown-wasi/libc++.a \
+        "${pkgdir}"/usr/share/wasi-sysroot/lib/libc++.a
 
   install -Dm0644 llvm-project/libcxx/CREDITS.TXT "${pkgdir}"/usr/share/licenses/${pkgname}/CREDITS
   install -Dm0644 llvm-project/libcxx/LICENSE.TXT "${pkgdir}"/usr/share/licenses/${pkgname}/LICENSE
@@ -194,6 +197,10 @@ package_wasi-libc++abi-git() {
 
   # reduce duplication
   hardlink -c "${pkgdir}"/usr/share/wasi-sysroot
+
+  # symlink wasm32 target to default location
+  ln -f "${pkgdir}"/usr/share/wasi-sysroot/lib/wasm32-unknown-wasi/libc++abi.a \
+        "${pkgdir}"/usr/share/wasi-sysroot/lib/libc++abi.a
 
   install -Dm0644 llvm-project/libcxxabi/CREDITS.TXT "${pkgdir}"/usr/share/licenses/${pkgname}/CREDITS
   install -Dm0644 llvm-project/libcxxabi/LICENSE.TXT "${pkgdir}"/usr/share/licenses/${pkgname}/LICENSE
