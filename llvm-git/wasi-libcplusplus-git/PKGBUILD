@@ -1,0 +1,196 @@
+# Maintainer: Frederik Schwan <freswa at archlinux dot org>
+
+pkgbase=wasi-libc++-git
+pkgname=(wasi-libc++-git wasi-libc++abi-git)
+pkgver=19.0.0_r504090.8426b51e0e94
+pkgrel=1
+epoch=1
+arch=('any')
+url='https://libcxx.llvm.org/'
+license=('Apache-2.0 WITH LLVM-exception')
+makedepends=('cmake' 'ninja' 'python' 'clang' 'llvm' 'wasi-libc-git' 'wasi-compiler-rt-git' 'lld' 'util-linux')
+source=("llvm-project::git+https://github.com/llvm/llvm-project.git"
+        WASI.cmake
+        wasi-sdk.cmake)
+b2sums=('SKIP'
+        'SKIP'
+        'c829d807c257921fddb8c4d3752ad2291a2beb116d414dd31e34b7f6b01599d8c4807db87ef9930456ed8c9f30e8648e77028fa0b903c3a5ea840514f6022cf4'
+        '0da3e98a7e09eb500a593f78f92a3b23238cf969be326e2711313f95daff39f8a890a7826b2526a81d8c22a035772ed420fddc2d6182f216be9b732755b94f8e')
+options=('staticlibs' '!lto' '!debug')
+
+_targets=(wasm32-wasi wasm32-wasip1 wasm32-wasip1-threads wasm32-wasip2)
+
+pkgver() {
+    cd llvm-project/cmake/Modules
+
+    # This will almost match the output of `llvm-config --version` when the
+    # LLVM_APPEND_VC_REV cmake flag is turned on. The only difference is
+    # dash being replaced with underscore because of Pacman requirements.
+    local _pkgver=$(awk -F 'MAJOR |MINOR |PATCH |)' \
+            'BEGIN { ORS="." ; i=0 } \
+             /set\(LLVM_VERSION_/ { print $2 ; i++ ; if (i==2) ORS="" } \
+             END { print "\n" }' \
+             LLVMVersion.cmake)_r$(git rev-list --count HEAD).$(git rev-parse --short HEAD)
+    echo "$_pkgver"
+}
+
+prepare() {
+  # Platform files have been copied from here https://github.com/WebAssembly/wasi-sdk
+  mkdir -p llvm-project/cmake/Platform
+  cp WASI.cmake llvm-project/cmake/Platform
+}
+
+build() {
+  # Build options are derived from here https://github.com/WebAssembly/wasi-sdk/blob/main/Makefile
+  # remove compiler options not supported by the wasm32-wasi target
+  export CFLAGS="$(echo $CFLAGS | sed "s/-mtune=generic//;
+  s/-fstack-clash-protection//; s/-fcf-protection//; s/-fexceptions//; s/-march=x86-64//")"
+  export CXXFLAGS="$(echo $CXXFLAGS | sed "s/-mtune=generic//;
+  s/-fstack-clash-protection//; s/-fcf-protection//; s/-fexceptions//; s/-march=x86-64//")"
+
+  local target threads_flag threads_cflags
+  for target in "${_targets[@]}"; do
+    if [[ ${target} == *-threads ]]; then
+      threads_flag=ON
+      threads_cflags=-pthread
+    else
+      threads_flag=OFF
+      threads_cflags=
+    fi
+
+    cmake -B build-${target} -G Ninja \
+      -DCMAKE_C_COMPILER_WORKS=ON \
+      -DCMAKE_CXX_COMPILER_WORKS=ON \
+      -DCMAKE_AR=/usr/bin/ar \
+      -DCMAKE_TOOLCHAIN_FILE="${srcdir}"/wasi-sdk.cmake \
+      -DCMAKE_STAGING_PREFIX=/usr/share/wasi-sysroot \
+      -DLIBCXXABI_USE_LLVM_UNWINDER:BOOL=OFF \
+      -DLIBCXX_ENABLE_THREADS:BOOL=${threads_flag} \
+      -DLIBCXX_HAS_PTHREAD_API:BOOL=${threads_flag} \
+      -DLIBCXX_HAS_EXTERNAL_THREAD_API:BOOL=OFF \
+      -DLIBCXX_BUILD_EXTERNAL_THREAD_LIBRARY:BOOL=OFF \
+      -DLIBCXX_HAS_WIN32_THREAD_API:BOOL=OFF \
+      -DLLVM_COMPILER_CHECKED:BOOL=ON \
+      -DLLVM_RUNTIMES_LINKING_WORKS:BOOL=ON \
+      -DLLVM_ENABLE_PER_TARGET_RUNTIME_DIR:BOOL=ON \
+      -DLLVM_DEFAULT_TARGET_TRIPLE=${target} \
+      -DCMAKE_BUILD_TYPE=Release \
+      -DLIBCXX_ENABLE_SHARED:BOOL=OFF \
+      -DLIBCXX_ENABLE_EXCEPTIONS:BOOL=OFF \
+      -DLIBCXX_ENABLE_FILESYSTEM:BOOL=ON \
+      -DLIBCXX_ENABLE_ABI_LINKER_SCRIPT:BOOL=OFF \
+      -DLIBCXX_CXX_ABI=libcxxabi \
+      -DLIBCXX_HAS_MUSL_LIBC:BOOL=ON \
+      -DLIBCXX_ABI_VERSION=2 \
+      -DLIBCXXABI_ENABLE_EXCEPTIONS:BOOL=OFF \
+      -DLIBCXXABI_ENABLE_SHARED:BOOL=OFF \
+      -DLIBCXXABI_SILENT_TERMINATE:BOOL=ON \
+      -DLIBCXXABI_ENABLE_THREADS:BOOL=${threads_flag} \
+      -DLIBCXXABI_HAS_PTHREAD_API:BOOL=${threads_flag} \
+      -DLIBCXXABI_HAS_EXTERNAL_THREAD_API:BOOL=OFF \
+      -DLIBCXXABI_BUILD_EXTERNAL_THREAD_LIBRARY:BOOL=OFF \
+      -DLIBCXXABI_HAS_WIN32_THREAD_API:BOOL=OFF \
+      -DLIBCXXABI_USE_LLVM_UNWINDER:BOOL=OFF \
+      -DWASI_SDK_PREFIX=/usr \
+      -DUNIX:BOOL=ON \
+      -DCMAKE_SYSROOT=/usr/share/wasi-sysroot \
+      -DCMAKE_C_FLAGS="${CFLAGS} ${threads_cflags} --target=${target}" \
+      -DCMAKE_CXX_FLAGS="${CXXFLAGS} ${threads_cflags} --target=${target}" \
+      -DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi" \
+      -DCXX_SUPPORTS_CLASS_MEMACCESS_FLAG:BOOL=OFF \
+      -DCXX_SUPPORTS_COVERED_SWITCH_DEFAULT_FLAG:BOOL=ON \
+      -DCXX_SUPPORTS_CXX11:BOOL=ON \
+      -DCXX_SUPPORTS_EHA_FLAG:BOOL=OFF \
+      -DCXX_SUPPORTS_EHS_FLAG:BOOL=OFF \
+      -DCXX_SUPPORTS_FALIGNED_ALLOCATION_FLAG:BOOL=ON \
+      -DCXX_SUPPORTS_FDATA_SECTIONS:BOOL=ON \
+      -DCXX_SUPPORTS_FNO_EXCEPTIONS_FLAG:BOOL=ON \
+      -DCXX_SUPPORTS_FSTRICT_ALIASING_FLAG:BOOL=ON \
+      -DCXX_SUPPORTS_FVISIBILITY_EQ_HIDDEN_FLAG:BOOL=ON \
+      -DCXX_SUPPORTS_FVISIBILITY_INLINES_HIDDEN_FLAG:BOOL=ON \
+      -DCXX_SUPPORTS_IMPLICIT_FALLTHROUGH_FLAG:BOOL=ON \
+      -DCXX_SUPPORTS_MISLEADING_INDENTATION_FLAG:BOOL=ON \
+      -DCXX_SUPPORTS_MISSING_FIELD_INITIALIZERS_FLAG:BOOL=ON \
+      -DCXX_SUPPORTS_NOEXCEPT_TYPE_FLAG:BOOL=OFF \
+      -DCXX_SUPPORTS_NOSTDINCXX_FLAG:BOOL=ON \
+      -DCXX_SUPPORTS_NOSTDLIBXX_FLAG:BOOL=ON \
+      -DCXX_SUPPORTS_PEDANTIC_FLAG:BOOL=ON \
+      -DCXX_SUPPORTS_STRING_CONVERSION_FLAG:BOOL=ON \
+      -DCXX_SUPPORTS_SUGGEST_OVERRIDE_FLAG:BOOL=ON \
+      -DCXX_SUPPORTS_UNWINDLIB_EQ_NONE_FLAG:BOOL=ON \
+      -DCXX_SUPPORTS_WALL_FLAG:BOOL=ON \
+      -DCXX_SUPPORTS_WCHAR_SUBSCRIPTS_FLAG:BOOL=ON \
+      -DCXX_SUPPORTS_WCONVERSION_FLAG:BOOL=ON \
+      -DCXX_SUPPORTS_WERROR_DATE_TIME:BOOL=ON \
+      -DCXX_SUPPORTS_WERROR_EQ_RETURN_TYPE_FLAG:BOOL=ON \
+      -DCXX_SUPPORTS_WERROR_UNGUARDED_AVAILABILITY_NEW:BOOL=ON \
+      -DCXX_SUPPORTS_WEXTRA_FLAG:BOOL=ON \
+      -DCXX_SUPPORTS_WEXTRA_SEMI_FLAG:BOOL=ON \
+      -DCXX_SUPPORTS_WFORMAT_NONLITERAL_FLAG:BOOL=ON \
+      -DCXX_SUPPORTS_WMISMATCHED_TAGS_FLAG:BOOL=ON \
+      -DCXX_SUPPORTS_WMISSING_BRACES_FLAG:BOOL=ON \
+      -DCXX_SUPPORTS_WNEWLINE_EOF_FLAG:BOOL=ON \
+      -DCXX_SUPPORTS_WNO_COVERED_SWITCH_DEFAULT_FLAG:BOOL=ON \
+      -DCXX_SUPPORTS_WNO_ERROR_FLAG:BOOL=ON \
+      -DCXX_SUPPORTS_WNO_LONG_LONG_FLAG:BOOL=ON \
+      -DCXX_SUPPORTS_WNO_SUGGEST_OVERRIDE_FLAG:BOOL=ON \
+      -DCXX_SUPPORTS_WNO_UNUSED_PARAMETER_FLAG:BOOL=ON \
+      -DCXX_SUPPORTS_WNO_USER_DEFINED_LITERALS_FLAG:BOOL=ON \
+      -DCXX_SUPPORTS_WSHADOW_FLAG:BOOL=ON \
+      -DCXX_SUPPORTS_WSHORTEN_64_TO_32_FLAG:BOOL=ON \
+      -DCXX_SUPPORTS_WSIGN_COMPARE_FLAG:BOOL=ON \
+      -DCXX_SUPPORTS_WSIGN_CONVERSION_FLAG:BOOL=ON \
+      -DCXX_SUPPORTS_WSTRICT_ALIASING_EQ_2_FLAG:BOOL=ON \
+      -DCXX_SUPPORTS_WSTRICT_OVERFLOW_EQ_4_FLAG:BOOL=ON \
+      -DCXX_SUPPORTS_WUNDEF_FLAG:BOOL=ON \
+      -DCXX_SUPPORTS_WUNUSED_FUNCTION_FLAG:BOOL=ON \
+      -DCXX_SUPPORTS_WUNUSED_PARAMETER_FLAG:BOOL=ON \
+      -DCXX_SUPPORTS_WUNUSED_VARIABLE_FLAG:BOOL=ON \
+      -DCXX_SUPPORTS_WWRITE_STRINGS_FLAG:BOOL=ON \
+      -DCXX_SUPPORTS_WX_FLAG:BOOL=OFF \
+      -DCXX_SUPPORTS_W_FLAG:BOOL=ON \
+      -DCXX_WONT_WARN_ON_FINAL_NONVIRTUALDTOR:BOOL=ON \
+      -DCXX_WSUGGEST_OVERRIDE_ALLOWS_ONLY_FINAL:BOOL=ON \
+      -DLINKER_SUPPORTS_COLOR_DIAGNOSTICS:BOOL=ON \
+      -DSUPPORTS_FVISIBILITY_INLINES_HIDDEN_FLAG:BOOL=ON \
+      llvm-project/runtimes
+
+      ninja -C build-${target} cxx cxxabi
+    done
+}
+
+# Do not remove the space before the () or commitpkg will
+# accidentally to run this function on the system (!!!)
+package_wasi-libc++-git() {
+  pkgdesc='WASI LLVM C++ standard library'
+  provides=('wasi-libc++')
+  conflicts=('wasi-libc++')
+
+  local target
+  for target in "${_targets[@]}"; do
+    DESTDIR="${pkgdir}" ninja -C build-${target} install-cxx
+  done
+
+  # reduce duplication
+  hardlink -c "${pkgdir}"/usr/share/wasi-sysroot
+
+  install -Dm0644 llvm-project/libcxx/CREDITS.TXT "${pkgdir}"/usr/share/licenses/${pkgname}/CREDITS
+  install -Dm0644 llvm-project/libcxx/LICENSE.TXT "${pkgdir}"/usr/share/licenses/${pkgname}/LICENSE
+}
+
+package_wasi-libc++abi-git() {
+  pkgdesc='WASI Low level support for the LLVM C++ standard library.'
+  provides=('wasi-libc++abi')
+  conflicts=('wasi-libc++abi')
+
+  local target
+  for target in "${_targets[@]}"; do
+    DESTDIR="${pkgdir}" ninja -C build-${target} install-cxxabi
+  done
+
+  # reduce duplication
+  hardlink -c "${pkgdir}"/usr/share/wasi-sysroot
+
+  install -Dm0644 llvm-project/libcxxabi/CREDITS.TXT "${pkgdir}"/usr/share/licenses/${pkgname}/CREDITS
+  install -Dm0644 llvm-project/libcxxabi/LICENSE.TXT "${pkgdir}"/usr/share/licenses/${pkgname}/LICENSE
+}
