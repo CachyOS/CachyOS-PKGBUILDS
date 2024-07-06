@@ -1,0 +1,136 @@
+# Maintainer: Peter Jung <admin@ptr1337.dev>
+# Maintainer: Maxime Gauduin <alucryd@archlinux.org>
+# Maintainer: Giancarlo Razzolini <grazzolini@archlinux.org>
+# Contributor: Samuel "scrufulufugus" Monson <smonson@irbash.net>
+# Contributor: PedroHLC <root@pedrohlc.com>
+
+pkgname=gamescope-plus
+pkgver=3.14.22
+pkgrel=1
+pkgdesc='SteamOS session compositing window manager (CachyOS Version)'
+arch=(x86_64)
+url=https://github.com/ValveSoftware/gamescope
+license=(BSD-2-Clause BSD-3-Clause)
+conflicts=(gamescope)
+provides=(gamescope)
+depends=(
+  gcc-libs
+  glibc
+  libavif
+  libcap.so
+  libdecor
+  libdrm
+  libinput
+  libpipewire-0.3.so
+  libx11
+  libxcb
+  libxcomposite
+  libxdamage
+  libxext
+  libxfixes
+  libxkbcommon.so
+  libxmu
+  libxrender
+  libxres
+  libxtst
+  libxxf86vm
+  sdl2
+  seatd
+  vulkan-icd-loader
+  wayland
+  xcb-util-errors
+  xcb-util-wm
+  xorg-server-xwayland
+)
+makedepends=(
+  benchmark
+  cmake # for openvr
+  git
+  glslang
+  meson
+  ninja
+  vulkan-headers
+  wayland-protocols
+)
+_tag=3b69847e15c84c0a4f93e82c2eb16b623f9765b9
+source=(
+  git+https://github.com/ValveSoftware/gamescope.git#tag=${_tag}
+  git+https://github.com/Joshua-Ashton/wlroots.git
+  git+https://gitlab.freedesktop.org/emersion/libliftoff.git
+  git+https://github.com/Joshua-Ashton/vkroots.git
+  git+https://gitlab.freedesktop.org/emersion/libdisplay-info.git
+  git+https://github.com/ValveSoftware/openvr.git
+  git+https://github.com/Joshua-Ashton/reshade.git
+  git+https://github.com/KhronosGroup/SPIRV-Headers.git
+  git+https://github.com/nothings/stb.git#commit=af1a5bc352164740c1cc1354942b1c6b72eacb8a
+  git+https://github.com/Joshua-Ashton/GamescopeShaders.git#tag=v0.1
+  chimera.patch
+)
+b2sums=('5f2fd5a052da71a8daf8518e306d0bfc49802f7e246cc3d9f454dce6a482eadc2c43db5c5458bd9ad4074c18bcd4ccad91da14a92f2df17671667c47da7b55c2'
+        'SKIP'
+        'SKIP'
+        'SKIP'
+        'SKIP'
+        'SKIP'
+        'SKIP'
+        'SKIP'
+        'db31478999287cc5b08cc7d98d1daa43a27b339b3ad975269710bd719d30e9f1cf5ee240ee7e2a8d8551f20fa46da14acd669cb207b26a18d79b360e718ff55b'
+        'ca268553bc3dacb5bd19553702cd454ea78ed97ab39d4397c5abf9a27d32633b63e0f7f7bf567b56066e6ecd979275330e629ba202a6d7721f0cd8166cd110dd')
+
+prepare() {
+  cd gamescope
+  meson subprojects download
+
+  git submodule init subprojects/wlroots
+  git config submodule.subprojects/wlroots.url ../wlroots
+
+  git submodule init subprojects/libliftoff
+  git config submodule.subprojects/libliftoff.url ../libliftoff
+
+  git submodule init subprojects/vkroots
+  git config submodule.subprojects/vkroots.url ../vkroots
+
+  git submodule init subprojects/libdisplay-info
+  git config submodule.subprojects/libdisplay-info.url ../libdisplay-info
+
+  git submodule init subprojects/openvr
+  git config submodule.subprojects/openvr.url ../openvr
+
+  git submodule init src/reshade
+  git config submodule.src/reshade.url ../reshade
+
+  git submodule init thirdparty/SPIRV-Headers
+  git config submodule.thirdparty/SPIRV-Headers.url ../SPIRV-Headers
+
+  git -c protocol.file.allow=always submodule update
+
+  # make stb.wrap use our local clone
+  rm -rf subprojects/stb
+  git clone "$srcdir/stb" subprojects/stb
+  cp -av subprojects/packagefiles/stb/* subprojects/stb/ # patch from the .wrap we elided
+  patch -Np1 < ../chimera.patch
+}
+
+pkgver() {
+  cd gamescope
+  git describe --tags | sed 's/-//'
+}
+
+build() {
+  export LDFLAGS="$LDFLAGS -lrt"
+  arch-meson gamescope build \
+    -Dforce_fallback_for=wlroots,libliftoff,vkroots,glm,stb,libdisplay-info \
+    -Dpipewire=enabled
+  meson compile -C build
+}
+
+package() {
+  install -d "$pkgdir"/usr/share/gamescope/reshade
+  cp -r "$srcdir"/GamescopeShaders/* "$pkgdir"/usr/share/gamescope/reshade/
+  chmod -R 655 "$pkgdir"/usr/share/gamescope
+
+  DESTDIR="${pkgdir}" meson install -C build \
+    --skip-subprojects
+}
+
+# vim: ts=2 sw=2 et:
