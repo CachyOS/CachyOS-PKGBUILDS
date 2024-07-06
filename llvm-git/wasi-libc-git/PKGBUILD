@@ -1,6 +1,7 @@
 # Maintainer: Frederik Schwan <freswa at archlinux dot org>
 
 pkgname=wasi-libc-git
+_pkgname=wasi-libc
 pkgver=0+374+9e8c5423
 pkgrel=2
 epoch=2
@@ -20,7 +21,7 @@ source=("git+https://github.com/WebAssembly/wasi-libc.git")
 b2sums=('SKIP')
 
 pkgver() {
-  cd ${pkgname}
+  cd ${_pkgname}
   printf "0+%s+%s" "$(git rev-list --count HEAD)" "$(git rev-parse --short HEAD)"
 }
 
@@ -37,7 +38,7 @@ build() {
     wasm32-wasip2         'WASI_SNAPSHOT=p2'
   )
 
-  cd ${pkgname}
+  cd ${_pkgname}
 
   for target in "${!targets[@]}"; do
     make "${make_options[@]}" TARGET_TRIPLE="$target" ${targets[$target]}
@@ -45,7 +46,7 @@ build() {
 }
 
 package() {
-  cd ${pkgname}
+  cd ${_pkgname}
   install -dm755 "${pkgdir}"/usr/share
   cp -dr --preserve=mode,timestamp sysroot "${pkgdir}"/usr/share/wasi-sysroot
   install -Dm644 LICENSE* -t "${pkgdir}"/usr/share/licenses/${pkgname}
