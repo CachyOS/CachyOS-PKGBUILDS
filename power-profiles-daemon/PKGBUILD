@@ -21,25 +21,30 @@ checkdepends=(python-dbusmock
               python-mccabe
               umockdev)
 source=(https://gitlab.freedesktop.org/upower/power-profiles-daemon/-/archive/$pkgver/$pkgname-$pkgver.tar.gz
-        https://gitlab.freedesktop.org/upower/power-profiles-daemon/-/commit/2e00350f922261329c5203706dbb5dc4426972a6.patch
-        https://gitlab.freedesktop.org/upower/power-profiles-daemon/-/commit/ff7900812c5318f7c78fb5fff347f22e681e9f6c.patch
-        https://gitlab.freedesktop.org/upower/power-profiles-daemon/-/commit/05867e84a46c17b81fc8316d0080ba65ccf756e4.patch
-        https://gitlab.freedesktop.org/upower/power-profiles-daemon/-/merge_requests/198.patch)
+        https://gitlab.freedesktop.org/upower/power-profiles-daemon/-/commit/2e00350f922261329c5203706dbb5dc4426972a6.patch # trivial: Don't assume that turbo_pct is present
+        https://gitlab.freedesktop.org/upower/power-profiles-daemon/-/commit/ff7900812c5318f7c78fb5fff347f22e681e9f6c.patch # Apply additional systemd hardening options
+        https://gitlab.freedesktop.org/upower/power-profiles-daemon/-/merge_requests/194.patch # build: skip shtab for the system without shtab support
+        https://gitlab.freedesktop.org/upower/power-profiles-daemon/-/merge_requests/197.patch # amd-pstate: Add support for core performance boost
+        https://gitlab.freedesktop.org/upower/power-profiles-daemon/-/merge_requests/198.patch # amd-pstate: Program minimum frequency to lowest non-linear frequency
+        )
 sha256sums=('c15a368a59f2cae1474bdfccdd9357f06b0abc9eb7638a87f68c091aaf570349'
             '4b747763e3ee7191d70501df07293f66d47bfe141ad5d8245acbf25376cfdc60'
             '5d25aa1aaf37358c84950d0f9d4b70b4e1ed4032da798a0b917829084916e96e'
+            '6fe877869c2a0ebf3c84bc4e2f4f5d186938bf4c8e3e07688b17e5248c53357f'
             'ebaeaf4e5fbfe5b1af7e9741dca3d2c58ac8f1ed545c602bcdc1fabcc946640a'
             '92459b12d29d91f7b1a5a10f1290bb73dbceeabbb11325c3899685f6fd736036')
 
 prepare() {
   cd $pkgname-$pkgver
-  # Don't assume that turbo_pct is present
+  msg2 "Don't assume that turbo_pct is present"
   patch -Np1 < ../2e00350f922261329c5203706dbb5dc4426972a6.patch
-  # Apply additional systemd hardening options
+  msg2 "Apply additional systemd hardening options"
   patch -Np1 < ../ff7900812c5318f7c78fb5fff347f22e681e9f6c.patch
-  # Add support for core performance boost
-  patch -Np1 < ../05867e84a46c17b81fc8316d0080ba65ccf756e4.patch
-  # Minimum Frequency
+  msg2 "build: skip shtab for the system without shtab support"
+  patch -Np1 < ../194.patch
+  msg2 "amd-pstate: Add support for core performance boost"
+  patch -Np1 < ../197.patch
+  msg2 "amd-pstate: Program minimum frequency to lowest non-linear frequency"
   patch -Np1 < ../198.patch
 
 }
