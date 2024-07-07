@@ -66,7 +66,7 @@ makedepends=(
   nasm
   nodejs
   python
-  rust
+  rustup
   unzip
   wasi-compiler-rt
   wasi-libc
@@ -110,6 +110,12 @@ sha256sums=('0b7b2a8c3def52fcab13c48769645d0e963902ee916e4f3d2a0098796e73e3e8'
 validpgpkeys=('14F26682D0916CDD81E37B6D61B7B526D98F0353') # Mozilla Software Releases <release@mozilla.com>
 
 prepare() {
+  if ! rustc --version | grep stable  >/dev/null 2>&1; then
+    echo "Installing rust compiler…"
+    rustup toolchain install stable
+    rustup default stable
+  fi
+
     mkdir -p mozbuild
     cd firefox-$pkgver
 
@@ -128,20 +134,23 @@ ac_add_options --enable-optimize
 ac_add_options --enable-rust-simd
 ac_add_options --enable-wasm-simd
 ac_add_options --enable-linker=lld
-ac_add_options --enable-lto=cross
+ac_add_options --enable-lto=full
 #ac_add_options --enable-linker=gold
 ac_add_options --disable-install-strip
 ac_add_options --disable-elf-hack
-ac_add_options --disable-bootstrap
-ac_add_options --with-wasi-sysroot=/usr/share/wasi-sysroot
+ac_add_options --enable-bootstrap
+#ac_add_options --with-wasi-sysroot=/usr/share/wasi-sysroot
+#ac_add_options --with-wasm-sandboxed-libraries
 ac_add_options --enable-default-toolkit=cairo-gtk3-wayland
 ac_add_options MOZ_PGO=1
+ac_add_options MOZ_LTO=full
+ac_add_options MOZ_USING_WASM_SANDBOXING=1
 
-export AR=llvm-ar
-export CC='clang'
-export CXX='clang++'
-export NM=llvm-nm
-export RANLIB=llvm-ranlib
+#export AR=llvm-ar
+#export CC='clang'
+#export CXX='clang++'
+#export NM=llvm-nm
+#export RANLIB=llvm-ranlib
 
 # Branding
 ac_add_options --enable-update-channel=release
@@ -156,14 +165,14 @@ export MOZ_ADDON_SIGNING=1
 export MOZ_APP_REMOTINGNAME=$pkgname
 
 # System libraries
-ac_add_options --with-system-nspr
-ac_add_options --with-system-nss
-ac_add_options --with-system-libvpx
-ac_add_options --with-system-webp
-ac_add_options --with-system-libevent
-ac_add_options --with-system-icu
-ac_add_options --with-system-zlib
-ac_add_options --with-system-jpeg
+#ac_add_options --with-system-nspr
+#ac_add_options --with-system-nss
+#ac_add_options --with-system-libvpx
+#ac_add_options --with-system-webp
+#ac_add_options --with-system-libevent
+#ac_add_options --with-system-icu
+#ac_add_options --with-system-zlib
+#ac_add_options --with-system-jpeg
 
 ac_add_options --enable-optimize=-O3
 ac_add_options OPT_LEVEL="3"
@@ -173,7 +182,7 @@ ac_add_options --enable-jxl
 ac_add_options --enable-av1
 ac_add_options --enable-pulseaudio
 ac_add_options --enable-alsa
-ac_add_options --enable-jack
+#ac_add_options --enable-jack
 ac_add_options --enable-proxy-bypass-protection
 ac_add_options --disable-warnings-as-errors
 ac_add_options --disable-crashreporter
@@ -198,6 +207,8 @@ mk_add_options MOZ_SERVICES_HEALTHREPORT=0
 mk_add_options MOZ_TELEMETRY_REPORTING=0
 
 END
+
+    rm "${_cachycommon_dir}/patches/gentoo/0021-bmo-1862601-system-icu-74.patch"
 
     # Apply patches
     msg2 "=+=+=+=+= Applying patches =+=+=+=+="
@@ -224,6 +235,8 @@ END
     #patch -Np1 -i ${srcdir}/0001-Bug-1882209-Update-encoding_rs-to-0.8.34-to-deal-wit.patch
     # msg2 "Match to system libs"
     # patch -Np1 -i ../match.patch
+
+    sed -i 's/releases\/mozilla-release",/mozilla-central",\n        "integration\/autoland",/' python/mozbuild/mozbuild/artifacts.py
 
     rm -f ${srcdir}/cachyos-browser-common/source_files/mozconfig
 }
