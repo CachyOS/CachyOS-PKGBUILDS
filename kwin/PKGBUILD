@@ -5,7 +5,7 @@
 pkgname=kwin
 pkgver=6.1.2
 _dirver=$(echo $pkgver | cut -d. -f1-3)
-pkgrel=2
+pkgrel=4
 pkgdesc='An easy to use, but flexible, composited Window Manager (CachyOS Version)'
 arch=(x86_64)
 url='https://kde.org/plasma-desktop/'
@@ -82,7 +82,8 @@ optdepends=('maliit-keyboard: virtual keyboard for kwin-wayland')
 groups=(plasma)
 source=(https://download.kde.org/stable/plasma/$_dirver/$pkgname-$pkgver.tar.xz{,.sig}
 		0001-backends-drm-support-tearing-with-atomic-modesetting.patch::https://invent.kde.org/plasma/kwin/-/commit/155c29b08f243c654630869e11a588e28d8199b1.patch
-		https://invent.kde.org/plasma/kwin/-/merge_requests/5982.patch)
+		https://invent.kde.org/plasma/kwin/-/merge_requests/5982.patch
+		tearing-dev.patch)
 install=$pkgname.install
 sha256sums=('82c582c83b01d42ac8dd6ca5fbc4b8daeea192b54dd1c859703e6f033455c00f'
             'SKIP'
@@ -95,7 +96,7 @@ validpgpkeys=('E0A3EB202F8E57528E13E72FD7574483BB57B18D'  # Jonathan Esk-Riddell
 prepare() {
   cd $pkgname-$pkgver
   msg2 "Tearing"
-  patch -Np1 < ../0001-backends-drm-support-tearing-with-atomic-modesetting.patch
+  patch -Np1 < ../tearing-dev.patch
 #  # core/renderloop: add some hysteresis to triple buffering
 #  patch -Np1 < ../5982.patch
 }
