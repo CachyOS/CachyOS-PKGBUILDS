@@ -24,7 +24,7 @@ license=('GPL-2.0-or-later')
 depends=('bash' 'glibc' 'libarchive' 'curl' 'gpgme' 'pacman-mirrorlist'
          'gettext' 'gawk' 'coreutils' 'gnupg' 'grep' 'debugedit')
 makedepends=('meson' 'asciidoc' 'doxygen' 'git' 'curl' 'unzip'
-             'cmake' 'rustup' 'clang' 'llvm' 'tcl')
+             'cmake' 'rust' 'clang' 'llvm' 'tcl')
 checkdepends=('python' 'fakechroot')
 optdepends=('perl-locale-gettext: translation support in makepkg-template')
 provides=('libalpm.so')
@@ -86,12 +86,6 @@ build() {
   export CXX=clang++
   export NM=llvm-nm
   export RANLIB=llvm-ranlib
-
-  if ! rustc --version | grep stable >/dev/null 2>&1; then
-    echo "Installing stable compiler…"
-    rustup toolchain install stable
-    rustup default stable
-  fi
 
   local _saved_cflags="${CFLAGS}"
   local _saved_cppflags="${CPPFLAGS}"
