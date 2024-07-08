@@ -1,0 +1,43 @@
+# Maintainer: SoulHarsh007 <harsh.peshwani@outlook.com>
+
+pkgname=cachy-chroot
+pkgver=1.0.0
+pkgrel=1
+pkgdesc='Chroot helper for CachyOS'
+arch=('x86_64' 'x86_64_v3')
+groups=('cachyos')
+license=(BSD-3-Clause)
+url="https://github.com/CachyOS/cachy-chroot"
+depends=('arch-install-scripts' 'btrfs-progs' 'util-linux')
+makedepends=('git' 'cargo' 'lld' 'clang' 'llvm')
+source=("${pkgname}-${pkgver}.tar.gz::${url}/archive/${pkgver}.tar.gz")
+b2sums=('SKIP')
+provides=('cachy-chroot')
+options=(strip)
+
+prepare() {
+  cd "${srcdir}/${pkgname}-${pkgver}"
+  cargo fetch --locked --target "${CARCH}-unknown-linux-gnu"
+}
+
+build() {
+  cd "${srcdir}/${pkgname}-${pkgver}"
+
+  # Compile with clang
+  export AR=llvm-ar
+  export CC=clang
+  export CXX=clang++
+  export NM=llvm-nm
+  export RANLIB=llvm-ranlib
+
+  export RUSTFLAGS="-Cembed-bitcode -C opt-level=3 -Ccodegen-units=1 -Clinker=clang -C link-arg=-flto -Clink-arg=-fuse-ld=/usr/bin/ld.lld"
+  cargo build --release --frozen
+}
+
+package() {
+  cd "${srcdir}/${pkgname}-${pkgver}"
+  install -Dm644 "LICENSE" "${pkgdir}/usr/share/licenses/cachy-chroot/LICENSE"
+  install -Dm755 "target/release/cachy-chroot" "${pkgdir}/usr/bin/cachy-chroot"
+}
+
+# vim:set sw=2 sts=2 et:
