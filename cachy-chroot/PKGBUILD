@@ -4,24 +4,25 @@ pkgname=cachy-chroot
 pkgver=1.1.0
 pkgrel=1
 pkgdesc='Chroot helper for CachyOS'
-arch=('any')
+arch=('x86_64')
 groups=('cachyos')
 license=(BSD-3-Clause)
 url="https://github.com/CachyOS/cachy-chroot"
 depends=('arch-install-scripts' 'btrfs-progs' 'util-linux')
 makedepends=('git' 'cargo' 'lld' 'clang' 'llvm')
-source=("${pkgname}-${pkgver}.tar.gz::${url}/archive/${pkgver}.tar.gz")
-b2sums=('SKIP')
-provides=('cachy-chroot')
-options=(strip)
+source=("git+${url}?signed#tag=${pkgver}")
+b2sums=('10b109b0be70baa048ed0e3ce788fa0bee8d7f6af5e7ad3b9b8577b7c1dc3c4ee10b147be0ab57d1349ac9770cb094c7d2f632549e8c3248ae9b811295c68aaa')
+validpgpkeys=(
+  2BDE2DF6DDC89DBA55698CA4D06942E10F32FD49 # SoulHarsh007 <harsh.peshwani@outlook.com>
+)
 
 prepare() {
-  cd "${srcdir}/${pkgname}-${pkgver}"
+  cd "${srcdir}/${pkgname}"
   cargo fetch --locked --target "${CARCH}-unknown-linux-gnu"
 }
 
 build() {
-  cd "${srcdir}/${pkgname}-${pkgver}"
+  cd "${srcdir}/${pkgname}"
 
   # Compile with clang
   export AR=llvm-ar
@@ -35,7 +36,7 @@ build() {
 }
 
 package() {
-  cd "${srcdir}/${pkgname}-${pkgver}"
+  cd "${srcdir}/${pkgname}"
   install -Dm644 "LICENSE" "${pkgdir}/usr/share/licenses/cachy-chroot/LICENSE"
   install -Dm755 "target/release/cachy-chroot" "${pkgdir}/usr/bin/cachy-chroot"
 }
