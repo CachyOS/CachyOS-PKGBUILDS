@@ -1,0 +1,11 @@
+post_install() {
+	cat << EOF
+
+Please configure crashkernel=128M using command kdump setup or by manually
+specifying it in your bootloader settings, then you can enable the service to
+automaticlly create dumps on kernel panics:
+
+sudo systemctl enable --now kdump
+
+EOF
+}
