@@ -55,23 +55,24 @@ depends=(
 )
 makedepends=(
   cbindgen
-  clang
+  #clang
   diffutils
   imake
   inetutils
   jack
-  lld
-  llvm
+  #lld
+  #llvm
   mesa
   nasm
   nodejs
   python
-  rustup
+  #rustup
+  rust
   unzip
-  wasi-compiler-rt
-  wasi-libc
-  wasi-libc++
-  wasi-libc++abi
+  #wasi-compiler-rt
+  #wasi-libc
+  #wasi-libc++
+  #wasi-libc++abi
   xorg-server-xvfb
   yasm
   zip
@@ -110,11 +111,11 @@ sha256sums=('65271ffefb235ea1e162a081f2074a0f06fce27b2f613f573c126ba8eef95172'
 validpgpkeys=('14F26682D0916CDD81E37B6D61B7B526D98F0353') # Mozilla Software Releases <release@mozilla.com>
 
 prepare() {
-  if ! rustc --version | grep stable  >/dev/null 2>&1; then
-    echo "Installing rust compiler…"
-    rustup toolchain install stable
-    rustup default stable
-  fi
+  #if ! rustc --version | grep stable  >/dev/null 2>&1; then
+  #  echo "Installing rust compiler…"
+  #  rustup toolchain install stable
+  #  rustup default stable
+  #fi
 
     mkdir -p mozbuild
     cd firefox-$pkgver
