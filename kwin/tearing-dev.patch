@@ -1059,3 +1059,30 @@ index fb883fb6b82..61ecd288cb1 100644
 -- 
 GitLab
 
+From fd3fb9db6db6eaf6b1c527e9f86ebf6e2974f80a Mon Sep 17 00:00:00 2001
+From: Xaver Hugl <xaver.hugl@gmail.com>
+Date: Tue, 9 Jul 2024 16:44:45 +0200
+Subject: [PATCH 4/4] core/renderloop: add a debug print for presentation mode
+ changes
+
+It can be useful for debugging and these changes don't happen too often
+---
+ src/core/renderloop.cpp | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/src/core/renderloop.cpp b/src/core/renderloop.cpp
+index 1c438854d2b..baecc472148 100644
+--- a/src/core/renderloop.cpp
++++ b/src/core/renderloop.cpp
+@@ -250,6 +250,9 @@ std::chrono::nanoseconds RenderLoop::nextPresentationTimestamp() const
+ 
+ void RenderLoop::setPresentationMode(PresentationMode mode)
+ {
++    if (mode != d->presentationMode) {
++        qCDebug(KWIN_CORE) << "Changed presentation mode to" << mode;
++    }
+     d->presentationMode = mode;
+ }
+ 
+-- 
+GitLab
