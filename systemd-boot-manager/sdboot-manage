@@ -60,13 +60,10 @@ export LINUX_OPTIONS \
     DISCARD \
     INITRD_PREFIX=initramfs
 
-# Load the config file
-[[ -f ${config} ]] && . "${config}"
-
 # Sources additional config files
 # #APPENDED_LINUX_OPTIONS do not overwrite each other and instead get merged to be added to the end of the kernel cmdline
 # Firstly loads from /usr/lib/sdboot-manage.conf.d then /etc/sdboot-manage.conf.d
-# File should be loaded alphabetically
+# Files should be loaded alphabetically
 CONSTRUCTED_LINUX_OPTIONS=""
 for file in /usr/lib/sdboot-manage.conf.d/*.conf /etc/sdboot-manage.conf.d/*.conf; do
     #Source files if exists
@@ -76,6 +73,9 @@ for file in /usr/lib/sdboot-manage.conf.d/*.conf /etc/sdboot-manage.conf.d/*.con
     #Delete variable to be sure it gets set by next source
     unset APPENDED_LINUX_OPTIONS
 done;
+
+# Load the config file after as user options should always win over package provided configs
+[[ -f ${config} ]] && . "${config}"
 
 get_entry_root() {
     echo -n "$ESP/loader/entries/"
