@@ -16,7 +16,7 @@ _sqlitever=$(curl -s 'https://archlinux.org/packages/search/json/?name=sqlite' |
     else { printf "00" }
 }')
 
-pkgrel=10
+pkgrel=6
 pkgdesc="A library-based package manager with dependency support. CachyOS fork."
 arch=('x86_64')
 url="https://www.archlinux.org/pacman/"
@@ -33,33 +33,28 @@ backup=(etc/pacman.conf
 options=('strip') #'!lto' -- should we put no lto here??
 #validpgpkeys=('6645B0A8C7005E78DB1D7864F99FFE0FEAE999BD'  # Allan McRae <allan@archlinux.org>
 #              'B8151B117037781095514CA7BBDFFC92306B1121') # Andrew Gregory (pacman) <andrew@archlinux.org>
-_commit="2f3dda35d764e4a5cbbc66cb558e47221313e0c0"
+_commit="bac6d9f0ac1c3d22cf471599b7fd8ef6ede48952"
 if $_staging; then
     _commit="1d910d41c9b598185e061369c977d8abd4a6e7e3"
 fi
 source=(
 #       https://sources.archlinux.org/other/pacman/$pkgname-$_pkgver.tar.xz{,.sig}
-        git+https://github.com/CachyOS/pacman.git#commit=${_commit}
+        git+https://github.com/CachyOS/pacman.git#commit=${_commit}?signed
         "pacman.conf"
         "makepkg.conf"
-#        pacman-always-create-directories-from-debugedit.patch::https://gitlab.archlinux.org/pacman/pacman/-/commit/efd0c24c07b86be014a4edb5a8ece021b87e3900.patch
-#        pacman-always-create-directories-from-debugedit-fixup.patch::https://gitlab.archlinux.org/pacman/pacman/-/commit/86981383a2f4380bda26311831be94cdc743649b.patch
-#        pacman-fix-unique-source-paths.patch::https://gitlab.archlinux.org/pacman/pacman/-/commit/478af273dfe24ded197ec54ae977ddc3719d74a0.patch
-#        pacman-strip-include-o-files-similar-to-kernel-modules.patch::https://gitlab.archlinux.org/pacman/pacman/-/commit/de11824527ec4e2561e161ac40a5714ec943543c.patch
-#        "0001-add-support-for-x86_64_v-2-3-4-autodetection.patch"
-#        "0001-Revert-pacman-key-Don-t-check-gpg-s-trustdb-after-ea.patch"
-#        "0001-add-information-about-origin-db.patch"
         static_sqlite.patch
         "https://www.sqlite.org/2024/sqlite-src-${_sqlitever}.zip"
         disable-always-stale.patch
-        #repo-add
         )
-sha256sums=('91ebe4b99a5e04d9f201564e9be4249723e84a0c600689646b01b1a38f149fb1'
+sha256sums=('483aafd4b50c58330f2cc259f2288023941270603f4d843f4c1e4fff538254bb'
             '47f4ba578b1a6a3291cb65a6f60ab8c4871ae45bbe93da308a595a447ed9ad9d'
             '3efb029c693729feb9a24cc3624e48a0875c1c784826f0765eb4ff43e9747c80'
             'bdd8fb13c1cd8606f41347bc1897e261031ac80b33c772d310f417064332f646'
             '070362109beb6899f65797571b98b8824c8f437f5b2926f88ee068d98ef368ec'
             '11e0078c5ac7cdafa625957a9da982989efe19719e4973cd77f28dc5780dccd9')
+validpgpkeys=(
+  'B1B70BB1CD56047DEF31DE2EB62C3D10C54D5DA9'  # Vladislav Nepogodin <nepogodin.vlad@gmail.com>
+)
 
 if $_staging; then
     source+=(78cd453.patch)
@@ -180,8 +175,6 @@ package() {
   export RUSTFLAGS+=" -Cembed-bitcode -Clinker-plugin-lto -Clinker=clang -C link-arg=-flto=thin"
 
   DESTDIR="$pkgdir" meson install -C build
-
-  #cp "$srcdir/repo-add" "$pkgdir/usr/bin/repo-add"
 
   # install Arch specific stuff
   install -dm755 "$pkgdir/etc"
