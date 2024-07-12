@@ -16,7 +16,7 @@ _sqlitever=$(curl -s 'https://archlinux.org/packages/search/json/?name=sqlite' |
     else { printf "00" }
 }')
 
-pkgrel=6
+pkgrel=7
 pkgdesc="A library-based package manager with dependency support. CachyOS fork."
 arch=('x86_64')
 url="https://www.archlinux.org/pacman/"
@@ -44,6 +44,7 @@ source=(
         "makepkg.conf"
         static_sqlite.patch
         "https://www.sqlite.org/2024/sqlite-src-${_sqlitever}.zip"
+        0001-Revert-_alpm_archive_fgets-bail-early-if-reached-end.patch # workaround for invalid repos
         disable-always-stale.patch
         )
 sha256sums=('483aafd4b50c58330f2cc259f2288023941270603f4d843f4c1e4fff538254bb'
@@ -51,6 +52,7 @@ sha256sums=('483aafd4b50c58330f2cc259f2288023941270603f4d843f4c1e4fff538254bb'
             '3efb029c693729feb9a24cc3624e48a0875c1c784826f0765eb4ff43e9747c80'
             'bdd8fb13c1cd8606f41347bc1897e261031ac80b33c772d310f417064332f646'
             '070362109beb6899f65797571b98b8824c8f437f5b2926f88ee068d98ef368ec'
+            'd9077997d9fab1026aeeacde5e019b49331b04e66504c5111fdccac5810d7bc3'
             '11e0078c5ac7cdafa625957a9da982989efe19719e4973cd77f28dc5780dccd9')
 validpgpkeys=(
   'B1B70BB1CD56047DEF31DE2EB62C3D10C54D5DA9'  # Vladislav Nepogodin <nepogodin.vlad@gmail.com>

@@ -1,0 +1,47 @@
+From c227ddb275e7e9fa9de89ecf9ab425e0d4c57d34 Mon Sep 17 00:00:00 2001
+From: Vladislav Nepogodin <nepogodin.vlad@gmail.com>
+Date: Fri, 12 Jul 2024 08:24:34 +0400
+Subject: [PATCH] Revert "_alpm_archive_fgets(): bail early if reached end of
+ block"
+
+This reverts commit fc1ad042e844acfa5b4ab90b9993b561be5b425e.
+---
+ lib/libalpm/util.c | 15 +++++++--------
+ 1 file changed, 7 insertions(+), 8 deletions(-)
+
+diff --git a/lib/libalpm/util.c b/lib/libalpm/util.c
+index e1f87142..83160f00 100644
+--- a/lib/libalpm/util.c
++++ b/lib/libalpm/util.c
+@@ -1138,14 +1138,6 @@ int _alpm_archive_fgets(struct archive *a, struct archive_read_buffer *b)
+ 			b->block_offset = b->block;
+ 			block_remaining = b->block_size;
+ 
+-			if(block_remaining == 0) {
+-				/* there was no new data, return what is left; ARCHIVE_EOF will be
+-				 * returned on next call */
+-				b->line_offset[0] = '\0';
+-				b->real_line_size = b->line_offset - b->line;
+-				return ARCHIVE_OK;
+-			}
+-
+ 			/* error, cleanup */
+ 			if(b->ret < ARCHIVE_OK) {
+ 				goto cleanup;
+@@ -1201,6 +1193,13 @@ int _alpm_archive_fgets(struct archive *a, struct archive_read_buffer *b)
+ 			memcpy(b->line_offset, b->block_offset, len);
+ 			b->line_offset += len;
+ 			b->block_offset = b->block + b->block_size;
++			/* there was no new data, return what is left; saved ARCHIVE_EOF will be
++			 * returned on next call */
++			if(len == 0) {
++				b->line_offset[0] = '\0';
++				b->real_line_size = b->line_offset - b->line;
++				return ARCHIVE_OK;
++			}
+ 		}
+ 	}
+ 
+-- 
+2.45.2
+
