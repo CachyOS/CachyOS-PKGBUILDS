@@ -5,6 +5,7 @@
 # Maintainer: Vladislav Nepogodin (vnepogodin) <nepogodin.vlad@gmail.com>
 # Maintainer: Piotr Gorski <piotrgorski@cachyos.org>
 # Maintainer: Peter Jung ptr1337 <admin@ptr1337.dev>
+# Maintainer: SoulHarsh007 <admin@soulharsh007.dev>
 
 _staging=false
 pkgname=pacman
@@ -18,7 +19,7 @@ _sqlitever=$(curl -s 'https://archlinux.org/packages/search/json/?name=sqlite' |
 
 pkgrel=7
 pkgdesc="A library-based package manager with dependency support. CachyOS fork."
-arch=('x86_64')
+arch=('x86_64' 'aarch64')
 url="https://www.archlinux.org/pacman/"
 license=('GPL-2.0-or-later')
 depends=('bash' 'glibc' 'libarchive' 'curl' 'gpgme' 'pacman-mirrorlist'
@@ -47,6 +48,7 @@ source=(
         0001-Revert-_alpm_archive_fgets-bail-early-if-reached-end.patch # workaround for invalid repos
         disable-always-stale.patch
         )
+source_aarch64=(fix-alpm-crate-for-aarch64.patch)
 sha256sums=('483aafd4b50c58330f2cc259f2288023941270603f4d843f4c1e4fff538254bb'
             '47f4ba578b1a6a3291cb65a6f60ab8c4871ae45bbe93da308a595a447ed9ad9d'
             '3efb029c693729feb9a24cc3624e48a0875c1c784826f0765eb4ff43e9747c80'
@@ -54,6 +56,7 @@ sha256sums=('483aafd4b50c58330f2cc259f2288023941270603f4d843f4c1e4fff538254bb'
             '070362109beb6899f65797571b98b8824c8f437f5b2926f88ee068d98ef368ec'
             'd9077997d9fab1026aeeacde5e019b49331b04e66504c5111fdccac5810d7bc3'
             '11e0078c5ac7cdafa625957a9da982989efe19719e4973cd77f28dc5780dccd9')
+sha256sums_aarch64=('98af0b680561b4430c0290d461d28a03b7178cce6b62880c7d0803473bfa543c')
 validpgpkeys=(
   'B1B70BB1CD56047DEF31DE2EB62C3D10C54D5DA9'  # Vladislav Nepogodin <nepogodin.vlad@gmail.com>
 )
