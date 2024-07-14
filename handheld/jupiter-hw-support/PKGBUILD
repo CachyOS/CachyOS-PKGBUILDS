@@ -24,19 +24,22 @@ source=("git+https://gitlab.com/evlaV/jupiter-hw-support.git#tag=$_srctag"
         "pythonhid.patch"
         "steamos-btrfs-automount.patch"
         "cachyos-automount.patch"
-        "udev-automount-rules.patch")
+        "udev-automount-rules.patch"
+        "priv-write.patch")
 #install="$pkgname.install"
 options=(!strip !debug)
 sha256sums=('f935d558e4384843f48f31f602c000f1e8cae4a8d7a25fdb32961ba45251be7a'
             '05f7a3d1fcff857aad4e5a8dae400f6acbf32c7e505db347f441dd33a6601df4'
             'fe064240bf77dabfa4d161b10c33c82385a0ca22a49350e70ab9301b0e98dc7b'
             'c7db0e977fb0c3a1526b8482e349f73304fc6397d7337c48fe0c990bde64412c'
-            'd6b5636eb09d2190b10eb665238c30960babba96424fc9768e36966495fa795e')
+            'd6b5636eb09d2190b10eb665238c30960babba96424fc9768e36966495fa795e'
+            'd3098f26eaa26d9eccfedeac792e47a03317bdd16b17ba03be0fbd1ed6621c5d')
 prepare() {
   patch --directory=$pkgname --forward --strip=1 --input=../pythonhid.patch
   patch --directory=$pkgname --forward --strip=1 --input=../steamos-btrfs-automount.patch
   patch --directory=$pkgname --forward --strip=1 --input=../cachyos-automount.patch
   patch --directory=$pkgname --forward --strip=1 --input=../udev-automount-rules.patch
+  patch --directory=$pkgname --forward --strip=1 --input=../priv-write.patch
 }
 
 package() {

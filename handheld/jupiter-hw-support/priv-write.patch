@@ -1,0 +1,53 @@
+From 8acb4b910566e0de55a97aab6e6e69484e9b0a7c Mon Sep 17 00:00:00 2001
+From: Nekoh <francisd246@hotmail.com>
+Date: Sat, 13 Jul 2024 22:33:55 -0400
+Subject: [PATCH] Patch priv-write. Inspired by Bazzite patch
+
+---
+ .../steamos-polkit-helpers/steamos-priv-write | 20 +++++++++++++++----
+ 1 file changed, 16 insertions(+), 4 deletions(-)
+
+diff --git a/usr/bin/steamos-polkit-helpers/steamos-priv-write b/usr/bin/steamos-polkit-helpers/steamos-priv-write
+index d1456c8..99c0965 100755
+--- a/usr/bin/steamos-polkit-helpers/steamos-priv-write
++++ b/usr/bin/steamos-polkit-helpers/steamos-priv-write
+@@ -42,7 +42,7 @@ function CommitWrite()
+         printf "%s" "$WRITE_VALUE" > "$WRITE_PATH"
+     fi
+ 
+-    chgrp deck "$WRITE_PATH"
++    chgrp "$(id -nu 1000)" "$WRITE_PATH"
+     chmod g+w "$WRITE_PATH"
+     exit 0
+ }
+@@ -65,15 +65,27 @@ if MatchFilenamePattern "$WRITE_PATH" "/dev/drm_dp_aux0"; then
+ fi
+ 
+ if MatchFilenamePattern "$WRITE_PATH" "/sys/class/drm/card*/device/power_dpm_force_performance_level"; then
+-    CommitWrite
++    if /usr/lib/hwsupport/valve-hardware; then
++        CommitWrite
++    else
++        Log "commit: Skipped $WRITE_VALUE -> $WRITE_PATH - Valve Hardware not detected"
++    fi
+ fi
+ 
+ if MatchFilenamePattern "$WRITE_PATH" "/sys/class/drm/card*/device/pp_od_clk_voltage"; then
+-    CommitWrite
++    if /usr/lib/hwsupport/valve-hardware; then
++        CommitWrite
++    else
++        Log "commit: Skipped $WRITE_VALUE -> $WRITE_PATH - Valve Hardware not detected"
++    fi
+ fi
+ 
+ if MatchFilenamePattern "$WRITE_PATH" "/sys/class/hwmon/hwmon*/power*_cap"; then
+-    CommitWrite
++    if /usr/lib/hwsupport/valve-hardware; then
++        CommitWrite
++    else
++        Log "commit: Skipped $WRITE_VALUE -> $WRITE_PATH - Valve Hardware not detected"
++    fi
+ fi
+ 
+ if MatchFilenamePattern "$WRITE_PATH" "/sys/devices/platform/*/*/*/iio:device*/in_illuminance_integration_time"; then
