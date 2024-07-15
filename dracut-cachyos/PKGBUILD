@@ -2,7 +2,7 @@
 # Maintainer: Giancarlo Razzolini <grazzolini@archlinux.org>
 # Contributor: SoulHarsh007 <admin@soulharsh007.dev>
 
-pkgname=dracut
+pkgname=dracut-cachyos
 pkgver=103
 pkgrel=1.1
 pkgdesc="An event driven initramfs infrastructure"
@@ -71,7 +71,8 @@ optdepends=(
   'tpm2-tools: tpm2 support for e.g. LUKS'
   'xz: xz compression'
 )
-provides=('initramfs')
+provides=('initramfs' "dracut=$pkgver")
+conflicts=('dracut')
 backup=('etc/dracut.conf' 'etc/dracut-cachyos.conf')
 source=("${pkgname}-${pkgver}::git+${url}#tag=${pkgver}"
   "dracut-rebuild"
