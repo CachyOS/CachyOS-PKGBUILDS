@@ -47,6 +47,7 @@ _libdir=usr/lib/gcc/$CHOST/${pkgver%%+*}
 source=(git+https://sourceware.org/git/gcc.git#commit=${_commit}
         c89 c99
         gcc-ada-repro.patch
+        load-store-znver.patch
 )
 validpgpkeys=(F3691687D867B81B51CE07D9BBE43771487328A9  # bpiotrowski@archlinux.org
               86CFFCA918CF3AF47147588051E8B148A9999C34  # evangelos@foutrelis.com
@@ -73,10 +74,7 @@ prepare() {
 
   # Reproducible gcc-ada
   patch -Np0 < "$srcdir/gcc-ada-repro.patch"
-  msg2 "Fixup load store for znver4"
-  git cherry-pick 1e3aa9c9278db69d4bdb661a750a7268789188d6
-  msg "Fixup uinaligned load/store cost for znver5"
-  git cherry-pick 896393791ee34ffc176c87d232dfee735db3aaab
+  patch -Np1 < "$srcdir/load-store-znver.patch"
   mkdir -p "$srcdir/gcc-build"
   mkdir -p "$srcdir/libgccjit-build"
 }
