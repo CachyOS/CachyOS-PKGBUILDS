@@ -3,7 +3,7 @@
 
 pkgname=chwd
 pkgver=1.8.5
-pkgrel=1
+pkgrel=2
 pkgdesc="CachyOS Hardware Detection Tool"
 arch=(x86_64)
 url="https://github.com/cachyos/chwd"
@@ -14,13 +14,15 @@ provides=('chwd-db')
 replaces=('chwd-db')
 conflicts=('chwd-db')
 groups=('cachyos')
-source=("chwd-$pkgver.tar.gz::$url/archive/$pkgver.tar.gz")
-sha256sums=('f8108c890cec5882b3376e84828467b6086cf6a7de89097cd0080026305f53e9')
+source=("chwd-$pkgver.tar.gz::$url/archive/$pkgver.tar.gz"
+        revert-prime-profile.patch::https://github.com/CachyOS/chwd/commit/cf2e74a4a4d28eb3484dad1b99a460ee8150070e.patch)
+sha256sums=('f8108c890cec5882b3376e84828467b6086cf6a7de89097cd0080026305f53e9'
+            'bc597bcd746d52092101af3cacde82fc38ccc4cb9e42d654206d2237213d9951')
 
 prepare() {
   cd "$srcdir/$pkgname-$pkgver"
   cargo fetch --locked --target "$CARCH-unknown-linux-gnu"
-
+  patch -Rp1 < ../revert-prime-profile.patch
   cd scripts/chwd-kernel
   cargo fetch --locked --target "$CARCH-unknown-linux-gnu"
 }
