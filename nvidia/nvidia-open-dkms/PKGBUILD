@@ -2,19 +2,17 @@
 
 pkgname=nvidia-open-dkms
 pkgver=555.58.02
-pkgrel=4
+pkgrel=5
 pkgdesc="NVIDIA open kernel modules"
 arch=('x86_64')
 url="https://github.com/NVIDIA/open-gpu-kernel-modules"
 depends=("nvidia-utils=${pkgver}" 'libglvnd')
 makedepends=('linux-cachyos-headers')
-license=(GPL-1.0-only)
+license=('MIT AND GPL-2.0-only')
 source=("$pkgname-$pkgver.tar.gz::https://github.com/NVIDIA/open-gpu-kernel-modules/archive/refs/tags/${pkgver}.tar.gz"
-        nvidia-open-gcc-ibt-sls.patch
         make-modeset-fbdev-default.patch
         gsp-fix-stutter.patch)
 sha512sums=('5cc927d994ba5ec79333b21534dbc60904b5e1ce746d231d29764648d6f6ffd8e7646b69f32b3d28f9ef8c407df5a04e5a94ff26d503201ec8fd17028bf3ccc9'
-            '263c4c5e75ef8cb8ca2641c022dfaf8bd9222fadf68ed15120b0ae7dd9cc901a04ce2e55625d513a0995759c9d82dfbdc4c33d4751159124915d7404b1400e34'
             'f19a7d52c6e7f5bd6818658c2b11adaaf4ad05016ec0acc73a42417748ed4bf81b8394c077a6f5aba9dfcf6ab01a578692ed1e9d3c2ab583fdaa56166bba05f2'
             '2cf7bad184ee585999b2dc1254596b0b741827e9707367991c3c4327f25db68857b2c9a896b6f2bdf5f7f7702181c64def25c17a17f3272fdbbf6fd40a359585')
 
@@ -22,8 +20,6 @@ prepare() {
   cd open-gpu-kernel-modules-${pkgver}
   msg2 "Put modeset and fbdev=1 as default"
   patch -Np1 < "$srcdir"/make-modeset-fbdev-default.patch
-  msg2 "Patch NVIDIA module for IBT"
-  patch -Np1 < "$srcdir"/nvidia-open-gcc-ibt-sls.patch
   msg2 "Patch gsp sutter"
   patch -Np1 < "$srcdir"/gsp-fix-stutter.patch
 
@@ -66,10 +62,6 @@ package_nvidia-open-dkms() {
   # cp -dr --no-preserve='ownership' kernel-open "${pkgdir}/usr/src/nvidia-$pkgver"
   cp -dr --no-preserve='ownership' open-gpu-kernel-modules-dkms "${pkgdir}/usr/src/nvidia-$pkgver"
   mv "${pkgdir}/usr/src/nvidia-$pkgver/kernel-open/dkms.conf" "${pkgdir}/usr/src/nvidia-$pkgver/dkms.conf"
-
-  # Force module to load even on unsupported GPUs
-  mkdir -p "$pkgdir"/usr/lib/modprobe.d
-  echo "options nvidia NVreg_OpenRmEnableUnsupportedGpus=1" > "$pkgdir"/usr/lib/modprobe.d/nvidia-open.conf
 
   install -Dm644 open-gpu-kernel-modules-${pkgver}/COPYING "$pkgdir"/usr/share/licenses/$pkgname
 }
