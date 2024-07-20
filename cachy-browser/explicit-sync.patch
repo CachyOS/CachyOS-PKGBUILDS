@@ -249,7 +249,7 @@ diff --git a/widget/gtk/GtkCompositorWidget.cpp b/widget/gtk/GtkCompositorWidget
  #endif
  
 +UniquePtr<MozContainerSurfaceLock> GtkCompositorWidget::LockSurface() {
-+  return mWidget->LockSurface();
++  return mWidget ? mWidget->LockSurface() : nullptr();
 +}
 +
  }  // namespace widget
