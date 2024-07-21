@@ -4,7 +4,7 @@
 
 pkgname=dracut-cachyos
 pkgver=103
-pkgrel=1.1
+pkgrel=2
 pkgdesc="An event driven initramfs infrastructure"
 arch=('x86_64')
 url="https://github.com/dracut-ng/dracut-ng"
@@ -29,7 +29,7 @@ makedepends=(
   'asciidoc'
   'bash-completion'
   'git'
-  'cargo'
+  'rust'
 )
 optdepends=(
   'binutils: --uefi option support'
@@ -120,12 +120,12 @@ build() {
   cd ${pkgname}-${pkgver}
 
   ./configure \
-    --enable-dracut-cpio \
     --sysconfdir=${sysconfdir} \
     --prefix=${prefix} \
     --libdir=${prefix}/lib \
     --systemdsystemunitdir=${prefix}/lib/systemd/system \
-    --bashcompletiondir=$(pkg-config --variable=completionsdir bash-completion)
+    --bashcompletiondir=$(pkg-config --variable=completionsdir bash-completion) \
+    --enable-dracut-cpio
   make
 }
 
