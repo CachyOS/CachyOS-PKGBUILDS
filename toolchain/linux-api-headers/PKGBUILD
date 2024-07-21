@@ -6,18 +6,18 @@
 # toolchain build order: linux-api-headers->glibc->binutils->gcc->glibc->binutils->gcc
 
 pkgname=linux-api-headers
-pkgver=6.8
-pkgrel=5
+pkgver=6.10
+pkgrel=2
 pkgdesc='Kernel headers sanitized for use in userspace'
-arch=(any)
+arch=('x86_64')
 url='https://www.gnu.org/software/libc'
 license=(GPL-2.0-only)
 makedepends=(rsync)
 source=(https://www.kernel.org/pub/linux/kernel/v${pkgver:0:1}.x/linux-${pkgver}.tar.{xz,sign}
-		ntsync.patch)
-sha256sums=('c969dea4e8bb6be991bbf7c010ba0e0a5643a3a8d8fb0a2aaa053406f1e965f3'
+        ntsync.patch)
+sha256sums=('774698422ee54c5f1e704456f37c65c06b51b4e9a8b0866f34580d86fef8e226'
             'SKIP'
-            '8806ec229bff3d0f2189cc5455bb8ef285e7009972112dcd0c0197f6976a80cd')
+            'fae945e795640549a6ecf18d52b8a204f56f544eaf7200f5e700c31a49a05b9d')
 validpgpkeys=('ABAF11C65A2970B130ABE3C479BE3E4300411886'   # Linus Torvalds
               '647F28654894E3BD457199BE38DBBDC86092693E')  # Greg Kroah-Hartman
 
