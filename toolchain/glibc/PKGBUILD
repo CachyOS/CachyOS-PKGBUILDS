@@ -13,9 +13,9 @@ _optimize_v4=${_optimize_v4-}
 
 pkgbase=glibc
 pkgname=(glibc lib32-glibc glibc-locales)
-pkgver=2.39+r64+g70f560fc22
-_commit=70f560fc22212f733647c9121c26bbb2307f2e10
-pkgrel=2
+pkgver=2.40+r1+g6daa771045
+_commit=6daa77104520ca992a9369bd01cccd4d98c82984
+pkgrel=1
 arch=(x86_64)
 url='https://www.gnu.org/software/libc'
 license=(GPL-2.0-or-later LGPL-2.1-or-later)
@@ -29,17 +29,17 @@ source=("git+https://sourceware.org/git/glibc.git#commit=${_commit}"
 )
 validpgpkeys=(7273542B39962DF7B299931416792B4EA25340F8 # Carlos O'Donell
               BC7C7372637EC10C57D7AA6579C43DFBF1CF2187) # Siddhesh Poyarekar
-b2sums=('f4026dc069c9beb2649771399b6c3d66d1340f229e39afff0ef59a9699462bbad80fe5108dd56056bdda764eb885dca3389a8d05fa9e686998f9bbf8fb1823b7'
+b2sums=('82f3a05d8ec43866b07c0c174d1afdf7e51b4eba563bcc43d3c2ad78708385c60db91eda9fc84c4c06e4c44e4f150cb9895d54b88eb0c76a46184493806c6b7a'
         'c859bf2dfd361754c9e3bbd89f10de31f8e81fd95dc67b77d10cb44e23834b096ba3caa65fbc1bd655a8696c6450dfd5a096c476b3abf5c7e125123f97ae1a72'
         '04fbb3b0b28705f41ccc6c15ed5532faf0105370f22133a2b49867e790df0491f5a1255220ff6ebab91a462f088d0cf299491b3eb8ea53534cb8638a213e46e3'
         '7c265e6d36a5c0dff127093580827d15519b6c7205c2e1300e82f0fb5b9dd00b6accb40c56581f18179c4fbbc95bd2bf1b900ace867a83accde0969f7b609f8a'
         'a6a5e2f2a627cc0d13d11a82458cfd0aa75ec1c5a3c7647e5d5a3bb1d4c0770887a3909bfda1236803d5bc9801bfd6251e13483e9adf797e4725332cd0d91a0e'
         '214e995e84b342fe7b2a7704ce011b7c7fc74c2971f98eeb3b4e677b99c860addc0a7d91b8dc0f0b8be7537782ee331999e02ba48f4ccc1c331b60f27d715678')
 
-#pkgver() {
-#  cd glibc
-#  git describe --tags | sed 's/[^-]*-//;s/[^-]*-/&r/;s/-/+/g'
-#}
+pkgver() {
+  cd glibc
+  git describe --tags | sed 's/[^-]*-//;s/[^-]*-/&r/;s/-/+/g'
+}
 
 prepare() {
   mkdir -p glibc-build lib32-glibc-build
