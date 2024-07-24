@@ -9,7 +9,7 @@ pkgdesc='Extremely fast compression algorithm'
 arch=('x86_64')
 url='https://lz4.github.io/lz4/'
 license=(GPL-2.0-or-later)
-makedepends=('git' 'cmake' 'ninja' 'llvm' 'clang' 'bc')
+makedepends=('git' 'meson' 'ninja' 'llvm' 'clang' 'bc')
 checkdepends=('diffutils')
 depends=('glibc')
 provides=('liblz4.so')
@@ -59,28 +59,25 @@ build() {
   export CFLAGS="$CFLAGS -fprofile-generate"
   export CXXFLAGS="$CXXFLAGS -fprofile-generate"
 
-  cmake -B build -S "$pkgname/build/cmake" \
-    -G Ninja \
-    -DCMAKE_BUILD_TYPE='None' \
-    -DCMAKE_INSTALL_PREFIX='/usr' \
-    -Wno-dev
-  cmake --build build
+  meson setup --prefix=/usr --buildtype=plain lz4/build/meson build
+  meson configure build -Dcontrib=true -Dexamples=true -Dprograms=true
+  meson compile -C build
 
   cd "$pkgname/tests"
   make datagen
   export DATASET_GENERATOR="$PWD/datagen"
   cd "$ROOT_DIR"
 
-  export LZ4_BIN="$ROOT_DIR/build/lz4"
+  export LZ4_BIN="$ROOT_DIR/build/meson/programs/lz4"
 
   # create data for 1MB, 10MB, 50MB
-  export DATA_SIZES=(1000000 10000000 50000000)
+  export DATA_SIZES=(1000000 50000000)
 
-  export COMPRESSION_LEVELS=(1 5 9) # 1 for fastest, 9 for best compression
+  export COMPRESSION_LEVELS=(1 3) # 1 for fastest
 
   msg2 "PGO data generation"
   # Generate and process data for 100 times
-  for i in {1..100}; do
+  for i in {1..30}; do
       for SIZE in "${DATA_SIZES[@]}"; do
           for LEVEL in "${COMPRESSION_LEVELS[@]}"; do
               _generate_and_process_data "$SIZE" "$LEVEL"
@@ -102,25 +99,22 @@ build() {
   # clean everything
   rm -rf build
 
-  cmake -B build -S "$pkgname/build/cmake" \
-    -G Ninja \
-    -DCMAKE_BUILD_TYPE='None' \
-    -DCMAKE_INSTALL_PREFIX='/usr' \
-    -Wno-dev
-  cmake --build build
+  meson setup --prefix=/usr --buildtype=plain lz4/build/meson build
+  meson configure build -Dcontrib=true -Dexamples=true -Dprograms=true
+  meson compile -C build
 
 }
 
 check() {
   rm -f passwd.lz4
-  build/lz4 /etc/passwd passwd.lz4
-  build/lz4 -d passwd.lz4 passwd
+  build/meson/programs/lz4 /etc/passwd passwd.lz4
+  build/meson/programs/lz4 -d passwd.lz4 passwd
   diff -q /etc/passwd passwd
   rm passwd
 }
 
 package() {
-  DESTDIR="$pkgdir" cmake --install build
+  meson install -C build --destdir "$pkgdir"
 }
 
 # vim:set ts=2 sw=2 et:
