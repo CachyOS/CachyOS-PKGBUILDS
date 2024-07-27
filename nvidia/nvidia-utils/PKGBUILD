@@ -162,21 +162,14 @@ package_nvidia-utils() {
     install -Dm755 "libnvidia-allocator.so.${pkgver}" "${pkgdir}/usr/lib/libnvidia-allocator.so.${pkgver}"
     install -Dm755 "libnvidia-gpucomp.so.${pkgver}" "${pkgdir}/usr/lib/libnvidia-gpucomp.so.${pkgver}"
 
-    # egl-xlib/xcb
-    install -D -m755 "libnvidia-egl-xlib.so.1" "${pkgdir}/usr/lib/libnvidia-egl-xlib.so.1"
-    install -D -m644 "20_nvidia_xlib.json" "${pkgdir}/usr/share/egl/egl_external_platform.d/20_nvidia_xlib.json"
-    install -D -m755 "libnvidia-egl-xcb.so.1" "${pkgdir}/usr/lib/libnvidia-egl-xcb.so.1"
-    install -D -m644 "20_nvidia_xcb.json" "${pkgdir}/usr/share/egl/egl_external_platform.d/20_nvidia_xcb.json"
-
     # Vulkan ICD
     install -Dm644 "nvidia_icd.json" "${pkgdir}/usr/share/vulkan/icd.d/nvidia_icd.json"
     install -Dm644 "nvidia_layers.json" "${pkgdir}/usr/share/vulkan/implicit_layer.d/nvidia_layers.json"
 
-    # VKSC
-    install -D -m755 "libnvidia-vksc-core.so.${pkgver}" "${pkgdir}/usr/lib/libnvidia-vksc-core.so.${pkgver}"
-    ln -s "libnvidia-vksc-core.so.${pkgver}" "${pkgdir}/usr/lib/libnvidia-vksc-core.so.1"
-    install -D -m644 "nvidia_icd_vksc.json" "${pkgdir}/usr/share/vulkansc/icd.d/nvidia_icd_vksc.json"
-    install -D -m755 nvidia-pcc "${pkgdir}/usr/bin/nvidia-pcc"
+    # VulkanSC
+    install -D -m755 nvidia-pcc -t "${pkgdir}/usr/bin"
+    install -D -m755 "libnvidia-vksc-core.so.${pkgver}" -t "${pkgdir}/usr/lib"
+    install -D -m644 nvidia_icd_vksc.json -t "${pkgdir}/usr/share/vulkansc/icd.d"
 
     # VDPAU
     install -Dm755 "libvdpau_nvidia.so.${pkgver}" "${pkgdir}/usr/lib/vdpau/libvdpau_nvidia.so.${pkgver}"
@@ -205,6 +198,12 @@ package_nvidia-utils() {
     install -Dm755 "libnvidia-ngx.so.${pkgver}" "${pkgdir}/usr/lib/libnvidia-ngx.so.${pkgver}"
     install -Dm755 _nvngx.dll "${pkgdir}/usr/lib/nvidia/wine/_nvngx.dll"
     install -Dm755 nvngx.dll "${pkgdir}/usr/lib/nvidia/wine/nvngx.dll"
+
+    # Xorg
+    install -D -m755 libnvidia-egl-xcb.so.1  -t "${pkgdir}/usr/lib"
+    install -D -m755 libnvidia-egl-xlib.so.1 -t "${pkgdir}/usr/lib"
+    install -D -m644 20_nvidia_xcb.json  -t "${pkgdir}/usr/share/egl/egl_external_platform.d"
+    install -D -m644 20_nvidia_xlib.json -t "${pkgdir}/usr/share/egl/egl_external_platform.d"
 
     # Optical flow
     install -Dm755 "libnvidia-opticalflow.so.${pkgver}" "${pkgdir}/usr/lib/libnvidia-opticalflow.so.${pkgver}"

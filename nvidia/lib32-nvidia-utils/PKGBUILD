@@ -80,19 +80,13 @@ package_lib32-nvidia-utils() {
     install -D -m755 "libnvidia-allocator.so.${pkgver}" "${pkgdir}/usr/lib32/libnvidia-allocator.so.${pkgver}"
     install -D -m755 "libnvidia-gpucomp.so.${pkgver}" "${pkgdir}/usr/lib32/libnvidia-gpucomp.so.${pkgver}"
 
-    if [ -n "${_eglgver:-}" ] && [[ -e libnvidia-egl-gbm.so."${_eglgver}" ]]; then
-      install -Dm755 libnvidia-egl-gbm.so."${_eglgver}" "${pkgdir}"/usr/lib32/libnvidia-egl-gbm.so."${_eglgver}"
-      ln -s libnvidia-egl-gbm.so."${_eglgver}" "${pkgdir}"/usr/lib32/libnvidia-egl-gbm.so.1
-      ln -s libnvidia-egl-gbm.so.1 "${pkgdir}"/usr/lib32/libnvidia-egl-gbm.so
-    fi
+    install -Dm755 libnvidia-egl-gbm.so."${_eglgver}" "${pkgdir}"/usr/lib32/libnvidia-egl-gbm.so."${_eglgver}"
+    ln -s libnvidia-egl-gbm.so."${_eglgver}" "${pkgdir}"/usr/lib32/libnvidia-egl-gbm.so.1
+    ln -s libnvidia-egl-gbm.so.1 "${pkgdir}"/usr/lib32/libnvidia-egl-gbm.so
 
     # egl-xlib/xcb
-    if [[ -e libnvidia-egl-xlib.so.1 ]]; then
-      install -D -m755 "libnvidia-egl-xlib.so.1" "${pkgdir}/usr/lib32/libnvidia-egl-xlib.so.1"
-    fi
-    if [[ -e libnvidia-egl-xcb.so.1 ]]; then
-      install -D -m755 "libnvidia-egl-xcb.so.1" "${pkgdir}/usr/lib32/libnvidia-egl-xcb.so.1"
-    fi
+    install -D -m755 "libnvidia-egl-xlib.so.1" "${pkgdir}/usr/lib32/libnvidia-egl-xlib.so.1"
+    install -D -m755 "libnvidia-egl-xcb.so.1" "${pkgdir}/usr/lib32/libnvidia-egl-xcb.so.1"
 
     # Symlink for embedded gamescope https://github.com/ValveSoftware/steam-for-linux/issues/10916
     mkdir -p "${pkgdir}/usr/lib32/gbm"
