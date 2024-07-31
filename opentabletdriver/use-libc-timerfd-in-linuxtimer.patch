@@ -1,0 +1,548 @@
+From 5ecf238c180c882876d00c193ba9875d3746b08e Mon Sep 17 00:00:00 2001
+From: hwsmm <hwsnemo@gmail.com>
+Date: Sun, 4 Aug 2024 15:29:33 +0900
+Subject: [PATCH 1/2] Use libc timerfd instead in LinuxTimer
+
+---
+ .../Interop/Timer/LinuxTimer.cs               | 125 +++++++++++-------
+ .../Linux/Timers/ClockID.cs                   |  24 ++--
+ OpenTabletDriver.Native/Linux/Timers/SigEv.cs |  10 --
+ .../Structs/{TimerSpec.cs => ITimerSpec.cs}   |   6 +-
+ .../Linux/Timers/Structs/SigEvThread.cs       |  12 --
+ .../Linux/Timers/Structs/SigEvent.cs          |  23 ----
+ .../Linux/Timers/Structs/SigVal.cs            |  15 ---
+ .../Linux/Timers/TimerFlag.cs                 |   5 +-
+ .../Linux/Timers/Timers.cs                    |  23 ++--
+ 9 files changed, 105 insertions(+), 138 deletions(-)
+ delete mode 100644 OpenTabletDriver.Native/Linux/Timers/SigEv.cs
+ rename OpenTabletDriver.Native/Linux/Timers/Structs/{TimerSpec.cs => ITimerSpec.cs} (60%)
+ delete mode 100644 OpenTabletDriver.Native/Linux/Timers/Structs/SigEvThread.cs
+ delete mode 100644 OpenTabletDriver.Native/Linux/Timers/Structs/SigEvent.cs
+ delete mode 100644 OpenTabletDriver.Native/Linux/Timers/Structs/SigVal.cs
+
+diff --git a/OpenTabletDriver.Desktop/Interop/Timer/LinuxTimer.cs b/OpenTabletDriver.Desktop/Interop/Timer/LinuxTimer.cs
+index 23cdd36e5..dbfb39986 100644
+--- a/OpenTabletDriver.Desktop/Interop/Timer/LinuxTimer.cs
++++ b/OpenTabletDriver.Desktop/Interop/Timer/LinuxTimer.cs
+@@ -1,128 +1,153 @@
+ using System;
+ using System.Runtime.InteropServices;
++using System.Threading;
+ using OpenTabletDriver.Native.Linux;
+ using OpenTabletDriver.Native.Linux.Timers;
+ using OpenTabletDriver.Native.Linux.Timers.Structs;
+ using OpenTabletDriver.Plugin;
+-using OpenTabletDriver.Plugin.Timers;
+ 
+ namespace OpenTabletDriver.Desktop.Interop.Timer
+ {
+     using static Timers;
++    using ITimer = Plugin.Timers.ITimer;
+ 
+     internal class LinuxTimer : ITimer, IDisposable
+     {
+-        public LinuxTimer()
+-        {
+-            callbackDelegate = Callback;
+-            callbackHandle = GCHandle.Alloc(callbackDelegate);
+-        }
++        private Thread _timerThread;
++        private readonly object _stateLock = new object();
++        private int _timerFD;
++        private ITimerSpec _timeSpec;
+ 
+-        private IntPtr timerID;
+-        private readonly TimerCallback callbackDelegate;
+-        private GCHandle callbackHandle;
+-        private readonly object stateLock = new object();
+-        private TimerSpec timeSpec;
+-        private SigEvent sigEvent;
++        private volatile bool enabled;
++        public bool Enabled => enabled;
+ 
+-        public bool Enabled { private set; get; }
+         public float Interval { set; get; } = 1;
+ 
+         public event Action Elapsed;
+ 
+         public void Start()
+         {
+-            lock (stateLock)
++            lock (_stateLock)
+             {
+-                if (!Enabled)
++                if (!enabled)
+                 {
+-                    sigEvent = new SigEvent
+-                    {
+-                        notify = SigEv.Thread,
+-                        thread = new SigEvThread
+-                        {
+-                            function = Marshal.GetFunctionPointerForDelegate(callbackDelegate),
+-                            attribute = IntPtr.Zero
+-                        },
+-                        value = new SigVal()
+-                    };
++                    int timerFD = TimerCreate(ClockID.Monotonic, 0);
+ 
+-                    if (TimerCreate(ClockID.Monotonic, ref sigEvent, out timerID) != ERRNO.NONE)
++                    if (timerFD == -1)
+                     {
+                         Log.Write("LinuxTimer", $"Failed creating timer: {(ERRNO)Marshal.GetLastWin32Error()}", LogLevel.Error);
+                         return;
+                     }
+ 
+-                    double interval = Interval * 1000 * 1000;
++                    _timerFD = timerFD;
+ 
+-                    timeSpec = new TimerSpec
++                    long seconds = (long)Interval;
++                    long nseconds = (long)((Interval - seconds) * 1000.0 * 1000.0 * 1000.0);
++
++                    _timeSpec = new ITimerSpec
+                     {
+-                        interval = new TimeSpec
++                        it_interval = new TimeSpec
+                         {
+-                            sec = 0,
+-                            nsec = (long)interval
++                            sec = seconds,
++                            nsec = nseconds
+                         },
+-                        value = new TimeSpec
++                        it_value = new TimeSpec
+                         {
+-                            sec = 0,
+-                            nsec = 100
++                            sec = seconds,
++                            nsec = nseconds
+                         }
+                     };
+ 
+-                    var oldTimeSpec = new TimerSpec();
+-                    if (TimerSetTime(timerID, TimerFlag.Default, ref timeSpec, ref oldTimeSpec) != ERRNO.NONE)
++                    if (TimerSetTime(_timerFD, TimerFlag.Default, ref _timeSpec, IntPtr.Zero) != ERRNO.NONE)
+                     {
+                         Log.Write("LinuxTimer", $"Failed activating the timer: ${(ERRNO)Marshal.GetLastWin32Error()}", LogLevel.Error);
+                         return;
+                     }
+ 
+-                    Enabled = true;
++                    _timerThread = new Thread(() =>
++                    {
++                        while (enabled)
++                        {
++                            ulong timerExpirations = 0;
++
++                            if (TimerGetTime(_timerFD, ref timerExpirations, sizeof(ulong)) == sizeof(ulong) && enabled)
++                            {
++                                for (ulong i = 0; i < timerExpirations; i++)
++                                {
++                                    try
++                                    {
++                                        Elapsed?.Invoke();
++                                    }
++                                    catch (Exception ex)
++                                    {
++                                        Log.Write("LinuxTimer", $"Elapsed delegate returned an exception", LogLevel.Error);
++                                        Log.Exception(ex);
++                                    }
++                                }
++                            }
++                            else if (enabled)
++                            {
++                                Log.Write("LinuxTimer", $"Unexpected timer error: ${(ERRNO)Marshal.GetLastWin32Error()}", LogLevel.Error);
++                                break;
++                            }
++                        }
++                    });
++
++                    enabled = true;
++
++                    _timerThread.Priority = ThreadPriority.Highest;
++                    _timerThread.Start();
+                 }
+             }
+         }
+ 
+         public void Stop()
+         {
+-            lock (stateLock)
++            lock (_stateLock)
+             {
+-                if (Enabled)
++                if (enabled)
+                 {
+-                    var timeSpec = new TimerSpec
++                    enabled = false;
++
++                    var timeSpec = new ITimerSpec
+                     {
+-                        interval = new TimeSpec
++                        it_interval = new TimeSpec
+                         {
+                             sec = 0,
+                             nsec = 0
++                        },
++                        it_value = new TimeSpec
++                        {
++                            sec = 0,
++                            nsec = 1 // makes it loop once more to safely close
+                         }
+                     };
+ 
+-                    if (TimerSetTime(timerID, TimerFlag.Default, ref timeSpec, IntPtr.Zero) != ERRNO.NONE)
++                    if (TimerSetTime(_timerFD, TimerFlag.Default, ref timeSpec, IntPtr.Zero) != ERRNO.NONE)
+                     {
+                         Log.Write("LinuxTimer", $"Failed deactivating the timer: ${(ERRNO)Marshal.GetLastWin32Error()}", LogLevel.Error);
+                         return;
+                     }
+ 
+-                    if (TimerDelete(timerID) != ERRNO.NONE)
++                    _timerThread?.Join();
++                    _timerThread = null;
++
++                    if (CloseTimer(_timerFD) != ERRNO.NONE)
+                     {
+                         Log.Write("LinuxTimer", $"Failed deleting the timer: ${(ERRNO)Marshal.GetLastWin32Error()}", LogLevel.Error);
+                         return;
+                     }
+ 
+-                    Enabled = false;
++                    _timerFD = -1;
+                 }
+             }
+         }
+ 
+-        private void Callback(SigVal _)
+-        {
+-            Elapsed?.Invoke();
+-        }
+-
+         public void Dispose()
+         {
+             if (Enabled)
+                 Stop();
+-            callbackHandle.Free();
++
+             GC.SuppressFinalize(this);
+         }
+     }
+diff --git a/OpenTabletDriver.Native/Linux/Timers/ClockID.cs b/OpenTabletDriver.Native/Linux/Timers/ClockID.cs
+index 03b0c8713..6ed0371b1 100644
+--- a/OpenTabletDriver.Native/Linux/Timers/ClockID.cs
++++ b/OpenTabletDriver.Native/Linux/Timers/ClockID.cs
+@@ -2,17 +2,17 @@ namespace OpenTabletDriver.Native.Linux.Timers
+ {
+     public enum ClockID
+     {
+-        RealTime,
+-        Monotonic,
+-        ProcessCPUTimeID,
+-        ThreadCPUTimeID,
+-        MonotonicRaw,
+-        RealTimeCourse,
+-        MonotonicCourse,
+-        BootTime,
+-        RealTimeAlarm,
+-        BootTimeAlarm,
+-        SGICycle,
+-        TAI
++        RealTime = 0,
++        Monotonic = 1,
++        ProcessCPUTimeID = 2,
++        ThreadCPUTimeID = 3,
++        MonotonicRaw = 4,
++        RealTimeCourse = 5,
++        MonotonicCourse = 6,
++        BootTime = 7,
++        RealTimeAlarm = 8,
++        BootTimeAlarm = 9,
++        SGICycle = 10,
++        TAI = 11
+     }
+ }
+diff --git a/OpenTabletDriver.Native/Linux/Timers/SigEv.cs b/OpenTabletDriver.Native/Linux/Timers/SigEv.cs
+deleted file mode 100644
+index ed116e940..000000000
+--- a/OpenTabletDriver.Native/Linux/Timers/SigEv.cs
++++ /dev/null
+@@ -1,10 +0,0 @@
+-namespace OpenTabletDriver.Native.Linux.Timers
+-{
+-    public enum SigEv
+-    {
+-        Signal,
+-        None,
+-        Thread,
+-        ThreadID
+-    }
+-}
+diff --git a/OpenTabletDriver.Native/Linux/Timers/Structs/TimerSpec.cs b/OpenTabletDriver.Native/Linux/Timers/Structs/ITimerSpec.cs
+similarity index 60%
+rename from OpenTabletDriver.Native/Linux/Timers/Structs/TimerSpec.cs
+rename to OpenTabletDriver.Native/Linux/Timers/Structs/ITimerSpec.cs
+index ee5f0ec05..4e8bc6db0 100644
+--- a/OpenTabletDriver.Native/Linux/Timers/Structs/TimerSpec.cs
++++ b/OpenTabletDriver.Native/Linux/Timers/Structs/ITimerSpec.cs
+@@ -3,9 +3,9 @@
+ namespace OpenTabletDriver.Native.Linux.Timers.Structs
+ {
+     [StructLayout(LayoutKind.Sequential)]
+-    public struct TimerSpec
++    public struct ITimerSpec
+     {
+-        public TimeSpec interval;
+-        public TimeSpec value;
++        public TimeSpec it_interval;
++        public TimeSpec it_value;
+     }
+ }
+diff --git a/OpenTabletDriver.Native/Linux/Timers/Structs/SigEvThread.cs b/OpenTabletDriver.Native/Linux/Timers/Structs/SigEvThread.cs
+deleted file mode 100644
+index e6607cfa2..000000000
+--- a/OpenTabletDriver.Native/Linux/Timers/Structs/SigEvThread.cs
++++ /dev/null
+@@ -1,12 +0,0 @@
+-using System;
+-using System.Runtime.InteropServices;
+-
+-namespace OpenTabletDriver.Native.Linux.Timers.Structs
+-{
+-    [StructLayout(LayoutKind.Sequential)]
+-    public struct SigEvThread
+-    {
+-        public IntPtr function;
+-        public IntPtr attribute;
+-    }
+-}
+diff --git a/OpenTabletDriver.Native/Linux/Timers/Structs/SigEvent.cs b/OpenTabletDriver.Native/Linux/Timers/Structs/SigEvent.cs
+deleted file mode 100644
+index aff3060b7..000000000
+--- a/OpenTabletDriver.Native/Linux/Timers/Structs/SigEvent.cs
++++ /dev/null
+@@ -1,23 +0,0 @@
+-using System.Runtime.InteropServices;
+-
+-namespace OpenTabletDriver.Native.Linux.Timers.Structs
+-{
+-    [StructLayout(LayoutKind.Explicit, Size = 64, Pack = 1)]
+-    public struct SigEvent
+-    {
+-        [FieldOffset(0)]
+-        public SigVal value;
+-
+-        [FieldOffset(8)]
+-        public int signo;
+-
+-        [FieldOffset(12)]
+-        public SigEv notify;
+-
+-        [FieldOffset(16)]
+-        public int tid;
+-
+-        [FieldOffset(16)]
+-        public SigEvThread thread;
+-    }
+-}
+diff --git a/OpenTabletDriver.Native/Linux/Timers/Structs/SigVal.cs b/OpenTabletDriver.Native/Linux/Timers/Structs/SigVal.cs
+deleted file mode 100644
+index f0338f569..000000000
+--- a/OpenTabletDriver.Native/Linux/Timers/Structs/SigVal.cs
++++ /dev/null
+@@ -1,15 +0,0 @@
+-using System;
+-using System.Runtime.InteropServices;
+-
+-namespace OpenTabletDriver.Native.Linux.Timers.Structs
+-{
+-    [StructLayout(LayoutKind.Explicit)]
+-    public struct SigVal
+-    {
+-        [FieldOffset(0)]
+-        public int sival_int;
+-
+-        [FieldOffset(0)]
+-        public IntPtr sival_ptr;
+-    }
+-}
+diff --git a/OpenTabletDriver.Native/Linux/Timers/TimerFlag.cs b/OpenTabletDriver.Native/Linux/Timers/TimerFlag.cs
+index 17a6777ba..5ba11ebfa 100644
+--- a/OpenTabletDriver.Native/Linux/Timers/TimerFlag.cs
++++ b/OpenTabletDriver.Native/Linux/Timers/TimerFlag.cs
+@@ -2,7 +2,8 @@ namespace OpenTabletDriver.Native.Linux.Timers
+ {
+     public enum TimerFlag
+     {
+-        Default,
+-        AbsoluteTime
++        Default = 0,
++        AbsoluteTime = 1 << 0,
++        CancelOnSet = 1 << 1
+     }
+ }
+diff --git a/OpenTabletDriver.Native/Linux/Timers/Timers.cs b/OpenTabletDriver.Native/Linux/Timers/Timers.cs
+index ee9be4904..83e9df453 100644
+--- a/OpenTabletDriver.Native/Linux/Timers/Timers.cs
++++ b/OpenTabletDriver.Native/Linux/Timers/Timers.cs
+@@ -4,22 +4,23 @@
+ 
+ namespace OpenTabletDriver.Native.Linux.Timers
+ {
+-    public delegate void TimerCallback(SigVal a);
+-
+     public static class Timers
+     {
+-        private const string librt = "librt.so.1";
++        private const string libc = "libc.so.6";
++
++        [DllImport(libc, EntryPoint = "timerfd_create", SetLastError = true)]
++        public static extern int TimerCreate(ClockID clockID, TimerFlag flags);
+ 
+-        [DllImport(librt, EntryPoint = "timer_create", SetLastError = true)]
+-        public static extern ERRNO TimerCreate(ClockID clockID, ref SigEvent eventPtr, out IntPtr timerID);
++        [DllImport(libc, EntryPoint = "timerfd_settime", SetLastError = true)]
++        public static extern ERRNO TimerSetTime(int fd, TimerFlag flags, ref ITimerSpec newValue, ref ITimerSpec oldValue);
+ 
+-        [DllImport(librt, EntryPoint = "timer_settime", SetLastError = true)]
+-        public static extern ERRNO TimerSetTime(IntPtr timerID, TimerFlag flags, ref TimerSpec newValue, ref TimerSpec oldValue);
++        [DllImport(libc, EntryPoint = "timerfd_settime", SetLastError = true)]
++        public static extern ERRNO TimerSetTime(int fd, TimerFlag flags, ref ITimerSpec newValue, IntPtr oldValue);
+ 
+-        [DllImport(librt, EntryPoint = "timer_settime", SetLastError = true)]
+-        public static extern ERRNO TimerSetTime(IntPtr timerID, TimerFlag flags, ref TimerSpec newValue, IntPtr oldValue);
++        [DllImport(libc, EntryPoint = "read", SetLastError = true)]
++        public static extern int TimerGetTime(int fd, ref ulong buf, int count);
+ 
+-        [DllImport(librt, EntryPoint = "timer_delete", SetLastError = true)]
+-        public static extern ERRNO TimerDelete(IntPtr timerID);
++        [DllImport(libc, EntryPoint = "close", SetLastError = true)]
++        public static extern ERRNO CloseTimer(int fd);
+     }
+ }
+
+From 5b5e200d4f401b527689d72e510a08bfcbac848f Mon Sep 17 00:00:00 2001
+From: hwsmm <9151706+hwsmm@users.noreply.github.com>
+Date: Wed, 7 Aug 2024 02:42:54 +0900
+Subject: [PATCH 2/2] Fix naming and apply a suggestion from X9Void in
+ LinuxTimer
+
+---
+ .../Interop/Timer/LinuxTimer.cs               | 45 +++++++++----------
+ 1 file changed, 21 insertions(+), 24 deletions(-)
+
+diff --git a/OpenTabletDriver.Desktop/Interop/Timer/LinuxTimer.cs b/OpenTabletDriver.Desktop/Interop/Timer/LinuxTimer.cs
+index dbfb39986..ddf2ddb0e 100644
+--- a/OpenTabletDriver.Desktop/Interop/Timer/LinuxTimer.cs
++++ b/OpenTabletDriver.Desktop/Interop/Timer/LinuxTimer.cs
+@@ -16,10 +16,10 @@ internal class LinuxTimer : ITimer, IDisposable
+         private Thread _timerThread;
+         private readonly object _stateLock = new object();
+         private int _timerFD;
+-        private ITimerSpec _timeSpec;
++        private ITimerSpec _timerSpec;
+ 
+-        private volatile bool enabled;
+-        public bool Enabled => enabled;
++        private volatile bool _enabled;
++        public bool Enabled => _enabled;
+ 
+         public float Interval { set; get; } = 1;
+ 
+@@ -29,7 +29,7 @@ public void Start()
+         {
+             lock (_stateLock)
+             {
+-                if (!enabled)
++                if (!_enabled)
+                 {
+                     int timerFD = TimerCreate(ClockID.Monotonic, 0);
+ 
+@@ -44,7 +44,7 @@ public void Start()
+                     long seconds = (long)Interval;
+                     long nseconds = (long)((Interval - seconds) * 1000.0 * 1000.0 * 1000.0);
+ 
+-                    _timeSpec = new ITimerSpec
++                    _timerSpec = new ITimerSpec
+                     {
+                         it_interval = new TimeSpec
+                         {
+@@ -58,7 +58,7 @@ public void Start()
+                         }
+                     };
+ 
+-                    if (TimerSetTime(_timerFD, TimerFlag.Default, ref _timeSpec, IntPtr.Zero) != ERRNO.NONE)
++                    if (TimerSetTime(_timerFD, TimerFlag.Default, ref _timerSpec, IntPtr.Zero) != ERRNO.NONE)
+                     {
+                         Log.Write("LinuxTimer", $"Failed activating the timer: ${(ERRNO)Marshal.GetLastWin32Error()}", LogLevel.Error);
+                         return;
+@@ -66,26 +66,23 @@ public void Start()
+ 
+                     _timerThread = new Thread(() =>
+                     {
+-                        while (enabled)
++                        while (_enabled)
+                         {
+                             ulong timerExpirations = 0;
+ 
+-                            if (TimerGetTime(_timerFD, ref timerExpirations, sizeof(ulong)) == sizeof(ulong) && enabled)
++                            if (TimerGetTime(_timerFD, ref timerExpirations, sizeof(ulong)) == sizeof(ulong) && _enabled)
+                             {
+-                                for (ulong i = 0; i < timerExpirations; i++)
++                                try
+                                 {
+-                                    try
+-                                    {
+-                                        Elapsed?.Invoke();
+-                                    }
+-                                    catch (Exception ex)
+-                                    {
+-                                        Log.Write("LinuxTimer", $"Elapsed delegate returned an exception", LogLevel.Error);
+-                                        Log.Exception(ex);
+-                                    }
++                                    Elapsed?.Invoke();
++                                }
++                                catch (Exception ex)
++                                {
++                                    Log.Write("LinuxTimer", $"Elapsed delegate returned an exception", LogLevel.Error);
++                                    Log.Exception(ex);
+                                 }
+                             }
+-                            else if (enabled)
++                            else if (_enabled)
+                             {
+                                 Log.Write("LinuxTimer", $"Unexpected timer error: ${(ERRNO)Marshal.GetLastWin32Error()}", LogLevel.Error);
+                                 break;
+@@ -93,7 +90,7 @@ public void Start()
+                         }
+                     });
+ 
+-                    enabled = true;
++                    _enabled = true;
+ 
+                     _timerThread.Priority = ThreadPriority.Highest;
+                     _timerThread.Start();
+@@ -105,11 +102,11 @@ public void Stop()
+         {
+             lock (_stateLock)
+             {
+-                if (enabled)
++                if (_enabled)
+                 {
+-                    enabled = false;
++                    _enabled = false;
+ 
+-                    var timeSpec = new ITimerSpec
++                    var timerSpec = new ITimerSpec
+                     {
+                         it_interval = new TimeSpec
+                         {
+@@ -123,7 +120,7 @@ public void Stop()
+                         }
+                     };
+ 
+-                    if (TimerSetTime(_timerFD, TimerFlag.Default, ref timeSpec, IntPtr.Zero) != ERRNO.NONE)
++                    if (TimerSetTime(_timerFD, TimerFlag.Default, ref timerSpec, IntPtr.Zero) != ERRNO.NONE)
+                     {
+                         Log.Write("LinuxTimer", $"Failed deactivating the timer: ${(ERRNO)Marshal.GetLastWin32Error()}", LogLevel.Error);
+                         return;
