@@ -1,9 +1,9 @@
 # Maintainer: Jan Alexander Steffens (heftig) <heftig@archlinux.org>
 
 pkgname=egl-wayland
-pkgver=1.1.13
+pkgver=1.1.14
 pkgrel=2
-epoch=2
+epoch=3
 pkgdesc="EGLStream-based Wayland external platform"
 url="https://github.com/NVIDIA/egl-wayland"
 arch=(x86_64)
@@ -19,15 +19,17 @@ makedepends=(
   wayland-protocols
 )
 provides=(libnvidia-egl-wayland.so)
-_commit=69ae9cf07bbec3b00a682918bf0dc845e9896771  # tags/1.1.13
+_commit=4f4c965c773a346802415155eb49e07ef0161159  # tags/1.1.14
 source=(
   "git+$url#commit=$_commit"
   10_nvidia_wayland.json
-  explicit-sync.patch::https://github.com/NVIDIA/egl-wayland/commit/ba39127e68299fb9ccfcad5f5cb8531011fa10a9.patch
+  0001-egl-wayland.patch
+  crashfix.patch::https://github.com/NVIDIA/egl-wayland/commit/a5182c7390a78ca2f7986cbcd2e1bf38f6be5f47.patch ## Fix for crashes in firefox, obs and co
 )
-b2sums=('4e5d9711836e04b42854a8c47f2b9fde02df25b95d50e878c9b7171f51c7484d39db26b50c8f205e8a57a2a245978632d53e5260a7438bcea98f1f689076b639'
+b2sums=('0f2a1a7dbdc6428122c15421187cfbbc938355a4c0b74a370af0c76e0dd638841aa055c6c93df72b02826e41f4ddd3cf5a2cbd7b779d12740650d5b31adf6c20'
         'b10206c742e8966d1192b9b0604137e6b296d2be74a437841c63844c0716343578b11565a34fb4c534d5908c0b5775305581b68039a6ff9ed7421c9d385a2b7a'
-        '1148a56f4d24be0c32574eb650846f99545184ddee1f69e3575356d699c6eef48fdf765e070ad387a37a3ae37d8998273a2a0005719b481985a8f1c248134a45')
+        '24ff3ef29fd7b3df55d44b48c48d38c4714150d598f75cef7182d1c0b87f89638d5a598eccaad4ddf9fe8028d20f87d8c570f489564b12fe7ac25f91b15cc642'
+        'c8473d4e6464c19b597d7c2bb18b709707a89e0947a137d06ad2cf2d25fc0ae7ec005c4702dc8095289042d12c365962f2d9ed875f643c86f622253b6b8b8e52')
 
 pkgver() {
   cd $pkgname
@@ -36,7 +38,8 @@ pkgver() {
 
 prepare() {
   cd $pkgname
-  patch -Np1 < ../explicit-sync.patch
+  patch -Np1 < ../0001-egl-wayland.patch
+  patch -Np1 < ../crashfix.patch
 }
 
 build() {
