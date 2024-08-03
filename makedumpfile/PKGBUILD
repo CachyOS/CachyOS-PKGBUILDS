@@ -1,0 +1,47 @@
+# Maintainer: Leonidas Spyropoulos <artafinde at archlinux dot org>
+# Contributor: Maurizio D'Addona <mauritiusdadd@gmail.com>
+# Contributor: Mathieu Pasquet <mathieui@mathieui.net>
+# Contributor: Bernhard Walle <bernhard.walle@gmx.de>
+# Contributor: Michael Eckert <michael.eckert@linuxmail.org>
+# Contributor: Guilherme G. Piccoli <gpiccoli@igalia.com>
+
+pkgname=makedumpfile
+pkgver=1.7.5
+pkgrel=2
+pkgdesc="A tool to generate smaller dumpfiles from kdump memory dumps"
+license=('GPL-2.0-only')
+depends=('perl' 'libelf' 'zstd')
+makedepends=('git')
+arch=('x86_64')
+url="https://github.com/makedumpfile/makedumpfile"
+source=("git+$url.git?signed#tag=${pkgver}"
+         6.10.patch::https://github.com/makedumpfile/makedumpfile/commit/bad2a7c4fa75d37a41578441468584963028bdda.patch
+         6.9.patch::https://github.com/makedumpfile/makedumpfile/commit/985e575253f1c2de8d6876cfe685c68a24ee06e1.patch)
+sha256sums=('4dbeb9bb18605518c5bb7ea3e779b90b2fb629d6dc204f930a0e9c52ff358cb4'
+            'fb28b3b6f62ffcefb6b44324bfb9aad1fda52ce2e1c66c4beb1e77ebc9d140ed'
+            '025f2062a3d9aaa1c21f7594a6eed0c6108a0b1019e62a2d31f02e253399413d')
+validpgpkeys=(
+  'F4BA97F873AB047F217F8D16B0E0CE20E95D17F5' # Kazuhito Hagio <k-hagio-ab@nec.com>
+  '60C5A596A37CDE6C357C5C623136D252B5E85FA9' # Kazuhito Hagio <k-hagio@ab.jp.nec.com>
+)
+
+prepare() {
+  cd "${pkgname}"
+  patch -Np1 < ../6.9.patch
+  patch -Np1 < ../6.10.patch 
+}
+build() {
+  cd "${pkgname}"
+  make -O \
+    LINKTYPE=dynamic \
+    USEZSTD=on \
+    V=1
+}
+
+package() {
+  cd "${pkgname}"
+  make install DESTDIR="${pkgdir}"
+  mv "${pkgdir}/usr/sbin" "${pkgdir}/usr/bin"
+}
+
+# vim:set ts=2 sw=2 et:
