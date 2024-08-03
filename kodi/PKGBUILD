@@ -20,7 +20,7 @@
 pkgbase=kodi
 pkgname=('kodi' 'kodi-gles' 'kodi-eventclients' 'kodi-tools-texturepacker' 'kodi-dev')
 pkgver=21.0
-pkgrel=8
+pkgrel=9
 arch=('x86_64')
 url="https://kodi.tv"
 license=('GPL2')
@@ -67,6 +67,7 @@ source=(
   "$pkgbase-libudfread-$_libudfread_version.tar.gz::https://mirrors.kodi.tv/build-deps/sources/libudfread-$_libudfread_version.tar.gz"
   "https://github.com/xbmc/xbmc/commit/2bf5ab07731b3d4160196e6b8d9ab9e25bea2ef9.patch"
   "https://github.com/xbmc/xbmc/commit/0f5db1a5aa5257ae9611fa76dac25cabeeaddf6d.patch"
+  "https://github.com/xbmc/xbmc/commit/9b2dff20301354db63f8ae6f0e10bf3cc1ac5d41.patch"
 )
 noextract=(
   "$pkgbase-libdvdcss-$_libdvdcss_version.tar.gz"
@@ -87,8 +88,9 @@ sha512sums=('9c2ca6b6e72197d2b1c26a47cf4ddc209318fcaa5a30ea20475ecc5518c7d1395c2
             'aaeb0227afd5ada5955cbe6a565254ff88d2028d677d199c00e03b7cb5de1f2c69b18e6e8b032e452350a8eda7081807b01765adbeb8476eaf803d9de6e5509c'
             '4066c94f2473c7ea16917d29a613e16f840a329089c88e0bdbdb999aef3442ba00abfd2aa92266fa9c067e399dc88e6f0ccac40dc151378857e665638e78bbf0'
             '3069feb5db40288beb5b112b285186162a704f0fdd3cf67a17fd4eeea015f2cfcfbb455b7aa7c3d79d00fd095a3fd11cffc7b121dce94d99c3b06a509a8977d2'
-            '4593f7897d4045b4498af466967cd04c1192d0d263607f25ed2f56773e428f6349535a07dfc13  9e6e8340885a582bd0dfe1e7e39ad3947c38b4d1f08e3e11fe1'
-            'fe94facb40b9d05d0cf6398dab94b7c0637af6e71d2384a58ad0ff3ae8fa5f04ba5b62a1b97f59137d75c27ca1e7946df68578b5789688d72568a81aaaa40508')
+            '4593f7897d4045b4498af466967cd04c1192d0d263607f25ed2f56773e428f6349535a07dfc139e6e8340885a582bd0dfe1e7e39ad3947c38b4d1f08e3e11fe1'
+            'fe94facb40b9d05d0cf6398dab94b7c0637af6e71d2384a58ad0ff3ae8fa5f04ba5b62a1b97f59137d75c27ca1e7946df68578b5789688d72568a81aaaa40508'
+            '7224ebc5fd64bd8035083540510ecaad943ec10eea94f58333cc2b257c1eabdeb4fb8b96ed961cde4570b2d40a86600af4dd1065d0277f6d76267f5da7588261')
 
 prepare() {
   [[ -d "$srcdir/kodi-build" ]] && rm -rf "$srcdir/kodi-build"
@@ -102,6 +104,9 @@ prepare() {
   patch -p1 -i "$srcdir/2bf5ab07731b3d4160196e6b8d9ab9e25bea2ef9.patch"
   # python 3.12 exit crash fix
   patch -p1 -i "$srcdir/0f5db1a5aa5257ae9611fa76dac25cabeeaddf6d.patch"
+  # can't play DVD or ISO files
+  # https://gitlab.archlinux.org/archlinux/packaging/packages/kodi/-/issues/7
+  patch -p1 -i "$srcdir/9b2dff20301354db63f8ae6f0e10bf3cc1ac5d41.patch"
 
   rm -rf system/certs # remove not needed cacert
 }
