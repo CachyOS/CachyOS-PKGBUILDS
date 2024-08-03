@@ -1,7 +1,7 @@
 # Maintainer: Peter Jung <admin@ptr1337.dev>
 
 pkgname=cachyos-handheld
-pkgver=1.0.1
+pkgver=1.0.2
 pkgrel=1
 arch=('any')
 license=('GPL-3.0-later')
@@ -12,7 +12,7 @@ options=(!strip !debug)
 provides=('cachyos-deckify')
 conflicts=('cachyos-gaming-meta' 'proton-cachyos' 'proton-ge-custom')
 replaces=('cachyos-deckify')
-sha256sums=('b3147a9c50acc1c64f25ce67354c9c20016051c274acf1232eb634e5d1b66dde')
+sha256sums=('46ce31a8d0167ebbddb37c688363a7a6d3fa15fbacedf47b5deb5a02140d6303')
 validpgpkeys=(
   E8B9AA39F054E30E8290D492C3C4820857F654FE  # Peter Jung <admin@ptr1337.dev>
 )
@@ -37,4 +37,8 @@ package() {
   cp -rf "${srcdir}/CachyOS-Handheld/etc" "$pkgdir"
   install -d "$pkgdir/usr"
   cp -rf "${srcdir}/CachyOS-Handheld/usr" "$pkgdir"
+
+  # Symlink for Rog Ally Firmware
+  # Firmware has been approved to allowed to be shipped by Texas Instruments until upstreamed
+  ln -s "$pkgdir/usr/lib/firmware/ti/tas2781/TAS2XX1EB3.bin" "$pkgdir/usr/lib/firmware/TAS2XX1EB3.bin"
 }
