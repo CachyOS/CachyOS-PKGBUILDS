@@ -20,7 +20,7 @@ sha256sums=('9508aee9c110e2f490d9abb3704e3c455c76f750706cf6ab1e3d79d78b199a56')
 prepare() {
   cd "$srcdir/$pkgname-$pkgver"
   cargo fetch --locked --target "$CARCH-unknown-linux-gnu"
-  patch -Rp1 < ../revert-prime-profile.patch
+
   cd scripts/chwd-kernel
   cargo fetch --locked --target "$CARCH-unknown-linux-gnu"
 }
