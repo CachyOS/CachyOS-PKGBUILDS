@@ -142,8 +142,12 @@ rate_mirror_ex_cos() {
 }
 
 MIRRORS_DEFAULT_DIR="/etc/pacman.d"
+ISO_DETECT_DIR="/run/archiso"
 
-rate_mirror_ex arch "${MIRRORS_DEFAULT_DIR}/mirrorlist"
+if [ ! -d "${ISO_DETECT_DIR}" ]; then
+    rate_mirror_ex arch "${MIRRORS_DEFAULT_DIR}/mirrorlist"
+fi
+
 rate_mirror_ex_cos cachyos "${MIRRORS_DEFAULT_DIR}/cachyos-mirrorlist"
 
 cp -f --backup=simple --suffix="-backup" "${MIRRORS_DEFAULT_DIR}/cachyos-mirrorlist" "${MIRRORS_DEFAULT_DIR}/cachyos-v3-mirrorlist"
