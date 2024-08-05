@@ -1,0 +1,67 @@
+From 6752571d8d782d07537a258a1ec8919ebd1308ad Mon Sep 17 00:00:00 2001
+From: Lianbo Jiang <lijiang@redhat.com>
+Date: Wed, 5 Jun 2024 16:28:58 +0800
+Subject: [PATCH] X86 64: fix for crash session loading failure
+
+Kernel commit 223b5e57d0d5 ("mm/execmem, arch: convert remaining
+overrides of module_alloc to execmem") makes crash session loading
+failure as below:
+
+  # ./crash -s
+  crash: seek error: kernel virtual address: ffffffff826bb418  type: "page_offset_base"
+
+For X86 64 architecture, currently crash will search for symbol
+"module_load_offset" to determine if the KASLR is enabled, and go
+into the relevant code block. But the symbols "module_load_offset"
+has been removed since Linux v6.10-rc1, which caused the current
+failure.
+
+And this issue can occur with live debugging and core dump file
+debugging.
+
+Let's check the symbol "kaslr_regions" instead of "module_load_offset"
+to fix it.
+
+Signed-off-by: Lianbo Jiang <lijiang@redhat.com>
+---
+ symbols.c | 13 ++++++++-----
+ 1 file changed, 8 insertions(+), 5 deletions(-)
+
+diff --git a/symbols.c b/symbols.c
+index 107920f0..f3c94b0a 100644
+--- a/symbols.c
++++ b/symbols.c
+@@ -619,9 +619,9 @@ strip_symbol_end(const char *name, char *buf)
+  *  or in /proc/kallsyms on a live system.
+  *
+  *  Setting KASLR_CHECK will trigger a search for "module_load_offset"
+- *  during the initial symbol sort operation, and if found, will
+- *  set (RELOC_AUTO|KASLR).  On live systems, the search is done
+- *  here by checking /proc/kallsyms.
++ *  or "kaslr_regions" during the initial symbol sort operation, and
++ *  if found, will set (RELOC_AUTO|KASLR).  On live systems, the search
++ *  is done here by checking /proc/kallsyms.
+  */
+ static void
+ kaslr_init(void)
+@@ -646,7 +646,8 @@ kaslr_init(void)
+ 		st->_stext_vmlinux = UNINITIALIZED;
+ 
+ 	if (ACTIVE() &&   /* Linux 3.15 */
+-	    (symbol_value_from_proc_kallsyms("module_load_offset") != BADVAL)) {
++	    ((symbol_value_from_proc_kallsyms("kaslr_regions") != BADVAL) ||
++	    (symbol_value_from_proc_kallsyms("module_load_offset") != BADVAL))) {
+ 		kt->flags2 |= (RELOC_AUTO|KASLR);
+ 		st->_stext_vmlinux = UNINITIALIZED;
+ 	}
+@@ -14251,7 +14252,9 @@ numeric_forward(const void *P_x, const void *P_y)
+ 			st->_stext_vmlinux = valueof(y);
+ 	}
+ 	if (kt->flags2 & KASLR_CHECK) {
+-		if (STREQ(x->name, "module_load_offset") || 
++		if (STREQ(x->name, "kaslr_regions") ||
++		    STREQ(y->name, "kaslr_regions") ||
++		    STREQ(x->name, "module_load_offset") ||
+ 		    STREQ(y->name, "module_load_offset")) {
+ 			kt->flags2 &= ~KASLR_CHECK;
+ 			kt->flags2 |= (RELOC_AUTO|KASLR);
