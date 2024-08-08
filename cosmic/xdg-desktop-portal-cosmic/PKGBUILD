@@ -1,0 +1,49 @@
+# Maintainer: Peter Jung <ptr1337@cachyos.org>
+# Maintainer: Mark Wagie <mark dot wagie at proton dot me>
+
+pkgname=xdg-desktop-portal-cosmic
+pkgver=1.0.0.alpha.1
+pkgrel=1
+pkgdesc="A backend implementation for xdg-desktop-portal for the COSMIC desktop environment"
+arch=('x86_64')
+url="https://github.com/pop-os/xdg-desktop-portal-cosmic"
+license=('GPL-3.0-or-later')
+groups=('cosmic')
+depends=(
+  'hicolor-icon-theme'
+  'libpipewire'
+  'libxkbcommon'
+  'mesa'
+  'wayland'
+  'xdg-desktop-portal'
+)
+makedepends=(
+  'cargo'
+  'clang'
+  'git'
+  'lld'
+)
+source=('git+https://github.com/pop-os/xdg-desktop-portal-cosmic.git#tag=epoch-1.0.0-alpha.1')
+sha256sums=('7adcc64dd84ecd58a7414523592e8150ffef5a7136fe13e35d1888f197cd4cf7')
+
+prepare() {
+  cd "${pkgname}"
+  export RUSTUP_TOOLCHAIN=stable
+  cargo fetch --locked --target "$(rustc -vV | sed -n 's/host: //p')"
+}
+
+build() {
+  cd "${pkgname}"
+  export RUSTUP_TOOLCHAIN=stable
+
+  # use lld
+  RUSTFLAGS="-C link-arg=-fuse-ld=lld"
+
+  # use nice to build with lower priority
+  ARGS+=" --frozen" nice make
+}
+
+package() {
+  cd "${pkgname}"
+  make prefix='/usr' libexecdir='/usr/lib' DESTDIR="$pkgdir" install
+}

@@ -1,0 +1,97 @@
+# Maintainer: Peter Jung <ptr1337@cachyos.org>
+# Maintainer: Mark Wagie <mark dot wagie at proton dot me>
+
+pkgname=cosmic-session-git
+pkgver=1.0.0.alpha.1
+pkgrel=1
+pkgdesc="Session manager for the COSMIC desktop environment"
+arch=('x86_64')
+url="https://github.com/pop-os/cosmic-session"
+license=('GPL-3.0-or-later')
+groups=('cosmic')
+depends=(
+  'cosmic-applibrary'
+  'cosmic-applets'
+  'cosmic-bg'
+  'cosmic-comp'
+  'cosmic-greeter'
+  'cosmic-icons'
+  'cosmic-launcher'
+  'cosmic-notifications'
+  'cosmic-osd'
+  'cosmic-panel'
+  'cosmic-randr'
+  'cosmic-screenshot'
+  'cosmic-settings-daemon'
+  'cosmic-settings'
+  'cosmic-workspaces'
+  'otf-fira-mono'
+  'otf-fira-sans'
+  'switcheroo-control'
+  'xdg-desktop-portal-cosmic'
+  'xorg-xwayland'
+)
+makedepends=(
+  'cargo'
+  'git'
+  'just'
+  'lld'
+)
+optdepends=(
+  'cosmic-edit: COSMIC text editor'
+  'cosmic-files: COSMIC file manager'
+  'cosmic-store: COSMIC store'
+  'cosmic-term: COSMIC terminal'
+  'cosmic-wallpapers: COSMIC wallpapers'
+  'vulkan-driver: packaged vulkan driver'
+
+  # Default applications
+  # See data/cosmic-mimeapps.list
+#  'abiword'
+#  'brasero'
+#  'cosmic-edit'
+#  'cosmic-files'
+#  'cosmic-store'
+#  'eog'
+#  'dia'
+#  'evince'
+#  'evolution'
+#  'file-roller'
+#  'firefox'
+#  'gimp'
+#  'gnome-font-viewer'
+#  'gnumeric'
+#  'libreoffice'
+#  'popsicle'
+#  'rhythmbox'
+#  'sound-juicer'
+#  'totem'
+#  'yelp'
+)
+source=('git+https://github.com/pop-os/cosmic-session.git#tag=epoch-1.0.0-alpha.1')
+sha256sums=('d95b7369012c72bc4529ed2499b2db9e5a29e32f88d7ee590e90ef8fd80cecd6')
+
+prepare() {
+  cd "${pkgname}"
+  export RUSTUP_TOOLCHAIN=stable
+  cargo fetch --locked --target "$(rustc -vV | sed -n 's/host: //p')"
+
+  # libexec > lib
+  sed -i 's|libexec|lib|g' Justfile src/main.rs
+}
+
+build() {
+  cd "${pkgname}"
+  export RUSTUP_TOOLCHAIN=stable
+
+  # use lld
+  RUSTFLAGS="-C link-arg=-fuse-ld=lld"
+
+  # use nice to build with lower priority
+  nice just build-release --frozen
+}
+
+package() {
+  cd "${pkgname}"
+  just rootdir="$pkgdir" install
+}

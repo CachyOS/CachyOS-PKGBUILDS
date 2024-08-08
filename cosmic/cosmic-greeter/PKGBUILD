@@ -1,0 +1,55 @@
+# Maintainer: Peter Jung <ptr1337@cachyos.org>
+# Maintainer: Mark Wagie <mark dot wagie at proton dot me>
+
+pkgname=cosmic-greeter
+pkgver=1.0.0.alpha.1
+pkgrel=1
+pkgdesc="libcosmic greeter for greetd, which can be run inside cosmic-comp"
+arch=('x86_64' 'aarch64')
+url="https://github.com/pop-os/cosmic-greeter"
+license=('GPL-3.0-or-later')
+groups=('cosmic')
+depends=(
+  'cosmic-comp'
+  'greetd'
+  'libxkbcommon'
+  'pam'
+  'wayland'
+)
+makedepends=(
+  'cargo'
+  'clang'
+  'git'
+  'git-lfs'
+  'just'
+  'lld'
+)
+source=('git+https://github.com/pop-os/cosmic-greeter.git#tag=epoch-1.0.0-alpha.1')
+sha256sums=('5a4b6cdc23931e0f0a4539cd38f1634a642f48190ed78d26a38110903fe7562f')
+
+prepare() {
+  cd "${pkgname}"
+  export RUSTUP_TOOLCHAIN=stable
+  cargo fetch --locked --target "$(rustc -vV | sed -n 's/host: //p')"
+
+  git lfs install --local
+  git remote add network-origin https://github.com/pop-os/cosmic-greeter
+  git lfs fetch network-origin
+  git lfs checkout
+}
+
+build() {
+  cd "${pkgname}"
+  export RUSTUP_TOOLCHAIN=stable
+
+  # use lld
+  RUSTFLAGS="-C link-arg=-fuse-ld=lld"
+
+  # use nice to build with lower priority
+  nice just build-release --frozen
+}
+
+package() {
+  cd "${pkgname}"
+  just rootdir="$pkgdir" install
+}

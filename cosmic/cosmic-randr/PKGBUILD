@@ -1,0 +1,43 @@
+# Maintainer: Peter Jung <ptr1337@cachyos.org>
+# Maintainer: Mark Wagie <mark dot wagie at proton dot me>
+
+pkgname=cosmic-randr
+pkgver=1.0.0.alpha.1
+pkgrel=1
+pkgdesc="Library and utility for displaying and configuring Wayland outputs"
+arch=(x86_64)
+url="https://github.com/pop-os/cosmic-randr"
+license=('MPL-2.0')
+groups=('cosmic')
+depends=('wayland')
+makedepends=(
+  'cargo'
+  'clang'
+  'git'
+  'just'
+  'lld'
+)
+source=('git+https://github.com/pop-os/cosmic-randr.git#tag=epoch-1.0.0-alpha.1')
+sha256sums=('3643aff739363971f301edcb622e691f727964718ab7a5568df170ba6295e106')
+
+prepare() {
+  cd "${pkgname}"
+  export RUSTUP_TOOLCHAIN=stable
+  cargo fetch --locked --target "$(rustc -vV | sed -n 's/host: //p')"
+}
+
+build() {
+  cd "${pkgname}"
+  export RUSTUP_TOOLCHAIN=stable
+
+  # use lld
+  RUSTFLAGS="-C link-arg=-fuse-ld=lld"
+
+  # use nice to build with lower priority
+  nice just build-release --frozen
+}
+
+package() {
+  cd "${pkgname}"
+  just rootdir="$pkgdir" install
+}

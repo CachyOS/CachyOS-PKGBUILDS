@@ -1,0 +1,46 @@
+# Maintainer: Peter Jung <ptr1337@cachyos.org>
+# Maintainer: Mark Wagie <mark dot wagie at proton dot me>
+
+pkgname=cosmic-workspaces
+pkgver=1.0.0.alpha.1
+pkgrel=1
+pkgdesc="Cosmic workspaces"
+arch=('x86_64')
+url="https://github.com/pop-os/cosmic-workspaces-epoch"
+license=('GPL-3.0-or-later')
+groups=('cosmic')
+depends=(
+  'libinput'
+  'libxkbcommon'
+  'mesa'
+  'wayland'
+)
+makedepends=(
+  'cargo'
+  'git'
+  'lld'
+)
+source=('git+https://github.com/pop-os/cosmic-workspaces-epoch.git#tag=epoch-1.0.0-alpha.1')
+sha256sums=('9618f8e4b8a3627bf7ab86d9cbaff55f7bf09566dd4204191e16e7125f134e82')
+
+prepare() {
+  cd "${pkgname}-epoch"
+  export RUSTUP_TOOLCHAIN=stable
+  cargo fetch --locked --target "$(rustc -vV | sed -n 's/host: //p')"
+}
+
+build() {
+  cd "${pkgname}-epoch"
+  export RUSTUP_TOOLCHAIN=stable
+
+  # use lld
+  RUSTFLAGS="-C link-arg=-fuse-ld=lld"
+
+  # use nice to build with lower priority
+  ARGS+=" --frozen" nice make
+}
+
+package() {
+  cd "${pkgname}-epoch"
+  make prefix='/usr' DESTDIR="$pkgdir" install
+}

@@ -1,0 +1,46 @@
+# Maintainer: Peter Jung <ptr1337@cachyos.org>
+# Maintainer: Mark Wagie <mark dot wagie at proton dot me>
+
+pkgname=cosmic-screenshot
+pkgver=1.0.0.alpha.1
+pkgrel=1
+pkgdesc="Utility for capturing screenshots via XDG Desktop Portal"
+arch=('x86_64')
+url="https://github.com/pop-os/cosmic-screenshot"
+license=('GPL-3.0-or-later')
+groups=('cosmic')
+depends=(
+  'xdg-desktop-portal-cosmic'
+)
+makedepends=(
+  'cargo'
+  'git'
+  'just'
+  'lld'
+)
+provides=("${pkgname%-git}")
+conflicts=("${pkgname%-git}")
+source=('git+https://github.com/pop-os/cosmic-screenshot.git#tag=epoch-1.0.0-alpha.1')
+sha256sums=('d1bc5b03bbe979d73732fab70f9d5041870b0a9ea4f199fa1a17f94c1c51fc44')
+
+prepare() {
+  cd "${pkgname}"
+  export RUSTUP_TOOLCHAIN=stable
+  cargo fetch --locked --target "$(rustc -vV | sed -n 's/host: //p')"
+}
+
+build() {
+  cd "${pkgname}"
+  export RUSTUP_TOOLCHAIN=stable
+
+  # use lld
+  RUSTFLAGS="-C link-arg=-fuse-ld=lld"
+
+  # use nice to build with lower priority
+  nice just build-release --frozen
+}
+
+package() {
+  cd "${pkgname}"
+  just rootdir="$pkgdir" install
+}
