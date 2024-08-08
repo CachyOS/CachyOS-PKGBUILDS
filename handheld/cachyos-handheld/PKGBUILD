@@ -2,16 +2,18 @@
 
 pkgname=cachyos-handheld
 pkgver=1.0.2
-pkgrel=2
+pkgrel=3
 arch=('any')
 license=('GPL-3.0-later')
 pkgdesc='CachyOS - Handheld!'
-source=(git+https://github.com/CachyOS/CachyOS-Handheld?signed#tag=$pkgver)
+source=(git+https://github.com/CachyOS/CachyOS-Handheld?signed#tag=$pkgver
+        symlink.patch::https://github.com/CachyOS/CachyOS-Handheld/commit/a7bfdcde85df2d0aeac88982660ff8e91ac9e7da.patch)
 install="$pkgname.install"
 options=(!strip !debug)
 provides=('cachyos-deckify')
 replaces=('cachyos-deckify')
-sha256sums=('46ce31a8d0167ebbddb37c688363a7a6d3fa15fbacedf47b5deb5a02140d6303')
+sha256sums=('46ce31a8d0167ebbddb37c688363a7a6d3fa15fbacedf47b5deb5a02140d6303'
+            'c41be1f283613b585766baee5e0f4f01d788e2f757f28f7c31ea69e8bc4d58bc')
 validpgpkeys=(
   E8B9AA39F054E30E8290D492C3C4820857F654FE  # Peter Jung <admin@ptr1337.dev>
 )
@@ -31,13 +33,13 @@ depends=('gamescope-session-git' 'mangohud' 'jq' 'dmidecode' 'glew' 'glfw' 'glxi
          steam steam-native-runtime vkd3d wine-gecko wine-mono winetricks protontricks goverlay
          mangohud lib32-mangohud ttf-liberation lib32-fontconfig)
 
+prepare() {
+  cd CachyOS-Handheld
+  patch -Np1 < ../fix-handheld.patch
+}
 package() {
   install -d "$pkgdir/etc"
   cp -rf "${srcdir}/CachyOS-Handheld/etc" "$pkgdir"
   install -d "$pkgdir/usr"
   cp -rf "${srcdir}/CachyOS-Handheld/usr" "$pkgdir"
-
-  # Symlink for Rog Ally Firmware
-  # Firmware has been approved to allowed to be shipped by Texas Instruments until upstreamed
-  ln -s "$pkgdir/usr/lib/firmware/ti/tas2781/TAS2XX1EB3.bin" "$pkgdir/usr/lib/firmware/TAS2XX1EB3.bin"
 }
