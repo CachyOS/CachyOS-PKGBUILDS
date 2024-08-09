@@ -1,0 +1,33 @@
+# Maintainer: Peter Jung <ptr1337@cachyos.org>
+# Maintainer: Kyuzial <kyuzial@protonmail.com>
+
+pkgname=cosmic-term
+pkgver=1.0.0.alpha.1
+pkgrel=1
+pkgdesc="WIP COSMIC Terminal Emulator"
+arch=('x86_64')
+url="https://github.com/pop-os/cosmic-term"
+license=('GPL-3.0-or-later')
+depends=('libxkbcommon' 'wayland' 'cosmic-icons-git')
+makedepends=('cargo' 'git' 'just')
+
+options=('!lto')
+source=('git+https://github.com/pop-os/cosmic-term.git#tag=epoch-1.0.0-alpha.1')
+sha256sums=('95219628d74edc5c91d5ec38916d09c551025d84fe25faadeff69ec0b1b02f55')
+
+prepare() {
+  cd "${pkgname}"
+  export RUSTUP_TOOLCHAIN=stable
+  just vendor
+}
+
+build() {
+  cd "${pkgname}"
+  export RUSTUP_TOOLCHAIN=stable
+  just build-vendored
+}
+
+package() {
+  cd "${pkgname}"
+  just rootdir="$pkgdir" install
+}

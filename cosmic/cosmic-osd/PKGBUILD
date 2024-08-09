@@ -1,0 +1,49 @@
+# Maintainer: Peter Jung <ptr1337@cachyos.org>
+# Maintainer: Mark Wagie <mark dot wagie at proton dot me>
+
+pkgname=cosmic-osd
+pkgver=1.0.0.alpha.1
+pkgrel=1
+pkgdesc="COSMIC OSD"
+arch=('x86_64')
+url="https://github.com/pop-os/cosmic-osd"
+license=('GPL-3.0-or-later')
+groups=('cosmic')
+depends=(
+  'libpulse'
+  'libxkbcommon'
+  'systemd-libs'
+  'wayland'
+)
+makedepends=(
+  'cargo'
+  'git'
+  'lld'
+)
+source=('git+https://github.com/pop-os/cosmic-osd.git#tag=epoch-1.0.0-alpha.1')
+sha256sums=('c81b40487abdc811924d7764ba4bfbd4f9e844e67f5beaa30f6cd1e5582b0d05')
+
+prepare() {
+  cd "${pkgname}"
+  export RUSTUP_TOOLCHAIN=stable
+  cargo fetch --locked --target "$(rustc -vV | sed -n 's/host: //p')"
+
+  # libexec > lib
+  sed -i 's|libexec|lib/polkit-1|g' Makefile src/subscriptions/polkit_agent_helper.rs
+}
+
+build() {
+  cd "${pkgname}"
+  export RUSTUP_TOOLCHAIN=stable
+
+  # use lld
+  RUSTFLAGS="-C link-arg=-fuse-ld=lld"
+
+  # use nice to build with lower priority
+  ARGS+=" --frozen" nice make
+}
+
+package() {
+  cd "${pkgname}"
+  make prefix='/usr' DESTDIR="$pkgdir" install
+}

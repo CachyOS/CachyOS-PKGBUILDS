@@ -1,0 +1,49 @@
+# Maintainer: Peter Jung <ptr1337@cachyos.org>
+# Maintainer: Mark Wagie <mark dot wagie at proton dot me>
+
+pkgname=cosmic-launcher
+pkgver=1.0.0.alpha.1
+pkgrel=1
+pkgdesc="WIP Layer Shell frontend for Pop Launcher."
+arch=('x86_64')
+url="https://github.com/pop-os/cosmic-launcher"
+license=('GPL-3.0-or-later')
+groups=('cosmic')
+depends=(
+  'hicolor-icon-theme'
+  'libxkbcommon'
+  'pop-launcher'
+  'wayland'
+)
+makedepends=(
+  'cargo'
+  'clang'
+  'git'
+  'intltool'
+  'just'
+  'lld'
+)
+source=('git+https://github.com/pop-os/cosmic-launcher.git#tag=epoch-1.0.0-alpha.1')
+sha256sums=('387e0264718981058c1346cfa368b0c3e9a154d621fe8b10a9d2dd247000da56')
+
+prepare() {
+  cd "${pkgname}"
+  export RUSTUP_TOOLCHAIN=stable
+  cargo fetch --locked --target "$(rustc -vV | sed -n 's/host: //p')"
+}
+
+build() {
+  cd "${pkgname}"
+  export RUSTUP_TOOLCHAIN=stable
+
+  # use lld
+  RUSTFLAGS="-C link-arg=-fuse-ld=lld"
+
+  # use nice to build with lower priority
+  nice just build-release --frozen
+}
+
+package() {
+  cd "${pkgname}"
+  just rootdir="$pkgdir" install
+}

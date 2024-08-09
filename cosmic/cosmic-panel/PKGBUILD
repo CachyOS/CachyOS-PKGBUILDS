@@ -1,0 +1,45 @@
+# Maintainer: Peter Jung <ptr1337@cachyos.org>
+# Maintainer: Mark Wagie <mark dot wagie at proton dot me>
+
+pkgname=cosmic-panel
+pkgver=1.0.0.alpha.1
+pkgrel=1
+pkgdesc="XDG Shell Wrapper Panel for COSMIC"
+arch=('x86_64')
+url="https://github.com/pop-os/cosmic-panel"
+license=('GPL-3.0-only')
+groups=('cosmic')
+depends=(
+  'libxkbcommon'
+  'wayland'
+)
+makedepends=(
+  'cargo'
+  'git'
+  'just'
+  'lld'
+)
+source=('git+https://github.com/pop-os/cosmic-panel.git#tag=epoch-1.0.0-alpha.1')
+sha256sums=('1778fc1bd8c841bb14522e97164fb1ff682c01d9808c0e2afd629d6e3d4371dc')
+
+prepare() {
+  cd "${pkgname}"
+  export RUSTUP_TOOLCHAIN=stable
+  cargo fetch --locked --target "$(rustc -vV | sed -n 's/host: //p')"
+}
+
+build() {
+  cd "${pkgname}"
+  export RUSTUP_TOOLCHAIN=stable
+
+  # use lld
+  RUSTFLAGS="-C link-arg=-fuse-ld=lld"
+
+  # use nice to build with lower priority
+  nice just build-release --frozen
+}
+
+package() {
+  cd "${pkgname}"
+  just rootdir="$pkgdir" install
+}

@@ -1,0 +1,48 @@
+# Maintainer: Peter Jung <ptr1337@cachyos.org>
+# Contributor: soloturn <soloturn@gmail.com>
+# Co-Maintainer: Mark Wagie <mark dot wagie at proton dot me>
+
+pkgname=cosmic-bg
+pkgver=1.0.0.alpha.1
+pkgrel=1
+pkgdes="COSMIC session service which applies backgrounds to displays."
+arch=('x86_64')
+url="https://github.com/pop-os/cosmic-bg"
+license=('MPL-2.0')
+groups=('cosmic')
+depends=(
+  'hicolor-icon-theme'
+  'libxkbcommon'
+)
+makedepends=(
+  'cargo'
+  'clang'
+  'git'
+  'just'
+  'lld'
+  'nasm'
+)
+source=('git+https://github.com/pop-os/cosmic-bg.git#tag=epoch-1.0.0-alpha.1')
+sha256sums=('25f49ec026bf064c757887870ff5099d83f3f24194caf87121a18f33d0bf5ef9')
+
+prepare() {
+  cd "${pkgname}"
+  export RUSTUP_TOOLCHAIN=stable
+  cargo fetch --locked --target "$(rustc -vV | sed -n 's/host: //p')"
+}
+
+build() {
+  cd "${pkgname}"
+  export RUSTUP_TOOLCHAIN=stable
+
+  # use lld
+  RUSTFLAGS="-C link-arg=-fuse-ld=lld"
+
+  # use nice to build with lower priority
+  nice just build-release --frozen
+}
+
+package() {
+  cd "${pkgname}"
+  just rootdir="$pkgdir" install
+}

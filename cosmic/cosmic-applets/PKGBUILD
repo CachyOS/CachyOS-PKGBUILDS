@@ -1,0 +1,50 @@
+# Maintainer: Peter Jung <ptr1337@cachyos.org>
+# Contributor: soloturn <soloturn@gmail.com>
+# Co-Maintainer: Mark Wagie <mark dot wagie at proton dot me>
+
+pkgname=cosmic-applets
+pkgver=1.0.0.alpha.1
+pkgrel=1
+pkgdesc="WIP applets for COSMIC Panel"
+arch=('x86_64')
+url="https://github.com/pop-os/cosmic-applets"
+license=('GPL-3.0-or-later')
+groups=('cosmic')
+depends=(
+  'cosmic-icons'
+  'dbus'
+  'libinput'
+  'libpulse'
+  'libxkbcommon'
+)
+makedepends=(
+  'cargo'
+  'git'
+  'just'
+  'lld'
+)
+options=('!lto')
+source=('git+https://github.com/pop-os/cosmic-applets.git#tag=epoch-1.0.0-alpha.1')
+sha256sums=('b915b3bb311693f05054a88bafbf0b0f1ba67fb3dfc81e9ab4ebe364912aed32')
+
+prepare() {
+  cd "${pkgname}"
+  export RUSTUP_TOOLCHAIN=stable
+  cargo fetch --locked --target "$(rustc -vV | sed -n 's/host: //p')"
+}
+
+build() {
+  cd "${pkgname}"
+  export RUSTUP_TOOLCHAIN=stable
+
+  # use lld
+  RUSTFLAGS="-C link-arg=-fuse-ld=lld"
+
+  # use nice to build with lower priority
+  nice just build-release --frozen
+}
+
+package() {
+  cd "${pkgname}"
+  just rootdir="$pkgdir" install
+}

@@ -1,0 +1,48 @@
+# Maintainer: Peter Jung <ptr1337@cachyos.org>
+# Maintainer: Mark Wagie <mark dot wagie at proton dot me>
+# Contributor: soloturn <soloturn@gmail.com>
+
+pkgname=cosmic-notifications
+pkgver=1.0.0.alpha.1
+pkgrel=1
+pkgdesc="Layer Shell notifications daemon which integrates with COSMIC."
+arch=('x86_64')
+url="https://github.com/pop-os/cosmic-notifications"
+license=('GPL-3.0-or-later')
+groups=('cosmic')
+depends=(
+  'hicolor-icon-theme'
+  'libxkbcommon'
+  'wayland'
+)
+makedepends=(
+  'cargo'
+  'git'
+  'intltool'
+  'just'
+  'lld'
+)
+source=('git+https://github.com/pop-os/cosmic-notifications.git')
+sha256sums=('SKIP')
+
+prepare() {
+  cd "${pkgname}"
+  export RUSTUP_TOOLCHAIN=stable
+  cargo fetch --locked --target "$(rustc -vV | sed -n 's/host: //p')"
+}
+
+build() {
+  cd "${pkgname}"
+  export RUSTUP_TOOLCHAIN=stable
+
+  # use lld
+  RUSTFLAGS="-C link-arg=-fuse-ld=lld"
+
+  # use nice to build with lower priority
+  nice just build-release --frozen
+}
+
+package() {
+  cd "${pkgname}"
+  just rootdir="$pkgdir" install
+}
