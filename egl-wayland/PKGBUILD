@@ -22,17 +22,14 @@ makedepends=(
 )
 provides=(libnvidia-egl-wayland.so)
 source=(
-  "git+$url#commit=448034502fdabc4ec60fb94051f981c5a901103b"
+  "git+$url#commit=5a5b17e9f0f18709e08a6ee08adfd27b56f2e601"
   10_nvidia_wayland.json
-  new-release.patch::https://github.com/NVIDIA/egl-wayland/commit/5b7fa06c0da810efca181410ebd9c069d4dffd6b.patch
 )
-b2sums=('72e9c03f40829b344dd2a83b5975d72635479388add238ccc5837a9c81d9bef2daed578bb715c0612f55dcbc0fb135bc01210ee7dddeb40fbe91727b355db0c7'
-        'b10206c742e8966d1192b9b0604137e6b296d2be74a437841c63844c0716343578b11565a34fb4c534d5908c0b5775305581b68039a6ff9ed7421c9d385a2b7a'
-        'e43e959158eef21b3c9ba31912673e56c2e7220c13f688263ee6ed38b05ddd5d5decaf128eeefccb64f6156eaa4e37003ca4e75d34fcd7468122684b364adb1c')
+b2sums=('0ced3f4b32516f315d7d39894efc1416dbd703537d8722dbe261c8274beab86c2f029534be769d65f2ab5ed2d9df0da7bc8e1e8bfb360074c834ad1e68667a67'
+        'b10206c742e8966d1192b9b0604137e6b296d2be74a437841c63844c0716343578b11565a34fb4c534d5908c0b5775305581b68039a6ff9ed7421c9d385a2b7a')
 
 prepare() {
   cd $pkgname
-  patch -Np1 < ../new-release.patch
 }
 
 build() {
