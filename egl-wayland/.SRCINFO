@@ -1,7 +1,7 @@
 pkgbase = egl-wayland
 	pkgdesc = EGLStream-based Wayland external platform
-	pkgver = 1.1.14
-	pkgrel = 2
+	pkgver = 1.1.15
+	pkgrel = 1
 	epoch = 3
 	url = https://github.com/NVIDIA/egl-wayland
 	arch = x86_64
@@ -11,15 +11,15 @@ pkgbase = egl-wayland
 	makedepends = meson
 	makedepends = wayland-protocols
 	depends = eglexternalplatform
+	depends = glibc
+	depends = libdrm
 	depends = wayland
 	provides = libnvidia-egl-wayland.so
-	source = git+https://github.com/NVIDIA/egl-wayland#commit=4f4c965c773a346802415155eb49e07ef0161159
+	source = git+https://github.com/NVIDIA/egl-wayland#commit=448034502fdabc4ec60fb94051f981c5a901103b
 	source = 10_nvidia_wayland.json
-	source = 0001-egl-wayland.patch
-	source = crashfix.patch::https://github.com/NVIDIA/egl-wayland/commit/a5182c7390a78ca2f7986cbcd2e1bf38f6be5f47.patch
-	b2sums = 0f2a1a7dbdc6428122c15421187cfbbc938355a4c0b74a370af0c76e0dd638841aa055c6c93df72b02826e41f4ddd3cf5a2cbd7b779d12740650d5b31adf6c20
+	source = new-release.patch::https://github.com/NVIDIA/egl-wayland/commit/5b7fa06c0da810efca181410ebd9c069d4dffd6b.patch
+	b2sums = 72e9c03f40829b344dd2a83b5975d72635479388add238ccc5837a9c81d9bef2daed578bb715c0612f55dcbc0fb135bc01210ee7dddeb40fbe91727b355db0c7
 	b2sums = b10206c742e8966d1192b9b0604137e6b296d2be74a437841c63844c0716343578b11565a34fb4c534d5908c0b5775305581b68039a6ff9ed7421c9d385a2b7a
-	b2sums = 24ff3ef29fd7b3df55d44b48c48d38c4714150d598f75cef7182d1c0b87f89638d5a598eccaad4ddf9fe8028d20f87d8c570f489564b12fe7ac25f91b15cc642
-	b2sums = c8473d4e6464c19b597d7c2bb18b709707a89e0947a137d06ad2cf2d25fc0ae7ec005c4702dc8095289042d12c365962f2d9ed875f643c86f622253b6b8b8e52
+	b2sums = e43e959158eef21b3c9ba31912673e56c2e7220c13f688263ee6ed38b05ddd5d5decaf128eeefccb64f6156eaa4e37003ca4e75d34fcd7468122684b364adb1c
 
 pkgname = egl-wayland
