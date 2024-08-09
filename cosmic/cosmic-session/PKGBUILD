@@ -88,7 +88,7 @@ build() {
   RUSTFLAGS="-C link-arg=-fuse-ld=lld"
 
   # use nice to build with lower priority
-  nice just build-release --frozen
+  nice cargo build --release --frozen --offline
 }
 
 package() {
