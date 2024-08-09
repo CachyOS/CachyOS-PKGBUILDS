@@ -1,0 +1,52 @@
+# Maintainer: Peter Jung <ptr1337@cachyos.org>
+# Maintainer: Mark Wagie <mark dot wagie at proton dot me>
+
+pkgname=cosmic-store
+pkgver=1.0.0.alpha.1
+pkgrel=1
+pkgdesc="Cosmic App Store"
+arch=('x86_64')
+url="https://github.com/pop-os/cosmic-store"
+license=('GPL-3.0-or-later')
+groups=('cosmic')
+depends=(
+  'archlinux-appstream-data'
+  'cosmic-icons-git'
+  'glib2'
+  'libxkbcommon'
+)
+makedepends=(
+  'cargo'
+  'flatpak'
+  'git'
+  'just'
+  'lld'
+)
+optdepends=(
+  'flatpak: Flatpak packages support'
+  'packagekit: package manager integration module'
+)
+source=('git+https://github.com/pop-os/cosmic-store.git#tag=epoch-1.0.0-alpha.1')
+sha256sums=('30ef8a475dcb74931c05353dc45f7269c15c19d7b0eda62636112e1c3a10dab1')
+
+prepare() {
+  cd "${pkgname}"
+  export RUSTUP_TOOLCHAIN=stable
+  cargo fetch --locked --target "$(rustc -vV | sed -n 's/host: //p')"
+}
+
+build() {
+  cd "${pkgname}"
+  export RUSTUP_TOOLCHAIN=stable
+
+  # use lld
+  RUSTFLAGS="-C link-arg=-fuse-ld=lld"
+
+  # use nice to build with lower priority
+  nice just build-release --frozen
+}
+
+package() {
+  cd "${pkgname}"
+  just rootdir="$pkgdir" install
+}
