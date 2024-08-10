@@ -4,7 +4,7 @@
 
 pkgname=cosmic-comp
 pkgver=1.0.0.alpha.1
-pkgrel=1
+pkgrel=2
 pkgdesc="Compositor for the COSMIC desktop environment"
 arch=('x86_64')
 url="https://github.com/pop-os/cosmic-comp"
@@ -32,6 +32,8 @@ sha256sums=('bafefcc583f7756d4cec1738ca8609d2f2dfae1192f28c701087ab6afe65dec2')
 prepare() {
   cd "${pkgname}"
   export RUSTUP_TOOLCHAIN=stable
+  msg2 "Cherrypick newer Smithay to fix regression"
+  git cherry-pick -n 0916d3599a91fe40503209e0431fcc888fa6b867
   make vendor
 }
 
