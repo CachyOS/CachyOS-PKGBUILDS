@@ -1,0 +1,49 @@
+# Maintainer: Peter Jung <ptr1337@cachyos.org>
+# Contributor: Mark Wagie <mark dot wagie at proton dot me>
+
+pkgname=cosmic-settings-daemon
+pkgver=1.0.0.alpha.1
+pkgrel=1
+pkgdesc="Cosmic settings daemon"
+arch=('x86_64')
+url="https://github.com/pop-os/cosmic-settings-daemon"
+license=('GPL-3.0-or-later')
+groups=('cosmic')
+depends=(
+  'acpid'
+  'adw-gtk3'
+  'geoclue'
+  'libinput'
+  'systemd-libs'
+)
+makedepends=(
+  'cargo'
+  'git'
+  'lld'
+)
+source=('git+https://github.com/pop-os/cosmic-settings-daemon.git#tag=epoch-1.0.0-alpha.1')
+sha256sums=('6a43ae7f95dfa18508c4e89ecb0976f2d5a7d1c864b99a548a157338ac664ac2')
+
+prepare() {
+  cd "${pkgname}"
+  export RUSTUP_TOOLCHAIN=stable
+  make vendor
+
+  sed -i 's|libexec|lib|g' Makefile src/main.rs
+}
+
+build() {
+  cd "${pkgname}"
+  export RUSTUP_TOOLCHAIN=stable
+
+  # use lld
+  RUSTFLAGS="-C link-arg=-fuse-ld=lld"
+
+  # use nice to build with lower priority
+  nice make prefix='/usr' VENDOR='1' all
+}
+
+package() {
+  cd "${pkgname}"
+  make prefix='/usr' DESTDIR="$pkgdir" install
+}

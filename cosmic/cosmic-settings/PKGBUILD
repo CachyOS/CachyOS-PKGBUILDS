@@ -1,0 +1,59 @@
+# Maintainer: Peter Jung <ptr1337@cachyos.org>
+# Contributor: soloturn <soloturn@gmail.com>
+# Contributor: Mark Wagie <mark dot wagie at proton dot me>
+
+pkgname=cosmic-settings
+pkgver=1.0.0.alpha.1
+pkgrel=1
+pkgdesc="The settings application for the COSMIC desktop environment."
+arch=('x86_64')
+url="https://github.com/pop-os/cosmic-settings"
+license=('GPL-3.0-or-later')
+groups=('cosmic')
+depends=(
+  'accountsservice'
+  'cosmic-icons-git'
+  'cosmic-randr-git'
+  'fontconfig'
+  'iso-codes'
+  'libinput'
+  'libxkbcommon'
+  'otf-fira-mono'
+  'otf-fira-sans'
+  'systemd-libs'
+  'wayland'
+)
+makedepends=(
+  'cargo'
+  'clang'
+  'git'
+  'just'
+  'lld'
+)
+optdepends=(
+  'adw-gtk3'
+  'power-profiles-daemon: power profiles'
+)
+source=('git+https://github.com/pop-os/cosmic-settings.git#tag=epoch-1.0.0-alpha.1')
+sha256sums=('7c0fdab98f1be3fcef2788b7b13f85446ed7f72c393b82a92f90edcc84bc3c06')
+
+
+prepare() {
+  cd "${pkgname}"
+  export RUSTUP_TOOLCHAIN=stable
+  just vendor
+}
+
+build() {
+  cd "${pkgname}"
+  CFLAGS+=" -ffat-lto-objects"
+  export RUSTUP_TOOLCHAIN=stable
+
+  # use nice to build with lower priority
+  nice just build-vendored
+}
+
+package() {
+  cd "${pkgname}"
+  just rootdir="$pkgdir" install
+}
