@@ -5,8 +5,8 @@
 
 pkgbase=nvidia-utils
 pkgname=('nvidia-utils' 'opencl-nvidia' 'nvidia-dkms')
-pkgver=555.58.02
-pkgrel=2
+pkgver=560.31.02
+pkgrel=1
 arch=('x86_64')
 url="http://www.nvidia.com/"
 license=('custom')
@@ -27,7 +27,7 @@ sha512sums=('de7116c09f282a27920a1382df84aa86f559e537664bb30689605177ce37dc50677
             '0958b99c0e5181db1b5fe542a87b4fdc91a9dbaed1193d173f4a0e67c31bf0b0e012abcece33e9c547446b9614a894546197e42edc6c7f3c5d2e7318ac5221ae'
             'a0183adce78e40853edf7e6b73867e7a8ea5dabac8e8164e42781f64d5232fbe869f850ab0697c3718ebced5cde760d0e807c05da50a982071dfe1157c31d6b8'
             '55def6319f6abb1a4ccd28a89cd60f1933d155c10ba775b8dfa60a2dc5696b4b472c14b252dc0891f956e70264be87c3d5d4271e929a4fc4b1a68a6902814cee'
-            '7a8c84c15d87d2cf5f6261b12d3d683e0a7a1847d7c5461b3995f78b8dd862272fd11be07018593a8d5ef5d8274040f15b9e6fe92e9212dcd7a97be668852433'
+            'ac54cc6f5820b523c894df2a7591c634f0337d5de72044ef9736218c5ec1e531a7347a4faa7a11eeaa7c3156884c0c909f766dce484cb51f9c68f6b5f83c8935'
             '73a3734aa0dd4df3cfba9dd7153f9b82981c4a4e86df0c804fb966280c02af8c39ad649bfa3d4119b82709974a40eaab67d357c586b2414c66113929a47628e9')
 
 
@@ -166,6 +166,11 @@ package_nvidia-utils() {
     install -Dm644 "nvidia_icd.json" "${pkgdir}/usr/share/vulkan/icd.d/nvidia_icd.json"
     install -Dm644 "nvidia_layers.json" "${pkgdir}/usr/share/vulkan/implicit_layer.d/nvidia_layers.json"
 
+    # VulkanSC
+    install -D -m755 nvidia-pcc -t "${pkgdir}/usr/bin"
+    install -D -m755 "libnvidia-vksc-core.so.${pkgver}" -t "${pkgdir}/usr/lib"
+    install -D -m644 nvidia_icd_vksc.json -t "${pkgdir}/usr/share/vulkansc/icd.d"
+
     # VDPAU
     install -Dm755 "libvdpau_nvidia.so.${pkgver}" "${pkgdir}/usr/lib/vdpau/libvdpau_nvidia.so.${pkgver}"
 
@@ -193,6 +198,12 @@ package_nvidia-utils() {
     install -Dm755 "libnvidia-ngx.so.${pkgver}" "${pkgdir}/usr/lib/libnvidia-ngx.so.${pkgver}"
     install -Dm755 _nvngx.dll "${pkgdir}/usr/lib/nvidia/wine/_nvngx.dll"
     install -Dm755 nvngx.dll "${pkgdir}/usr/lib/nvidia/wine/nvngx.dll"
+
+    # Xorg
+    install -D -m755 libnvidia-egl-xcb.so.1  -t "${pkgdir}/usr/lib"
+    install -D -m755 libnvidia-egl-xlib.so.1 -t "${pkgdir}/usr/lib"
+    install -D -m644 20_nvidia_xcb.json  -t "${pkgdir}/usr/share/egl/egl_external_platform.d"
+    install -D -m644 20_nvidia_xlib.json -t "${pkgdir}/usr/share/egl/egl_external_platform.d"
 
     # Optical flow
     install -Dm755 "libnvidia-opticalflow.so.${pkgver}" "${pkgdir}/usr/lib/libnvidia-opticalflow.so.${pkgver}"
