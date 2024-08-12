@@ -1,47 +1,51 @@
-# Maintainer: Peter Jung <ptr1337@cachyos.org>
-# Maintainer: Mark Wagie <mark dot wagie at proton dot me>
+# Maintainer: Maxime Gauduin <alucryd@archlinux.org>
+# Contributor: Mark Wagie <mark.wagie@proton.me>
 
 pkgname=cosmic-files
 pkgver=1.0.0.alpha.1
 pkgrel=1
-pkgdesc="File manager for the COSMIC desktop environment"
-arch=('x86_64')
-url="https://github.com/pop-os/cosmic-files"
-license=('GPL-3.0-or-later')
-groups=('cosmic')
+pkgdesc='File manager for the COSMIC desktop environment'
+arch=(x86_64)
+url=https://github.com/pop-os/cosmic-files
+license=(GPL-3.0-only)
+groups=(cosmic)
 depends=(
-  'glib2'
-  'hicolor-icon-theme'
-  'libxkbcommon'
-  'xdg-utils'
+  gcc-libs
+  glib2
+  glibc
+  cosmic-icon-theme
+  libxkbcommon
+  xdg-utils
 )
 makedepends=(
-  'cargo'
-  'git'
-  'just'
-  'lld'
+  cargo
+  git
+  just
+  lld
 )
-source=('git+https://github.com/pop-os/cosmic-files.git#tag=epoch-1.0.0-alpha.1')
-sha256sums=('f409be729e03b6cd2396551a7bcd3a030fd630089254086d15f2a4ed94d50ebb')
+_tag=190029aa27d08a26877e73db2dda789de3e6595f
+source=(git+https://github.com/pop-os/cosmic-files.git#tag=${_tag})
+b2sums=('294e63292397c88961704bfade498c66eb374238c7e183d321607bb3b79845c146cbc5b26ef4bd4a975a72467bd274c4a31fc467de185a8f06c5233d8ae6a824')
 
 prepare() {
-  cd "${pkgname}"
-  export RUSTUP_TOOLCHAIN=stable
-  cargo fetch --locked --target "$(rustc -vV | sed -n 's/host: //p')"
+  cd cosmic-files
+  cargo fetch --locked
+}
+
+pkgver() {
+  cd cosmic-files
+  git describe --tags | sed 's/^epoch-//; s/-/./g'
 }
 
 build() {
-  cd "${pkgname}"
-  export RUSTUP_TOOLCHAIN=stable
-
-  # use lld
-  RUSTFLAGS="-C link-arg=-fuse-ld=lld"
-
-  # use nice to build with lower priority
-  nice just build-release --frozen
+  cd cosmic-files
+  RUSTFLAGS+=" -C link-arg=-fuse-ld=lld"
+  just build-release --frozen
 }
 
 package() {
-  cd "${pkgname}"
-  just rootdir="$pkgdir" install
+  cd cosmic-files
+  just rootdir="${pkgdir}" install
 }
+
+# vim: ts=2 sw=2 et:

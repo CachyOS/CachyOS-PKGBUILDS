@@ -1,20 +1,21 @@
 pkgbase = cosmic-settings
-	pkgdesc = The settings application for the COSMIC desktop environment.
+	pkgdesc = The settings application for the COSMIC desktop environment
 	pkgver = 1.0.0.alpha.1
 	pkgrel = 1
 	url = https://github.com/pop-os/cosmic-settings
 	arch = x86_64
 	groups = cosmic
-	license = GPL-3.0-or-later
+	license = GPL-3.0-only
 	makedepends = cargo
-	makedepends = clang
 	makedepends = git
 	makedepends = just
 	makedepends = lld
 	depends = accountsservice
-	depends = cosmic-icons-git
-	depends = cosmic-randr-git
+	depends = cosmic-icon-theme
+	depends = cosmic-randr
 	depends = fontconfig
+	depends = gcc-libs
+	depends = glibc
 	depends = iso-codes
 	depends = libinput
 	depends = libxkbcommon
@@ -22,9 +23,8 @@ pkgbase = cosmic-settings
 	depends = otf-fira-sans
 	depends = systemd-libs
 	depends = wayland
-	optdepends = adw-gtk3
-	optdepends = power-profiles-daemon: power profiles
-	source = git+https://github.com/pop-os/cosmic-settings.git#tag=epoch-1.0.0-alpha.1
-	sha256sums = 7c0fdab98f1be3fcef2788b7b13f85446ed7f72c393b82a92f90edcc84bc3c06
+	optdepends = power-profiles-daemon: power profiles support
+	source = git+https://github.com/pop-os/cosmic-settings.git#tag=648c4e24ab825444af4e84bf713dc37c6250dbee
+	b2sums = 210c175a3282bee335434b88d466c053d5ba3fd56c5c2b0989c1afafe90f6465d99aac70915b7fe956e7c35e8b39d811b97e2cf28c8f43b292376638811b9f16
 
 pkgname = cosmic-settings

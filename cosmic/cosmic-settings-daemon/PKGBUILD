@@ -1,49 +1,53 @@
-# Maintainer: Peter Jung <ptr1337@cachyos.org>
-# Contributor: Mark Wagie <mark dot wagie at proton dot me>
+# Maintainer: Maxime Gauduin <alucryd@archlinux.org>
+# Contributor: Mark Wagie <mark.wagie@proton.me>
 
 pkgname=cosmic-settings-daemon
 pkgver=1.0.0.alpha.1
 pkgrel=1
-pkgdesc="Cosmic settings daemon"
-arch=('x86_64')
-url="https://github.com/pop-os/cosmic-settings-daemon"
-license=('GPL-3.0-or-later')
-groups=('cosmic')
+pkgdesc='Cosmic settings daemon'
+arch=(x86_64)
+url=https://github.com/pop-os/cosmic-settings-daemon
+license=(GPL-3.0-only)
+groups=(cosmic)
 depends=(
-  'acpid'
-  'adw-gtk3'
-  'geoclue'
-  'libinput'
-  'systemd-libs'
+  acpid
+  adw-gtk-theme
+  gcc-libs
+  geoclue
+  glibc
+  libinput
+  systemd-libs
 )
 makedepends=(
-  'cargo'
-  'git'
-  'lld'
+  cargo
+  git
+  lld
 )
-source=('git+https://github.com/pop-os/cosmic-settings-daemon.git#tag=epoch-1.0.0-alpha.1')
-sha256sums=('6a43ae7f95dfa18508c4e89ecb0976f2d5a7d1c864b99a548a157338ac664ac2')
+_tag=362c77f9faaeb7f1b9e4aa79a7d5588001f04874
+source=(git+https://github.com/pop-os/cosmic-settings-daemon.git#tag=${_tag})
+b2sums=('57e2a6f63b2f455300776f8127ef866f54be79e09cb2199e4c2c5d3d77d9171b54051b2279e693210327e51e80c2890f93ddad9ae4d30da11c947b74d7f4379d')
 
 prepare() {
-  cd "${pkgname}"
-  export RUSTUP_TOOLCHAIN=stable
-  make vendor
+  cd cosmic-settings-daemon
+  cargo fetch --locked
+  sed 's/libexec/lib/g' -i Makefile src/main.rs
+  sed 's/sudo/wheel/g' -i data/polkit-1/rules.d/cosmic-settings-daemon.rules
+}
 
-  sed -i 's|libexec|lib|g' Makefile src/main.rs
+pkgver() {
+  cd cosmic-settings-daemon
+  git describe --tags | sed 's/^epoch-//; s/-/./g'
 }
 
 build() {
-  cd "${pkgname}"
-  export RUSTUP_TOOLCHAIN=stable
-
-  # use lld
-  RUSTFLAGS="-C link-arg=-fuse-ld=lld"
-
-  # use nice to build with lower priority
-  nice make prefix='/usr' VENDOR='1' all
+  cd cosmic-settings-daemon
+  RUSTFLAGS+=" -C link-arg=-fuse-ld=lld"
+  make ARGS+=" --frozen --release"
 }
 
 package() {
-  cd "${pkgname}"
-  make prefix='/usr' DESTDIR="$pkgdir" install
+  cd cosmic-settings-daemon
+  make DESTDIR="${pkgdir}" install
 }
+
+# vim: ts=2 sw=2 et:

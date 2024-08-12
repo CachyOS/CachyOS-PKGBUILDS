@@ -1,59 +1,60 @@
-# Maintainer: Peter Jung <ptr1337@cachyos.org>
+# Maintainer: Maxime Gauduin <alucryd@archlinux.org>
 # Contributor: soloturn <soloturn@gmail.com>
-# Contributor: Mark Wagie <mark dot wagie at proton dot me>
+# Contributor: Mark Wagie <mark.wagie@proton.me>
 
 pkgname=cosmic-settings
 pkgver=1.0.0.alpha.1
 pkgrel=1
-pkgdesc="The settings application for the COSMIC desktop environment."
-arch=('x86_64')
-url="https://github.com/pop-os/cosmic-settings"
-license=('GPL-3.0-or-later')
-groups=('cosmic')
+pkgdesc='The settings application for the COSMIC desktop environment'
+arch=(x86_64)
+url=https://github.com/pop-os/cosmic-settings
+license=(GPL-3.0-only)
+groups=(cosmic)
 depends=(
-  'accountsservice'
-  'cosmic-icons-git'
-  'cosmic-randr-git'
-  'fontconfig'
-  'iso-codes'
-  'libinput'
-  'libxkbcommon'
-  'otf-fira-mono'
-  'otf-fira-sans'
-  'systemd-libs'
-  'wayland'
+  accountsservice
+  cosmic-icon-theme
+  cosmic-randr
+  fontconfig
+  gcc-libs
+  glibc
+  iso-codes
+  libinput
+  libxkbcommon
+  otf-fira-mono
+  otf-fira-sans
+  systemd-libs
+  wayland
 )
 makedepends=(
-  'cargo'
-  'clang'
-  'git'
-  'just'
-  'lld'
+  cargo
+  git
+  just
+  lld
 )
-optdepends=(
-  'adw-gtk3'
-  'power-profiles-daemon: power profiles'
-)
-source=('git+https://github.com/pop-os/cosmic-settings.git#tag=epoch-1.0.0-alpha.1')
-sha256sums=('7c0fdab98f1be3fcef2788b7b13f85446ed7f72c393b82a92f90edcc84bc3c06')
-
+optdepends=('power-profiles-daemon: power profiles support')
+_tag=648c4e24ab825444af4e84bf713dc37c6250dbee
+source=(git+https://github.com/pop-os/cosmic-settings.git#tag=${_tag})
+b2sums=('210c175a3282bee335434b88d466c053d5ba3fd56c5c2b0989c1afafe90f6465d99aac70915b7fe956e7c35e8b39d811b97e2cf28c8f43b292376638811b9f16')
 
 prepare() {
-  cd "${pkgname}"
-  export RUSTUP_TOOLCHAIN=stable
-  just vendor
+  cd cosmic-settings
+  cargo fetch --locked
+}
+
+pkgver() {
+  cd cosmic-settings
+  git describe --tags | sed 's/^epoch-//; s/-/./g'
 }
 
 build() {
-  cd "${pkgname}"
-  CFLAGS+=" -ffat-lto-objects"
-  export RUSTUP_TOOLCHAIN=stable
-
-  # use nice to build with lower priority
-  nice just build-vendored
+  cd cosmic-settings
+  RUSTFLAGS+=" -C link-arg=-fuse-ld=lld"
+  just build-release --frozen
 }
 
 package() {
-  cd "${pkgname}"
-  just rootdir="$pkgdir" install
+  cd cosmic-settings
+  just rootdir="${pkgdir}" install
 }
+
+# vim: ts=2 sw=2 et:

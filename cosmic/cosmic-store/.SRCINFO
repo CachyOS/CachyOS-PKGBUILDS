@@ -5,19 +5,23 @@ pkgbase = cosmic-store
 	url = https://github.com/pop-os/cosmic-store
 	arch = x86_64
 	groups = cosmic
-	license = GPL-3.0-or-later
+	license = GPL-3.0-only
 	makedepends = cargo
-	makedepends = flatpak
 	makedepends = git
 	makedepends = just
 	makedepends = lld
+	makedepends = packagekit
 	depends = archlinux-appstream-data
-	depends = cosmic-icons-git
+	depends = cosmic-icon-theme
+	depends = flatpak
+	depends = gcc-libs
 	depends = glib2
+	depends = glibc
 	depends = libxkbcommon
-	optdepends = flatpak: Flatpak packages support
-	optdepends = packagekit: package manager integration module
-	source = git+https://github.com/pop-os/cosmic-store.git#tag=epoch-1.0.0-alpha.1
-	sha256sums = 30ef8a475dcb74931c05353dc45f7269c15c19d7b0eda62636112e1c3a10dab1
+	depends = openssl
+	depends = wayland
+	optdepends = packagekit: Native packages support
+	source = git+https://github.com/pop-os/cosmic-store.git#tag=639a17c1bc72118ea755d245b9307c6e94be9cff
+	b2sums = dadb92857a375eb2bf665c6dd7f69f48eaeefdcedd5eba789af229ace9aaf4ca2c00495a04cb7319356271852a8783fa7e2fe631a3b84d17a65363bd750d6f36
 
 pkgname = cosmic-store

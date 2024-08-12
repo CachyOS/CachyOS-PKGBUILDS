@@ -1,52 +1,56 @@
-# Maintainer: Peter Jung <ptr1337@cachyos.org>
-# Maintainer: Mark Wagie <mark dot wagie at proton dot me>
+# Maintainer: Maxime Gauduin <alucryd@archlinux.org>
+# Contributor: Mark Wagie <mark.wagie@proton.me>
 
 pkgname=cosmic-store
 pkgver=1.0.0.alpha.1
 pkgrel=1
-pkgdesc="Cosmic App Store"
-arch=('x86_64')
-url="https://github.com/pop-os/cosmic-store"
-license=('GPL-3.0-or-later')
-groups=('cosmic')
+pkgdesc='Cosmic App Store'
+arch=(x86_64)
+url=https://github.com/pop-os/cosmic-store
+license=(GPL-3.0-only)
+groups=(cosmic)
 depends=(
-  'archlinux-appstream-data'
-  'cosmic-icons-git'
-  'glib2'
-  'libxkbcommon'
+  archlinux-appstream-data
+  cosmic-icon-theme
+  flatpak
+  gcc-libs
+  glib2
+  glibc
+  libxkbcommon
+  openssl
+  wayland
 )
 makedepends=(
-  'cargo'
-  'flatpak'
-  'git'
-  'just'
-  'lld'
+  cargo
+  git
+  just
+  lld
+  packagekit
 )
-optdepends=(
-  'flatpak: Flatpak packages support'
-  'packagekit: package manager integration module'
-)
-source=('git+https://github.com/pop-os/cosmic-store.git#tag=epoch-1.0.0-alpha.1')
-sha256sums=('30ef8a475dcb74931c05353dc45f7269c15c19d7b0eda62636112e1c3a10dab1')
+optdepends=('packagekit: Native packages support')
+_tag=639a17c1bc72118ea755d245b9307c6e94be9cff
+source=(git+https://github.com/pop-os/cosmic-store.git#tag=${_tag})
+b2sums=('dadb92857a375eb2bf665c6dd7f69f48eaeefdcedd5eba789af229ace9aaf4ca2c00495a04cb7319356271852a8783fa7e2fe631a3b84d17a65363bd750d6f36')
 
 prepare() {
-  cd "${pkgname}"
-  export RUSTUP_TOOLCHAIN=stable
-  cargo fetch --locked --target "$(rustc -vV | sed -n 's/host: //p')"
+  cd cosmic-store
+  cargo fetch --locked
+}
+
+pkgver() {
+  cd cosmic-store
+  git describe --tags | sed 's/^epoch-//; s/-/./g'
 }
 
 build() {
-  cd "${pkgname}"
-  export RUSTUP_TOOLCHAIN=stable
-
-  # use lld
-  RUSTFLAGS="-C link-arg=-fuse-ld=lld"
-
-  # use nice to build with lower priority
-  nice just build-release --frozen
+  cd cosmic-store
+  RUSTFLAGS+=" -C link-arg=-fuse-ld=lld"
+  just build-release --frozen
 }
 
 package() {
-  cd "${pkgname}"
-  just rootdir="$pkgdir" install
+  cd cosmic-store
+  just rootdir="${pkgdir}" install
 }
+
+# vim: ts=2 sw=2 et:
