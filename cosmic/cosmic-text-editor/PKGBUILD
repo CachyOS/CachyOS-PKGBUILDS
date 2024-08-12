@@ -1,55 +1,54 @@
-# Maintainer: Peter Jung <ptr1337@cachyos.org>
-# Maintainer: Mark Wagie <mark at proton dot me>
-# Co-Maintainer: soloturn <soloturn@gmail.com>
+# Maintainer: Maxime Gauduin <alucryd@archlinux.org>
+# Contributor: Mark Wagie <mark.wagie@proton.me>
+# Contributor: soloturn <soloturn@gmail.com>
 
-pkgname=cosmic-test-editor
+pkgname=cosmic-text-editor
 pkgver=1.0.0.alpha.1
 pkgrel=4
-pkgdesc="Text editor for the COSMIC desktop"
-arch=('x86_64')
-url="https://github.com/pop-os/cosmic-edit"
-license=('GPL-3.0-or-later')
+pkgdesc='Text editor for the COSMIC desktop'
+arch=(x86_64)
+url=https://github.com/pop-os/cosmic-edit
+license=(GPL-3.0-only)
+groups=(cosmic)
 depends=(
-  'cosmic-icon-theme'
-  'libxkbcommon'
-  'wayland'
+  cosmic-icon-theme
+  gcc-libs
+  glibc
+  libxkbcommon
+  oniguruma
+  wayland
 )
 makedepends=(
-  'cargo'
-  'git'
-  'git-lfs'
-  'just'
-  'lld'
+  cargo
+  git
+  just
+  lld
 )
 provides=('cosmic-edit')
 replaces=('cosmic-edit')
-options=('!lto')
-source=('git+https://github.com/pop-os/cosmic-edit.git#tag=epoch-1.0.0-alpha.1')
-sha256sums=('08fd3c008dea08db0eb326690b97395b33bdc868657a0738647ddb6f3355fe8c')
+_tag=df5d10936c5a1cc16e231b92221eae7c73ed9da4
+source=(git+https://github.com/pop-os/cosmic-edit.git#tag=${_tag})
+b2sums=('a35f11774d9c2a796e6f23bd1d7cb31886251f3cbb1b0852b710d65798f0fb96b9e8a1693b396ea3fab014f0559e8cd28cce800345e86f986a53a9814a3d819c')
 
 prepare() {
-  cd "${pkgname}"
-  export RUSTUP_TOOLCHAIN=stable
-  cargo fetch --locked --target "$(rustc -vV | sed -n 's/host: //p')"
+  cd cosmic-edit
+  cargo fetch --locked
+}
 
-  git lfs install --local
-  git remote add network-origin https://github.com/pop-os/cosmic-edit
-  git lfs fetch network-origin
-  git lfs checkout
+pkgver() {
+  cd cosmic-edit
+  git describe --tags | sed 's/^epoch-//; s/-/./g'
 }
 
 build() {
-  cd "${pkgname}"
-  export RUSTUP_TOOLCHAIN=stable
-
-  # use lld
-  RUSTFLAGS="-C link-arg=-fuse-ld=lld"
-
-  # use nice to build with lower priority
-  nice just build-release --frozen
+  cd cosmic-edit
+  RUSTFLAGS+=" -C link-arg=-fuse-ld=lld -C link-arg=-lonig"
+  just build-release --frozen
 }
 
 package() {
-  cd "${pkgname}"
-  just rootdir="$pkgdir" install
+  cd cosmic-edit
+  just rootdir="${pkgdir}" install
 }
+
+# vim: ts=2 sw=2 et:
