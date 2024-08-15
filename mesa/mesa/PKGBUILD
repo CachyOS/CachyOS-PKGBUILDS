@@ -18,8 +18,8 @@ pkgname=(
   vulkan-swrast
   vulkan-virtio
 )
-pkgver=24.1.6
-pkgrel=2
+pkgver=24.2.0
+pkgrel=1
 epoch=1
 pkgdesc="Open-source OpenGL drivers"
 url="https://www.mesa3d.org/"
@@ -115,7 +115,14 @@ for _crate in "${!_crates[@]}"; do
   )
 done
 
-b2sums=('295634438e1a2ae64bd1c5b0309a253e72a4d95e559cabad72f94aa2b91e5b05179c69cce5e371b69707419399dae0bfe808cb16b2e9ee112277e18b8f0f31f9'
+sha256sums=('c02bb72cea290f78b11895a0c95c7c92394f180d7ff66d4a762ec6950a58addf'
+            'SKIP'
+            '39278fbbf5fb4f646ce651690877f89d1c5811a3d4acb27700c1cb3cdb78fd3b'
+            '3354b9ac3fae1ff6755cb6db53683adb661634f67557942dea4facebec0fee4b'
+            '5267fca4496028628a95160fc423a33e8b2e6af8a5302579e322e4b520293cae'
+            'de3145af08024dea9fa9914f381a17b8fc6034dfb00f3a84013f7ff43f29ed4c'
+            '23e78b90f2fcf45d3e842032ce32e3f2d1545ba6636271dcbf24fa306d87be7a')
+b2sums=('dfbd0e5b8de3db475f40a8313ee3013bb513d505541e056efd84aad50d5043414dd2c0b95e6c7336a1b4d29037274dae2fa1fdb9697187bf239a5adb54dd3721'
         'SKIP'
         'fff0dec06b21e391783cc136790238acb783780eaedcf14875a350e7ceb46fdc100c8b9e3f09fb7f4c2196c25d4c6b61e574c0dad762d94533b628faab68cf5c'
         '4cede03c08758ccd6bf53a0d0057d7542dfdd0c93d342e89f3b90460be85518a9fd24958d8b1da2b5a09b5ddbee8a4263982194158e171c2bba3e394d88d6dac'
@@ -124,13 +131,6 @@ b2sums=('295634438e1a2ae64bd1c5b0309a253e72a4d95e559cabad72f94aa2b91e5b05179c69c
         '2cff6626624d03f70f1662af45a8644c28a9f92e2dfe38999bef3ba4a4c1ce825ae598277e9cb7abd5585eebfb17b239effc8d0bbf1c6ac196499f0d288e5e01')
 
 # https://docs.mesa3d.org/relnotes.html
-sha256sums=('da94c0908d5662467369b69ed8236da1e1577141a6e7d25171a9bf56383b34e8'
-            'SKIP'
-            '39278fbbf5fb4f646ce651690877f89d1c5811a3d4acb27700c1cb3cdb78fd3b'
-            '3354b9ac3fae1ff6755cb6db53683adb661634f67557942dea4facebec0fee4b'
-            '5267fca4496028628a95160fc423a33e8b2e6af8a5302579e322e4b520293cae'
-            'de3145af08024dea9fa9914f381a17b8fc6034dfb00f3a84013f7ff43f29ed4c'
-            '23e78b90f2fcf45d3e842032ce32e3f2d1545ba6636271dcbf24fa306d87be7a')
 
 prepare() {
   cd mesa-$pkgver
@@ -145,7 +145,7 @@ build() {
   local meson_options=(
     -D android-libbacktrace=disabled
     -D b_ndebug=true
-    -D gallium-drivers=r300,r600,radeonsi,nouveau,virgl,svga,swrast,i915,iris,crocus,zink,d3d12
+    -D gallium-drivers=r300,r600,radeonsi,nouveau,virgl,svga,softpipe,llvmpipe,i915,iris,crocus,zink,d3d12
     -D gallium-extra-hud=true
     -D gallium-nine=true
     -D gallium-omx=bellagio
@@ -160,6 +160,8 @@ build() {
     -D osmesa=true
     -D platforms=x11,wayland
     -D valgrind=enabled
+    --wrap-mode=nofallback
+    --force-fallback-for=syn,paste
     -D video-codecs=all
     -D vulkan-drivers=amd,intel,intel_hasvk,swrast,virtio,nouveau
     -D vulkan-layers=device-select,intel-nullhw,overlay
