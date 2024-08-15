@@ -9,7 +9,7 @@ arch=(aarch64 x86_64 x86_64_v3)
 url="https://github.com/cachyos/kernel-manager"
 license=(GPLv3)
 depends=('qt6-base' 'polkit')
-makedepends=('cmake' 'ninja' 'git' 'python' 'polkit-qt6' 'qt6-tools')
+makedepends=('cmake' 'ninja' 'git' 'python' 'polkit-qt6' 'qt6-tools' 'cargo' 'lld' 'clang' 'llvm')
 source=("${pkgname}::git+$url.git"
         fix-installed-db.patch)
 sha256sums=('SKIP'
@@ -37,6 +37,15 @@ build() {
 
   _cpuCount=$(grep -c -w ^processor /proc/cpuinfo)
 
+  # Compile with clang
+  export AR=llvm-ar
+  export CC=clang
+  export CXX=clang++
+  export NM=llvm-nm
+  export RANLIB=llvm-ranlib
+
+  export RUSTFLAGS="-Cembed-bitcode -C opt-level=3 -Ccodegen-units=1 -Clinker=clang -C link-arg=-flto -Clink-arg=-fuse-ld=/usr/bin/ld.lld"
+
   cmake -S . -Bbuild \
         -GNinja \
         -DCMAKE_BUILD_TYPE=Release \
@@ -47,6 +56,16 @@ build() {
 
 package() {
   cd "${srcdir}/${pkgname}"
+
+  # Compile with clang
+  export AR=llvm-ar
+  export CC=clang
+  export CXX=clang++
+  export NM=llvm-nm
+  export RANLIB=llvm-ranlib
+
+  export RUSTFLAGS="-Cembed-bitcode -C opt-level=3 -Ccodegen-units=1 -Clinker=clang -C link-arg=-flto -Clink-arg=-fuse-ld=/usr/bin/ld.lld"
+
   DESTDIR="${pkgdir}" cmake --build build --target install
 
   install -Dm644 LICENSE "${pkgdir}/usr/share/licenses/${pkgname/-git}/LICENSE"
