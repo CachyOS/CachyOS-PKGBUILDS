@@ -1,49 +1,50 @@
-# Maintainer: Peter Jung <ptr1337@cachyos.org>
-# Maintainer: Mark Wagie <mark dot wagie at proton dot me>
+# Maintainer: Maxime Gauduin <alucryd@archlinux.org>
+# Contributor: Mark Wagie <mark.wagie@proton.me>
 
 pkgname=cosmic-launcher
 pkgver=1.0.0.alpha.1
-pkgrel=3
-pkgdesc="WIP Layer Shell frontend for Pop Launcher."
-arch=('x86_64')
-url="https://github.com/pop-os/cosmic-launcher"
-license=('GPL-3.0-or-later')
-groups=('cosmic')
+pkgrel=4
+pkgdesc='Layer Shell frontend for Pop Launcher'
+arch=(x86_64)
+url=https://github.com/pop-os/cosmic-launcher
+license=(GPL-3.0-only)
+groups=(cosmic)
 depends=(
-  'hicolor-icon-theme'
-  'libxkbcommon'
-  'pop-launcher'
-  'wayland'
+  cosmic-icon-theme
+  gcc-libs
+  glibc
+  libxkbcommon
+  pop-launcher
+  wayland
 )
 makedepends=(
-  'cargo'
-  'clang'
-  'git'
-  'intltool'
-  'just'
-  'lld'
+  cargo
+  git
+  just
+  lld
 )
-source=('git+https://github.com/pop-os/cosmic-launcher.git#tag=epoch-1.0.0-alpha.1')
-sha256sums=('387e0264718981058c1346cfa368b0c3e9a154d621fe8b10a9d2dd247000da56')
+_tag=d84fda0bcc494f6ba197a5bc4bae17c45dcbf458
+source=(git+https://github.com/pop-os/cosmic-launcher.git#tag=${_tag})
+b2sums=('cad8460c548aa23e587054abc1f65437f13699e314049ebf4ce5c58bb172f5cf723c95152ee3db0779727ce4c0ce0a3968bc1c007093ed2bad9f42ce6e8d9ac6')
 
 prepare() {
-  cd "${pkgname}"
-  export RUSTUP_TOOLCHAIN=stable
-  cargo fetch --locked --target "$(rustc -vV | sed -n 's/host: //p')"
+  cd cosmic-launcher
+  cargo fetch --locked
 }
 
+pkgver() {
+  cd cosmic-launcher
+  git describe --tags | sed 's/^epoch-//; s/-/./g'
+}
 build() {
-  cd "${pkgname}"
-  export RUSTUP_TOOLCHAIN=stable
-
-  # use lld
-  RUSTFLAGS="-C link-arg=-fuse-ld=lld"
-
-  # use nice to build with lower priority
-  nice just build-release --frozen
+  cd cosmic-launcher
+  RUSTFLAGS+=" -C link-arg=-fuse-ld=lld"
+  just build-release --frozen
 }
 
 package() {
-  cd "${pkgname}"
-  just rootdir="$pkgdir" install
+  cd cosmic-launcher
+  just rootdir="${pkgdir}" install
 }
+
+# vim: ts=2 sw=2 et:

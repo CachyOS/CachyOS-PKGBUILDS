@@ -2,13 +2,13 @@
 # Contributor: soloturn <soloturn@gmail.com>
 # Contributor: Mark Wagie <mark.wagie@proton.me>
 
-pkgname=cosmic-bg
+pkgname=cosmic-app-library
 pkgver=1.0.0.alpha.1
-pkgrel=4
-pkgdesc='COSMIC session service which applies backgrounds to displays'
+pkgrel=1
+pkgdesc='Cosmic App Library'
 arch=(x86_64)
-url=https://github.com/pop-os/cosmic-bg
-license=(MPL-2.0)
+url=https://github.com/pop-os/cosmic-applibrary
+license=(GPL-3.0-only)
 groups=(cosmic)
 depends=(
   cosmic-icon-theme
@@ -21,30 +21,31 @@ makedepends=(
   git
   just
   lld
-  nasm
 )
-_tag=e5637fcc83abeb4e9a675b04a9b98ae4a5c186fa
-source=(git+https://github.com/pop-os/cosmic-bg.git#tag=${_tag})
-b2sums=('80757e5fd9db7e16c4f72e08708099b5f6fe369e1a6135061ba3f35489d70a0b88fe9a03f0cef99efdd101d8eb33183af113260f2b93a58dd9b517c2d7e83a0a')
+provides=(cosmic-app-library)
+conflicts=(cosmic-app-library)
+_tag=1416b80bf42064a5ccc7109011f00531f5a8e3aa
+source=(git+https://github.com/pop-os/cosmic-applibrary.git#tag=${_tag})
+b2sums=('ff7484da61dcf1196cbe051223e13f9a4c517f9aaccc75e910a11a97cbf159b75f5aa01c06736e4971f63385285504c2f5eb0240f399f06348939f12f4a49e32')
 
 prepare() {
-  cd cosmic-bg
+  cd cosmic-applibrary
   cargo fetch --locked
 }
 
 pkgver() {
-  cd cosmic-bg
+  cd cosmic-applibrary
   git describe --tags | sed 's/^epoch-//; s/-/./g'
 }
 
 build() {
-  cd cosmic-bg
+  cd cosmic-applibrary
   RUSTFLAGS+=" -C link-arg=-fuse-ld=lld"
   just build-release --frozen
 }
 
 package() {
-  cd cosmic-bg
+  cd cosmic-applibrary
   just rootdir="${pkgdir}" install
 }
 

@@ -1,54 +1,57 @@
-# Maintainer: Peter Jung <ptr1337@cachyos.org>
+# Maintainer: Maxime Gauduin <alucryd@archlinux.org>
 # Contributor: soloturn <soloturn@gmail.com>
-# Contributor: Mark Wagie <mark dot wagie at proton dot me>
+# Contributor: Mark Wagie <mark.wagie@proton.me>
 
 pkgname=cosmic-comp
 pkgver=1.0.0.alpha.1
-pkgrel=3
-pkgdesc="Compositor for the COSMIC desktop environment"
-arch=('x86_64')
-url="https://github.com/pop-os/cosmic-comp"
-license=('GPL-3.0-or-later')
-groups=('cosmic')
+pkgrel=4
+pkgdesc='Compositor for the COSMIC desktop environment'
+arch=(x86_64)
+url='https://github.com/pop-os/cosmic-comp'
+license=(GPL-3.0-only)
+groups=(cosmic)
 depends=(
-  'fontconfig'
-  'libseat.so'
-  'libinput'
-  'libxcb'
-  'libxkbcommon'
-  'mesa'
-  'pixman'
-  'systemd'
-  'wayland'
+  fontconfig
+  gcc-libs
+  glibc
+  libseat.so
+  libinput
+  libxcb
+  libxkbcommon
+  mesa
+  pixman
+  systemd-libs
+  wayland
 )
 makedepends=(
-  'cargo'
-  'git'
-  'lld'
+  cargo
+  git
+  lld
 )
-source=('git+https://github.com/pop-os/cosmic-comp.git#tag=epoch-1.0.0-alpha.1')
-sha256sums=('bafefcc583f7756d4cec1738ca8609d2f2dfae1192f28c701087ab6afe65dec2')
+_tag=4748916ff91c50c16d84f4a777db1e1b4d90c90c
+source=(git+https://github.com/pop-os/cosmic-comp.git#tag=${_tag})
+b2sums=('SKIP')
 
 prepare() {
-  cd "${pkgname}"
-  export RUSTUP_TOOLCHAIN=stable
-  msg2 "Cherrypick newer Smithay to fix regression"
-  git cherry-pick -n 0916d3599a91fe40503209e0431fcc888fa6b867
-  make vendor
+  cd cosmic-comp
+  cargo fetch --locked
+  sed 's/lto = "fat"/lto = "thin"/' -i Cargo.toml
+}
+
+pkgver() {
+  cd cosmic-comp
+  git describe --tags | sed 's/^epoch-//; s/-/./g'
 }
 
 build() {
-  cd "${pkgname}"
-  export RUSTUP_TOOLCHAIN=stable
-
-  # use lld
-  RUSTFLAGS="-C link-arg=-fuse-ld=lld"
-
-  # use nice to build with lower priority
-  nice make VENDOR='1' all
+  cd cosmic-comp
+  RUSTFLAGS+=" -C link-arg=-fuse-ld=lld"
+  make ARGS+=" --frozen --release"
 }
 
 package() {
-  cd "${pkgname}"
-  make DESTDIR="$pkgdir" install
+  cd cosmic-comp
+  make prefix='/usr' libexecdir='/usr/lib' DESTDIR="${pkgdir}" install
 }
+
+# vim: ts=2 sw=2 et:
