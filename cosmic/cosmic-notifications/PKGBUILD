@@ -1,48 +1,50 @@
-# Maintainer: Peter Jung <ptr1337@cachyos.org>
-# Maintainer: Mark Wagie <mark dot wagie at proton dot me>
+# Maintainer: Maxime Gauduin <alucryd@archlinux.org>
+# Contributor: Mark Wagie <mark.wagie@proton.me>
 # Contributor: soloturn <soloturn@gmail.com>
 
 pkgname=cosmic-notifications
 pkgver=1.0.0.alpha.1
-pkgrel=3
-pkgdesc="Layer Shell notifications daemon which integrates with COSMIC."
-arch=('x86_64')
-url="https://github.com/pop-os/cosmic-notifications"
-license=('GPL-3.0-or-later')
-groups=('cosmic')
+pkgrel=4
+pkgdesc='Layer Shell notifications daemon which integrates with COSMIC'
+arch=(x86_64)
+url=https://github.com/pop-os/cosmic-notifications
+license=(GPL-3.0-only)
+groups=(cosmic)
 depends=(
-  'hicolor-icon-theme'
-  'libxkbcommon'
-  'wayland'
+  cosmic-icon-theme
+  gcc-libs
+  glibc
+  libxkbcommon
+  wayland
 )
 makedepends=(
-  'cargo'
-  'git'
-  'intltool'
-  'just'
-  'lld'
+  cargo
+  git
+  just
+  lld
 )
-source=('git+https://github.com/pop-os/cosmic-notifications.git')
-sha256sums=('SKIP')
+_tag=e9abef567a928cfa88949dbbdb5c49bb87c2f6a0
+source=(git+https://github.com/pop-os/cosmic-notifications.git#tag=${_tag})
+b2sums=('bb8ab78fd417cbbd27ec57a362e34cc704143a4de0ce8bcc8508da521b9504980aa931de78c0a22f6cc80970d5c8967c321a355cfd086c191c8870f5d93379a4')
 
 prepare() {
-  cd "${pkgname}"
-  export RUSTUP_TOOLCHAIN=stable
-  cargo fetch --locked --target "$(rustc -vV | sed -n 's/host: //p')"
+  cd cosmic-notifications
+  cargo fetch --locked
+}
+
+pkgver() {
+  cd cosmic-notifications
+  git describe --tags | sed 's/^epoch-//; s/-/./g'
 }
 
 build() {
-  cd "${pkgname}"
-  export RUSTUP_TOOLCHAIN=stable
-
-  # use lld
-  RUSTFLAGS="-C link-arg=-fuse-ld=lld"
-
-  # use nice to build with lower priority
-  nice just build-release --frozen
+  cd cosmic-notifications
+  just build-release --frozen
 }
 
 package() {
-  cd "${pkgname}"
-  just rootdir="$pkgdir" install
+  cd cosmic-notifications
+  just rootdir="${pkgdir}" install
 }
+
+# vim: ts=2 sw=2 et:
