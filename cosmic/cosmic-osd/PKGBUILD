@@ -1,49 +1,51 @@
-# Maintainer: Peter Jung <ptr1337@cachyos.org>
-# Maintainer: Mark Wagie <mark dot wagie at proton dot me>
+# Maintainer: Maxime Gauduin <alucryd@archlinux.org>
+# Contributor: Mark Wagie <mark.wagie@proton.me>
 
 pkgname=cosmic-osd
 pkgver=1.0.0.alpha.1
-pkgrel=3
-pkgdesc="COSMIC OSD"
-arch=('x86_64')
-url="https://github.com/pop-os/cosmic-osd"
-license=('GPL-3.0-or-later')
-groups=('cosmic')
+pkgrel=4
+pkgdesc='COSMIC On-Screen Display'
+arch=(x86_64)
+url=https://github.com/pop-os/cosmic-osd
+license=(GPL-3.0-only)
+groups=(cosmic)
 depends=(
-  'libpulse'
-  'libxkbcommon'
-  'systemd-libs'
-  'wayland'
+  gcc-libs
+  glibc
+  libpulse
+  libxkbcommon
+  systemd-libs
+  wayland
 )
 makedepends=(
-  'cargo'
-  'git'
-  'lld'
+  cargo
+  git
+  lld
 )
-source=('git+https://github.com/pop-os/cosmic-osd.git#tag=epoch-1.0.0-alpha.1')
-sha256sums=('c81b40487abdc811924d7764ba4bfbd4f9e844e67f5beaa30f6cd1e5582b0d05')
+_tag=27fc5e5ba4bbed119a1fc85f840db0ade13dde85
+source=(git+https://github.com/pop-os/cosmic-osd.git#tag=${_tag})
+b2sums=('1e7665a1c4dfbabcb0ca181efc4545a6973c7ef7188266a426977d783db18318179015ba255e31450be2d85a8fa8266bd14aaf54baac4616728a303634662f1d')
 
 prepare() {
-  cd "${pkgname}"
-  export RUSTUP_TOOLCHAIN=stable
-  cargo fetch --locked --target "$(rustc -vV | sed -n 's/host: //p')"
+  cd cosmic-osd
+  cargo fetch --locked
+  sed 's|libexec|lib/polkit-1|g' -i Makefile src/subscriptions/polkit_agent_helper.rs
+}
 
-  # libexec > lib
-  sed -i 's|libexec|lib/polkit-1|g' Makefile src/subscriptions/polkit_agent_helper.rs
+pkgver() {
+  cd cosmic-osd
+  git describe --tags | sed 's/^epoch-//; s/-/./g'
 }
 
 build() {
-  cd "${pkgname}"
-  export RUSTUP_TOOLCHAIN=stable
-
-  # use lld
-  RUSTFLAGS="-C link-arg=-fuse-ld=lld"
-
-  # use nice to build with lower priority
-  ARGS+=" --frozen" nice make
+  cd cosmic-osd
+  RUSTFLAGS+=" -C link-arg=-fuse-ld=lld"
+  make ARGS+=" --frozen --release"
 }
 
 package() {
-  cd "${pkgname}"
-  make prefix='/usr' DESTDIR="$pkgdir" install
+  cd cosmic-osd
+  make prefix='/usr' DESTDIR="${pkgdir}" install
 }
+
+# vim: ts=2 sw=2 et:
