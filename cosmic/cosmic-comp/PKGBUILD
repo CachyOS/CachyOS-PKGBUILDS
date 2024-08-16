@@ -4,7 +4,7 @@
 
 pkgname=cosmic-comp
 pkgver=1.0.0.alpha.1
-pkgrel=4
+pkgrel=5
 pkgdesc='Compositor for the COSMIC desktop environment'
 arch=(x86_64)
 url='https://github.com/pop-os/cosmic-comp'
@@ -34,6 +34,8 @@ b2sums=('SKIP')
 
 prepare() {
   cd cosmic-comp
+  msg2 "Cherrypick newer Smithay to fix regression"
+  git cherry-pick -n 0916d3599a91fe40503209e0431fcc888fa6b867
   cargo fetch --locked
   sed 's/lto = "fat"/lto = "thin"/' -i Cargo.toml
 }
