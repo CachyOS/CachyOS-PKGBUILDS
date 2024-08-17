@@ -5,7 +5,7 @@
 pkgname=kwin
 pkgver=6.1.4
 _dirver=$(echo $pkgver | cut -d. -f1-3)
-pkgrel=4
+pkgrel=6
 pkgdesc='An easy to use, but flexible, composited Window Manager (CachyOS Version)'
 arch=(x86_64)
 url='https://kde.org/plasma-desktop/'
@@ -81,15 +81,19 @@ makedepends=(extra-cmake-modules
 optdepends=('maliit-keyboard: virtual keyboard for kwin-wayland')
 groups=(plasma)
 source=(https://download.kde.org/stable/plasma/$_dirver/$pkgname-$pkgver.tar.xz{,.sig}
-		https://invent.kde.org/plasma/kwin/-/merge_requests/6178.patch
-		tearing-dev.patch
-		fix-xwayland-copy-paste.patch::https://invent.kde.org/plasma/kwin/-/commit/7e23386d46d8441d31a1e82c210179546ee6cae1.patch)
+		https://invent.kde.org/plasma/kwin/-/merge_requests/6178.patch # Required for handheld edition
+		tearing-dev.patch # Tearing
+		fix-xwayland-copy-paste.patch::https://invent.kde.org/plasma/kwin/-/commit/7e23386d46d8441d31a1e82c210179546ee6cae1.patch # Fix copy and pasting to Xwayland applications.
+#		https://invent.kde.org/plasma/kwin/-/merge_requests/6204.patch # Screencast: Pipewire Add Explicit Sync support
+		https://invent.kde.org/plasma/kwin/-/merge_requests/6233.patch # allow triple buffering on NVIDIA, if KWIN_DRM_DISABLE_TRIPLE_BUFFERING=0 is set
+		)
 install=$pkgname.install
 sha256sums=('fcffce468dea23a92cad33ac1b1264c55c0799d497f54f6b8e23439dcdadeb3a'
             'SKIP'
-            '5fd0774e1277fbb2f7bbae6f4f78487a704521174b9e836b5933eeeafdf4ecd2'
+            'c6a95954f26a68b3def07fd9cd04910653ad8829f0150becee35ccf713d597ff'
             '26a75cd9b50ffcd705bf99e681f73a6f168bd17540b1976547f869662cd5fccf'
-            'edcac240dc84837462fb8bd17af3bfa77f690b1df5f149ef5a0ae783e24b20e2')
+            'edcac240dc84837462fb8bd17af3bfa77f690b1df5f149ef5a0ae783e24b20e2'
+            '11c18eca1e3bc79646ba2a2f61fdb6b9566a6f9f3dd06f4d73c8d3e2d3db6fe1')
 validpgpkeys=('E0A3EB202F8E57528E13E72FD7574483BB57B18D'  # Jonathan Esk-Riddell <jr@jriddell.org>
               '0AAC775BB6437A8D9AF7A3ACFE0784117FBCE11D'  # Bhushan Shah <bshah@kde.org>
               'D07BD8662C56CB291B316EB2F5675605C74E02CF'  # David Edmundson <davidedmundson@kde.org>
@@ -101,7 +105,11 @@ prepare() {
   msg2 "Add an option to allow Xwayland apps use libei input emulation without prompting"
   patch -Np1 < ../6178.patch
   msg2 "Fix copy and pasting to Xwayland applications."
-  patch -Np1 <../fix-xwayland-copy-paste.patch
+  patch -Np1 < ../fix-xwayland-copy-paste.patch
+#  msg2 "Screencast: Pipewire Add Explicit Sync support"
+#  patch -Np1 < ../6204.patch
+  msg2 "allow triple buffering on NVIDIA, if KWIN_DRM_DISABLE_TRIPLE_BUFFERING=0 is set"
+  patch -Np1 < ../6233.patch
 }
 
 build() {

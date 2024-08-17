@@ -462,7 +462,7 @@ index d795ee7d1c5..bd47d3c7deb 100644
 GitLab
 
 
-From 8868e52cfa8dccd3dc685de88a81cbfc1ffefcd9 Mon Sep 17 00:00:00 2001
+From d9067406b3d71af3c1405bd0af7460659872fdf9 Mon Sep 17 00:00:00 2001
 From: David Redondo <kde@david-redondo.de>
 Date: Fri, 12 Jul 2024 15:55:59 +0200
 Subject: [PATCH 4/4] Add option to control whether xwayland xtest will prompt
@@ -477,17 +477,17 @@ as we can get the client binary name from the eis client compared
 to the portal which receives nothing.
 ---
  src/kcms/xwayland/kwinxwaylandsettings.kcfg |  3 ++
- src/kcms/xwayland/ui/main.qml               | 14 ++++++++
+ src/kcms/xwayland/ui/main.qml               | 14 +++++++
  src/kwin.kcfg                               |  3 ++
  src/options.cpp                             | 11 ++++++
  src/options.h                               | 11 ++++++
  src/plugins/eis/CMakeLists.txt              |  3 +-
  src/plugins/eis/eisbackend.cpp              |  3 +-
- src/plugins/eis/eiscontext.cpp              | 40 +++++++++++----------
+ src/plugins/eis/eiscontext.cpp              | 40 +++++++++++---------
  src/plugins/eis/eiscontext.h                | 13 +++----
- src/plugins/eis/xwaylandeiscontext.cpp      | 40 +++++++++++++++++++++
- src/plugins/eis/xwaylandeiscontext.h        | 18 ++++++++++
- 11 files changed, 131 insertions(+), 28 deletions(-)
+ src/plugins/eis/xwaylandeiscontext.cpp      | 42 +++++++++++++++++++++
+ src/plugins/eis/xwaylandeiscontext.h        | 18 +++++++++
+ 11 files changed, 133 insertions(+), 28 deletions(-)
  create mode 100644 src/plugins/eis/xwaylandeiscontext.cpp
  create mode 100644 src/plugins/eis/xwaylandeiscontext.h
 
@@ -781,10 +781,10 @@ index 50de947a856..c14b17fb153 100644
  }
 diff --git a/src/plugins/eis/xwaylandeiscontext.cpp b/src/plugins/eis/xwaylandeiscontext.cpp
 new file mode 100644
-index 00000000000..ecd3fb2c65f
+index 00000000000..4400977c693
 --- /dev/null
 +++ b/src/plugins/eis/xwaylandeiscontext.cpp
-@@ -0,0 +1,40 @@
+@@ -0,0 +1,42 @@
 +#include "xwaylandeiscontext.h"
 +
 +#include "options.h"
@@ -792,6 +792,8 @@ index 00000000000..ecd3fb2c65f
 +#include <KLocalizedString>
 +#include <KMessageDialog>
 +#include <KStandardGuiItem>
++
++#include <unistd.h>
 +
 +namespace KWin
 +{
