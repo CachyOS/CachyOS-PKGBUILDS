@@ -1,0 +1,77 @@
+diff --git a/lib/pacutils/config.c b/lib/pacutils/config.c
+index 9b9397a..9243c26 100644
+--- a/lib/pacutils/config.c
++++ b/lib/pacutils/config.c
+@@ -54,6 +54,9 @@ struct _pu_config_setting {
+   {"DisableDownloadTimeout", PU_CONFIG_OPTION_DISABLEDOWNLOADTIMEOUT},
+   {"ParallelDownloads",      PU_CONFIG_OPTION_PARALLELDOWNLOADS},
+ 
++  {"DownloadUser",    PU_CONFIG_OPTION_DOWNLOADUSER},
++  {"DisableSandbox",    PU_CONFIG_OPTION_DISABLE_SANDBOX},
++
+   {"SigLevel",        PU_CONFIG_OPTION_SIGLEVEL},
+   {"LocalFileSigLevel",  PU_CONFIG_OPTION_LOCAL_SIGLEVEL},
+   {"RemoteFileSigLevel", PU_CONFIG_OPTION_REMOTE_SIGLEVEL},
+@@ -855,6 +858,9 @@ int pu_config_reader_next(pu_config_reader_t *reader) {
+           config->paralleldownloads = (int) pd;
+           break;
+         }
++        case PU_CONFIG_OPTION_DOWNLOADUSER:
++          SETSTROPT(config->downloaduser, mini->value);
++          break;
+         break;
+         default:
+           reader->status = PU_CONFIG_READER_STATUS_UNKNOWN_OPTION;
+@@ -883,6 +889,9 @@ int pu_config_reader_next(pu_config_reader_t *reader) {
+         case PU_CONFIG_OPTION_DISABLEDOWNLOADTIMEOUT:
+           config->disabledownloadtimeout = 1;
+           break;
++        case PU_CONFIG_OPTION_DISABLE_SANDBOX:
++          config->disablesandbox = 1;
++          break;
+         default:
+           reader->status = PU_CONFIG_READER_STATUS_UNKNOWN_OPTION;
+           break;
+diff --git a/lib/pacutils/config.h b/lib/pacutils/config.h
+index f842f9d..0a9992d 100644
+--- a/lib/pacutils/config.h
++++ b/lib/pacutils/config.h
+@@ -42,6 +42,8 @@ typedef enum pu_config_option_t {
+   PU_CONFIG_OPTION_ILOVECANDY,
+   PU_CONFIG_OPTION_DISABLEDOWNLOADTIMEOUT,
+   PU_CONFIG_OPTION_PARALLELDOWNLOADS,
++  PU_CONFIG_OPTION_DOWNLOADUSER,
++  PU_CONFIG_OPTION_DISABLE_SANDBOX,
+ 
+   PU_CONFIG_OPTION_SIGLEVEL,
+   PU_CONFIG_OPTION_LOCAL_SIGLEVEL,
+@@ -82,6 +84,7 @@ typedef struct pu_config_t {
+   char *gpgdir;
+   char *logfile;
+   char *xfercommand;
++  char *downloaduser;
+ 
+   int paralleldownloads;
+ 
+@@ -92,6 +95,7 @@ typedef struct pu_config_t {
+   pu_config_bool_t usesyslog;
+   pu_config_bool_t verbosepkglists;
+   pu_config_bool_t disabledownloadtimeout;
++  pu_config_bool_t disablesandbox;
+ 
+   int siglevel;
+   int localfilesiglevel;
+diff --git a/src/pacconf.c b/src/pacconf.c
+index 7d1e8a7..7c64ff6 100644
+--- a/src/pacconf.c
++++ b/src/pacconf.c
+@@ -310,6 +310,9 @@ void dump_options(void) {
+   show_bool("CheckSpace", config->checkspace);
+   show_bool("VerbosePkgLists", config->verbosepkglists);
+   show_bool("ILoveCandy", config->ilovecandy);
++  show_bool("DisableSandbox", config->disablesandbox);
++
++  show_str("DownloadUser", config->downloaduser);
+ 
+   show_int("ParallelDownloads", config->paralleldownloads);
+ 

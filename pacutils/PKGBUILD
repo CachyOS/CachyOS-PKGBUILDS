@@ -1,0 +1,50 @@
+# Maintainer: Johannes Löthberg <johannes@kyriasis.com>
+
+pkgname=pacutils
+pkgver=0.14.0
+pkgrel=3
+
+pkgdesc='Helper tools for libalpm'
+url='https://github.com/andrewgregory/pacutils'
+arch=('x86_64')
+license=('MIT')
+
+depends=(
+  'glibc'
+  'libarchive'
+  'pacman'
+)
+makedepends=('git' 'perl')
+
+source=("git+https://github.com/andrewgregory/pacutils.git#tag=v$pkgver"
+        add-sandbox-config-options.patch)
+sha256sums=('d506e110803a120740b796254fcc599fff5026bff82263a43dac10d6eb3f0a77')
+validpgpkeys=('0016846EDD8432261C62CB63DF3891463C352040')
+
+prepare() {
+  cd pacutils
+
+  patch -Np1 -i ../add-sandbox-config-options.patch
+}
+
+build() {
+  cd pacutils
+
+  export PATH="$PATH:/usr/bin/core_perl/"
+  make CFLAGS="$CFLAGS $LDFLAGS" SYSCONFDIR=/etc LOCALSTATEDIR=/var
+}
+
+check() {
+  cd pacutils
+  export PATH="$PATH:/usr/bin/core_perl/"
+  make check
+}
+
+package() {
+  cd pacutils
+  export PATH="$PATH:/usr/bin/core_perl/"
+  make DESTDIR="$pkgdir" PREFIX=/usr install
+  install -Dm644 COPYING "$pkgdir"/usr/share/licenses/"$pkgname"/COPYING
+}
+
+# vim: set ft=PKGBUILD et sw=2:

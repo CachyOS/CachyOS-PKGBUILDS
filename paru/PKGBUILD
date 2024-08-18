@@ -1,25 +1,21 @@
 # Maintainer: Morgan <morganamilo@archlinux.org>
 pkgname=paru
 pkgver=2.0.3
-pkgrel=2
+pkgrel=3
 pkgdesc='Feature packed AUR helper'
 url='https://github.com/morganamilo/paru'
-source=("$pkgname-$pkgver.tar.gz::https://github.com/Morganamilo/paru/archive/v$pkgver.tar.gz"
-        alpm-14.patch)
+source=("$pkgname-$pkgver.tar.gz::https://github.com/Morganamilo/paru/archive/v$pkgver.tar.gz")
 backup=("etc/paru.conf")
 arch=('i686' 'pentium4' 'x86_64' 'arm' 'armv7h' 'armv6h' 'aarch64')
-license=(GPL-3.0-or-later)
+license=('GPL-3.0-or-later')
 makedepends=('cargo')
-depends=('git' 'pacman')
+depends=('git' 'pacman' 'libalpm.so>=14')
 optdepends=('bat: colored pkgbuild printing' 'devtools: build in chroot and downloading pkgbuilds')
-sha256sums=('ccf6defc4884d580a4b813cc40323a0389ffc9aa4bdc55f3764a46b235dfe1e0'
-            'a218294d821e4fadc20da1af32347539d490c6e112e209a361e7fe8d3470fb96')
+sha256sums=('ccf6defc4884d580a4b813cc40323a0389ffc9aa4bdc55f3764a46b235dfe1e0')
 
 prepare() {
   cd "$pkgname-$pkgver"
   cargo fetch --locked --target "$(rustc -vV | sed -n 's|host: ||p')"
-
-  patch -Np1 -i ../alpm-14.patch
 }
 
 build () {
