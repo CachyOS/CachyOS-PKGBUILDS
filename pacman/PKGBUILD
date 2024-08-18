@@ -9,14 +9,13 @@
 
 _staging=false
 pkgname=pacman
-pkgver=7.0.0.r7536.ec885872
-_pkgver=7.0.0
+pkgver=7.0.0.r2.g6393505
 _sqlitever=$(curl -s 'https://archlinux.org/packages/search/json/?name=sqlite' | grep -oP '"pkgver":\s*"\K[^"]+' | head -n 1 | awk -F. '{
     printf "%d%02d%02d", $1, $2, $3;
     if (NF == 4) { printf "%02d", $4 }
     else { printf "00" }
 }')
-pkgrel=2
+pkgrel=1
 pkgdesc="A library-based package manager with dependency support. CachyOS fork."
 arch=('x86_64' 'aarch64')
 url="https://www.archlinux.org/pacman/"
@@ -61,9 +60,8 @@ backup=(etc/pacman.conf
 #options=('!lto') -- should we put no lto here??
 #validpgpkeys=('6645B0A8C7005E78DB1D7864F99FFE0FEAE999BD'  # Allan McRae <allan@archlinux.org>
 #              'B8151B117037781095514CA7BBDFFC92306B1121') # Andrew Gregory (pacman) <andrew@archlinux.org>
-_commit="ec8858726a8ab82a5adaf310c550d390ed7b2cd0"
-source=(
-        git+https://github.com/CachyOS/pacman.git#commit=${_commit}?signed
+_commit="639350593fdc006e38756b4590935d1dbd17bc73"
+source=("git+https://github.com/CachyOS/pacman.git#commit=${_commit}?signed"
         pacman.conf
         makepkg.conf
         alpm.sysusers
@@ -72,7 +70,7 @@ source=(
         disable-always-stale.patch
         )
 source_aarch64=(fix-alpm-crate-for-aarch64.patch)
-sha256sums=('e92abe3836e3227a42e72a0a41be825ff16e809bfa44a45e850b77ac09d6b978'
+sha256sums=('0fda98d94d2e26211870c102711d4be50256144720937d188e291e8dbb1fd310'
             'bc80e9d0439caddd29b99a69b5060b5589cad2398c23abc5b2b8b990fae6ad8c'
             '3efb029c693729feb9a24cc3624e48a0875c1c784826f0765eb4ff43e9747c80'
             'c8760d7ebb6c9817d508c691c67084be251cd9c8811ee1ccf92c1278bad74c1c'
@@ -91,7 +89,7 @@ fi
 
 pkgver() {
   cd "$pkgname"
-  printf "${_pkgver}.r%s.%s" "$(git rev-list --abbrev=7 --count HEAD)" "$(git rev-parse --short HEAD)"
+  git describe --abbrev=7 --tags --match 'v*' | sed 's/^v//;s/\([^-]*-g\)/r\1/;s/-/./g'
 }
 
 prepare() {
