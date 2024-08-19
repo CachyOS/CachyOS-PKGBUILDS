@@ -2,7 +2,7 @@
 
 pkgname=nvidia-open-dkms
 pkgver=560.31.02
-pkgrel=1
+pkgrel=2
 pkgdesc="NVIDIA open kernel modules"
 arch=('x86_64')
 url="https://github.com/NVIDIA/open-gpu-kernel-modules"
@@ -11,10 +11,12 @@ makedepends=('linux-cachyos-headers')
 license=('MIT AND GPL-2.0-only')
 source=("$pkgname-$pkgver.tar.gz::https://github.com/NVIDIA/open-gpu-kernel-modules/archive/refs/tags/${pkgver}.tar.gz"
         make-modeset-fbdev-default.patch
-        ibt.patch)
+        ibt.patch
+        fix-zen5.patch)
 sha512sums=('a3f85af2220426cc84fe721fd4386fa3b5cd84e83782c495303fbad35a20b8b784fce91d4563a8bdac9c66a4e7a60ecd0a3518a0716fbec1e59e3e45f3f4bc71'
             'f19a7d52c6e7f5bd6818658c2b11adaaf4ad05016ec0acc73a42417748ed4bf81b8394c077a6f5aba9dfcf6ab01a578692ed1e9d3c2ab583fdaa56166bba05f2'
-            '263c4c5e75ef8cb8ca2641c022dfaf8bd9222fadf68ed15120b0ae7dd9cc901a04ce2e55625d513a0995759c9d82dfbdc4c33d4751159124915d7404b1400e34')
+            '263c4c5e75ef8cb8ca2641c022dfaf8bd9222fadf68ed15120b0ae7dd9cc901a04ce2e55625d513a0995759c9d82dfbdc4c33d4751159124915d7404b1400e34'
+            '2161dea1e8e237498f21698110aa3081c503e0496780766d0d5839bad0e01b686aad07fa05af3316dd5c3f40d71db0a159d225eaf02efa094b6a9db9f529a76e')
 
 prepare() {
   cd open-gpu-kernel-modules-${pkgver}
@@ -22,6 +24,10 @@ prepare() {
   patch -Np1 < "$srcdir"/make-modeset-fbdev-default.patch
   msg2 "IBT fix"
   patch -Np1 < "$srcdir"/ibt.patch
+  msg2 "Add fix for Zen5 Error Printing"
+  # NVIDIA Developers shared this patch for me, currently on Zen5 following error gets print:
+  # VRM: cpuidInfoAMD: Unrecognized AMD processor in cpuidInfoAMD
+  patch -Np1 < "$srcdir"/fix-zen5.patch
 
   # Attempt to make this reproducible
   sed -i "s/^HOSTNAME.*/HOSTNAME = echo cachyos"/ utils.mk
