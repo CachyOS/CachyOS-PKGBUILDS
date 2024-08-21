@@ -6,17 +6,19 @@ pkgrel=1
 pkgdesc="NVIDIA open kernel modules"
 arch=('x86_64')
 url="https://github.com/NVIDIA/open-gpu-kernel-modules"
-depends=("nvidia-utils=${pkgver}" 'libglvnd')
+depends=("nvidia-utils" 'libglvnd')
 makedepends=('linux-cachyos-headers')
 license=('MIT AND GPL-2.0-only')
 source=("$pkgname-$pkgver.tar.gz::https://github.com/NVIDIA/open-gpu-kernel-modules/archive/refs/tags/${pkgver}.tar.gz"
         make-modeset-fbdev-default.patch
         ibt.patch
-        fix-zen5.patch)
+        fix-zen5.patch
+        6.11-fbdev.patch)
 sha512sums=('a0cbe05fc8acbb4769fa5320d6bfe2033fd31775036e984278cdf7e67ebd801bd8991d4d1626884a4ff729d3900c969f385caea7ae049e3d918a1ea60e45890a'
             'f19a7d52c6e7f5bd6818658c2b11adaaf4ad05016ec0acc73a42417748ed4bf81b8394c077a6f5aba9dfcf6ab01a578692ed1e9d3c2ab583fdaa56166bba05f2'
             '263c4c5e75ef8cb8ca2641c022dfaf8bd9222fadf68ed15120b0ae7dd9cc901a04ce2e55625d513a0995759c9d82dfbdc4c33d4751159124915d7404b1400e34'
-            '2161dea1e8e237498f21698110aa3081c503e0496780766d0d5839bad0e01b686aad07fa05af3316dd5c3f40d71db0a159d225eaf02efa094b6a9db9f529a76e')
+            '2161dea1e8e237498f21698110aa3081c503e0496780766d0d5839bad0e01b686aad07fa05af3316dd5c3f40d71db0a159d225eaf02efa094b6a9db9f529a76e'
+            'f7078e0bf1657ab34e54fa86b1993d7870100f26eb23f9e5e589b853f9afc510818caa0d74004071c8d041ff198e2475c7ced793dcd8163e934d0c741af8ee9d')
 
 prepare() {
   cd open-gpu-kernel-modules-${pkgver}
@@ -28,7 +30,8 @@ prepare() {
   # NVIDIA Developers shared this patch for me, currently on Zen5 following error gets print:
   # VRM: cpuidInfoAMD: Unrecognized AMD processor in cpuidInfoAMD
   patch -Np1 < "$srcdir"/fix-zen5.patch
-
+  msg2 "Fix fbdev on 6.11 Kernel"
+  patch -Np1 < "$srcdir"/6.11-fbdev.patch
   # Attempt to make this reproducible
   sed -i "s/^HOSTNAME.*/HOSTNAME = echo cachyos"/ utils.mk
   sed -i "s/^WHOAMI.*/WHOAMI = echo cachybuilder"/ utils.mk
