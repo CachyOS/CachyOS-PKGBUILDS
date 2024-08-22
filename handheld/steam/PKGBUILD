@@ -4,8 +4,8 @@
 # Contributor: K900 <k0009000@gmail.com>
 
 pkgname=steam
-pkgver=1.0.0.79
-pkgrel=7
+pkgver=1.0.0.81
+pkgrel=2
 pkgdesc="Valve's digital software delivery system"
 url='https://steampowered.com/'
 arch=('x86_64')
@@ -50,21 +50,23 @@ depends_x86_64=(
   lib32-vulkan-icd-loader
 )
 optdepends=('steam-native-runtime: steam native runtime support')
-source=(https://repo.steampowered.com/${pkgname}/pool/${pkgname}/s/${pkgname}/${pkgname}_${pkgver}{.tar.gz,.dsc}
+# the beta directory is a superset of stable and also contains the stable releases
+source=(https://repo.steampowered.com/${pkgname}/archive/stable/${pkgname}_${pkgver}{.tar.gz,.dsc}
         steam-runtime.sh
         deckify.patch)
-sha512sums=('52d1a23f43012af641ebc9a03a444b6944ea966e0814619c890e792442e760a96bf570a84e4f8b38552904dafb6572a92de31154ddefe1eb8d702106605c8497'
-            '68b59c7b4e9d55b60f92b466e01c10b5d84309e5822adb6bfdee8790a77357eb513166d958f25fc8f17f4f786b2dae19f281c330ff7bc34d4dbb17a4b263c99a'
+sha512sums=('adbb89f3af069d9ff417ca7789a3d275e6485212ec8e08a4b2d110a2f370fc6d1a564895ba58b0548ea1521ee90029a4bb397ef86f29e093907abd562f65d07f'
+            '8cab6ca49601936be3edfe334e438654861d728c330bf268a7b8c2f82bb3e148c040c464f9af948d10383714300dd87e20605dc8cb382059be465006953f0352'
             '5e75c019e9fe8c67d686c4e3343dac1180a69a4bdb7d39b333415c63201eef9b98da5619dbf6fd8daa6884e65bc7f8afc9e52778682425e5a75987d527eae6f0'
             '899c572d6a779e02a9a5f956143e9649c9e1ac76117b53efc72f29c017f4fff09013dd58155a95c59b15e15363cf49213e47290af228b76eed1003cfcef4d17b')
-b2sums=('73538d120182b37cca15e99512af6c689ff29e47cd37ea5bdd0d754f42aacd69aa71125e3c07140d8b8eaf55ee980babdfa6f7a1de8daf8c6ce8af4b03608cbc'
-        '27f2df8198d0fcf5173f3b4e3cef38d9cfc122aa4e5383ee5924597892137918cbcf5fce813f6379412b5a61c676b13f85ef70798ab94a91d67eaaf8583b7250'
+b2sums=('3bd5deaa2aab8988bb071af3b2400699440af23795bad55f2040581431e2fe1aa02221bb4e4455677207689e9c7383cdf09290fd9b50334ce1ffabcd6c439f4b'
+        '517fe4d1e19d79bd2e60dcaf2019bba57f232d8b8c8cf2c9f9e99e77101c3040d738133ff4b53eebf4dcd29c7814c9e8ead6fd9f718f73c17ada5e68b3d1c15d'
         'c6bac99336b7c30fec7cdbaf9e949555c687dd9dff50bcae136134d6314f4b841f5fc66ddb2caac1b003690b926fd4afbdc11da143b4674db4b75f27709fdd23'
         'e16a5754a1750ac001f70960b9f521595789cf159b21da9cc4727e4b2cc44462d5f22437eb76b4b51635006b38b2bfc421c5eac67d6677c0456da697859e6b23')
 validpgpkeys=('BA1816EF8E75005FCF5E27A1F24AEA9FB05498B7') # linux@steampowered.com
 
 prepare() {
   cd ${pkgname}-launcher
+
   patch -Np1 < ../deckify.patch
   # separated runtime/native desktop files
   sed -r 's|(Name=Steam)|\1 (Runtime)|' -i steam.desktop
