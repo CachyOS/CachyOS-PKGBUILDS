@@ -2,12 +2,10 @@ diff --git a/bin_steam.sh b/bin_steam.sh
 index fb81d47..134f94e 100755
 --- a/bin_steam.sh
 +++ b/bin_steam.sh
-@@ -200,6 +206,22 @@ fi
- 
+@@ -229,4 +229,20 @@
  # go to the install directory and run the client
- cp "$LAUNCHSTEAMBOOTSTRAPFILE" "$LAUNCHSTEAMDIR/bootstrap.tar.xz"
--cd "$LAUNCHSTEAMDIR"
-+
+ cd "$LAUNCHSTEAMDIR"
+ 
 +STEAMDEV="$LAUNCHSTEAMDIR"/steam_dev.cfg
 +
 +if [[ ! -f "$STEAMDEV" ]]; then
@@ -16,13 +14,12 @@ index fb81d47..134f94e 100755
 +
 +if [[ -f "$STEAMDEV" ]]; then
 +  if [[ -z $(cat "$STEAMDEV" | grep "nClientDownloadEnableHTTP2PlatformLinux") ]]; then
-+	echo "@nClientDownloadEnableHTTP2PlatformLinux 0" >> "$STEAMDEV"
++       echo "@nClientDownloadEnableHTTP2PlatformLinux 0" >> "$STEAMDEV"
 +  fi
 +
 +  if [[ -z $(cat "$STEAMDEV" | grep "fDownloadRateImprovementToAddAnotherConnection") ]]; then
-+	echo "@fDownloadRateImprovementToAddAnotherConnection 1.0" >> "$STEAMDEV"
++       echo "@fDownloadRateImprovementToAddAnotherConnection 1.0" >> "$STEAMDEV"
 +  fi
 +fi
 +
- 
  exec "$LAUNCHSTEAMDIR/$STEAMBOOTSTRAP" "$@"
