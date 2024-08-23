@@ -25,14 +25,14 @@ scx_lavd_default() {
 steamos_steam() {
   # Grab the steam bootstrap for first boot
 
-  URL="https://steamdeck-packages.steamos.cloud/archlinux-mirror/jupiter-main/os/x86_64/steam-jupiter-stable-1.0.0.78-1.2-x86_64.pkg.tar.zst"
+  URL="https://steamdeck-packages.steamos.cloud/archlinux-mirror/jupiter-main/os/x86_64/steam-jupiter-stable-1.0.0.79-1.1-x86_64.pkg.tar.zst"
   TMP_PKG="/tmp/package.pkg.tar.zst"
   OUTPUT_FILE="/tmp/bootstraplinux_ubuntu12_32.tar.xz"
   TARGET_FILE="/usr/lib/steam/bootstraplinux_ubuntu12_32.tar.xz"
 
   echo "Downloading $URL"
   curl -o "$TMP_PKG" "$URL"
-  ZST_CHECKSUM=e94242167c5af25a87b6ffd92963fa8c15263b9a2838bcc0c3a36f918e5ba21c64984be20f718096ff1fed4ec52d49846239695b573db21e1c4ffce9cd493bc1
+  ZST_CHECKSUM=54b40e62f20202c5e9be83f7be9130976327a51981c6ac5841f83738ea191c168d6974563bcfe82b6a116c680e45a9dfe15709eb39f94a9f6cc1bcc7a53b7996
   TMP_PKG_CHECKSUM=$(sha512sum ${TMP_PKG} | cut -d " " -f1)
   if [[ "$ZST_CHECKSUM" == "$TMP_PKG_CHECKSUM" ]]; then
      echo "Extracting $OUTPUT_FILE"
@@ -41,7 +41,7 @@ steamos_steam() {
      echo "Download failed!"
      exit 1
   fi
-   XZ_CHECKSUM=17b7011fe7ae13834aa1f722724abfc3829ef8632bbabec2ae6b53ef0a9b6f1fc4db61b32056c62401e5aeb001e0f00d9e20f8ea045347b91cbe84ad4d0a919b
+   XZ_CHECKSUM=ba46762da3a809735e57c84afea525f703e6a5c67d2ab14e2dde949f2fdb490f198eb147deb5297349a788e5645949490574175935e66dfe11b6f9d4069140cc
   BS_CHECKSUM=$(sha512sum ${OUTPUT_FILE} | cut -d " " -f1)
   if [[ "$XZ_CHECKSUM" == "$BS_CHECKSUM" ]]; then
      echo "moving $OUTPUT_FILE to $TARGET_FILE"
@@ -59,7 +59,8 @@ post_install() {
     for service in "${SERVICES[@]}"; do
         systemctl enable "$service" --now
     done
-
+  
+  steamos_steam
   # Update users sddm config to reflect the changes
   echo "Updating Handheld Configs."
   update_user
