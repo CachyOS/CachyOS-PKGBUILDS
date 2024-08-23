@@ -7,16 +7,16 @@
 # toolchain build order: linux-api-headers->glibc->binutils->gcc->glibc->binutils->gcc
 # NOTE: libtool requires rebuilt with each new gcc version
 
-# ENABLE x86-64-v3 ASFLAGS optimization
-_optimize_v3=${_optimize_v3-y}
+# ENABLE x86-64-v3 optimization
+_optimize_v3=${_optimize_v3-}
 
-# ENABLE x86-64-v4 ASFLAGS optimization
+# ENABLE x86-64-v4 optimization
 _optimize_v4=${_optimize_v4-}
 
 pkgname=(gcc gcc-libs lib32-gcc-libs gcc-ada gcc-d gcc-fortran gcc-go gcc-m2 gcc-objc gcc-rust lto-dump libgccjit)
 pkgver=14.2.1+r32+geccf707e5ce
 _commit=eccf707e5ceb7e405ffe4edfbcae2f769b8386cf
-pkgrel=2
+pkgrel=3
 pkgdesc='The GNU Compiler Collection'
 arch=(x86_64)
 license=(GPL-3.0-with-GCC-exception GFDL-1.3-or-later)
@@ -121,11 +121,17 @@ build() {
   export CXXLAGS+=" -fno-semantic-interposition"
 
   if [ -n "$_optimize_v3" ]; then
-    export ASFLAGS="-D__AVX__=1 -D__AVX2__=1 -msse2avx -D__FMA__=1 "
-  elif [-n "$_optimize_v4" ]; then
-    export ASFLAGS="-D__AVX__=1 -D__AVX2__=1 -D__AVX512__=1 -msse2avx -D__FMA__=1 "
+    export ASFLAGS+="-D__AVX__=1 -D__AVX2__=1 -msse2avx -D__FMA__=1 "
+    export LDFLAGS+=" -Wl,-z,max-page-size=0x1000"
+    export CFLAGS+=" -Wl,-z,max-page-size=0x1000"
+    export CXXFLAGS+=" -Wl,-z,max-page-size=0x1000"
+  elif [ -n "$_optimize_v4" ]; then
+    export ASFLAGS+=" -D__AVX__=1 -D__AVX2__=1 -D__AVX512__=1 -msse2avx -D__FMA__=1 "
+    export LDFLAGS+=" -Wl,-z,max-page-size=0x1000"
+    export CFLAGS+=" -Wl,-z,max-page-size=0x1000"
+    export CXXFLAGS+=" -Wl,-z,max-page-size=0x1000"
   else
-    unset AFLAGS
+    echo "Do not set any custom Asembler Flags"
   fi
 
   "$srcdir/gcc/configure" \
