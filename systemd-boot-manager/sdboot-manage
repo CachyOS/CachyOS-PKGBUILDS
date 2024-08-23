@@ -60,22 +60,16 @@ export LINUX_OPTIONS \
     DISCARD \
     INITRD_PREFIX=initramfs
 
+[[ -f ${config} ]] && . "${config}"
+
 # Sources additional config files
-# #APPENDED_LINUX_OPTIONS do not overwrite each other and instead get merged to be added to the end of the kernel cmdline
 # Firstly loads from /usr/lib/sdboot-manage.conf.d then /etc/sdboot-manage.conf.d
 # Files should be loaded alphabetically
-CONSTRUCTED_LINUX_OPTIONS=""
+# These files are loaded after and therefore overwrite the main config use += if you want to append
 for file in /usr/lib/sdboot-manage.conf.d/*.conf /etc/sdboot-manage.conf.d/*.conf; do
     #Source files if exists
     [[ -f "${file}" ]] && . "${file}"
-    #Check if variable is non empty if so append.
-    [[ -n "${APPENDED_LINUX_OPTIONS}" ]] && CONSTRUCTED_LINUX_OPTIONS+=" ${APPENDED_LINUX_OPTIONS}"
-    #Delete variable to be sure it gets set by next source
-    unset APPENDED_LINUX_OPTIONS
 done;
-
-# Load the config file after as user options should always win over package provided configs
-[[ -f ${config} ]] && . "${config}"
 
 get_entry_root() {
     echo -n "$ESP/loader/entries/"
