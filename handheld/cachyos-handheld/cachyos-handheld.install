@@ -1,4 +1,4 @@
-SERVICES=("bluetooth")
+SERVICES=("bluetooth" "scx")
 
 
 update_user() {
@@ -19,7 +19,7 @@ update_user() {
 }
 
 scx_lavd_default() {
-  sed -i 's/SCX_SCHEDULER=scx_rusty/SCX_SCHEDULER=scx_lavd/' /etc/default/scx
+  sed -i 's/SCX_SCHEDULER=.*/SCX_SCHEDULER=scx_lavd/' /etc/default/scx
 }
 
 steamos_steam() {
