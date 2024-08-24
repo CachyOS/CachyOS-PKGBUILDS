@@ -60,15 +60,11 @@ prepare() {
 build() {
 
     if [ -n "$_optimize_v3" ]; then
-      export ASFLAGS+="-D__AVX__=1 -D__AVX2__=1 -msse2avx -D__FMA__=1 "
+      export ASFLAGS+=" -D__AVX__=1 -D__AVX2__=1 -msse2avx -D__FMA__=1 "
       export LDFLAGS+=" -Wl,-z,max-page-size=0x1000"
-      export CFLAGS+=" -Wl,-z,max-page-size=0x1000"
-      export CXXFLAGS+=" -Wl,-z,max-page-size=0x1000"
     elif [ -n "$_optimize_v4" ]; then
       export ASFLAGS+=" -D__AVX__=1 -D__AVX2__=1 -D__AVX512__=1 -msse2avx -D__FMA__=1 "
       export LDFLAGS+=" -Wl,-z,max-page-size=0x1000"
-      export CFLAGS+=" -Wl,-z,max-page-size=0x1000"
-      export CXXFLAGS+=" -Wl,-z,max-page-size=0x1000"
     else
       echo "Do not set any custom Asembler Flags"
     fi
