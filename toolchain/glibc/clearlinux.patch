@@ -1,0 +1,107 @@
+# This is a collection of cherry picked clearlinux patches from https://github.com/clearlinux-pkgs/glibc
+# Following will be used in this patch:
+# https://github.com/clearlinux-pkgs/glibc/blob/main/tune_adaptive_spin.patch
+# https://github.com/clearlinux-pkgs/glibc/blob/main/0001-Set-vector-width-and-alignment-to-fix-GCC-AVX-issue.patch
+# https://github.com/clearlinux-pkgs/glibc/blob/main/disable-vectorization-even-more.patch
+
+--- glibc-2.37/sysdeps/generic/adaptive_spin_count.h~	2023-02-01 03:27:45.000000000 +0000
++++ glibc-2.37/sysdeps/generic/adaptive_spin_count.h	2023-04-20 16:24:07.132939021 +0000
+@@ -19,4 +19,4 @@
+ /* The choice of 100 spins for the default spin count for an adaptive spin
+    is a completely arbitrary choice that has not been evaluated thoroughly
+    using modern hardware.  */
+-#define DEFAULT_ADAPTIVE_COUNT 100
++#define DEFAULT_ADAPTIVE_COUNT 5000
+
+From 0c62c38deb339d973ac5eaf3476441f304473938 Mon Sep 17 00:00:00 2001
+From: Guobing Chen <guobing.chen@intel.com>
+Date: Tue, 21 May 2019 15:53:18 +0800
+Subject: [PATCH] Set vector-width and alignment to fix GCC AVX issue
+
+GCC does not always provide optimized binary code when compile under
+arch=haswell or arch=skylake-avx512. Some generated functions like
+libm's sin/cos/sincos/sqrt are even performing worse under AVX2/AVX512
+compiling options. This patch restrict the vector-width case-by-case for
+some senstive libm functions, and also add alignment (align(64)) to make
+related functions perform good.
+
+With this patch, on AVX2/AVX512 platforms, sqrt with 11~13% better
+performance, exp with 24~26% better performance, exp2 with 7~9% better
+performance. And sincos can performs ~97% better on AVX512 platform.
+
+Signed-off-by: Guobing Chen <guobing.chen@intel.com>
+---
+ math/w_sqrt_compat.c            | 1 +
+ sysdeps/ieee754/dbl-64/e_exp.c  | 1 +
+ sysdeps/ieee754/dbl-64/e_exp2.c | 1 +
+ sysdeps/x86_64/fpu/Makefile     | 3 +++
+ 4 files changed, 6 insertions(+)
+
+diff --git a/math/w_sqrt_compat.c b/math/w_sqrt_compat.c
+index cc5ba4b7..d977ec4c 100644
+--- a/math/w_sqrt_compat.c
++++ b/math/w_sqrt_compat.c
+@@ -26,6 +26,7 @@
+ #if LIBM_SVID_COMPAT
+ /* wrapper sqrt */
+ double
++__attribute__((aligned(64)))
+ __sqrt (double x)
+ {
+   if (__builtin_expect (isless (x, 0.0), 0) && _LIB_VERSION != _IEEE_)
+diff --git a/sysdeps/ieee754/dbl-64/e_exp.c b/sysdeps/ieee754/dbl-64/e_exp.c
+index 853d6ca7..7290caab 100644
+--- a/sysdeps/ieee754/dbl-64/e_exp.c
++++ b/sysdeps/ieee754/dbl-64/e_exp.c
+@@ -94,6 +94,7 @@ top12 (double x)
+ 
+ double
+ SECTION
++__attribute__((aligned(64)))
+ __exp (double x)
+ {
+   uint32_t abstop;
+diff --git a/sysdeps/ieee754/dbl-64/e_exp2.c b/sysdeps/ieee754/dbl-64/e_exp2.c
+index 22cade8b..fe20e84c 100644
+--- a/sysdeps/ieee754/dbl-64/e_exp2.c
++++ b/sysdeps/ieee754/dbl-64/e_exp2.c
+@@ -87,6 +87,7 @@ top12 (double x)
+ }
+ 
+ double
++__attribute__((aligned(64)))
+ __exp2 (double x)
+ {
+   uint32_t abstop;
+diff --git a/sysdeps/x86_64/fpu/Makefile b/sysdeps/x86_64/fpu/Makefile
+index b5f95890..30c71c84 100644
+--- a/sysdeps/x86_64/fpu/Makefile
++++ b/sysdeps/x86_64/fpu/Makefile
+@@ -240,4 +240,7 @@ endif
+ # Limit vector width to 128 bits to work around this issue.  It improves
+ # performance of sin and cos by more than 40% on Skylake.
+ CFLAGS-branred.c = -mprefer-vector-width=128
++CFLAGS-s_sincos.c = -mprefer-vector-width=256
++CFLAGS-e_exp.c = -mprefer-vector-width=128
++CFLAGS-e_exp2.c = -mprefer-vector-width=128
+ endif
+-- 
+2.21.0
+
+diff --git a/sysdeps/x86_64/fpu/Makefile b/sysdeps/x86_64/fpu/Makefile
+index b82cd126..56e68f04 100644
+--- a/sysdeps/x86_64/fpu/Makefile
++++ b/sysdeps/x86_64/fpu/Makefile
+@@ -136,8 +136,8 @@ ifeq ($(subdir)$(config-cflags-mprefer-vector-width),mathyes)
+ #
+ # Limit vector width to 128 bits to work around this issue.  It improves
+ # performance of sin and cos by more than 40% on Skylake.
+-CFLAGS-branred.c = -mprefer-vector-width=128
+-CFLAGS-s_sincos.c = -mprefer-vector-width=256
+-CFLAGS-e_exp.c = -mprefer-vector-width=128
+-CFLAGS-e_exp2.c = -mprefer-vector-width=128
++CFLAGS-branred.c = -mprefer-vector-width=128 -fno-tree-vectorize
++CFLAGS-s_sincos.c = -mprefer-vector-width=256 -fno-tree-vectorize
++CFLAGS-e_exp.c = -mprefer-vector-width=128 -fno-tree-vectorize
++CFLAGS-e_exp2.c = -mprefer-vector-width=128 -fno-tree-vectorize
+ endif
