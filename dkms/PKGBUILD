@@ -8,8 +8,22 @@ pkgdesc='Dynamic Kernel Modules System'
 arch=('any')
 url='https://github.com/dell/dkms'
 license=(GPL-2.0-or-later)
-depends=('coreutils' 'bash' 'gawk' 'sed' 'kmod' 'gcc' 'make' 'patch'
-         'clang' 'llvm' 'lld')
+depends=(
+  bash
+  clang
+  coreutils
+  gawk
+  gcc
+  kmod
+  lld
+  llvm
+  make
+  patch
+  sed
+)
+makedepends=(
+  git
+)
 makedepends=('git')
 optdepends=('linux-headers: build modules against the Arch kernel'
             'linux-lts-headers: build modules against the LTS kernel'
