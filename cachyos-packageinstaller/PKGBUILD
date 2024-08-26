@@ -1,7 +1,7 @@
 # Maintainer: Vladislav Nepogodin <nepogodin.vlad@gmail.com>
 
 pkgname=cachyos-packageinstaller
-pkgver=1.3.3
+pkgver=1.3.4
 pkgrel=1
 pkgdesc="Simple Software Application Package Installer for CachyOS which helps setting up & installing applications"
 arch=(aarch64 x86_64)
@@ -11,7 +11,7 @@ depends=('qt6-base' 'polkit' 'curl')
 makedepends=('cmake' 'ninja' 'git' 'polkit-qt6' 'qt6-tools' 'clang' 'llvm')
 groups=('cachyos')
 source=("packageinstaller-$pkgver.tar.gz::$url/archive/v$pkgver.tar.gz")
-sha256sums=('2304ecffaa0aad2387e0519da9374a8ea7588ba967c2aaadf85bd14fcb673938')
+sha256sums=('f28e77f2f2c593f1cf060623370c783f6452a4c10e283217c819871980ac54b0')
 provides=('cachyos-packageinstaller')
 conflicts=('cachyos-packageinstaller')
 options=(strip)
@@ -19,8 +19,7 @@ options=(strip)
 build() {
   cd ${srcdir}/packageinstaller-${pkgver}
 
-  _cpuCount=$(grep -c -w ^processor /proc/cpuinfo)
-
+  # we are building with llvm stack here, due to rust
   export AR=llvm-ar
   export CC=clang
   export CXX=clang++
@@ -32,14 +31,12 @@ build() {
         -DCMAKE_BUILD_TYPE=Release \
         -DCMAKE_INSTALL_PREFIX=/usr \
         -DCMAKE_INSTALL_LIBDIR=lib
-  cmake --build build --parallel $_cpuCount
+  cmake --build build --parallel
 }
 
 package() {
   cd ${srcdir}/packageinstaller-${pkgver}
   DESTDIR="${pkgdir}" cmake --build build --target install
-
-  install -Dm644 LICENSE "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE"
 }
 
 # vim:set sw=2 sts=2 et:
