@@ -7,16 +7,22 @@ pkgdesc="Zsh configuration for CachyOS"
 arch=(any)
 url="https://github.com/CachyOS/$pkgname"
 license=(GPL-1.0-only)
-depends=('zsh' 'fzf' 'vim'
-         'zsh-autosuggestions'
-         'zsh-completions'
-         'zsh-history-substring-search'
-         'zsh-syntax-highlighting'
-         'zsh-theme-powerlevel10k'
-         'powerline-fonts'
-         'oh-my-zsh-git'
-         'pkgfile')
-makedepends=('git')
+depends=(
+  fzf
+  oh-my-zsh-git
+  pkgfile
+  powerline-fonts
+  vim
+  zsh
+  zsh-autosuggestions
+  zsh-completions
+  zsh-history-substring-search
+  zsh-syntax-highlighting
+  zsh-theme-powerlevel10k
+)
+makedepends=(
+  git
+)
 source=("git+$url.git#commit=2d809c457f78b935a4fb78719f7c7abac26b7caa")
 md5sums=('764285832950473259b519024d76c924')
 
