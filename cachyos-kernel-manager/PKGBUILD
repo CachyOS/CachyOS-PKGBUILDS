@@ -1,10 +1,10 @@
 # Maintainer: Vladislav Nepogodin <nepogodin.vlad@gmail.com>
 
 pkgname=cachyos-kernel-manager
-pkgver=1.9.1
+pkgver=1.10.0
 pkgrel=1
 pkgdesc="Simple kernel manager"
-arch=(aarch64 x86_64 x86_64_v3)
+arch=(aarch64 x86_64)
 url="https://github.com/cachyos/kernel-manager"
 license=(GPL-3.0-or-later)
 depends=('qt6-base' 'polkit' 'chwd')
@@ -12,7 +12,7 @@ makedepends=('cmake' 'ninja' 'git' 'python' 'polkit-qt6' 'qt6-tools' 'cargo' 'll
 groups=('cachyos')
 source=("kernel-manager-$pkgver.tar.gz::$url/archive/v$pkgver.tar.gz"
         fix-installed-db.patch)
-sha256sums=('cc9d6ec7bcf749293889f854c3c7fa7b335055e030089150c220ce42d91b0d35'
+sha256sums=('6e443cb71a866e42fee32124f2415e065886b889c0143a7c008d3eb736639bae'
             '455c136513110b88e8234b8e4b25fd739804122ba6a492cde369b1f76c90960c')
 provides=('cachyos-kernel-manager')
 conflicts=('cachyos-kernel-manager')
@@ -21,18 +21,14 @@ options=(strip)
 prepare() {
   cd ${srcdir}/kernel-manager-${pkgver}
 
+  # patch cmake to not check for existence of installeddb api
   patch -Np1 -i ../fix-installed-db.patch
 }
 
 build() {
   cd ${srcdir}/kernel-manager-${pkgver}
 
-  CFLAGS=${CFLAGS/-Wp,-D_GLIBCXX_ASSERTIONS}
-  CXXFLAGS=${CXXFLAGS/-Wp,-D_GLIBCXX_ASSERTIONS}
-
-  _cpuCount=$(grep -c -w ^processor /proc/cpuinfo)
-
-  # Compile with clang
+  # we are building with llvm stack here, due to rust
   export AR=llvm-ar
   export CC=clang
   export CXX=clang++
@@ -46,13 +42,13 @@ build() {
         -DCMAKE_BUILD_TYPE=Release \
         -DCMAKE_INSTALL_PREFIX=/usr \
         -DCMAKE_INSTALL_LIBDIR=lib
-  cmake --build build --parallel $_cpuCount
+  cmake --build build
 }
 
 package() {
   cd ${srcdir}/kernel-manager-${pkgver}
 
-  # Compile with clang
+  # we are building with llvm stack here, due to rust
   export AR=llvm-ar
   export CC=clang
   export CXX=clang++
@@ -62,8 +58,6 @@ package() {
   export RUSTFLAGS="-Cembed-bitcode -C opt-level=3 -Ccodegen-units=1 -Clinker=clang -C link-arg=-flto -Clink-arg=-fuse-ld=/usr/bin/ld.lld"
 
   DESTDIR="${pkgdir}" cmake --build build --target install
-
-  install -Dm644 LICENSE "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE"
 }
 
 # vim:set sw=2 sts=2 et:
