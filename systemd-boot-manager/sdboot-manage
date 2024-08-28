@@ -9,17 +9,17 @@ die() {
 
 usage() {
     cat << EOF
-Usage: sdboot-manage [OPTIONS] [ACTION]
+Usage: $0 [OPTIONS]... [ACTION]
 
 Actions:
-  gen     generates entries for systemd-boot based on installed kernels
-  remove  removes orphaned systemd-boot entries
-  setup   installs systemd-boot and generate initial entries
-  update  updates systemd-boot
+  gen     Generates entries for systemd-boot based on installed kernels
+  remove  Removes orphaned systemd-boot entries
+  setup   Installs systemd-boot and generate initial entries
+  update  Updates systemd-boot
 
 Options:
-  -e,--esp-path=<path>  specify <path> to be used for esp
-  -c,--config=<path>    location of config file
+  -e,--esp-path=<path>  Specify <path> to be used for esp
+  -c,--config=<path>    Location of config file
 EOF
 exit 0
 }
@@ -99,7 +99,7 @@ setup_sdboot() {
     echo "timeout 3" > "${ESP}/loader/loader.conf"
 
     # generate entries, ensure an initial set of entries is generated
-    [[ ${DEFAULT_ENTRY} != "oldest" ]] && DEFAULT_ENTRY="latest"
+    [ "${DEFAULT_ENTRY}" != "oldest" ] && DEFAULT_ENTRY="latest"
     generate_entries
 }
 
@@ -116,7 +116,6 @@ generate_entries() {
 
     srcdev="$(findmnt -no SOURCE /)"
     srcdev_uuid="$(findmnt -no UUID /)"
-    srcdev_partuuid="$(findmnt -no PARTUUID /)"
     srcdev_fsroot="$(findmnt -no FSROOT /)"
     root_fstype="$(findmnt -no FSTYPE /)"
     # mkinitcpio.conf might not exist (e.g. when using booster)
@@ -124,27 +123,17 @@ generate_entries() {
         mkinitcpio_has_sdencrypt_hook="$(grep -c '^HOOKS=\(.*sd-encrypt.*\)$' /etc/mkinitcpio.conf)"
     fi
 
+    sdoptions="root=UUID=${srcdev_uuid} rw"
     # generate an appropriate options line
     case ${root_fstype} in
         zfs)
             sdoptions="zfs=${srcdev} rw"
             ;;
         btrfs)
-            if [ -n "${srcdev_partuuid}" ]; then
-                sdoptions="root=PARTUUID=${srcdev_partuuid} rw rootflags=subvol=${srcdev_fsroot}"
-            elif [ -n "${srcdev_uuid}" ]; then
-                sdoptions="root=UUID=${srcdev_uuid} rw rootflags=subvol=${srcdev_fsroot}"
-            fi
+            sdoptions+=" rootflags=subvol=${srcdev_fsroot}"
             ;;
         *)
-            if [ -n "${srcdev_partuuid}" ]; then
-                sdoptions="root=PARTUUID=${srcdev_partuuid} rw"
-            elif [ -n "${srcdev_uuid}" ]; then
-                sdoptions="root=UUID=${srcdev_uuid} rw"
-            else
-                sdoptions="root=${srcdev} rw"
-            fi
-            [ "${CDISCARD,,}" = "yes" ] && sdoptions="${sdoptions} rootflags=discard"
+            [ "${CDISCARD,,}" = "yes" ] && sdoptions+=" rootflags=discard"
             ;;
     esac
 
