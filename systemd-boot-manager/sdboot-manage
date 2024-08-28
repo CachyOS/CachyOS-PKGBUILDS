@@ -136,7 +136,6 @@ generate_entries() {
             elif [ -n "${srcdev_uuid}" ]; then
                 sdoptions="root=UUID=${srcdev_uuid} rw rootflags=subvol=${srcdev_fsroot}"
             fi
-            [ "${CDISCARD,,}" = "yes" ] && sdoptions="${sdoptions},discard=async"
             ;;
         *)
             if [ -n "${srcdev_partuuid}" ]; then
