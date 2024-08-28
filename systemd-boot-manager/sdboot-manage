@@ -53,7 +53,6 @@ done
 # config variables
 export LINUX_OPTIONS \
     LINUX_FALLBACK_OPTIONS \
-    LINUX_USE_SWAP_FOR_RESUME \
     DEFAULT_ENTRY="manual" \
     DISABLE_FALLBACK="no" \
     KERNEL_PATTERN="vmlinuz-*" \
@@ -178,20 +177,6 @@ generate_entries() {
             fi
         fi
     done < <(lsblk -nslo NAME,TYPE /dev/disk/by-uuid/"${top_level_uuid}" 2>/dev/null)
-
-    # if LINUX_USE_DEVICE_FOR_RESUME is enabled, pass its identifier to the `resume` kernel parameter
-    if [ "${LINUX_USE_DEVICE_FOR_RESUME,,}" = "yes" ]; then
-        sdoptions="${sdoptions} resume=${LINUX_USE_DEVICE_FOR_RESUME}"
-    fi
-
-    # if LINUX_USE_SWAP_FOR_RESUME is enabled, pass the UUID of the first detected swap device as an argument to the `resume` kernel parameter
-    if [ "${LINUX_USE_SWAP_FOR_RESUME,,}" = "yes" ]; then
-        swapdev="$(swapon --show=NAME --noheadings | head -1)"
-        if [ -n "${swapdev}" ]; then
-            swapdev_uuid="$(blkid -o value -s UUID "$swapdev")"
-            sdoptions="${sdoptions} resume=UUID=${swapdev_uuid}"
-        fi
-    fi
 
     # when remove existing is set we want to start from an empty slate
     if [ "${REMOVE_EXISTING,,}" = "yes" ]; then
