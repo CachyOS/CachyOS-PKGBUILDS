@@ -116,12 +116,8 @@ generate_entries() {
     srcdev_uuid="$(findmnt -no UUID /)"
     srcdev_fsroot="$(findmnt -no FSROOT /)"
     root_fstype="$(findmnt -no FSTYPE /)"
-    # mkinitcpio.conf might not exist (e.g. when using booster)
-    if [ -f /etc/mkinitcpio.conf ]; then
-        mkinitcpio_has_sdencrypt_hook="$(grep -c '^HOOKS=\(.*sd-encrypt.*\)$' /etc/mkinitcpio.conf)"
-    fi
-
     sdoptions="root=UUID=${srcdev_uuid} rw"
+
     # generate an appropriate options line
     case "${root_fstype}" in
         zfs)
@@ -145,13 +141,12 @@ generate_entries() {
     while read -r devname devtype; do
         if [ "$devtype" = "crypt" ]; then
             # handle cryptdevice
-            cryptdevice_option_prefix="cryptdevice=UUID"
-            cryptdevice_option_suffix=":"
-            if [ "$mkinitcpio_has_sdencrypt_hook" -gt 0 ]; then
-                cryptdevice_option_prefix="rd.luks.name"
-                cryptdevice_option_suffix="="
+            cryptdevice_uuid="$(blkid -o value -s UUID "$(cryptsetup status "${devname}" | grep device | awk '{print $2}')")"
+            if grep -q '^HOOKS=\(.*sd-encrypt.*\)$' /etc/mkinitcpio.conf 2>/dev/null; then
+                sdoptions+=" rd.luks.name=${cryptdevice_uuid}=${devname}"
+            else
+                sdoptions+=" cryptdevice=UUID=${cryptdevice_uuid}:${devname}"
             fi
-            sdoptions="${sdoptions} ${cryptdevice_option_prefix}=$(blkid -o value -s UUID "$(cryptsetup status "${devname}" | grep device | awk '{print $2}')")${cryptdevice_option_suffix}${devname}"
         fi
     done < <(lsblk -nslo NAME,TYPE /dev/disk/by-uuid/"${top_level_uuid}" 2>/dev/null)
 
