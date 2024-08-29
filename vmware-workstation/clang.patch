@@ -1,0 +1,40 @@
+From 328dbb51fc530402d0de39c2eb877c4f99781bab Mon Sep 17 00:00:00 2001
+From: Vasiliy Stelmachenok <ventureo@cachyos.org>
+Date: Thu, 29 Aug 2024 22:36:54 +0300
+Subject: [PATCH] Fix build vmmon/vmnet modules via Clang
+
+Signed-off-by: Vasiliy Stelmachenok <ventureo@cachyos.org>
+---
+ vmmon-only/Makefile.kernel | 2 +-
+ vmnet-only/Makefile.kernel | 2 +-
+ 2 files changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/vmmon-only/Makefile.kernel b/vmmon-only/Makefile.kernel
+index 69ee8d0..1278aa3 100644
+--- a/vmmon-only/Makefile.kernel
++++ b/vmmon-only/Makefile.kernel
+@@ -20,7 +20,7 @@
+ CC_OPTS += -DVMMON -DVMCORE
+ 
+ INCLUDE := -I$(SRCROOT)/include -I$(SRCROOT)/include/x86 -I$(SRCROOT)/common -I$(SRCROOT)/linux
+-EXTRA_CFLAGS := $(CC_OPTS) $(INCLUDE)
++EXTRA_CFLAGS := $(CC_OPTS) $(INCLUDE) -Wno-deprecated-non-prototype -Wno-strict-prototypes
+ 
+ obj-m += $(DRIVER).o
+ 
+diff --git a/vmnet-only/Makefile.kernel b/vmnet-only/Makefile.kernel
+index 44a8a95..ee10474 100644
+--- a/vmnet-only/Makefile.kernel
++++ b/vmnet-only/Makefile.kernel
+@@ -19,7 +19,7 @@
+ 
+ INCLUDE := -I$(SRCROOT)
+ 
+-EXTRA_CFLAGS := $(CC_OPTS) $(INCLUDE)
++EXTRA_CFLAGS := $(CC_OPTS) $(INCLUDE) -Wno-deprecated-non-prototype -Wno-strict-prototypes
+ EXTRA_CFLAGS += $(call vm_check_build, $(SRCROOT)/netif_trans_update.c,-DVMW_NETIF_TRANS_UPDATE, )
+ 
+ obj-m += $(DRIVER).o
+-- 
+2.46.0
+
