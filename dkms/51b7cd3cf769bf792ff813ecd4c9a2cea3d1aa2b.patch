@@ -1,0 +1,51 @@
+From 51b7cd3cf769bf792ff813ecd4c9a2cea3d1aa2b Mon Sep 17 00:00:00 2001
+From: ltsdw <44977415+ltsdw@users.noreply.github.com>
+Date: Thu, 6 Jun 2024 18:57:20 -0300
+Subject: [PATCH] dkms: fix building against clang and thin/full lto Right now
+ there's some issues when trying to compile open-gpu-kernel-modules against a
+ kernel compiled using clang+Thin/Full LTO. Also the script will pick the
+ wrong version of the strip command, is also necessary to set the OBJCOPY
+ environment variable.
+
+Fixes #416.
+---
+ dkms.in | 16 +++++++---------
+ 1 file changed, 7 insertions(+), 9 deletions(-)
+
+diff --git a/dkms.in b/dkms.in
+index 11180db..b2bfa43 100644
+--- a/dkms.in
++++ b/dkms.in
+@@ -625,17 +625,11 @@ read_conf()
+     # Check if clang was used to compile or lld was used to link the kernel.
+     if [[ -e $kernel_source_dir/vmlinux ]]; then
+       if  readelf -p .comment $kernel_source_dir/vmlinux | grep -q clang; then
+-        make_command="${make_command} CC=clang"
+-      fi
+-      if  readelf -p .comment $kernel_source_dir/vmlinux | grep -q LLD; then
+-        make_command="${make_command} LD=ld.lld"
++        make_command="${make_command} LLVM=1"
+       fi
+     elif [[ -e "${kernel_config}" ]]; then
+       if grep -q CONFIG_CC_IS_CLANG=y "${kernel_config}"; then
+-        make_command="${make_command} CC=clang"
+-      fi
+-      if grep -q CONFIG_LD_IS_LLD=y "${kernel_config}"; then
+-        make_command="${make_command} LD=ld.lld"
++        make_command="${make_command} LLVM=1"
+       fi
+     fi
+ 
+@@ -1150,7 +1144,11 @@ actual_build()
+         local built_module="$the_module$module_uncompressed_suffix"
+         local compressed_module="$the_module$module_suffix"
+ 
+-        [[ ${strip[$count]} != no ]] && strip -g "$built_module"
++        if [[ ${strip[$count]} != no ]] && [[ ${CC} == "clang" ]]; then
++            llvm-strip -g "$built_module"
++        elif [[ ${strip[$count]} != no ]]; then
++            strip -g "$built_module"
++        fi
+ 
+         if (( do_signing )); then
+             echo "Signing module $built_module"
