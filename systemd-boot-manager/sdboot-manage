@@ -73,7 +73,7 @@ export LINUX_OPTIONS \
 for file in /usr/lib/sdboot-manage.conf.d/*.conf /etc/sdboot-manage.conf.d/*.conf; do
     #Source files if exists
     [ -f "${file}" ] && . "${file}"
-done;
+done
 
 get_entry_root() {
     echo -n "$ESP/loader/entries/"
@@ -177,7 +177,7 @@ generate_entries() {
 title ${title}
 linux ${kernel}
 initrd ${kernelpath}${initramfs}.img
-options ${sdoptions} ${LINUX_OPTIONS}${CONSTRUCTED_LINUX_OPTIONS}
+options ${sdoptions} ${LINUX_OPTIONS}
 EOF
         if [ "${DISABLE_FALLBACK}" != "yes" ]; then
             cat <<EOF >"$(get_entry_root "$ESP")${entry}-fallback.conf"
