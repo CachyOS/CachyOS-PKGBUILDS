@@ -62,7 +62,6 @@ export LINUX_OPTIONS \
     PRESERVE_FOREIGN \
     NO_AUTOGEN \
     NO_AUTOUPDATE \
-    CDISCARD \
     INITRD_PREFIX=initramfs
 
 [ -f "${config}" ] && . "${config}"
@@ -124,15 +123,12 @@ generate_entries() {
 
     sdoptions="root=UUID=${srcdev_uuid} rw"
     # generate an appropriate options line
-    case ${root_fstype} in
+    case "${root_fstype}" in
         zfs)
             sdoptions="zfs=${srcdev} rw"
             ;;
         btrfs)
             sdoptions+=" rootflags=subvol=${srcdev_fsroot}"
-            ;;
-        *)
-            [ "${CDISCARD,,}" = "yes" ] && sdoptions+=" rootflags=discard"
             ;;
     esac
 
