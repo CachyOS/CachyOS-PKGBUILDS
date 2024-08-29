@@ -63,7 +63,6 @@ export LINUX_OPTIONS \
     NO_AUTOGEN \
     NO_AUTOUPDATE \
     CDISCARD \
-    DISCARD \
     INITRD_PREFIX=initramfs
 
 [ -f "${config}" ] && . "${config}"
@@ -157,13 +156,6 @@ generate_entries() {
                 cryptdevice_option_suffix="="
             fi
             sdoptions="${sdoptions} ${cryptdevice_option_prefix}=$(blkid -o value -s UUID "$(cryptsetup status "${devname}" | grep device | awk '{print $2}')")${cryptdevice_option_suffix}${devname}"
-            if [ "${DISCARD,,}" = "yes" ]; then
-                if [ "$mkinitcpio_has_sdencrypt_hook" -gt 0 ]; then
-                    sdoptions="${sdoptions} rd.luks.options=discard"
-                else
-                    sdoptions="${sdoptions}:allow-discards"
-                fi
-            fi
         fi
     done < <(lsblk -nslo NAME,TYPE /dev/disk/by-uuid/"${top_level_uuid}" 2>/dev/null)
 
@@ -196,7 +188,7 @@ linux ${kernel}
 initrd ${kernelpath}${initramfs}.img
 options ${sdoptions} ${LINUX_OPTIONS}${CONSTRUCTED_LINUX_OPTIONS}
 EOF
-        if [ ${DISABLE_FALLBACK} != "yes" ]; then
+        if [ "${DISABLE_FALLBACK}" != "yes" ]; then
             cat <<EOF >"$(get_entry_root "$ESP")${entry}-fallback.conf"
 title ${title} (Fallback)
 linux ${kernel}
