@@ -1,0 +1,18 @@
+diff --git a/Makefile.am b/Makefile.am
+index f6e73633..46e4284c 100644
+--- a/Makefile.am
++++ b/Makefile.am
+@@ -117,3 +117,13 @@ pdf-local:
+ 			< "$(srcdir)/$$FILE" \
+ 			> "$$dest/pdf-letter/$$BASE-letter.pdf"; \
+ 	done
++
++PGO_DIR="pgo"
++PGO_GEN_CFLAGS=-fprofile-generate -fprofile-dir=`realpath ${PGO_DIR}`
++PGO_USE_CFLAGS=-fprofile-use -fprofile-dir=`realpath ${PGO_DIR}`
++pgo-build:
++	$(MKDIR_P) ${PGO_DIR}
++	$(MAKE) clean
++	$(MAKE) check CFLAGS="${CFLAGS} ${PGO_GEN_CFLAGS}" CXXFLAGS="${CXXFLAGS} ${PGO_GEN_CFLAGS}" LDFLAGS="${LDFLAGS} ${PGO_GEN_CFLAGS}"
++	$(MAKE) clean
++	$(MAKE) check CFLAGS="${CFLAGS} ${PGO_USE_CFLAGS}" CXXFLAGS="${CXXFLAGS} ${PGO_USE_CFLAGS}" LDFLAGS="${LDFLAGS} ${PGO_USE_CFLAGS}"

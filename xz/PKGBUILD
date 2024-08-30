@@ -3,7 +3,7 @@
 
 pkgname=xz
 pkgver=5.6.2
-pkgrel=2
+pkgrel=3
 pkgdesc='Library and command line tools for XZ and LZMA compressed files'
 arch=('x86_64')
 url='https://xz.tukaani.org/xz-utils/'
@@ -12,24 +12,29 @@ depends=('sh')
 makedepends=('git' 'po4a' 'doxygen')
 provides=('liblzma.so')
 validpgpkeys=('3690C240CE51B4670D30AD1C38EE757D69184620') # Lasse Collin <lasse.collin@tukaani.org>
-source=("git+https://git.tukaani.org/xz.git#tag=v${pkgver}")
-sha256sums=('a71fcf56faa1f7d9e9708ca8d6a97906b929307d6a98d220018852eef37853c8')
-sha512sums=('f369f126dd3d538ef27ecce62e8ae01a2c9056eeb22c6b21d9a1d5e456f35330bc7f2bb0df525ad4a4f95ba84c0196c7c79ad768359786d3a73f876aa043f164')
+source=("git+https://git.tukaani.org/xz.git#tag=v${pkgver}"
+        "add-pgo.patch")
+sha256sums=('32863aadcca14171379fc5dbcba290b8c203863d0277c6e637f69a666f22bbcf'
+            '25d2b7b9c6d356ed18df7802bd6dae82005310fa065f3703c39e4d9f5ea55a9f')
+sha512sums=('5c9cd3eb2d2126a5ccc6973c66f46ee5787e1808cbcdfada35ea9566206bf77969fb8ba401694ce75f6866fafde3c59114d22694f811f3b251cb073fd0c4ec47'
+            'fb9a7ea934555fe3ab2fccc4bd125fb4711d54862082f3a5e68faa2e96abb7c18c48c9b5e7d6be2616861dd1f97b5b3d244736676ec48b3467e61caf4c02a2a5')
 
 prepare() {
   cd ${pkgname}
-
+  ## Patch make pgo-build in
+  patch -Np1 < ../add-pgo.patch
   ./autogen.sh
 }
 
 build() {
   cd ${pkgname}
 
+  export CFLAGS+=" -fno-semantic-interposition"
+  export CXXLAGS+=" -fno-semantic-interposition"
   ./configure \
     --prefix=/usr \
-    --disable-rpath \
-    --enable-werror
-  make
+    --disable-rpath
+  make pgo-build
 }
 
 check() {
