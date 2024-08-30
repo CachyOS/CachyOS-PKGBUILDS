@@ -4,8 +4,8 @@
 # Contributor: Zak BlueSwordM <neutronpcxt@gmail.com>
 
 pkgname=svt-av1-psy
-pkgver=v2.1.0.r0.g5471bd78
-pkgrel=3
+pkgver=v2.2.1.r0.g7077c9ff
+pkgrel=1
 epoch=1
 pkgdesc='Scalable Video Technology AV1 encoder and decoder, with added perceptual enhancements for psychovisually optimal AV1 encoding'
 arch=(x86_64)
@@ -23,12 +23,14 @@ makedepends=(
 )
 provides=('svt-av1')
 conflicts=('svt-av1')
-_tag=5471bd78311d70ab4691af1ae54fd80e25f214f5
+_tag=7077c9ff6f638328f6a5139fafcc2d8d537ebb77
 source=(git+https://github.com/gianni-rosato/svt-av1-psy.git#tag=${_tag})
 b2sums=('46991c2d50be23a35c498ac3e934da228e526d10e793f44314b7d22397d2b9a27a2d4d4ecb5d91fa1bfc0b3bc20d4037b0bc307c38b31a7fba3a5a26c41db6ea')
 
 prepare() {
-  sed '/CMAKE_BUILD_TYPE Release/d' -i svt-av1-psy/CMakeLists.txt
+   # to build with PGO we need to remove that
+#  sed '/CMAKE_BUILD_TYPE Release/d' -i SVT-AV1/CMakeLists.txt
+  cd "$srcdir"
 }
 
 pkgver() {
@@ -41,9 +43,9 @@ build() {
   cmake -S svt-av1-psy -B build -G Ninja \
     -DCMAKE_INSTALL_PREFIX=/usr \
     -DBUILD_SHARED_LIBS=ON \
-    -DENABLE_AVX512=OFF \
-    -DNATIVE=OFF
-  ninja -C build
+    -DNATIVE=OFF \
+    -DSVT_AV1_PGO=ON
+  ninja -C build RunPGO
 }
 
 package() {
