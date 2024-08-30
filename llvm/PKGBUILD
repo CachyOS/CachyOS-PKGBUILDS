@@ -102,8 +102,11 @@ build() {
     -DSPHINX_WARNINGS_AS_ERRORS=OFF
   )
 
+  export AR=llvm-ar
   export CC=clang
   export CXX=clang++
+  export NM=llvm-nm
+  export RANLIB=llvm-ranlib
   # Export Original CFLAGS
   export ORIG_CFLAGS="${CFLAGS}"
   export ORIG_CXXFLAGS="${CXXFLAGS}"
@@ -124,10 +127,10 @@ build() {
   ./bin/llvm-lit -v test || true
 
   # Merge the generated profile
-  llvm-profdata merge -o llvm.profdata "${srcdir}/llvm-18.1.8.src/build/profiles"/*.profraw
+  llvm-profdata merge -o llvm.profdata "${srcdir}/llvm-$pkgver.src/build/profiles"/*.profraw
 
   # Use Original CFLAGS again and enable ThinLTO + use the profile
-  export PGO_PROFILE="${srcdir}/llvm-18.1.8.src/build/llvm.profdata"
+  export PGO_PROFILE="${srcdir}/llvm-$pkgver.src/build/llvm.profdata"
   export CFLAGS="${ORIG_CFLAGS} -fprofile-use=$PGO_PROFILE"
   export CXXFLAGS="${ORIG_CXXFLAGS} -fprofile-use=$PGO_PROFILE"
   export LDFLAGS="$LDFLAGS -flto=thin"
