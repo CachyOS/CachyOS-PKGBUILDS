@@ -6,7 +6,7 @@ _pkgbasename=nvidia-utils
 pkgbase=lib32-$_pkgbasename
 pkgname=('lib32-nvidia-utils' 'lib32-opencl-nvidia')
 pkgver=560.35.03
-pkgrel=2
+pkgrel=3
 arch=('x86_64')
 url="http://www.nvidia.com/"
 #makedepends=('nvidia-libgl')  # To avoid conflict during installation in the build chroot
@@ -80,15 +80,6 @@ package_lib32-nvidia-utils() {
     install -D -m755 "libnvidia-glvkspirv.so.${pkgver}" "${pkgdir}/usr/lib32/libnvidia-glvkspirv.so.${pkgver}"
     install -D -m755 "libnvidia-allocator.so.${pkgver}" "${pkgdir}/usr/lib32/libnvidia-allocator.so.${pkgver}"
     install -D -m755 "libnvidia-gpucomp.so.${pkgver}" "${pkgdir}/usr/lib32/libnvidia-gpucomp.so.${pkgver}"
-
-    # Might be missing on archlinux? Lets keep em for now.
-    install -Dm755 libnvidia-egl-gbm.so."${_eglgver}" "${pkgdir}"/usr/lib32/libnvidia-egl-gbm.so."${_eglgver}"
-    ln -s libnvidia-egl-gbm.so."${_eglgver}" "${pkgdir}"/usr/lib32/libnvidia-egl-gbm.so.1
-    ln -s libnvidia-egl-gbm.so.1 "${pkgdir}"/usr/lib32/libnvidia-egl-gbm.so
-
-    # egl-xlib/xcb
-    install -D -m755 "libnvidia-egl-xlib.so.1" "${pkgdir}/usr/lib32/libnvidia-egl-xlib.so.1"
-    install -D -m755 "libnvidia-egl-xcb.so.1" "${pkgdir}/usr/lib32/libnvidia-egl-xcb.so.1"
 
     # VDPAU
     install -D -m755 "libvdpau_nvidia.so.${pkgver}" "${pkgdir}/usr/lib32/vdpau/libvdpau_nvidia.so.${pkgver}"
