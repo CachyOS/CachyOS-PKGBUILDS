@@ -1,4 +1,5 @@
 # Maintainer: Felix Yan <felixonmars@archlinux.org>
+# Maintainer: Daniel M. Capella <polyzen@archlinux.org>
 # Contributor  Bartłomiej Piotrowski <bpiotrowski@archlinux.org>
 # Contributor: Thomas Dziedzic < gostrc at gmail >
 # Contributor: James Campos <james.r.campos@gmail.com>
@@ -8,19 +9,37 @@
 # Contributor: TIanyi Cui <tianyicui@gmail.com>
 
 pkgname=nodejs
-pkgver=22.2.0
+pkgver=22.7.0
 pkgrel=2
 pkgdesc='Evented I/O for V8 javascript'
 arch=('x86_64')
 url='https://nodejs.org/'
 license=('MIT')
-options=(!lto)
-depends=('icu' 'libuv' 'libnghttp2' 'libnghttp3' 'libngtcp2' 'openssl' 'zlib' 'brotli' 'c-ares') # 'http-parser' 'v8')
-makedepends=('git' 'python' 'procps-ng')
+depends=(
+  'brotli'
+  'c-ares'
+  'icu'
+  'libnghttp2'
+  'libnghttp3'
+  'libngtcp2'
+  'libuv'
+  'openssl'
+  'zlib'
+) # 'http-parser' 'v8')
+makedepends=(
+  'git'
+  'procps-ng'
+  'python'
+)
 optdepends=('npm: nodejs package manager')
+options=(!lto)
 source=("git+https://github.com/nodejs/node.git#tag=v$pkgver?signed")
-sha512sums=('9603c736e5f0fb976507413ecec5d3ab5b62fb7eec53635a7a376c2c9b41cc89ab3830a61b6b0f923aa7c62dff7b29a7150000d7db85c43c7e286a42c8beb408')
-validpgpkeys=('8FCCA13FEF1D0C2E91008E09770F7A9A5AE15600') # Michaël Zasso (Targos) <targos@protonmail.com>
+sha512sums=('c03df108a5d332326adeddaea9a8145de9f43fbbad706545b94abc33bda02b0490ed764de3d0dc1ce5da57f062bc0790e3da35457ea44e4350888362eec550c5')
+validpgpkeys=(
+  '8FCCA13FEF1D0C2E91008E09770F7A9A5AE15600' # Michaël Zasso (Targos) <targos@protonmail.com>
+  '890C08DB8579162FEE0DF9DB8BEAB4DFCF555EF4' # RafaelGSS <rafael.nunu@hotmail.com>
+  'C82FA3AE1CBEDC6BE46B9360C43CEC45C17AB93C' # Richard Lau <rlau@redhat.com>
+)
 
 build() {
   cd node
@@ -28,7 +47,8 @@ build() {
   # /usr/lib/libnode.so uses malloc_usable_size, which is incompatible with fortification level 3
   export CFLAGS="${CFLAGS/_FORTIFY_SOURCE=3/_FORTIFY_SOURCE=2}"
   export CXXFLAGS="${CXXFLAGS/_FORTIFY_SOURCE=3/_FORTIFY_SOURCE=2}"
-
+  export CFLAGS+=" -fno-semantic-interposition"
+  export CXXFLAGS+=" -fno-semantic-interposition"
   ./configure \
     --prefix=/usr \
     --without-npm \
