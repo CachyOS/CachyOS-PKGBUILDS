@@ -216,7 +216,7 @@ build() {
 
   export CFLAGS+=" -flto=thin"
   export CXXFLAGS+=" -flto=thin"
-  export LDFLAGS+=" -fuse-ld=lld"
+  export LDFLAGS+=" -Wl,--undefined-version -fuse-ld=lld"
 
   # Build only minimal debug info to reduce size
   CFLAGS+=" -g1"
