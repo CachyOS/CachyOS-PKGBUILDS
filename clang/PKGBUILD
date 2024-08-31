@@ -1,0 +1,193 @@
+# Maintainer: Evangelos Foutras <foutrelis@archlinux.org>
+# Contributor: Jan "heftig" Steffens <jan.steffens@gmail.com>
+
+pkgname=clang
+pkgver=18.1.8
+pkgrel=3
+pkgdesc="C language family frontend for LLVM"
+arch=('x86_64')
+url="https://clang.llvm.org/"
+license=('Apache-2.0 WITH LLVM-exception')
+depends=('llvm-libs' 'gcc' 'compiler-rt')
+makedepends=('llvm' 'cmake' 'ninja' 'python-sphinx' 'python-myst-parser')
+optdepends=('openmp: OpenMP support in clang with -fopenmp'
+            'python: for scan-view and git-clang-format'
+            'llvm: referenced by some clang headers')
+provides=("clang-analyzer=$pkgver" "clang-tools-extra=$pkgver")
+conflicts=('clang-analyzer' 'clang-tools-extra')
+replaces=('clang-analyzer' 'clang-tools-extra')
+options=(!lto) # We are using here ThinLTO, so disable pacman's LTO
+_source_base=https://github.com/llvm/llvm-project/releases/download/llvmorg-$pkgver
+source=($_source_base/clang-$pkgver.src.tar.xz{,.sig}
+        $_source_base/clang-tools-extra-$pkgver.src.tar.xz{,.sig}
+        $_source_base/llvm-$pkgver.src.tar.xz{,.sig}
+        $_source_base/cmake-$pkgver.src.tar.xz{,.sig}
+        $_source_base/third-party-$pkgver.src.tar.xz{,.sig}
+        clangd-handle-missing-ending-brace.patch::https://github.com/llvm/llvm-project/commit/9d1dada57741.patch
+        enable-fstack-protector-strong-by-default.patch)
+sha256sums=('5724fe0a13087d5579104cedd2f8b3bc10a212fb79a0fcdac98f4880e19f4519'
+            'SKIP'
+            'e58877fcd95ed106824bd1a31276dd17ed0c53adcd60ca75289eac0654f0a7f1'
+            'SKIP'
+            'f68cf90f369bc7d0158ba70d860b0cb34dbc163d6ff0ebc6cfa5e515b9b2e28d'
+            'SKIP'
+            '59badef592dd34893cd319d42b323aaa990b452d05c7180ff20f23ab1b41e837'
+            'SKIP'
+            'b76b810f3d3dc5d08e83c4236cb6e395aa9bd5e3ea861e8c319b216d093db074'
+            'SKIP'
+            'c102e8a6a2adb0e8729865ffb8799b22bb8a9bdf0f421991880fa4393378370a'
+            'ef319e65f927718e1d3b1a23c480d686b1d292e2a0bf27229540964f9734117a')
+validpgpkeys=('474E22316ABF4785A88C6E8EA2C794A986419D8A') # Tom Stellard <tstellar@redhat.com>
+
+# Utilizing LLVM_DISTRIBUTION_COMPONENTS to avoid
+# installing static libraries; inspired by Gentoo
+_get_distribution_components() {
+  local target
+  ninja -t targets | grep -Po 'install-\K.*(?=-stripped:)' | while read -r target; do
+    case $target in
+      clang-libraries|distribution)
+        continue
+        ;;
+      clang|clangd|clang-*)
+        ;;
+      clang*|findAllSymbols)
+        continue
+        ;;
+    esac
+    echo $target
+  done
+}
+
+prepare() {
+  rename -v -- "-$pkgver.src" '' {cmake,third-party}-$pkgver.src
+  cd clang-$pkgver.src
+  mkdir build
+  mv "$srcdir/clang-tools-extra-$pkgver.src" tools/extra
+  patch -Np2 -i ../enable-fstack-protector-strong-by-default.patch
+
+  # https://github.com/clangd/clangd/issues/1559
+  sed 's|clang-tools-extra|clang/tools/extra|' \
+    clangd-handle-missing-ending-brace.patch | patch -Np2
+
+  # Attempt to convert script to Python 3
+  2to3 -wn --no-diffs \
+    tools/extra/clang-include-fixer/find-all-symbols/tool/run-find-all-symbols.py
+}
+
+build() {
+  cd clang-$pkgver.src/build
+
+  # Add dir for PGO data
+  mkdir $srcdir/clang-$pkgver.src/pgo
+
+  # Build only minimal debug info to reduce size
+  CFLAGS=${CFLAGS/-g /-g1 }
+  CXXFLAGS=${CXXFLAGS/-g /-g1 }
+
+  local cmake_args=(
+    -G Ninja
+    -DCMAKE_BUILD_TYPE=Release
+    -DCMAKE_INSTALL_PREFIX=/usr
+    -DCMAKE_INSTALL_DOCDIR=share/doc
+    -DCMAKE_SKIP_RPATH=ON
+    -DCLANG_DEFAULT_PIE_ON_LINUX=ON
+    -DCLANG_LINK_CLANG_DYLIB=ON
+    -DENABLE_LINKER_BUILD_ID=ON
+    -DLLVM_BUILD_DOCS=ON
+    -DLLVM_BUILD_TESTS=ON
+    -DLLVM_ENABLE_RTTI=ON
+    -DLLVM_ENABLE_SPHINX=ON
+    -DLLVM_EXTERNAL_LIT=/usr/bin/lit
+    -DLLVM_INCLUDE_DOCS=ON
+    -DLLVM_LINK_LLVM_DYLIB=ON
+    -DLLVM_MAIN_SRC_DIR="$srcdir/llvm-$pkgver.src"
+    -DSPHINX_WARNINGS_AS_ERRORS=OFF
+  )
+
+  # Use Clang as compiler
+  export AR=llvm-ar
+  export CC=clang
+  export CXX=clang++
+  export NM=llvm-nm
+  export RANLIB=llvm-ranlib
+  # Export Original CFLAGS
+  export ORIG_CFLAGS="${CFLAGS}"
+  export ORIG_CXXFLAGS="${CXXFLAGS}"
+  
+  # Flags for profile generation
+  export CFLAGS+=" -fprofile-generate"
+  export CXXFLAGS+=" -fprofile-generate"
+
+  cmake .. "${cmake_args[@]}"
+  local distribution_components=$(_get_distribution_components | paste -sd\;)
+  test -n "$distribution_components"
+  cmake_args+=(-DLLVM_DISTRIBUTION_COMPONENTS="$distribution_components")
+
+  # Intrumented build
+  cmake .. -DCMAKE_BUILD_TYPE=Release -DLLVM_BUILD_INSTRUMENTED=IR -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DLLVM_USE_LINKER=lld -DLLVM_VP_COUNTERS_PER_SITE=6 "${cmake_args[@]}"
+  ninja
+
+  # Workload for PGO profiles
+  # Might want to be increased in the future
+  LD_LIBRARY_PATH=$PWD/lib ninja check-clang{,-tools} || true
+  unset LD_LIBRARY_PATH
+
+  # Move all profiles into PGO dir
+  # Somehow defining the dir did not work, therefore we use that hacky workaround
+  find . -name "*.profraw" -exec mv {} "$srcdir/clang-$pkgver.src/pgo" \;
+  
+  # Merge the generated profile
+  llvm-profdata merge -o "${srcdir}/clang-$pkgver.src/pgo/llvm.profdata" "$srcdir/clang-$pkgver.src/pgo"/*.profraw
+
+  # Use Original CFLAGS again and enable ThinLTO + use the profile
+  export PGO_PROFILE="${srcdir}/clang-$pkgver.src/pgo/llvm.profdata"
+  export CFLAGS="${ORIG_CFLAGS} -fprofile-use=$PGO_PROFILE"
+  export CXXFLAGS="${ORIG_CXXFLAGS} -fprofile-use=$PGO_PROFILE"
+  export LDFLAGS="$LDFLAGS -flto=thin"
+
+  cd ..
+  mkdir build-pgo-use
+  cd build-pgo-use
+  # Enable ThinLTO and use profile
+  cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DLLVM_USE_LINKER=lld -DLLVM_ENABLE_LTO=Thin -DLLVM_PROFDATA_FILE=$PGO_PROFILE "${cmake_args[@]}"
+  ninja
+}
+
+check() {
+  cd clang-$pkgver.src/build-pgo-use
+  LD_LIBRARY_PATH=$PWD/lib ninja check-clang{,-tools}
+}
+
+_python_optimize() {
+  python -m compileall "$@"
+  python -O -m compileall "$@"
+  python -OO -m compileall "$@"
+}
+
+package() {
+  cd clang-$pkgver.src/build-pgo-use
+
+  DESTDIR="$pkgdir" ninja install-distribution
+  install -Dm644 ../LICENSE.TXT "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+
+  # Remove documentation sources
+  rm -r "$pkgdir"/usr/share/doc/clang{,-tools}/html/{_sources,.buildinfo}
+
+  # Move scanbuild-py into site-packages and install Python bindings
+  local site_packages=$(python -c "import site; print(site.getsitepackages()[0])")
+  install -d "$pkgdir/$site_packages"
+  mv "$pkgdir"/usr/lib/{libear,libscanbuild} "$pkgdir/$site_packages/"
+  cp -a ../bindings/python/clang "$pkgdir/$site_packages/"
+
+  # Move analyzer scripts out of /usr/libexec
+  mv "$pkgdir"/usr/libexec/* "$pkgdir/usr/lib/clang/"
+  rmdir "$pkgdir/usr/libexec"
+  sed -i 's|libexec|lib/clang|' \
+    "$pkgdir/usr/bin/scan-build" \
+    "$pkgdir/$site_packages/libscanbuild/analyze.py"
+
+  # Compile Python scripts
+  _python_optimize "$pkgdir/usr/share" "$pkgdir/$site_packages"
+}
+
+# vim:set ts=2 sw=2 et:
