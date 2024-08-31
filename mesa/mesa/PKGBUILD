@@ -24,7 +24,7 @@ pkgname=(
   mesa-docs
 )
 pkgver=24.2.2
-pkgrel=3
+pkgrel=5
 epoch=1
 pkgdesc="Open-source OpenGL drivers"
 url="https://www.mesa3d.org/"
@@ -60,7 +60,7 @@ makedepends=(
   xcb-util-keysyms
   zlib
   zstd
-
+  lld
   # shared between mesa and lib32-mesa
   cbindgen
   clang
@@ -139,6 +139,7 @@ done
 
 b2sums=('14b29989b056c3bc76cb64babef6e93dd31af37ea72674adaad3f7ef7373c004996e375941662b1c3bbacfd707a21e2e3631a116a841130edfa1bfe3450ae5ab'
         'SKIP'
+        'd6d69a2e2bfc83b0a84840dd043c8dd35c4c7af50e532bfd2fbe742dea9d4e2483f0978f06ddf0066a04ad63ddc3076a07193cac7083211eb04594382eb993e2'
         'da196d667e31f647c376c37b394caed7787f4a41d79526ac2177f328920f49d183ef10bdf16b369c00aee4eecc6bc8cd3038908065438d99e58ac97e62c5cbba'
         '53d57d8fcfa140e24bec9dbb377f852d4719c0404fc08c3b7a0cca6e0a9b2bfc607bb85126579b00d498283ae2b173fca63982128421151b238aa9051e8754f9'
         'a6d47c903be6094423d89b8ec3ca899d0a84df6dbd6e76632bb6c9b9f40ad9c216f8fa400310753d392f85072756b43ac3892e0a2c4d55f87ab6463002554823'
@@ -218,9 +219,22 @@ build() {
     -D vulkan-layers=device-select,intel-nullhw,overlay
   )
 
+  # Set Clang as compiler
+  export AR=llvm-ar
+  export CC=clang
+  export CXX=clang++
+  export NM=llvm-nm
+  export RANLIB=llvm-ranlib
+
+  export CFLAGS+=" -flto=thin"
+  export CXXFLAGS+=" -flto=thin"
+  export LDFLAGS+=" -Wl,--undefined-version -fuse-ld=lld"
   # Build only minimal debug info to reduce size
   CFLAGS+=" -g1"
   CXXFLAGS+=" -g1"
+
+  # LTO needs more open files
+  ulimit -n 4096
 
   # Inject subproject packages
   export MESON_PACKAGE_CACHE_DIR="$srcdir"
