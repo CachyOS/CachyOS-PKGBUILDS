@@ -3,13 +3,13 @@
 
 pkgname=('llvm' 'llvm-libs')
 pkgver=18.1.8
-pkgrel=5
+pkgrel=6
 arch=('x86_64')
 url="https://llvm.org/"
 license=('Apache-2.0 WITH LLVM-exception')
 makedepends=('cmake' 'ninja' 'zlib' 'zstd' 'curl' 'libffi' 'libedit' 'ncurses'
              'libxml2' 'python-setuptools' 'python-psutil' 'python-sphinx'
-             'python-myst-parser')
+             'python-myst-parser' 'clang' 'lld' 'llvm')
 options=('staticlibs' '!lto') # tools/llvm-shlib/typeids.test fails with LTO
 _source_base=https://github.com/llvm/llvm-project/releases/download/llvmorg-$pkgver
 source=($_source_base/llvm-$pkgver.src.tar.xz{,.sig}
@@ -22,7 +22,7 @@ sha256sums=('f68cf90f369bc7d0158ba70d860b0cb34dbc163d6ff0ebc6cfa5e515b9b2e28d'
             'SKIP'
             'b76b810f3d3dc5d08e83c4236cb6e395aa9bd5e3ea861e8c319b216d093db074'
             'SKIP'
-            '62cc0a323ebe6a61a1302605d42a28ce812dbeae186e23515b333211e3de008a')
+            '9b53e584f8b8a44648a2a066da1860155b61118c8cdebed3632161db0b680462')
 validpgpkeys=('474E22316ABF4785A88C6E8EA2C794A986419D8A') # Tom Stellard <tstellar@redhat.com>
 
 # Utilizing LLVM_DISTRIBUTION_COMPONENTS to avoid
@@ -102,17 +102,49 @@ build() {
     -DSPHINX_WARNINGS_AS_ERRORS=OFF
   )
 
+  export AR=llvm-ar
+  export CC=clang
+  export CXX=clang++
+  export NM=llvm-nm
+  export RANLIB=llvm-ranlib
+  # Export Original CFLAGS
+  export ORIG_CFLAGS="${CFLAGS}"
+  export ORIG_CXXFLAGS="${CXXFLAGS}"
+
+  export CFLAGS+=" -fprofile-generate"
+  export CXXFLAGS+=" -fprofile-generate"
+
   cmake .. "${cmake_args[@]}"
   local distribution_components=$(_get_distribution_components | paste -sd\;)
   test -n "$distribution_components"
   cmake_args+=(-DLLVM_DISTRIBUTION_COMPONENTS="$distribution_components")
 
-  cmake .. "${cmake_args[@]}"
+  # Build LLVM with -fprofile generate
+  cmake .. -DCMAKE_BUILD_TYPE=Release -DLLVM_BUILD_INSTRUMENTED=IR -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DLLVM_USE_LINKER=lld -DLLVM_VP_COUNTERS_PER_SITE=6 "${cmake_args[@]}"
+  ninja
+
+  # Run LLVM lit tests to generate profile to be used for PGO
+  ./bin/llvm-lit -v test || true
+
+  # Merge the generated profile
+  llvm-profdata merge -o llvm.profdata "${srcdir}/llvm-$pkgver.src/build/profiles"/*.profraw
+
+  # Use Original CFLAGS again and enable ThinLTO + use the profile
+  export PGO_PROFILE="${srcdir}/llvm-$pkgver.src/build/llvm.profdata"
+  export CFLAGS="${ORIG_CFLAGS} -fprofile-use=$PGO_PROFILE"
+  export CXXFLAGS="${ORIG_CXXFLAGS} -fprofile-use=$PGO_PROFILE"
+  export LDFLAGS="$LDFLAGS -flto=thin"
+
+  cd ..
+  mkdir build-pgo-use
+  cd build-pgo-use
+  # Enable ThinLTO
+  cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DLLVM_USE_LINKER=lld -DLLVM_ENABLE_LTO=Thin -DLLVM_PROFDATA_FILE=$PGO_PROFILE "${cmake_args[@]}"
   ninja
 }
 
 check() {
-  cd llvm-$pkgver.src/build
+  cd llvm-$pkgver.src/build-pgo-use
   LD_LIBRARY_PATH=$PWD/lib ninja check
 }
 
@@ -120,7 +152,7 @@ package_llvm() {
   pkgdesc="Compiler infrastructure"
   depends=('llvm-libs' 'curl' 'perl')
 
-  cd llvm-$pkgver.src/build
+  cd llvm-$pkgver.src/build-pgo-use
 
   DESTDIR="$pkgdir" ninja install-distribution
 
