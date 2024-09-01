@@ -3,7 +3,7 @@
 
 pkgname=('llvm' 'llvm-libs')
 pkgver=18.1.8
-pkgrel=6
+pkgrel=7
 arch=('x86_64')
 url="https://llvm.org/"
 license=('Apache-2.0 WITH LLVM-exception')
@@ -15,14 +15,18 @@ _source_base=https://github.com/llvm/llvm-project/releases/download/llvmorg-$pkg
 source=($_source_base/llvm-$pkgver.src.tar.xz{,.sig}
         $_source_base/cmake-$pkgver.src.tar.xz{,.sig}
         $_source_base/third-party-$pkgver.src.tar.xz{,.sig}
-        $pkgname-SelectionDAG.patch::https://github.com/llvm/llvm-project/commit/46505b3cbfc5.patch)
+        $pkgname-SelectionDAG.patch::https://github.com/llvm/llvm-project/commit/46505b3cbfc5.patch
+        0001-Enable-TuningSlowDivide64-on-Barcelona-Bobcat-Bulldo.patch
+        0002-Reduce-znver3-4-LoopMicroOpBufferSize-to-practical-l.patch)
 sha256sums=('f68cf90f369bc7d0158ba70d860b0cb34dbc163d6ff0ebc6cfa5e515b9b2e28d'
             'SKIP'
             '59badef592dd34893cd319d42b323aaa990b452d05c7180ff20f23ab1b41e837'
             'SKIP'
             'b76b810f3d3dc5d08e83c4236cb6e395aa9bd5e3ea861e8c319b216d093db074'
             'SKIP'
-            '9b53e584f8b8a44648a2a066da1860155b61118c8cdebed3632161db0b680462')
+            '9b53e584f8b8a44648a2a066da1860155b61118c8cdebed3632161db0b680462'
+            '7d4b76f753618752aaed64bb496ed3cd443faf1d3124b540c643abcca5a9756e'
+            'bac174d1958fa3134ce530cf2eed8abdbf910697e87cee6e4a23a5a3a1098b2d')
 validpgpkeys=('474E22316ABF4785A88C6E8EA2C794A986419D8A') # Tom Stellard <tstellar@redhat.com>
 
 # Utilizing LLVM_DISTRIBUTION_COMPONENTS to avoid
@@ -66,6 +70,12 @@ prepare() {
 
   # https://github.com/llvm/llvm-project/issues/82431
   sed '/^diff.*inline-asm-memop.ll/,$d' ../$pkgname-SelectionDAG.patch | patch -Np2
+
+  # Add fixes for the Zen3 and Zen4 Architecure, since compiling with -march=znverX
+  # can result often into a lower runtime performance
+  # Lets pick them from the LLVM 19 branch
+  patch -Np1 < ../0001-Enable-TuningSlowDivide64-on-Barcelona-Bobcat-Bulldo.patch
+  patch -Np1 < ../0002-Reduce-znver3-4-LoopMicroOpBufferSize-to-practical-l.patch
 
   # Remove CMake find module for zstd; breaks if out of sync with upstream zstd
   rm cmake/modules/Findzstd.cmake
