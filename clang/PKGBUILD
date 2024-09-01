@@ -3,7 +3,7 @@
 
 pkgname=clang
 pkgver=18.1.8
-pkgrel=3
+pkgrel=4
 pkgdesc="C language family frontend for LLVM"
 arch=('x86_64')
 url="https://clang.llvm.org/"
@@ -24,7 +24,9 @@ source=($_source_base/clang-$pkgver.src.tar.xz{,.sig}
         $_source_base/cmake-$pkgver.src.tar.xz{,.sig}
         $_source_base/third-party-$pkgver.src.tar.xz{,.sig}
         clangd-handle-missing-ending-brace.patch::https://github.com/llvm/llvm-project/commit/9d1dada57741.patch
-        enable-fstack-protector-strong-by-default.patch)
+        enable-fstack-protector-strong-by-default.patch
+        0001-Enable-TuningSlowDivide64-on-Barcelona-Bobcat-Bulldo.patch
+        0002-Reduce-znver3-4-LoopMicroOpBufferSize-to-practical-l.patch)
 sha256sums=('5724fe0a13087d5579104cedd2f8b3bc10a212fb79a0fcdac98f4880e19f4519'
             'SKIP'
             'e58877fcd95ed106824bd1a31276dd17ed0c53adcd60ca75289eac0654f0a7f1'
@@ -36,7 +38,9 @@ sha256sums=('5724fe0a13087d5579104cedd2f8b3bc10a212fb79a0fcdac98f4880e19f4519'
             'b76b810f3d3dc5d08e83c4236cb6e395aa9bd5e3ea861e8c319b216d093db074'
             'SKIP'
             'c102e8a6a2adb0e8729865ffb8799b22bb8a9bdf0f421991880fa4393378370a'
-            'ef319e65f927718e1d3b1a23c480d686b1d292e2a0bf27229540964f9734117a')
+            'ef319e65f927718e1d3b1a23c480d686b1d292e2a0bf27229540964f9734117a'
+            '7d4b76f753618752aaed64bb496ed3cd443faf1d3124b540c643abcca5a9756e'
+            'bac174d1958fa3134ce530cf2eed8abdbf910697e87cee6e4a23a5a3a1098b2d')
 validpgpkeys=('474E22316ABF4785A88C6E8EA2C794A986419D8A') # Tom Stellard <tstellar@redhat.com>
 
 # Utilizing LLVM_DISTRIBUTION_COMPONENTS to avoid
@@ -72,6 +76,10 @@ prepare() {
   # Attempt to convert script to Python 3
   2to3 -wn --no-diffs \
     tools/extra/clang-include-fixer/find-all-symbols/tool/run-find-all-symbols.py
+
+  cd $srcdir/llvm-$pkgver.src
+  patch -Np1 < ../0001-Enable-TuningSlowDivide64-on-Barcelona-Bobcat-Bulldo.patch
+  patch -Np1 < ../0002-Reduce-znver3-4-LoopMicroOpBufferSize-to-practical-l.patch
 }
 
 build() {
