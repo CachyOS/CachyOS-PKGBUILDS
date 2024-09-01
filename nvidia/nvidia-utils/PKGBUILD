@@ -6,7 +6,7 @@
 pkgbase=nvidia-utils
 pkgname=('nvidia-utils' 'opencl-nvidia' 'nvidia-dkms')
 pkgver=560.35.03
-pkgrel=3
+pkgrel=4
 arch=('x86_64')
 url="http://www.nvidia.com/"
 license=('custom')
@@ -54,10 +54,9 @@ prepare() {
 
     echo "Applying nvidia-patch..."
 
-# Disable for now, since there is no support for it yet
-#    # NVENC/NvFBC
-#    sed -i 's/\xe8\x25\x43\xfe\xff\x85\xc0\x41\x89\xc4/\xe8\x25\x43\xfe\xff\x29\xc0\x41\x89\xc4/g' "libnvidia-encode.so.${pkgver}"
-#    sed -i 's/\x83\xfe\x01\x73\x08\x48/\x83\xfe\x01\x90\x90\x48/' "libnvidia-fbc.so.${pkgver}"
+    msg2 "NVENC/NvFBC"
+    sed -i 's/\xe8\x35\x3e\xfe\xff\x85\xc0\x41\x89\xc4/\xe8\x35\x3e\xfe\xff\x29\xc0\x41\x89\xc4/g' "libnvidia-encode.so.${pkgver}"
+    sed -i 's/\x85\xc0\x0f\x84\x9b\x00\x00\x00\x48/\x85\xc0\x90\x90\x90\x90\x90\x90\x48/g' "libnvidia-fbc.so.${pkgver}"
 
     cd kernel
 
