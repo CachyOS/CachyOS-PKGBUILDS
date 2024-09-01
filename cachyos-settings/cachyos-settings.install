@@ -9,17 +9,11 @@ post_install() {
 
 post_upgrade() {
     echo "Enabling services..."
-    systemctl daemon-reload >/dev/null
 
     for service in "${SERVICES[@]}"; do
         if systemctl is-active "$service" >/dev/null; then
             systemctl restart "$service"
-        else
-            systemctl enable "$service"
         fi
+
     done
-    if systemctl is-enabled uksmd >/dev/null; then
-        echo "Disabling uksmd, managed now via systemd 256 MemoryKSM"
-        systemctl disable uksmd
-    fi
 }
