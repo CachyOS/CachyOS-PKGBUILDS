@@ -16,7 +16,7 @@ _optimize_v4=${_optimize_v4-}
 pkgname=(gcc gcc-libs lib32-gcc-libs gcc-ada gcc-d gcc-fortran gcc-go gcc-m2 gcc-objc gcc-rust lto-dump libgccjit)
 pkgver=14.2.1+r32+geccf707e5ce
 _commit=eccf707e5ceb7e405ffe4edfbcae2f769b8386cf
-pkgrel=3
+pkgrel=4
 pkgdesc='The GNU Compiler Collection'
 arch=(x86_64)
 license=(GPL-3.0-with-GCC-exception GFDL-1.3-or-later)
@@ -47,6 +47,7 @@ _libdir=usr/lib/gcc/$CHOST/${pkgver%%+*}
 source=(git+https://sourceware.org/git/gcc.git#commit=${_commit}
         c89 c99
         gcc-ada-repro.patch
+        znver5-disable-gather.patch
 )
 validpgpkeys=(F3691687D867B81B51CE07D9BBE43771487328A9  # bpiotrowski@archlinux.org
               86CFFCA918CF3AF47147588051E8B148A9999C34  # foutrelis@archlinux.org
@@ -55,7 +56,8 @@ validpgpkeys=(F3691687D867B81B51CE07D9BBE43771487328A9  # bpiotrowski@archlinux.
 sha256sums=('d3e9d9a008f3b63101eb5d771b3ee7db3a77ee87b8975485a79738245b377521'
             'de48736f6e4153f03d0a5d38ceb6c6fdb7f054e8f47ddd6af0a3dbf14f27b931'
             '2513c6d9984dd0a2058557bf00f06d8d5181734e41dcfe07be7ed86f2959622a'
-            '1773f5137f08ac1f48f0f7297e324d5d868d55201c03068670ee4602babdef2f')
+            '1773f5137f08ac1f48f0f7297e324d5d868d55201c03068670ee4602babdef2f'
+            '17f4606f297b16cf73e345f44d6ce19e4ddf1eec74b872bc10274e240ac18247')
 #pkgver() {
 #  cd gcc
 #  echo "$(cat gcc/BASE-VER)+$(git describe --tags | sed 's/[^-]*-[^-]*-//;s/[^-]*-/r&/;s/-/+/g;s/_/./')"
@@ -73,6 +75,9 @@ prepare() {
 
   # Reproducible gcc-ada
   patch -Np0 < "$srcdir/gcc-ada-repro.patch"
+  # Add patch to disable GATHER, when znver5 is used
+  # https://gcc.gnu.org/git/?p=gcc.git;a=commit;h=d82edbe92eed53a479736fcbbe6d54d0fb42daa4
+  patch -Np1 < "$srcidr/znver5-disable-gather.patch"
 
   mkdir -p "$srcdir/gcc-build"
   mkdir -p "$srcdir/libgccjit-build"
