@@ -7,15 +7,11 @@
 pkgname=cachy-browser
 _pkgname=Cachy
 __pkgname=cachy
-pkgver=129.0.2
+pkgver=130.0
 pkgrel=1
 pkgdesc="Community-maintained fork of Firefox, focused on privacy, security and freedom."
 arch=(x86_64)
-license=(
-  GPL
-  LGPL
-  MPL
-)
+license=(MPL-2.0)
 depends=(
   alsa-lib
   at-spi2-core
@@ -96,20 +92,18 @@ install=cachy-browser.install
 #backup=('usr/lib/cachy-browser/distribution/policies.json')
 
 _settings_commit=72b43a93b822ad06554d8dbe793b31fffef5aa74
-_common_commit=f3d38371739b0729685adbd0bca92a6f177db318
+_common_commit=03cf179a4404a27c86d823b0b507e64012902869
 source=(https://archive.mozilla.org/pub/firefox/releases/$pkgver/source/firefox-$pkgver.source.tar.xz{,.asc}
         $pkgname.desktop
         "git+https://github.com/cachyos/cachyos-browser-settings.git#commit=${_settings_commit}"
         "git+https://github.com/cachyos/cachyos-browser-common.git#commit=${_common_commit}"
-        "match.patch"
-        "0004-Bug-1912663-Fix-some-build-issues-with-cbindgen-0.27.patch")
-sha256sums=('35a1da121af474833d013ecbc1f77aa55bb35678fe06d438842d320dfab3f344'
+        "match.patch")
+sha256sums=('0c12852a502c9ceefc11003416057917466d8788dd8780931ea387b0b137b567'
             'SKIP'
             'de5c0deb9b6a4ebfaa933103cc6a65f1f43c9a456296d356cc54c7ca042d144c'
             '1975dba8663744e5757a7398899fe94dd50ba33adfe122d6cfb69d8480de9c3a'
-            '6e998f9f9d6c2caf377a04ada59a114921f0d7fce2873d929756124487929d68'
-            '1fbb1971a1d0d4c875b1af0f9681601909cfbe4fe0cc2c2f42c523c84c934499'
-            'dd2aba1c02c21b89ceed0713a6aa0241365fe79b1e3a4d21cdcd7231db6fab5e')
+            'e105a8bc95e4493d012708769610634ee002a00804d268811adbf9788aca617a'
+            '1fbb1971a1d0d4c875b1af0f9681601909cfbe4fe0cc2c2f42c523c84c934499')
 validpgpkeys=('14F26682D0916CDD81E37B6D61B7B526D98F0353') # Mozilla Software Releases <release@mozilla.com>
 
 prepare() {
@@ -234,13 +228,8 @@ END
 
     msg2 "mozilla-nongnome-proxies"
     patch -Np1 -i ${_patches_dir}/kde/mozilla-nongnome-proxies.patch
-    #msg2 "Fix build with new rust"
-    #patch -Np1 -i ${srcdir}/0001-Bug-1882209-Update-encoding_rs-to-0.8.34-to-deal-wit.patch
     # msg2 "Match to system libs"
     # patch -Np1 -i ../match.patch
-    # Fix build with cinbdgen 0.27.0
-    # https://bugzilla.mozilla.org/show_bug.cgi?id=1912663
-    patch -Np1 -i ../0004-Bug-1912663-Fix-some-build-issues-with-cbindgen-0.27.patch
 
     sed -i 's/releases\/mozilla-release",/mozilla-central",\n        "integration\/autoland",/' python/mozbuild/mozbuild/artifacts.py
 
