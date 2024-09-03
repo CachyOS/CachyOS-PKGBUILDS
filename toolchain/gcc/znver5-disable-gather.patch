@@ -1,6 +1,6 @@
-From d82edbe92eed53a479736fcbbe6d54d0fb42daa4 Mon Sep 17 00:00:00 2001
-From: Jan Hubicka <jh@suse.cz>
-Date: Tue, 3 Sep 2024 15:07:41 +0200
+From 5c24d76152bfb762800fbdfb255e3610f71193dd Mon Sep 17 00:00:00 2001
+From: Peter Jung <admin@ptr1337.dev>
+Date: Tue, 3 Sep 2024 17:06:55 +0200
 Subject: [PATCH] Zen5 tuning part 2: disable gather and scatter
 
 We disable gathers for zen4.  It seems that gather has improved a bit compared
@@ -24,28 +24,30 @@ I opened PR116582 with some examples of wins and loses
 
 gcc/ChangeLog:
 
-	* config/i386/x86-tune.def (X86_TUNE_USE_GATHER_2PARTS): Disable for
-	ZNVER5.
-	(X86_TUNE_USE_SCATTER_2PARTS): Disable for ZNVER5.
-	(X86_TUNE_USE_GATHER_4PARTS): Disable for ZNVER5.
-	(X86_TUNE_USE_SCATTER_4PARTS): Disable for ZNVER5.
-	(X86_TUNE_USE_GATHER_8PARTS): Disable for ZNVER5.
-	(X86_TUNE_USE_SCATTER_8PARTS): Disable for ZNVER5.
+        * config/i386/x86-tune.def (X86_TUNE_USE_GATHER_2PARTS): Disable for
+        ZNVER5.
+        (X86_TUNE_USE_SCATTER_2PARTS): Disable for ZNVER5.
+        (X86_TUNE_USE_GATHER_4PARTS): Disable for ZNVER5.
+        (X86_TUNE_USE_SCATTER_4PARTS): Disable for ZNVER5.
+        (X86_TUNE_USE_GATHER_8PARTS): Disable for ZNVER5.
+        (X86_TUNE_USE_SCATTER_8PARTS): Disable for ZNVER5.
+
+Signed-off-by: Peter Jung <admin@ptr1337.dev>
 ---
  gcc/config/i386/x86-tune.def | 12 ++++++------
  1 file changed, 6 insertions(+), 6 deletions(-)
 
 diff --git a/gcc/config/i386/x86-tune.def b/gcc/config/i386/x86-tune.def
-index da1a3d6a3c6c..ed26136faee5 100644
+index 1ab2f444b56..ef83ebd0d3a 100644
 --- a/gcc/config/i386/x86-tune.def
 +++ b/gcc/config/i386/x86-tune.def
-@@ -476,35 +476,35 @@ DEF_TUNE (X86_TUNE_AVOID_4BYTE_PREFIXES, "avoid_4byte_prefixes",
+@@ -483,35 +483,35 @@ DEF_TUNE (X86_TUNE_AVOID_4BYTE_PREFIXES, "avoid_4byte_prefixes",
  /* X86_TUNE_USE_GATHER_2PARTS: Use gather instructions for vectors with 2
     elements.  */
  DEF_TUNE (X86_TUNE_USE_GATHER_2PARTS, "use_gather_2parts",
 -	  ~(m_ZNVER1 | m_ZNVER2 | m_ZNVER3 | m_ZNVER4 | m_CORE_HYBRID
 +	  ~(m_ZNVER | m_CORE_HYBRID
- 	    | m_YONGFENG | m_SHIJIDADAO | m_CORE_ATOM | m_GENERIC | m_GDS))
+ 	    | m_YONGFENG | m_CORE_ATOM | m_GENERIC | m_GDS))
  
  /* X86_TUNE_USE_SCATTER_2PARTS: Use scater instructions for vectors with 2
     elements.  */
@@ -58,7 +60,7 @@ index da1a3d6a3c6c..ed26136faee5 100644
  DEF_TUNE (X86_TUNE_USE_GATHER_4PARTS, "use_gather_4parts",
 -	  ~(m_ZNVER1 | m_ZNVER2 | m_ZNVER3 | m_ZNVER4 | m_CORE_HYBRID
 +	  ~(m_ZNVER | m_CORE_HYBRID
- 	    | m_YONGFENG | m_SHIJIDADAO | m_CORE_ATOM | m_GENERIC | m_GDS))
+ 	    | m_YONGFENG | m_CORE_ATOM | m_GENERIC | m_GDS))
  
  /* X86_TUNE_USE_SCATTER_4PARTS: Use scater instructions for vectors with 4
     elements.  */
@@ -71,7 +73,7 @@ index da1a3d6a3c6c..ed26136faee5 100644
  DEF_TUNE (X86_TUNE_USE_GATHER_8PARTS, "use_gather_8parts",
 -	  ~(m_ZNVER1 | m_ZNVER2 | m_ZNVER4 | m_CORE_HYBRID | m_CORE_ATOM
 +	  ~(m_ZNVER | m_CORE_HYBRID | m_CORE_ATOM
- 	    | m_YONGFENG | m_SHIJIDADAO | m_GENERIC | m_GDS))
+ 	    | m_YONGFENG | m_GENERIC | m_GDS))
  
  /* X86_TUNE_USE_SCATTER: Use scater instructions for vectors with 8 or more
     elements.  */
@@ -82,4 +84,5 @@ index da1a3d6a3c6c..ed26136faee5 100644
  /* X86_TUNE_AVOID_128FMA_CHAINS: Avoid creating loops with tight 128bit or
     smaller FMA chain.  */
 -- 
-2.43.5
+2.46.0
+
