@@ -9,10 +9,10 @@ pkgver=11.6.4
 pkgrel=3
 _pkgfixver=$pkgver
 
-_commit='dff0d861a492e0dcbfb03b134cf737e627315d52'
-sha256sums=('965ea2c39b3999bb0ac5ec75da150d43fdd35deb02c0c113deef84e96ee636de'
+_commit='9108cba3ae01c60c198e996a4956474a66597a7b'
+sha256sums=('f5aabfc5b1972f444bd527d23ee33c927e4bec9fedf2e947aff3aa997afbee07'
             '6e0c25f0fcb0076ce78845b037e32925fcc3f1cd1670062c48ed35f564a10244'
-            'c2b943318a01ba1f3dabbf32e48e6a6f4b4b774e167ab86c6bfee31aa4a3424c'
+            'b5236af02c25cd7de4b2c9c2d0f064dac3c2f54da5cc72bf72fc6236a34bd9c4'
             '23862d7ba3507670cbdd00b949c453bf8b8f2bb876cbd5943b2ceb60cc13cc6f')
 
 pkgdesc="Pamac package manager library based on libalpm"
@@ -31,7 +31,7 @@ options=(!emptydirs !strip)
 install=pamac.install
 source=("libpamac-$pkgver-$pkgrel.tar.gz::$url/-/archive/$_commit/libpamac-$_commit.tar.gz"
         fix-appstream-data.sh fix-appstream-data.hook
-        "https://github.com/vnepogodin/my-patches/raw/develop/libpamac/0001-add-arches-from-pacman-func-call.patch")
+        https://github.com/vnepogodin/my-patches/raw/develop/libpamac/0001-add-arches-from-pacman-func-call.patch)
 
 define_meson=''
 if [ "${ENABLE_FLATPAK}" = 1 ]; then
