@@ -1,0 +1,87 @@
+From 067b94f37f1fe437ca7b7cc72c71e50d64954440 Mon Sep 17 00:00:00 2001
+From: Jan Hubicka <jh@suse.cz>
+Date: Tue, 3 Sep 2024 18:20:34 +0200
+Subject: [PATCH 3/4] Zen5 tuning part 4: update reassocation width
+
+Zen5 has 6 instead of 4 ALUs and the integer multiplication can now execute in
+3 of them.  FP units can do 2 additions and 2 multiplications with latency 2
+and 3.  This patch updates reassociation width accordingly.  This has potential
+of increasing register pressure but unlike while benchmarking znver1 tuning
+I did not noticed this actually causing problem on spec, so this patch bumps
+up reassociation width to 6 for everything except for integer vectors, where
+there are 4 units with typical latency of 1.
+
+Bootstrapped/regtested x86_64-linux, comitted.
+
+gcc/ChangeLog:
+
+	* config/i386/i386.cc (ix86_reassociation_width): Update for Znver5.
+	* config/i386/x86-tune-costs.h (znver5_costs): Update reassociation
+	widths.
+---
+ gcc/config/i386/i386.cc          | 10 +++++++---
+ gcc/config/i386/x86-tune-costs.h | 23 +++++++++++++----------
+ 2 files changed, 20 insertions(+), 13 deletions(-)
+
+diff --git a/gcc/config/i386/i386.cc b/gcc/config/i386/i386.cc
+index feefbe322de..85095cbcbb3 100644
+--- a/gcc/config/i386/i386.cc
++++ b/gcc/config/i386/i386.cc
+@@ -24512,13 +24512,17 @@ ix86_reassociation_width (unsigned int op, machine_mode mode)
+       if (width == 1)
+ 	return 1;
+ 
+-      /* Integer vector instructions execute in FP unit
++      /* Znver1-4 Integer vector instructions execute in FP unit
+ 	 and can execute 3 additions and one multiplication per cycle.  */
+       if ((ix86_tune == PROCESSOR_ZNVER1 || ix86_tune == PROCESSOR_ZNVER2
+-	   || ix86_tune == PROCESSOR_ZNVER3 || ix86_tune == PROCESSOR_ZNVER4
+-	   || ix86_tune == PROCESSOR_ZNVER5)
++	   || ix86_tune == PROCESSOR_ZNVER3 || ix86_tune == PROCESSOR_ZNVER4)
+    	  && INTEGRAL_MODE_P (mode) && op != PLUS && op != MINUS)
+ 	return 1;
++      /* Znver5 can do 2 integer multiplications per cycle with latency
++	 of 3.  */
++      if (ix86_tune == PROCESSOR_ZNVER5
++	  && INTEGRAL_MODE_P (mode) && op != PLUS && op != MINUS)
++	width = 6;
+ 
+       /* Account for targets that splits wide vectors into multiple parts.  */
+       if (TARGET_AVX512_SPLIT_REGS && GET_MODE_BITSIZE (mode) > 256)
+diff --git a/gcc/config/i386/x86-tune-costs.h b/gcc/config/i386/x86-tune-costs.h
+index 8348ab8230a..da36d2adfec 100644
+--- a/gcc/config/i386/x86-tune-costs.h
++++ b/gcc/config/i386/x86-tune-costs.h
+@@ -2100,16 +2100,19 @@ struct processor_costs znver5_cost = {
+   COSTS_N_INSNS (13),			/* cost of DIVSD instruction.  */
+   COSTS_N_INSNS (14),			/* cost of SQRTSS instruction.  */
+   COSTS_N_INSNS (20),			/* cost of SQRTSD instruction.  */
+-  /* Zen can execute 4 integer operations per cycle.  FP operations
+-     take 3 cycles and it can execute 2 integer additions and 2
+-     multiplications thus reassociation may make sense up to with of 6.
+-     SPEC2k6 bencharks suggests
+-     that 4 works better than 6 probably due to register pressure.
+-
+-     Integer vector operations are taken by FP unit and execute 3 vector
+-     plus/minus operations per cycle but only one multiply.  This is adjusted
+-     in ix86_reassociation_width.  */
+-  4, 4, 3, 6,				/* reassoc int, fp, vec_int, vec_fp.  */
++  /* Zen5 can execute:
++      - integer ops: 6 per cycle, at most 3 multiplications.
++	latency 1 for additions, 3 for multiplications (pipelined)
++
++	Setting width of 9 for multiplication is probably excessive
++	for register pressure.
++      - fp ops: 2 additions per cycle, latency 2-3
++		2 multiplicaitons per cycle, latency 3
++      - vector intger ops: 4 additions, latency 1
++			   2 multiplications, latency 4
++	We increase width to 6 for multiplications
++	in ix86_reassociation_width.  */
++  6, 6, 4, 6,				/* reassoc int, fp, vec_int, vec_fp.  */
+   znver2_memcpy,
+   znver2_memset,
+   COSTS_N_INSNS (4),			/* cond_taken_branch_cost.  */
+-- 
+2.46.0
+
