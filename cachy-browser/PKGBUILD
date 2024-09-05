@@ -92,7 +92,7 @@ install=cachy-browser.install
 #backup=('usr/lib/cachy-browser/distribution/policies.json')
 
 _settings_commit=72b43a93b822ad06554d8dbe793b31fffef5aa74
-_common_commit=9b7b26597985b79c1af4826609291de6a7c79fc8
+_common_commit=5dd46aafa8ad8b4bddc86a4febdab901e447c9a2
 source=(https://archive.mozilla.org/pub/firefox/releases/$pkgver/source/firefox-$pkgver.source.tar.xz{,.asc}
         $pkgname.desktop
         "git+https://github.com/cachyos/cachyos-browser-settings.git#commit=${_settings_commit}"
@@ -108,7 +108,7 @@ validpgpkeys=('14F26682D0916CDD81E37B6D61B7B526D98F0353') # Mozilla Software Rel
 
 prepare() {
   # we need it for bootstap build to be able to build with Firefox toolchain,
-  # for some reason it doesn't bootstrap rust compiler 
+  # for some reason it doesn't bootstrap rust compiler
   if ! rustc --version | grep stable  >/dev/null 2>&1; then
     echo "Installing rust compiler…"
     rustup toolchain install stable
