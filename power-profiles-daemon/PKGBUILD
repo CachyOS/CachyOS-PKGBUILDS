@@ -1,0 +1,50 @@
+# Maintainer: Antonio Rojas <arojas@archlinux.org>
+# Contributor: tinywrkb <tinywrkb@gmail.com>
+
+pkgname=power-profiles-daemon
+pkgver=0.22
+pkgrel=2
+pkgdesc='Makes power profiles handling available over D-Bus'
+url='https://gitlab.freedesktop.org/upower/power-profiles-daemon'
+license=(GPL-3.0-only)
+arch=(x86_64)
+depends=(gcc-libs
+         glib2
+         glibc
+         libgudev
+         polkit
+         upower)
+optdepends=('python-gobject: for powerprofilesctl')
+makedepends=(git
+             glib2-devel
+             meson)
+checkdepends=(python-dbusmock
+              python-isort
+              python-mccabe
+              umockdev)
+source=(git+https://gitlab.freedesktop.org/upower/$pkgname#tag=$pkgver
+        no-dpm-user-override.patch::https://gitlab.freedesktop.org/upower/power-profiles-daemon/-/merge_requests/208.patch)
+sha256sums=('1bc3965288d36554fcfa56d3de7dc1b16e09204205cf0af23bd47007a91530ec'
+            '5ee72e38a522b3226ede7176770db9af186376e1a7e13a2edc6b3cba7b2504c7')
+
+prepare() {
+  cd $pkgname
+  msg2 "Don't override user settings for dpm if set to manual"
+  patch -Np1 < ../no-dpm-user-override.patch
+}
+
+build() {
+  meson $pkgname build \
+    --prefix /usr \
+    --libexec lib \
+    --sysconfdir /usr/share
+  meson compile -C build
+}
+
+check() {
+  meson test -C build
+}
+
+package() {
+  meson install -C build --destdir "$pkgdir"
+}
