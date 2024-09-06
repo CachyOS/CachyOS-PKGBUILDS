@@ -33,6 +33,9 @@ b2sums=('eacd6e01b8792d1646054b32274c486021fa3c4341a5ce4e19d7afcccf0fc8645a20e78
 build() {
   cd "zlib-ng-${pkgver}"
 
+  export CFLAGS+=" -fno-semantic-interposition"
+  export CXXLAGS+=" -fno-semantic-interposition"
+
 	# WITH_UNALIGNED - unaligned access invokes undefined behaviour,
 	#   see https://github.com/gentoo/gentoo/pull/17167 for more info.
   local _options=(
