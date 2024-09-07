@@ -1,4 +1,4 @@
-SERVICES=("ananicy-cpp")
+SERVICES=("ananicy-cpp" "systemd-resolved")
 
 post_install() {
     echo "Enabling services..."
@@ -16,4 +16,6 @@ post_upgrade() {
         fi
 
     done
+    # Enable systemd-resolved only once for the upcoming upgrade
+    systemctl enable systemd-resolved
 }
