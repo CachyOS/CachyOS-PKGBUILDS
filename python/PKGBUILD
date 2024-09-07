@@ -10,14 +10,14 @@ shopt -s extglob
 pkgbase=python
 pkgname=(python python-tests)
 pkgver=3.12.6
-pkgrel=2
+pkgrel=3
 _pybasever=${pkgver%.*}
 pkgdesc="The Python programming language"
 arch=('x86_64')
 license=('PSF-2.0')
 url="https://www.python.org/"
 depends=('bzip2' 'expat' 'gdbm' 'libffi' 'libnsl' 'libxcrypt' 'openssl' 'zlib' 'tzdata' 'mpdecimal')
-makedepends=('tk' 'sqlite' 'bluez-libs' 'llvm' 'gdb' 'xorg-server-xvfb' 'ttf-font')
+makedepends=('tk' 'sqlite' 'bluez-libs' 'llvm' 'gdb' 'xorg-server-xvfb' 'ttf-font' 'llvm-bolt')
 source=("https://www.python.org/ftp/python/${pkgver%rc*}/Python-${pkgver}.tar.xz"{,.asc}
         EXTERNALLY-MANAGED)
 sha512sums=('e658b0d59b5cfdc591d626e8282b9945759f27ee6fbc8bcb8670737db32ffc11fb832dfed9b0e80188fb5f7f3f39fe6dd6191ab7736376453c9e248321e9b063'
@@ -55,6 +55,7 @@ build() {
               --enable-shared \
               --with-computed-gotos \
               --enable-optimizations \
+              --enable-bolt \
               --with-lto \
               --enable-ipv6 \
               --with-system-expat \
