@@ -9,7 +9,7 @@
 
 _staging=false
 pkgname=pacman
-pkgver=7.0.0.r2.g6393505
+pkgver=7.0.0.r3.gf3211df
 _sqlitever=$(curl -s 'https://archlinux.org/packages/search/json/?name=sqlite' | grep -oP '"pkgver":\s*"\K[^"]+' | head -n 1 | awk -F. '{
     printf "%d%02d%02d", $1, $2, $3;
     if (NF == 4) { printf "%02d", $4 }
@@ -62,7 +62,7 @@ backup=(etc/pacman.conf
 #options=('!lto') -- should we put no lto here??
 #validpgpkeys=('6645B0A8C7005E78DB1D7864F99FFE0FEAE999BD'  # Allan McRae <allan@archlinux.org>
 #              'B8151B117037781095514CA7BBDFFC92306B1121') # Andrew Gregory (pacman) <andrew@archlinux.org>
-_commit="639350593fdc006e38756b4590935d1dbd17bc73"
+_commit="f3211df62b9c6e5c7542b12e24e6fcc36b4c0edb"
 source=("git+https://github.com/CachyOS/pacman.git#commit=${_commit}?signed"
         pacman.conf
         makepkg.conf
@@ -73,7 +73,7 @@ source=("git+https://github.com/CachyOS/pacman.git#commit=${_commit}?signed"
         disable-always-stale.patch
         )
 source_aarch64=(fix-alpm-crate-for-aarch64.patch)
-sha256sums=('0fda98d94d2e26211870c102711d4be50256144720937d188e291e8dbb1fd310'
+sha256sums=('387ab7db82bca2da0fa565fa35695385f2fd67189e84242098b9a2a48c068a88'
             'bc80e9d0439caddd29b99a69b5060b5589cad2398c23abc5b2b8b990fae6ad8c'
             'ce794bf0d8a9b1cb2637188516ce39e3559b2b027c47e94ea388991d33461d89'
             'c8760d7ebb6c9817d508c691c67084be251cd9c8811ee1ccf92c1278bad74c1c'
