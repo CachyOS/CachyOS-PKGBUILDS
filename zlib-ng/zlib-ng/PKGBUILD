@@ -1,0 +1,91 @@
+### Arch Linux PKGBUILD Maintainers:
+# Maintainer: Levente Polyak <anthraxx[at]archlinux[dot]org>
+# Contributor: Chocobo1 <chocobo1 AT archlinux DOT net>
+# Contributor: Jacek Szafarkiewicz <szafar at linux dot pl>
+### CachyOS PKGBUILD Maintainers:
+# Maintainer: Eric Naim <dnaim@cachyos.org>
+# Maintainer: Peter Jung <admin@ptr1337.dev>
+
+
+pkgbase=zlib-ng
+pkgname=(
+  $pkgbase
+  $pkgbase-compat
+)
+pkgver=2.2.1
+pkgrel=2
+pkgdesc='zlib replacement with optimizations for next generation systems'
+url='https://github.com/zlib-ng/zlib-ng'
+arch=('x86_64')
+license=('custom:zlib')
+depends=(
+  glibc
+)
+makedepends=(
+  cmake
+  ninja
+)
+source=("${url}/archive/refs/tags/$pkgver/zlib-ng-${pkgver}.tar.gz")
+sha256sums=('ec6a76169d4214e2e8b737e0850ba4acb806c69eeace6240ed4481b9f5c57cdf')
+b2sums=('eacd6e01b8792d1646054b32274c486021fa3c4341a5ce4e19d7afcccf0fc8645a20e78aedad2b353d662b2b82641780c55ff8e4e255c3fe9ffb67fce2001552')
+
+
+build() {
+  cd "zlib-ng-${pkgver}"
+
+  export CFLAGS+=" -fno-semantic-interposition"
+  export CXXFLAGS+=" -fno-semantic-interposition"
+
+	# WITH_UNALIGNED - unaligned access invokes undefined behaviour,
+	#   see https://github.com/gentoo/gentoo/pull/17167 for more info.
+  local _options=(
+    -G Ninja
+    -DCMAKE_BUILD_TYPE=None
+    -DCMAKE_INSTALL_PREFIX=/usr
+    -DCMAKE_INSTALL_LIBDIR=lib
+    -Wno-dev
+    -DWITH_GTEST=OFF
+    -DWITH_UNALIGNED=OFF
+  )
+
+  msg2 "Building zlib-ng"
+  cmake -B build \
+    "${_options[@]}"
+  cmake --build build
+
+  msg2 "Building zlib-ng-compat"
+  cmake -B build-compat \
+    "${_options[@]}" \
+    -DZLIB_COMPAT=ON
+  cmake --build build-compat
+}
+
+check() {
+  cd "zlib-ng-${pkgver}"
+  msg2 "Checking zlib-ng"
+  ctest --output-on-failure --test-dir build
+  msg2 "Checking zlib-ng-compat"
+  ctest --output-on-failure --test-dir build-compat
+}
+
+package_zlib-ng() {
+  provides=('libz-ng.so')
+
+  cd "zlib-ng-${pkgver}"
+  DESTDIR="${pkgdir}" cmake --install build
+  install -Dm 644 LICENSE.md -t "${pkgdir}/usr/share/licenses/${pkgname}"
+  install -Dm 644 README.md -t "${pkgdir}/usr/share/doc/${pkgname}"
+}
+
+package_zlib-ng-compat() {
+  pkgdesc+=" (zlib compat)"
+  provides=('zlib' 'libz.so')
+  replaces=('zlib')
+
+  cd "zlib-ng-${pkgver}"
+  DESTDIR="${pkgdir}" cmake --install build-compat
+  install -Dm 644 LICENSE.md -t "${pkgdir}/usr/share/licenses/${pkgname}"
+  install -Dm 644 README.md -t "${pkgdir}/usr/share/doc/${pkgname}"
+}
+
+# vim: ts=2 sw=2 et:
