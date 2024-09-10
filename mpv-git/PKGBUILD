@@ -6,7 +6,7 @@
 
 pkgname=mpv-git
 gitname=mpv
-pkgver=0.38.0.r737.g1f33889c03
+pkgver=0.38.0_757_gf6d931301b
 pkgrel=1
 pkgdesc='a free, open source, and cross-platform media player - Git Version'
 arch=('x86_64')
@@ -30,7 +30,7 @@ sha256sums=('SKIP')
 
 pkgver() {
   cd ${gitname}
-  git describe --long --tags | sed 's/^v//;s/\([^-]*-g\)/r\1/;s/-/./g'
+  git describe --always --tags --dirty | sed -e 's/^v//' -e 's/-/_/g'
 }
 
 build() {
