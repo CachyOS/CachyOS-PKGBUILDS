@@ -6,9 +6,9 @@
 # Contributor: Giovanni Scafora <giovanni@archlinux.org>
 
 pkgname=wine-cachyos
-_srctag=9.0-20240831
+_srctag=9.0-20240905
 pkgver=${_srctag//-/.}
-pkgrel=2
+pkgrel=1
 epoch=2
 
 _pkgbasever=${pkgver/rc/-rc}
@@ -18,13 +18,12 @@ _winever=$_pkgbasever
 source=(wine-cachyos::git+https://github.com/CachyOS/wine-cachyos.git#tag=cachyos-wine-${_srctag}
         30-win32-aliases.conf
         wine-binfmt.conf)
-source+=('lto-fixup.patch'
+source+=(
 )
-b2sums=('16429f09051c0a47219ab419a1e4de6551f6d997491673c52aeed5c3e7e4a14976ef500f6fd148ee1a9a6a5e0d915f057e534dfb840655cb576d7fc1d5065589'
+b2sums=('fd2961a3fec818a0fa41f15c6bb5bd2db8bf84e3adc864ad330179d445cac30ae48346eb2be0bab77f8a5c2a3d485844847e4dbd8fb7f4cd66704b91a5010c6a'
         '45db34fb35a679dc191b4119603eba37b8008326bd4f7d6bd422fbbb2a74b675bdbc9f0cc6995ed0c564cf088b7ecd9fbe2d06d42ff8a4464828f3c4f188075b'
         'e9de76a32493c601ab32bde28a2c8f8aded12978057159dd9bf35eefbf82f2389a4d5e30170218956101331cf3e7452ae82ad0db6aad623651b0cc2174a61588')
 b2sums+=(
-        '3f3e4757e5bb02cde801e9c7dd97090b74ff1bd071c3ace6e3115eb8089672c78fe4405bf2d0fb57bb96b2ce38112b2970ff9b4e064ad92b8febeaa8ed1c8e33'
 )
 validpgpkeys=(5AC1A08B03BD7A313E0A955AF5E6E9EEB9461DD7
               DA23579A74D4AD9AF9D3F945CEFAC8EAAF17519D)
@@ -114,8 +113,6 @@ prepare() {
   mkdir $pkgname-{32,64}-build
 
   pushd $pkgname
-      patch -Np1 -i "$srcdir"/lto-fixup.patch
-
       git config user.email "wine@cachyos.org"
       git config user.name "wine cachyos"
       git tag wine-9.0 --annotate -m "$pkgver" --force
@@ -127,7 +124,8 @@ prepare() {
 }
 
 build() {
-  export CFLAGS="$CFLAGS"
+  # Doesn't compile without remove these flags as of 4.10
+  export CFLAGS="$CFLAGS -ffat-lto-objects"
 
   local -a split=($CFLAGS)
   local -A flags
