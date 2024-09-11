@@ -92,6 +92,12 @@ build() {
   CFLAGS=${CFLAGS/-g /-g1 }
   CXXFLAGS=${CXXFLAGS/-g /-g1 }
 
+  # Add fno-semantic-position, can improve at fPIC compiled packages massively the performance
+  # At clang it improves for 3%
+  # If clang is as compiler used, it should as default add this anyways
+  export CFLAGS+=" -fno-semantic-interposition"
+  export CXXFLAGS+=" -fno-semantic-interposition"
+
   local cmake_args=(
     -G Ninja
     -DCMAKE_BUILD_TYPE=Release

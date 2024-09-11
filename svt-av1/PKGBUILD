@@ -35,6 +35,11 @@ pkgver() {
 }
 
 build() {
+
+  # Add fno-semantic-position, can improve at fPIC compiled packages massively the performance
+  export CFLAGS+=" -fno-semantic-interposition"
+  export CXXFLAGS+=" -fno-semantic-interposition"
+
   cmake -S SVT-AV1 -B build -G Ninja \
     -DCMAKE_INSTALL_PREFIX=/usr \
     -DBUILD_SHARED_LIBS=ON \
