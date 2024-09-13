@@ -2,7 +2,7 @@
 # Maintainer: loathingkernel <loathingkernel _a_ gmail _d_ com>
 
 pkgname=proton-cachyos
-_srctag=9.0-20240831
+_srctag=9.0-20240905
 _commit=
 pkgver=${_srctag//-/.}
 _geckover=2.47.4
@@ -40,8 +40,6 @@ depends=(
   cabextract
 )
 depends+=(
-  winesync-dkms
-  winesync-udev-rule
   wayland          lib32-wayland
 )
 
@@ -72,7 +70,6 @@ makedepends=(autoconf bison perl flex mingw-w64-gcc
   wayland-protocols
 )
 makedepends+=(
-  winesync-header
 )
 
 optdepends=(
@@ -99,7 +96,6 @@ source=(
     https://github.com/madewokherd/wine-mono/releases/download/wine-mono-${_monover}/wine-mono-${_monover}-x86.tar.xz
     https://github.com/madewokherd/xalia/releases/download/xalia-${_xaliaver}/xalia-${_xaliaver}-net48-mono.zip
     dxvk-reflex.patch
-    disable-fastsync.patch
 )
 noextract=(
     wine-gecko-${_geckover}-{x86,x86_64}.tar.xz
@@ -166,9 +162,6 @@ prepare() {
         cargo fetch --locked --target "x86_64-unknown-linux-gnu"
     popd
     done
-
-    echo "Disable Fastsync as default"
-    patch -Np1 -i "$srcdir"/disable-fastsync.patch
 
     echo "dxvk: Enable Reflex"
     pushd $srcdir/proton-cachyos/dxvk
@@ -261,10 +254,9 @@ package() {
         $(find "$_monodir" -iname "*x86_64.dll" -or -iname "*x86_64.exe")
 }
 
-sha256sums=('ee6a10a9a2402dc6616939f466b68dcf1020e6708b3b112576cdccbd5a927232'
+sha256sums=('a447c19d25c4852cd0d10099de7fad8695451fbf1f1063d8b5a634005945b316'
             '2cfc8d5c948602e21eff8a78613e1826f2d033df9672cace87fed56e8310afb6'
             'fd88fc7e537d058d7a8abf0c1ebc90c574892a466de86706a26d254710a82814'
             '59b35dfe525f32c581884b6c7865496e13b3cd200c5ed267c43fb4663e0cd757'
             '50ce2cc85162343e62340b0ca7994ceba94592ab395fb99711e94e108e991f0c'
-            '678bba12f4881cd5b6ffb6a503106232619d46d8bbc6d7ec95e719d63fcb1c37'
-            '25776bc421be4a083c64f1fd232bbd67e24bde6ad9975281ad716dc2ce4d7888')
+            '678bba12f4881cd5b6ffb6a503106232619d46d8bbc6d7ec95e719d63fcb1c37')
