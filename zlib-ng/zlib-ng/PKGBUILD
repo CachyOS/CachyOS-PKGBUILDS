@@ -13,7 +13,7 @@ pkgname=(
   $pkgbase-compat
 )
 pkgver=2.2.1
-pkgrel=2
+pkgrel=4
 pkgdesc='zlib replacement with optimizations for next generation systems'
 url='https://github.com/zlib-ng/zlib-ng'
 arch=('x86_64')
@@ -80,7 +80,9 @@ package_zlib-ng() {
 package_zlib-ng-compat() {
   pkgdesc+=" (zlib compat)"
   provides=('zlib' 'libz.so')
+  conflicts=('zlib')
   replaces=('zlib')
+  options=('staticlibs')
 
   cd "zlib-ng-${pkgver}"
   DESTDIR="${pkgdir}" cmake --install build-compat
