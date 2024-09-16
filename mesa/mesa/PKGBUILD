@@ -24,7 +24,7 @@ pkgname=(
   mesa-docs
 )
 pkgver=24.2.2
-pkgrel=3
+pkgrel=5
 epoch=1
 pkgdesc="Open-source OpenGL drivers"
 url="https://www.mesa3d.org/"
@@ -60,7 +60,7 @@ makedepends=(
   xcb-util-keysyms
   zlib
   zstd
-
+  lld
   # shared between mesa and lib32-mesa
   cbindgen
   clang
@@ -218,9 +218,22 @@ build() {
     -D vulkan-layers=device-select,intel-nullhw,overlay
   )
 
+  # Set Clang as compiler
+  export AR=llvm-ar
+  export CC=clang
+  export CXX=clang++
+  export NM=llvm-nm
+  export RANLIB=llvm-ranlib
+
+  export CFLAGS+=" -flto=thin"
+  export CXXFLAGS+=" -flto=thin"
+  export LDFLAGS+=" -Wl,--undefined-version -fuse-ld=lld"
   # Build only minimal debug info to reduce size
   CFLAGS+=" -g1"
   CXXFLAGS+=" -g1"
+
+  # LTO needs more open files
+  ulimit -n 4096
 
   # Inject subproject packages
   export MESON_PACKAGE_CACHE_DIR="$srcdir"
