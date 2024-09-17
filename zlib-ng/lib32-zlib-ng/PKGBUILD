@@ -71,6 +71,7 @@ check() {
 
 package_lib32-zlib-ng() {
   provides=('libz-ng.so')
+  depends=(zlib-ng=$pkgver)
 
 
   cd "zlib-ng-${pkgver}"
@@ -84,6 +85,7 @@ package_lib32-zlib-ng() {
 package_lib32-zlib-ng-compat() {
   pkgdesc+=" (zlib compat)"
   provides=('lib32-zlib' 'libz.so')
+  depends=(zlib-ng-compat=$pkgver)
   conflicts=('lib32-zlib')
   replaces=('lib32-zlib')
   options=('staticlibs')
