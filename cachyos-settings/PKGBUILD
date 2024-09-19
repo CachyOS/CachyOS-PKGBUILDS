@@ -3,7 +3,7 @@
 _gitname=CachyOS-Settings
 pkgname=cachyos-settings
 pkgver=1.1.0
-pkgrel=1
+pkgrel=2
 epoch=1
 groups=(cachyos)
 arch=('any')
@@ -29,7 +29,11 @@ optdepends=('ruby: for tunecfs2'
             'lua-luv: for topmem'
             'irqbalance'
             'power-profiles-daemon: For game-performance')
-
+prepare() {
+  # Cherry Pick Gnome Wayland Workaround removal
+  # Gnome 47 does not need it anymore
+  git cherry-pick -n 285ac8ba03be514efa489df0d23a17838e82e81b
+}
 package() {
   install -d "$pkgdir/etc"
   cp -rf "${srcdir}/${_gitname}/etc" "$pkgdir"
