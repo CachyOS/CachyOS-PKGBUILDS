@@ -1,0 +1,43 @@
+pkgbase = tinysparql
+	pkgdesc = Low-footprint RDF triple store with SPARQL 1.1 interface
+	pkgver = 3.8.0
+	pkgrel = 1
+	url = https://tinysparql.org/
+	arch = x86_64
+	license = GPL-2.0-or-later
+	checkdepends = man-db
+	makedepends = asciidoc
+	makedepends = bash-completion
+	makedepends = dbus
+	makedepends = gi-docgen
+	makedepends = git
+	makedepends = glib2-devel
+	makedepends = gobject-introspection
+	makedepends = meson
+	makedepends = python-dbus
+	makedepends = python-gobject
+	makedepends = python-tappy
+	makedepends = systemd
+	makedepends = vala
+	depends = avahi
+	depends = gcc-libs
+	depends = glib2
+	depends = glibc
+	depends = icu
+	depends = json-glib
+	depends = libsoup3
+	depends = libstemmer
+	depends = libxml2
+	depends = sqlite
+	source = git+https://gitlab.gnome.org/GNOME/tinysparql.git#commit=a5f3c82f093f9e4c137270c443fd94ddf4f8009c
+	b2sums = 1d1564bf421c70c86393f8030bddb10fef091d60bb6fac9ffede04d7082c48e2d8cdf84434965884ce30a59ad8ce1edd120dcc1614c0365e91db4e894d84528e
+
+pkgname = tinysparql
+	provides = tracker3=3.8.0
+	provides = libtinysparql-3.0.so
+	conflicts = tracker3<=3.7.3-2
+	replaces = tracker3<=3.7.3-2
+
+pkgname = tinysparql-docs
+	pkgdesc = Low-footprint RDF triple store with SPARQL 1.1 interface (documentation)
+	depends = 
