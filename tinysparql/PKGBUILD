@@ -9,7 +9,7 @@ pkgname=(
   tinysparql-docs
 )
 pkgver=3.8.0
-pkgrel=2
+pkgrel=3
 pkgdesc="Low-footprint RDF triple store with SPARQL 1.1 interface"
 url="https://tinysparql.org/"
 arch=(x86_64)
@@ -67,8 +67,8 @@ package_tinysparql() {
     "tracker3=$pkgver"
     libtinysparql-3.0.so
   )
-  replaces=('tracker3')
-  conflicts=('tracker3')
+  replaces=('tracker3<=3.7.3-2.1')
+  conflicts=('tracker3<=3.7.3-2.1')
 
   meson install -C build --destdir "$pkgdir"
 
