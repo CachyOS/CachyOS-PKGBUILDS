@@ -6,7 +6,7 @@
 pkgbase=nvidia-utils
 pkgname=('nvidia-utils' 'opencl-nvidia' 'nvidia-dkms')
 pkgver=560.35.03
-pkgrel=4
+pkgrel=5
 arch=('x86_64')
 url="http://www.nvidia.com/"
 license=('custom')
@@ -50,7 +50,7 @@ prepare() {
     msg2 "Make fbdev and modeset default enabled"
     patch -Np1 < ../make-modeset-fbdev-default.patch
     msg2 "Fix fbdev on 6.11 Kernel"
-    patch -Np1 < "$srcdir"/6.11-fbdev.patch
+    patch -Np2 -i $srcdir/6.11-fbdev.patch -d kernel/
 
     echo "Applying nvidia-patch..."
 
