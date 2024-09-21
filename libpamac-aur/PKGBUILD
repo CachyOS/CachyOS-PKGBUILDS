@@ -6,11 +6,11 @@ ENABLE_SNAPD=0
 
 pkgname=libpamac-aur
 pkgver=11.6.4
-pkgrel=5
+pkgrel=6
 _pkgfixver=$pkgver
 
-_commit='9108cba3ae01c60c198e996a4956474a66597a7b'
-sha256sums=('09ff6fad62e622feb3fa8e553c4e7899c186c3424e03da05859d62c02106a9bb'
+_commit='14212835ca50c3cb90aac0eed88e07b764dcba0e'
+sha256sums=('19b80dd064e913713cce45aa8e05350a851f4e1489a95d3ce0169a5fc7042ff3'
             '6e0c25f0fcb0076ce78845b037e32925fcc3f1cd1670062c48ed35f564a10244'
             'b5236af02c25cd7de4b2c9c2d0f064dac3c2f54da5cc72bf72fc6236a34bd9c4'
             'e90cb38ce31fac5eae86b73dfd94936f920b50f260afd4979b7cc7f62ca93bae'
@@ -28,7 +28,7 @@ depends=('glib2>=2.42' 'json-glib' 'libsoup3' 'dbus-glib' 'polkit' 'vte3>=0.38' 
 makedepends=('gettext' 'itstool' 'vala>=0.46'  'asciidoc' 'meson' 'ninja' 'gobject-introspection' 'systemd')
 backup=('etc/pamac.conf')
 conflicts=('libpamac' 'libpamac-all')
-provides=('libpamac.so=11' 'libpamac-aur.so=11' 'libpamac-appstream.so=11')
+provides=('libpamac.so=11' 'libpamac-appstream.so=11' "libpamac=$_pkgfixver")
 options=(!emptydirs !strip)
 install=pamac.install
 source=("libpamac-$pkgver-$pkgrel.zip::$url/archive/$_commit.zip"
