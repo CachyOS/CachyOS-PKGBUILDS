@@ -1,0 +1,190 @@
+From 5cd1b29f560be1f29b86f85167058a39d7a1d10c Mon Sep 17 00:00:00 2001
+From: Peter Jung <admin@ptr1337.dev>
+Date: Sun, 22 Sep 2024 18:35:59 +0200
+Subject: [PATCH] Add --enable-default-semantic-interposition to GCC configure
+
+--enable-default-semantic-interposition=no makes -fPIC default to
+-fno-semantic-interposition which enables interprocedural optimizations
+for default visibility non-vague-linkage function definitions.
+
+The suppression of interprocedural optimizations and inlining for such
+functions is the biggest difference between -fPIE/-fPIC.
+Distributions may want to enable default -fno-semantic-interposition to
+reclaim the lost performance (e.g. CPython is said to be 27% faster;
+Clang is 3% faster).
+
+gcc/
+
+    PR 100937
+    * common.opt (fsemantic-interposition): Initialize to -1.
+    * configure.ac: Add --enable-default-semantic-interposition. Default
+    to yes.
+    * defaults.h (DEFAULT_FLAG_SEMANTIC_INTERPOSITION): New.
+    * opts.c (finish_options): Update
+    opts->x_flag_semantic_interposition if it is -1.
+    * doc/install.texi: Document --enable-default-semantic-interposition.
+    * config.in: Add template.
+    * configure: Regenerate.
+
+Signed-off-by: Peter Jung <admin@ptr1337.dev>
+---
+ gcc/common.opt       |  2 +-
+ gcc/config.in        |  6 ++++++
+ gcc/configure        | 18 ++++++++++++++++++
+ gcc/configure.ac     | 12 ++++++++++++
+ gcc/defaults.h       |  6 ++++++
+ gcc/doc/install.texi |  3 +++
+ gcc/opts.cc          |  3 +++
+ 7 files changed, 49 insertions(+), 1 deletion(-)
+
+diff --git a/gcc/common.opt b/gcc/common.opt
+index ad348844775..9e9425f1662 100644
+--- a/gcc/common.opt
++++ b/gcc/common.opt
+@@ -2753,7 +2753,7 @@ Common Var(flag_sel_sched_reschedule_pipelined) Init(0) Optimization
+ Reschedule pipelined regions without pipelining.
+ 
+ fsemantic-interposition
+-Common Var(flag_semantic_interposition) Init(1) Optimization
++Common Var(flag_semantic_interposition) Init(-1) Optimization
+ Allow interposing function (or variables) by ones with different semantics (or initializer) respectively by dynamic linker.
+ 
+ ; sched_stalled_insns means that insns can be moved prematurely from the queue
+diff --git a/gcc/config.in b/gcc/config.in
+index f3de4ba6776..aea045f1e8a 100644
+--- a/gcc/config.in
++++ b/gcc/config.in
+@@ -150,6 +150,12 @@
+ #endif
+ 
+ 
++/* Define if -fPIC defaults to -fsemantic-interposition */
++#ifndef USED_FOR_TARGET
++#undef ENABLE_DEFAULT_SEMANTIC_INTERPOSITION
++#endif
++
++
+ /* Define if your target supports default stack protector and it is enabled.
+    */
+ #ifndef USED_FOR_TARGET
+diff --git a/gcc/configure b/gcc/configure
+index abc8bfdc244..98735c4c731 100755
+--- a/gcc/configure
++++ b/gcc/configure
+@@ -633,6 +633,7 @@ gt_needs=
+ ac_subst_vars='LTLIBOBJS
+ LIBOBJS
+ CET_HOST_FLAGS
++enable_default_semantic_interposition
+ LD_PICFLAG
+ PICFLAG
+ enable_default_pie
+@@ -1059,6 +1060,7 @@ with_linker_hash_style
+ with_diagnostics_color
+ with_diagnostics_urls
+ enable_default_pie
++enable_default_semantic_interposition
+ enable_cet
+ enable_s390_excess_float_precision
+ '
+@@ -1830,6 +1832,8 @@ Optional Features:
+   --disable-libquadmath-support
+                           disable libquadmath support for Fortran
+   --enable-default-pie    enable Position Independent Executable as default
++  --enable-default-semantic-interposition
++                          enable -fsemantic-interposition as -fPIC default
+   --enable-cet            enable Intel CET in host libraries [default=auto]
+   --enable-s390-excess-float-precision
+                           on s390 targets, evaluate float with double
+@@ -34563,6 +34567,20 @@ fi
+ 
+ 
+ 
++# Check whether --enable-default-semantic-interposition=no was given.
++if test "${enable_default_semantic_interposition+set}" = set; then :
++  enableval=$enable_default_semantic_interposition; enable_default_semantic_interposition=$enableval
++else
++  enable_default_semantic_interposition=yes
++fi
++
++if test x$enable_default_semantic_interposition != xno ; then
++
++$as_echo "#define ENABLE_DEFAULT_SEMANTIC_INTERPOSITION 1" >>confdefs.h
++
++fi
++
++
+ # Enable Intel CET on Intel CET enabled host if jit is enabled.
+  # Check whether --enable-cet was given.
+ if test "${enable_cet+set}" = set; then :
+diff --git a/gcc/configure.ac b/gcc/configure.ac
+index 1d2cefa3f6a..79bf9814f07 100644
+--- a/gcc/configure.ac
++++ b/gcc/configure.ac
+@@ -7810,6 +7810,18 @@ fi
+ 
+ AC_SUBST([LD_PICFLAG])
+ 
++# Check whether --enable-default-semantic-interposition=no was given.
++AC_ARG_ENABLE(default-semantic-interposition,
++[AS_HELP_STRING([--enable-default-semantic-interposition],
++  [enable -fsemantic-interposition as -fPIC default])],
++enable_default_semantic_interposition=$enableval,
++enable_default_semantic_interposition=yes)
++if test x$enable_default_semantic_interposition != xno ; then
++  AC_DEFINE(ENABLE_DEFAULT_SEMANTIC_INTERPOSITION, 1,
++      [Define if -fPIC defaults to -fsemantic-interposition.])
++fi
++AC_SUBST([enable_default_semantic_interposition])
++
+ # Enable Intel CET on Intel CET enabled host if jit is enabled.
+ GCC_CET_HOST_FLAGS(CET_HOST_FLAGS)
+ case x$enable_languages in
+diff --git a/gcc/defaults.h b/gcc/defaults.h
+index 92f3e07f742..7c83e586f62 100644
+--- a/gcc/defaults.h
++++ b/gcc/defaults.h
+@@ -1230,6 +1230,12 @@ see the files COPYING3 and COPYING.RUNTIME respectively.  If not, see
+ # define DEFAULT_FLAG_PIE 0
+ #endif
+ 
++#ifdef ENABLE_DEFAULT_SEMANTIC_INTERPOSITION
++# define DEFAULT_FLAG_SEMANTIC_INTERPOSITION 1
++#else
++# define DEFAULT_FLAG_SEMANTIC_INTERPOSITION 0
++#endif
++
+ #ifndef SWITCHABLE_TARGET
+ #define SWITCHABLE_TARGET 0
+ #endif
+diff --git a/gcc/doc/install.texi b/gcc/doc/install.texi
+index 9f2e427be68..34b4518836d 100644
+--- a/gcc/doc/install.texi
++++ b/gcc/doc/install.texi
+@@ -2094,6 +2094,9 @@ mips-linux and s390-linux.
+ @item --enable-default-pie
+ Turn on @option{-fPIE} and @option{-pie} by default.
+ 
++@item --enable-default-semantic-interposition=no
++Make @option{-fPIC} default to @option{-fno-semantic-interposition}.
++
+ @item --enable-secureplt
+ This option enables @option{-msecure-plt} by default for powerpc-linux.
+ @ifnothtml
+diff --git a/gcc/opts.cc b/gcc/opts.cc
+index 3333600e0ea..5a729698d6f 100644
+--- a/gcc/opts.cc
++++ b/gcc/opts.cc
+@@ -1156,6 +1156,9 @@ finish_options (struct gcc_options *opts, struct gcc_options *opts_set,
+ 		"%<-fhardened%> because it was specified on the command "
+ 		"line");
+ 
++  if (opts->x_flag_semantic_interposition == -1)
++    opts->x_flag_semantic_interposition = DEFAULT_FLAG_SEMANTIC_INTERPOSITION;
++
+   if (opts->x_optimize == 0)
+     {
+       /* Inlining does not work if not optimizing,
+-- 
+2.46.1
+
