@@ -3,7 +3,7 @@
 
 pkgname=scx-scheds-git
 _gitname=scx
-pkgver=1.0.4.r74.ga3cc4c2
+pkgver=1.0.4.r100.g1b5d23d
 pkgrel=1
 pkgdesc='sched_ext schedulers and tools'
 url='https://github.com/sched-ext/scx'
@@ -33,8 +33,9 @@ provides=("scx-scheds=$pkgver")
 conflicts=("scx-scheds")
 
 _backports=(
-e3609ac932a4e6eae91647c0a7d17d9f5fcee275
-5912314dc03c9d1e95a2a73f698fd997c1134772
+e3609ac932a4e6eae91647c0a7d17d9f5fcee275 # e3609ac scheds: introduce scx_fair
+5912314dc03c9d1e95a2a73f698fd997c1134772 # 5912314 scx_fair: introduce lowlatency mode
+1b44eca9d54d1fe02faa81722d5f105f0bd50b9a # 1b44eca scx_bpfland: prevent stall with sched_setaffinity()
 )
 
 _reverts=(
