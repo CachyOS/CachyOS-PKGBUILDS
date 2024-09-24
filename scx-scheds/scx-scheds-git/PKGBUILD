@@ -3,7 +3,7 @@
 
 pkgname=scx-scheds-git
 _gitname=scx
-pkgver=1.0.4.r100.g1b5d23d
+pkgver=1.0.4.r106.g652c923
 pkgrel=1
 pkgdesc='sched_ext schedulers and tools'
 url='https://github.com/sched-ext/scx'
@@ -26,8 +26,10 @@ makedepends=(
   python
   rust
 )
-source=("git+https://github.com/sched-ext/scx")
-sha256sums=('SKIP')
+source=("git+https://github.com/sched-ext/scx"
+        '0001-scx_fair-append-cast_mask.patch')
+sha256sums=('SKIP'
+            'a96e1aa26620522723d9148949cc3ebaeeef5750d2a814a37b9febebfc808148')
 options=(!lto)
 provides=("scx-scheds=$pkgver")
 conflicts=("scx-scheds")

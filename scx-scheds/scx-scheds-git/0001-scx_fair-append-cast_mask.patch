@@ -1,0 +1,32 @@
+From 8ec39a9f963f0468b5b0263874d96d4f17c848a1 Mon Sep 17 00:00:00 2001
+From: Piotr Gorski <lucjan.lucjanov@gmail.com>
+Date: Tue, 24 Sep 2024 17:41:39 +0200
+Subject: [PATCH] scx_fair: append cast_mask()
+
+Signed-off-by: Piotr Gorski <lucjan.lucjanov@gmail.com>
+---
+ scheds/rust/scx_fair/src/bpf/main.bpf.c | 8 --------
+ 1 file changed, 8 deletions(-)
+
+diff --git a/scheds/rust/scx_fair/src/bpf/main.bpf.c b/scheds/rust/scx_fair/src/bpf/main.bpf.c
+index 9bc8370..dcf8e9d 100644
+--- a/scheds/rust/scx_fair/src/bpf/main.bpf.c
++++ b/scheds/rust/scx_fair/src/bpf/main.bpf.c
+@@ -140,14 +140,6 @@ struct task_ctx *try_lookup_task_ctx(const struct task_struct *p)
+ 					(struct task_struct *)p, 0, 0);
+ }
+ 
+-/*
+- * Access a cpumask in read-only mode (typically to check bits).
+- */
+-static const struct cpumask *cast_mask(struct bpf_cpumask *mask)
+-{
+-	return (const struct cpumask *)mask;
+-}
+-
+ /*
+  * Allocate/re-allocate a new cpumask.
+  */
+-- 
+2.45.2.606.g9005149a4a
+
