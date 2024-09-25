@@ -3,8 +3,8 @@
 
 pkgname=scx-scheds-git
 _gitname=scx
-pkgver=1.0.4.r106.g652c923
-pkgrel=1
+pkgver=1.0.4.r119.gaea431c
+pkgrel=2
 pkgdesc='sched_ext schedulers and tools'
 url='https://github.com/sched-ext/scx'
 arch=('x86_64' 'aarch64')
@@ -26,18 +26,17 @@ makedepends=(
   python
   rust
 )
-source=("git+https://github.com/sched-ext/scx"
-        '0001-scx_fair-append-cast_mask.patch')
-sha256sums=('SKIP'
-            'a96e1aa26620522723d9148949cc3ebaeeef5750d2a814a37b9febebfc808148')
+source=("git+https://github.com/sched-ext/scx")
+sha256sums=('SKIP')
 options=(!lto)
 provides=("scx-scheds=$pkgver")
 conflicts=("scx-scheds")
 
 _backports=(
-e3609ac932a4e6eae91647c0a7d17d9f5fcee275 # e3609ac scheds: introduce scx_fair
-5912314dc03c9d1e95a2a73f698fd997c1134772 # 5912314 scx_fair: introduce lowlatency mode
-1b44eca9d54d1fe02faa81722d5f105f0bd50b9a # 1b44eca scx_bpfland: prevent stall with sched_setaffinity()
+92b7be0ba755d0fe0418929fd767b5796ec2cec9 # scx_bpfland: prevent stall with sched_setaffinity()
+c6363058f82bc508ee68df62ea7f6b6e4ce20881 # scheds: introduce scx_fair
+c1eb745217a1d1d73f06f757fa88b0a4e37ae8c5 # scx_fair: introduce lowlatency mode
+2d20150e0d206034a22891f72316323d1d7e9f11 # scx_fair: use cast_mask() from common.bpf.h
 )
 
 _reverts=(
