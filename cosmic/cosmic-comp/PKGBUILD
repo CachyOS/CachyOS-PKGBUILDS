@@ -34,6 +34,7 @@ b2sums=('7c7135a28c081e606ee033393ff5a068e60fea42893d642008008a206ce46589e9fb945
 
 prepare() {
   cd cosmic-comp
+  git cherry-pick -n 869ebee8f4a888dfc4770e6e6be841abdc56c70f
   cargo fetch --locked
   sed 's/lto = "fat"/lto = "thin"/' -i Cargo.toml
 }
