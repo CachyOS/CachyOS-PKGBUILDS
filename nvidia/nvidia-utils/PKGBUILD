@@ -6,7 +6,7 @@
 pkgbase=nvidia-utils
 pkgname=('nvidia-utils' 'opencl-nvidia' 'nvidia-dkms')
 pkgver=560.35.03
-pkgrel=6
+pkgrel=7
 arch=('x86_64')
 url="http://www.nvidia.com/"
 license=('custom')
@@ -20,8 +20,9 @@ source=('nvidia-drm-outputclass.conf'
         'systemd-homed-override.conf'
         'systemd-suspend-override.conf'
         "https://us.download.nvidia.com/XFree86/Linux-x86_64/${pkgver}/${_pkg}.run"
-        "make-modeset-fbdev-default.patch"
-        "6.11-fbdev.patch")
+        0001-Make-modeset-and-fbdev-default-enabled.patch
+        0004-6.11-Add-fix-for-fbdev.patch
+        0005-6.12-drm_outpull_pill-changed-check.patch)
 sha512sums=('de7116c09f282a27920a1382df84aa86f559e537664bb30689605177ce37dc5067748acf9afd66a3269a6e323461356592fdfc624c86523bf105ff8fe47d3770'
             '4b3ad73f5076ba90fe0b3a2e712ac9cde76f469cd8070280f960c3ce7dc502d1927f525ae18d008075c8f08ea432f7be0a6c3a7a6b49c361126dcf42f97ec499'
             'f8f071f5a46c1a5ce5188e104b017808d752e61c0c20de1466feb5d693c0b55a5586314411e78cc2ab9c0e16e2c67afdd358da94c0c75df1f8233f54c280762c'
@@ -29,8 +30,9 @@ sha512sums=('de7116c09f282a27920a1382df84aa86f559e537664bb30689605177ce37dc50677
             'a0183adce78e40853edf7e6b73867e7a8ea5dabac8e8164e42781f64d5232fbe869f850ab0697c3718ebced5cde760d0e807c05da50a982071dfe1157c31d6b8'
             '55def6319f6abb1a4ccd28a89cd60f1933d155c10ba775b8dfa60a2dc5696b4b472c14b252dc0891f956e70264be87c3d5d4271e929a4fc4b1a68a6902814cee'
             '97137160b64928ff84fd6145a0ebc209c045d6a07ccc53ec6df6ba1fda2ad72038eda7ecdc0a0178a2628aa4e18819a9b3ff3b693b22bdc9de543be0a968f8aa'
-            '73a3734aa0dd4df3cfba9dd7153f9b82981c4a4e86df0c804fb966280c02af8c39ad649bfa3d4119b82709974a40eaab67d357c586b2414c66113929a47628e9'
-            'f7078e0bf1657ab34e54fa86b1993d7870100f26eb23f9e5e589b853f9afc510818caa0d74004071c8d041ff198e2475c7ced793dcd8163e934d0c741af8ee9d')
+            '4090db2d9f2547b830619c5c9c378783367955d080c447e8b09e87adc8848083a7749c8a5ab2bdbada27c7bd54e472a88e612bdb517c5a55afbfd81fd1f29666'
+            'd37aa56ed937c596340106138a80c38ef5cc703cdc270dea6189fda20bcf369b11badd662bd0c0799ec1282428ca64d3dc137289fa1951905a10fd4cba6dd9b0'
+            'd4551ab9f653fbd919ef43b2bc8dbc5e0eb7ea9ce342dcb71beb666842d1d7543ff396dadb532c2a16aaa4f7d5e34c3201ae4d8f4c290267e4fc6b63be1c0cc2')
 
 
 create_links() {
@@ -47,10 +49,9 @@ prepare() {
     sh "${_pkg}.run" --extract-only
     cd "${_pkg}"
     bsdtar -xf nvidia-persistenced-init.tar.bz2
-    msg2 "Make fbdev and modeset default enabled"
-    patch -Np1 < ../make-modeset-fbdev-default.patch
-    msg2 "Fix fbdev on 6.11 Kernel"
-    patch -Np2 -i $srcdir/6.11-fbdev.patch -d kernel/
+    patch -Np1 < ../0001-Make-modeset-and-fbdev-default-enabled.patch
+    patch -Np1 < ../0004-6.11-Add-fix-for-fbdev.patch
+    patch -Np1 < ../0005-6.12-drm_outpull_pill-changed-check.patch
 
     echo "Applying nvidia-patch..."
 
