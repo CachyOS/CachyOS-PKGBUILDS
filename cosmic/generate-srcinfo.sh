@@ -8,6 +8,5 @@ do
   cd $d
   updpkgsums
   makepkg --printsrcinfo > .SRCINFO
-  rm -rf *.patch
   cd ..
 done

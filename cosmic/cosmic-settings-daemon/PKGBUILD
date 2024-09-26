@@ -2,8 +2,8 @@
 # Contributor: Mark Wagie <mark.wagie@proton.me>
 
 pkgname=cosmic-settings-daemon
-pkgver=1.0.0.alpha.1
-pkgrel=3
+pkgver=1.0.0.alpha.2
+pkgrel=1
 pkgdesc='Cosmic settings daemon'
 arch=(x86_64)
 url=https://github.com/pop-os/cosmic-settings-daemon
@@ -11,11 +11,14 @@ license=(GPL-3.0-only)
 groups=(cosmic)
 depends=(
   acpid
+  alsa-utils
   adw-gtk-theme
   gcc-libs
   geoclue
   glibc
   libinput
+  playerctl
+  pop-sound-theme
   systemd-libs
 )
 makedepends=(
@@ -23,9 +26,9 @@ makedepends=(
   git
   lld
 )
-_tag=362c77f9faaeb7f1b9e4aa79a7d5588001f04874
+_tag=a41d1991fdfdac58f0b788e43087ad6ee01d00ca
 source=(git+https://github.com/pop-os/cosmic-settings-daemon.git#tag=${_tag})
-b2sums=('57e2a6f63b2f455300776f8127ef866f54be79e09cb2199e4c2c5d3d77d9171b54051b2279e693210327e51e80c2890f93ddad9ae4d30da11c947b74d7f4379d')
+b2sums=('38c0445581be3c5867928050c6ddce100fccd79b700038086507909a3642cb2183032a829f6330725d034a08788e849b9f2b70027ecc470ef70b99f2c3f129e3')
 
 prepare() {
   cd cosmic-settings-daemon
