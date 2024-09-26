@@ -32,11 +32,6 @@ prepare() {
   sed 's|libexec|lib/polkit-1|g' -i Makefile src/subscriptions/polkit_agent_helper.rs
 }
 
-pkgver() {
-  cd cosmic-osd
-  git describe --tags | sed 's/^epoch-//; s/-/./g'
-}
-
 build() {
   cd cosmic-osd
   RUSTFLAGS+=" -C link-arg=-fuse-ld=lld"

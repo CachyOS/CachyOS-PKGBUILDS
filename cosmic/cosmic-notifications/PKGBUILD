@@ -32,11 +32,6 @@ prepare() {
   cargo fetch --locked
 }
 
-pkgver() {
-  cd cosmic-notifications
-  git describe --tags | sed 's/^epoch-//; s/-/./g'
-}
-
 build() {
   cd cosmic-notifications
   just build-release --frozen
