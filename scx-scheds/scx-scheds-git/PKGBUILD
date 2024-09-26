@@ -4,7 +4,7 @@
 pkgname=scx-scheds-git
 _gitname=scx
 pkgver=1.0.4.r134.g818e829
-pkgrel=1
+pkgrel=2
 pkgdesc='sched_ext schedulers and tools'
 url='https://github.com/sched-ext/scx'
 arch=('x86_64' 'aarch64')
@@ -33,7 +33,10 @@ provides=("scx-scheds=$pkgver")
 conflicts=("scx-scheds")
 
 _backports=(
-92b7be0ba755d0fe0418929fd767b5796ec2cec9 # scx_bpfland: prevent stall with sched_setaffinity()
+cb9d4c283965b2dcf7035eb4c5644145db0c1906 # scx_bpfland: prevent stall with sched_setaffinity()
+b6b7593c529195c7953757a287d7200d0de5269f # scheds: introduce scx_fair
+3b982c14519dc3b3fc4538a7b3cc9c38cc0cb171 # scx_fair: introduce lowlatency mode
+573d83dfa94c0f6e7612b7580a9e210e68ce9d7d # scx_fair: use cast_mask() from common.bpf.h
 8bb295bb0ab5d5597d7d04c704fae56a62e81e93 # scx_loader: Add systemd service and on-DBUS launch
 )
 
