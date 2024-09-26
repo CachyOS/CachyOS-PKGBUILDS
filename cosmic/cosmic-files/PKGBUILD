@@ -21,7 +21,7 @@ makedepends=(
   cargo
   git
   just
-  lld
+  mold
 )
 _tag=774ccf955f59f24cf9493f9249d20788ad394d48
 source=(git+https://github.com/pop-os/cosmic-files.git#tag=${_tag})
@@ -39,7 +39,7 @@ pkgver() {
 
 build() {
   cd cosmic-files
-  RUSTFLAGS+=" -C link-arg=-fuse-ld=lld"
+  RUSTFLAGS+=" -C link-arg=-fuse-ld=mold"
   just build-release --frozen
 }
 
