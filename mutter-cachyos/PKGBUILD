@@ -9,7 +9,7 @@ pkgname=(
   mutter-cachyos-docs
 )
 pkgver=47.0
-pkgrel=1
+pkgrel=2
 pkgdesc="Window manager and compositor for GNOME (patched version from CachyOS)"
 url="https://gitlab.gnome.org/GNOME/mutter"
 arch=(x86_64)
@@ -95,6 +95,10 @@ prepare() {
   cd mutter
   # Dynamic triple/double buffering
   patch -Np1 -i "${srcdir}/1441.patch"
+
+  # Revert "window/wayland: Use scale for configured rect in configuration"
+  # https://gitlab.gnome.org/GNOME/mutter/-/commit/70c0eca6b08b7a5aed7a1951149f72f98331a6b4
+  git cherry-pick -n 70c0eca6b08b7a5aed7a1951149f72f98331a6b4
 }
 
 build() {
