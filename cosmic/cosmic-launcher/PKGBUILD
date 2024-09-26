@@ -3,7 +3,7 @@
 
 pkgname=cosmic-launcher
 pkgver=1.0.0.alpha.2
-pkgrel=1
+pkgrel=2
 pkgdesc='Layer Shell frontend for Pop Launcher'
 arch=(x86_64)
 url=https://github.com/pop-os/cosmic-launcher
@@ -19,6 +19,7 @@ depends=(
 )
 makedepends=(
   cargo
+  clang
   git
   just
   lld
@@ -38,6 +39,8 @@ pkgver() {
 }
 build() {
   cd cosmic-launcher
+  export CC=clang
+  export CXX=clang++
   RUSTFLAGS+=" -C link-arg=-fuse-ld=lld"
   just build-release --frozen
 }

@@ -3,7 +3,7 @@
 
 pkgname=cosmic-session
 pkgver=1.0.0.alpha.2
-pkgrel=1
+pkgrel=2
 pkgdesc='Session manager for the COSMIC desktop environment'
 arch=(x86_64)
 url=https://github.com/pop-os/cosmic-session
@@ -36,6 +36,7 @@ depends=(
 )
 makedepends=(
   cargo
+  clang
   git
   just
   lld
@@ -64,6 +65,8 @@ pkgver() {
 
 build() {
   cd cosmic-session
+  export CC=clang
+  export CXX=clang++
   RUSTFLAGS+=" -C link-arg=-fuse-ld=lld"
   cargo build --release --frozen
 }

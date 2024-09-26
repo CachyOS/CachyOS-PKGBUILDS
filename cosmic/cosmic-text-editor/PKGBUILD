@@ -4,7 +4,7 @@
 
 pkgname=cosmic-text-editor
 pkgver=1.0.0.alpha.2
-pkgrel=1
+pkgrel=2
 pkgdesc='Text editor for the COSMIC desktop'
 arch=(x86_64)
 url=https://github.com/pop-os/cosmic-edit
@@ -20,6 +20,7 @@ depends=(
 )
 makedepends=(
   cargo
+  clang
   git
   just
   lld
@@ -40,6 +41,8 @@ pkgver() {
 
 build() {
   cd cosmic-edit
+  export CC=clang
+  export CXX=clang++
   RUSTFLAGS+=" -C link-arg=-fuse-ld=lld -C link-arg=-lonig"
   just build-release --frozen
 }

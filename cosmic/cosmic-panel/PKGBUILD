@@ -3,7 +3,7 @@
 
 pkgname=cosmic-panel
 pkgver=1.0.0.alpha.2
-pkgrel=1
+pkgrel=2
 pkgdesc='XDG Shell Wrapper Panel for Cosmic'
 arch=(x86_64)
 url=https://github.com/pop-os/cosmic-panel
@@ -17,6 +17,7 @@ depends=(
 )
 makedepends=(
   cargo
+  clang
   git
   just
   lld
@@ -37,6 +38,8 @@ pkgver() {
 
 build() {
   cd cosmic-panel
+  export CC=clang
+  export CXX=clang++
   RUSTFLAGS+=" -C link-arg=-fuse-ld=lld"
   just build-release --frozen
 }

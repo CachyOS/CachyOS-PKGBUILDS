@@ -4,7 +4,7 @@
 
 pkgname=cosmic-settings
 pkgver=1.0.0.alpha.2
-pkgrel=1
+pkgrel=2
 pkgdesc='The settings application for the COSMIC desktop environment'
 arch=(x86_64)
 url=https://github.com/pop-os/cosmic-settings
@@ -20,6 +20,7 @@ depends=(
   iso-codes
   libinput
   libxkbcommon
+  networkmanager
   otf-fira-mono
   otf-fira-sans
   systemd-libs
@@ -27,6 +28,7 @@ depends=(
 )
 makedepends=(
   cargo
+  clang
   git
   just
   lld
@@ -35,6 +37,7 @@ optdepends=('power-profiles-daemon: power profiles support')
 _tag=5fc02288564e059f8d325c061f0787d5a86fb39a
 source=(git+https://github.com/pop-os/cosmic-settings.git#tag=${_tag})
 b2sums=('b4cb80d63496792d9a0f716fdeaacb2dcdd4644169b9ed8567351cb049eab0f3cc740fa2348132177c3530726e8aa1dc32688c0c7772d03afe79fc677a18da2c')
+options=(!lto)
 
 prepare() {
   cd cosmic-settings
@@ -48,6 +51,8 @@ pkgver() {
 
 build() {
   cd cosmic-settings
+  export CC=clang
+  export CXX=clang++
   RUSTFLAGS+=" -C link-arg=-fuse-ld=lld"
   just build-release --frozen
 }

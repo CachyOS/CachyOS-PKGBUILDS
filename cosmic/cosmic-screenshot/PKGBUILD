@@ -3,7 +3,7 @@
 
 pkgname=cosmic-screenshot
 pkgver=1.0.0.alpha.2
-pkgrel=1
+pkgrel=2
 pkgdesc='Utility for capturing screenshots via XDG Desktop Portal'
 arch=(x86_64)
 url=https://github.com/pop-os/cosmic-screenshot
@@ -17,6 +17,7 @@ depends=(
 )
 makedepends=(
   cargo
+  clang
   git
   just
   lld
@@ -30,13 +31,10 @@ prepare() {
   cargo fetch --locked
 }
 
-pkgver() {
-  cd cosmic-screenshot
-  git describe --tags | sed 's/^epoch-//; s/-/./g'
-}
-
 build() {
   cd cosmic-screenshot
+  export CC=clang
+  export CXX=clang++
   RUSTFLAGS+=" -C link-arg=-fuse-ld=lld"
   just build-release --frozen
 }

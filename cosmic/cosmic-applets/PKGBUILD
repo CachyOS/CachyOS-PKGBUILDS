@@ -4,7 +4,7 @@
 
 pkgname=cosmic-applets
 pkgver=1.0.0.alpha.2
-pkgrel=1
+pkgrel=2
 pkgdesc="WIP applets for COSMIC Panel"
 arch=('x86_64')
 url="https://github.com/pop-os/cosmic-applets"
@@ -19,6 +19,7 @@ depends=(
 )
 makedepends=(
   'cargo'
+  clang
   'git'
   'just'
   'lld'
@@ -38,6 +39,8 @@ build() {
   cd "${pkgname}"
   export RUSTUP_TOOLCHAIN=stable
 
+  export CC=clang
+  export CXX=clang++
   # use lld
   RUSTFLAGS="-C link-arg=-fuse-ld=lld"
 

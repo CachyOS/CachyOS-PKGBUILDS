@@ -3,7 +3,7 @@
 
 pkgname=cosmic-workspaces
 pkgver=1.0.0.alpha.2
-pkgrel=1
+pkgrel=2
 pkgdesc='Cosmic workspaces'
 arch=(x86_64)
 url=https://github.com/pop-os/cosmic-workspaces-epoch
@@ -20,6 +20,7 @@ depends=(
 )
 makedepends=(
   cargo
+  clang
   git
   lld
 )
@@ -39,6 +40,8 @@ pkgver() {
 
 build() {
   cd cosmic-workspaces-epoch
+  export CC=clang
+  export CXX=clang++
   RUSTFLAGS+=" -C link-arg=-fuse-ld=lld"
   make ARGS+=" --frozen --release"
 }

@@ -3,7 +3,7 @@
 
 pkgname=cosmic-files
 pkgver=1.0.0.alpha.2
-pkgrel=1
+pkgrel=2
 pkgdesc='File manager for the COSMIC desktop environment'
 arch=(x86_64)
 url=https://github.com/pop-os/cosmic-files
@@ -19,9 +19,10 @@ depends=(
 )
 makedepends=(
   cargo
+  clang
   git
   just
-  mold
+  lld
 )
 _tag=774ccf955f59f24cf9493f9249d20788ad394d48
 source=(git+https://github.com/pop-os/cosmic-files.git#tag=${_tag})
@@ -39,7 +40,9 @@ pkgver() {
 
 build() {
   cd cosmic-files
-  RUSTFLAGS+=" -C link-arg=-fuse-ld=mold"
+  export CC=clang
+  export CXX=clang++
+  RUSTFLAGS+=" -C link-arg=-fuse-ld=lld"
   just build-release --frozen
 }
 

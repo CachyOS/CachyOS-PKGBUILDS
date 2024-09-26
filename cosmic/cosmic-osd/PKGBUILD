@@ -3,7 +3,7 @@
 
 pkgname=cosmic-osd
 pkgver=1.0.0.alpha.2
-pkgrel=1
+pkgrel=2
 pkgdesc='COSMIC On-Screen Display'
 arch=(x86_64)
 url=https://github.com/pop-os/cosmic-osd
@@ -19,6 +19,7 @@ depends=(
 )
 makedepends=(
   cargo
+  clang
   git
   lld
 )
@@ -34,6 +35,8 @@ prepare() {
 
 build() {
   cd cosmic-osd
+  export CC=clang
+  export CXX=clang++
   RUSTFLAGS+=" -C link-arg=-fuse-ld=lld"
   make ARGS+=" --frozen --release"
 }

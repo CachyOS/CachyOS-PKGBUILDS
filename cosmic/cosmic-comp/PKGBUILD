@@ -4,7 +4,7 @@
 
 pkgname=cosmic-comp
 pkgver=1.0.0.alpha.2
-pkgrel=1
+pkgrel=2
 pkgdesc='Compositor for the COSMIC desktop environment'
 arch=(x86_64)
 url='https://github.com/pop-os/cosmic-comp'
@@ -25,6 +25,7 @@ depends=(
 )
 makedepends=(
   cargo
+  clang
   git
   lld
 )
@@ -46,6 +47,8 @@ pkgver() {
 
 build() {
   cd cosmic-comp
+  export CC=clang
+  export CXX=clang++
   RUSTFLAGS+=" -C link-arg=-fuse-ld=lld"
   make ARGS+=" --frozen --release"
 }

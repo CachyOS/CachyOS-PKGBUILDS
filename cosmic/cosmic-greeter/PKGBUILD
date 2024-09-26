@@ -3,7 +3,7 @@
 
 pkgname=cosmic-greeter
 pkgver=1.0.0.alpha.2
-pkgrel=1
+pkgrel=2
 pkgdesc='COSMIC greeter for greetd'
 arch=(x86_64)
 url=https://github.com/pop-os/cosmic-greeter
@@ -51,6 +51,8 @@ pkgver() {
 
 build() {
   cd cosmic-greeter
+  export CC=clang
+  export CXX=clang++
   RUSTFLAGS+=" -C link-arg=-fuse-ld=lld"
   just build-release --frozen
 }
