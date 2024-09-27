@@ -3,7 +3,7 @@
 
 pkgname=cosmic-greeter
 pkgver=1.0.0.alpha.2
-pkgrel=2
+pkgrel=3
 pkgdesc='COSMIC greeter for greetd'
 arch=(x86_64)
 url=https://github.com/pop-os/cosmic-greeter
@@ -30,9 +30,11 @@ _tag=4ddb320daeea5124bf67500d73d6ead620f3d09b
 source=(
   git+https://github.com/pop-os/cosmic-greeter.git#tag=${_tag}
   cosmic-greeter-display-manager.patch
+  cosmic-greeter-lto.patch
 )
 b2sums=('2bae195d537b84f6a9e21b5bf224c7cd44bdfad11fbb952a018959ee716f0aa10e49f051e65b2211c7798c36258753b92eeb4f6f68d0848c4f1da58b67d9fa91'
-        '8b5c32a991e31cf102b1b07e06d37e979f19106b82e8cab7dc8df81789ab6b24587605aa3387254057732a268368c4074f92461f6f5125bc1cba4e62e18cef27')
+        '8b5c32a991e31cf102b1b07e06d37e979f19106b82e8cab7dc8df81789ab6b24587605aa3387254057732a268368c4074f92461f6f5125bc1cba4e62e18cef27'
+        '89ca262c95713e773662fb81e379bc2b63d2c93072b909f8f1eaaafee5289359fd729a476eb66568f893986a53e9c689dccfc4aeeeef62cb736cff466c463f7d')
 
 prepare() {
   cd cosmic-greeter
@@ -40,8 +42,11 @@ prepare() {
   git remote add network-origin ${url}
   git lfs fetch network-origin
   git lfs checkout
+  # revert pam config for now
+  git revert -n ef1253aa2393666bb2a0b0132b722f51ec7ebbf3
   cargo fetch --locked
   patch -Np1 -i ../cosmic-greeter-display-manager.patch
+  patch -Np1 -i ../cosmic-greeter-lto.patch
 }
 
 pkgver() {
@@ -51,8 +56,6 @@ pkgver() {
 
 build() {
   cd cosmic-greeter
-  export CC=clang
-  export CXX=clang++
   RUSTFLAGS+=" -C link-arg=-fuse-ld=lld"
   just build-release --frozen
 }
