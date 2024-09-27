@@ -8,7 +8,7 @@ pkgname=(
   lib32-zlib-ng-compat
 )
 pkgver=2.2.2
-pkgrel=2
+pkgrel=3
 pkgdesc='zlib replacement with optimizations for next generation systems - 32-bit'
 url='https://github.com/zlib-ng/zlib-ng'
 arch=('x86_64')
@@ -84,7 +84,7 @@ package_lib32-zlib-ng() {
 package_lib32-zlib-ng-compat() {
   pkgdesc+=" (zlib compat)"
   provides=('lib32-zlib' 'libz.so')
-  depends=(zlib-ng-compat=$pkgver)
+  depends=(zlib-ng-compat=$pkgver lib32-zlib-ng)
   conflicts=('lib32-zlib')
   replaces=('lib32-zlib')
   options=('staticlibs')

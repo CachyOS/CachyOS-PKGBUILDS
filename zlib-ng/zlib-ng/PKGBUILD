@@ -12,7 +12,7 @@ pkgname=(
   zlib-ng-compat
 )
 pkgver=2.2.2
-pkgrel=2
+pkgrel=3
 pkgdesc='zlib replacement with optimizations for next generation systems'
 url='https://github.com/zlib-ng/zlib-ng'
 arch=('x86_64')
@@ -79,6 +79,7 @@ package_zlib-ng() {
 package_zlib-ng-compat() {
   pkgdesc+=" (zlib compat)"
   provides=('zlib' 'libz.so')
+  depends=('zlib-ng')
   conflicts=('zlib')
   replaces=('zlib')
   options=('staticlibs')
