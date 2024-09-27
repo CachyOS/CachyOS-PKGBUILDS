@@ -1,11 +1,11 @@
 # Maintainer: archeese
 
 _pkgbasename=nvidia-utils
-pkgbase=lib32-nvidia-535xx-utils
-pkgname=('lib32-nvidia-535xx-utils' 'lib32-opencl-nvidia-535xx')
+pkgbase=lib32-nvidia-550xx-utils
+pkgname=('lib32-nvidia-550xx-utils' 'lib32-opencl-nvidia-550xx')
 pkgver=550.120
-pkgrel=1
-pkgdesc="NVIDIA x32 libs for Linux, 535 branch"
+pkgrel=2
+pkgdesc="NVIDIA x32 libs for Linux, 550 branch"
 arch=('x86_64')
 url="http://www.nvidia.com/"
 license=('custom')
@@ -28,8 +28,8 @@ build() {
     sh ${_pkg}.run --extract-only
 }
 
-package_lib32-opencl-nvidia-535xx() {
-    pkgdesc="OpenCL implemention for NVIDIA (32-bit), 535 branch"
+package_lib32-opencl-nvidia-550xx() {
+    pkgdesc="OpenCL implemention for NVIDIA (32-bit), 550 branch"
     depends=('lib32-zlib' 'lib32-gcc-libs')
     optdepends=('opencl-headers: headers necessary for OpenCL development')
     conflicts=('lib32-opencl-nvidia')
@@ -46,8 +46,8 @@ package_lib32-opencl-nvidia-535xx() {
     ln -s $_pkgbasename "${pkgdir}/usr/share/licenses/lib32-opencl-nvidia"
 }
 
-package_lib32-nvidia-535xx-utils() {
-    pkgdesc="NVIDIA drivers utilities (32-bit), 535 branch"
+package_lib32-nvidia-550xx-utils() {
+    pkgdesc="NVIDIA drivers utilities (32-bit), 550 branch"
     depends=('lib32-zlib' 'lib32-gcc-libs' 'lib32-libglvnd' "nvidia-utils=${pkgver}")
     optdepends=('lib32-opencl-nvidia')
     conflicts=('lib32-nvidia-utils' 'lib32-nvidia-libgl')
