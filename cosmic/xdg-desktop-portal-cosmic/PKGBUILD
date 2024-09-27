@@ -3,7 +3,7 @@
 
 pkgname=xdg-desktop-portal-cosmic
 pkgver=1.0.0.alpha.2
-pkgrel=2
+pkgrel=3
 pkgdesc='A backend implementation for xdg-desktop-portal for the COSMIC desktop environment'
 arch=(x86_64)
 url=https://github.com/pop-os/xdg-desktop-portal-cosmic
@@ -23,15 +23,20 @@ makedepends=(
   cargo
   clang
   git
-  just
   lld
 )
+provides=(xdg-desktop-portal-impl)
 _tag=dcbdd9974b570633ae3b47cb1d427771e4b8e276
-source=(git+https://github.com/pop-os/xdg-desktop-portal-cosmic.git#tag=${_tag})
-b2sums=('9913f89855be0c446a3b795200c207c75103dc799d0ecbe5361a2befb0d48e6a96dd6bf15fad578d4a065f49dec79864d071b31244d32a0c853486792d185d8c')
+source=(
+  git+https://github.com/pop-os/xdg-desktop-portal-cosmic.git#tag=${_tag}
+  xdg-desktop-portal-cosmic-lto.patch
+)
+b2sums=('9913f89855be0c446a3b795200c207c75103dc799d0ecbe5361a2befb0d48e6a96dd6bf15fad578d4a065f49dec79864d071b31244d32a0c853486792d185d8c'
+        'dec9ed0a2913843e4d88dece0be9b8ac6f1f8fbc601b3b6ff3158f8b80604e9edc28951fe42005cef0d5d23dc4efca9836022bae4f031b38c63aad1f654154a8')
 
 prepare() {
   cd xdg-desktop-portal-cosmic
+  patch -Np1 -i ../xdg-desktop-portal-cosmic-lto.patch
   cargo fetch --locked
 }
 
