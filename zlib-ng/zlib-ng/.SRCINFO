@@ -1,7 +1,7 @@
 pkgbase = zlib-ng
 	pkgdesc = zlib replacement with optimizations for next generation systems
 	pkgver = 2.2.2
-	pkgrel = 2
+	pkgrel = 4
 	url = https://github.com/zlib-ng/zlib-ng
 	arch = x86_64
 	license = custom:zlib
@@ -17,8 +17,10 @@ pkgname = zlib-ng
 
 pkgname = zlib-ng-compat
 	pkgdesc = zlib replacement with optimizations for next generation systems (zlib compat)
+	depends = zlib-ng
 	provides = zlib
 	provides = libz.so
+	provides = zlib=1:$_zlibver
 	conflicts = zlib
 	replaces = zlib
 	options = staticlibs
