@@ -1,5 +1,6 @@
 # Maintainer: Levente Polyak <anthraxx[at]archlinux[dot]org>
-# Maintainer: Giancarlo Razzolini <grazzolini@archlinux.org>
+# Maintainer: Tobias Powalowski <tpowa@archlinux.org>
+# Contributor: Giancarlo Razzolini <grazzolini@archlinux.org>
 # Contributor:  Bartłomiej Piotrowski <bpiotrowski@archlinux.org>
 # Contributor: Allan McRae <allan@archlinux.org>
 # Contributor: Aaron Griffin <aaron@archlinux.org>
@@ -7,30 +8,38 @@
 
 pkgname=bash
 _basever=5.2
-_patchlevel=032
+_patchlevel=037
 pkgver=${_basever}.${_patchlevel}
-pkgrel=3
+pkgrel=2
 pkgdesc='The GNU Bourne Again shell'
 arch=(x86_64)
 license=('GPL-3.0-or-later')
 url='https://www.gnu.org/software/bash/bash.html'
-backup=(etc/bash.bash{rc,_logout} etc/skel/.bash{rc,_profile,_logout})
-depends=(readline libreadline.so glibc ncurses)
+backup=(
+  etc/bash.bash{rc,_logout} 
+  etc/skel/.bash{rc,_profile,_logout}
+)
+depends=(
+  readline
+  libreadline.so
+  glibc
+  ncurses
+)
 optdepends=('bash-completion: for tab completion')
 provides=('sh')
 install=bash.install
-source=(https://ftp.gnu.org/gnu/bash/bash-$_basever.tar.gz{,.sig}
-        bash-5.2_p15-configure-clang16.patch
-        bash-5.2_p15-random-ub.patch
-        bash-5.2_p21-configure-strtold.patch
-        bash-5.2_p21-wpointer-to-int.patch
-        bash-5.2_p32-memory-leaks.patch
-        bash-5.2_p32-read-delimiter-in-invalid-mbchar.patch
-        dot.bashrc
-        dot.bash_profile
-        dot.bash_logout
-        system.bashrc
-        system.bash_logout)
+source=(
+  https://ftp.gnu.org/gnu/bash/bash-$_basever.tar.gz{,.sig}
+  bash-5.2_p15-random-ub.patch
+  bash-5.2_p21-wpointer-to-int.patch
+  bash-5.2_p32-memory-leaks.patch
+  bash-5.2_p32-read-delimiter-in-invalid-mbchar.patch
+  dot.bashrc
+  dot.bash_profile
+  dot.bash_logout
+  system.bashrc
+  system.bash_logout
+)
 validpgpkeys=('7C0135FB088AAF6C66C650B9BB5869F064EA74AB') # Chet Ramey
 
 if [[ $((10#${_patchlevel})) -gt 0 ]]; then
@@ -40,9 +49,7 @@ if [[ $((10#${_patchlevel})) -gt 0 ]]; then
 fi
 b2sums=('51b196e710794ebad8eac28c31c93eb99ac1a7db30919a13271e39e1cb66a0672f242df75fc7d71627ea873dfbce53ec35c0c56a71c5167143070a7811343fd9'
         'SKIP'
-        '5ef332cd2847f46e351e5db6dda79d01d9853f5eda9762deeba0450c2bd400eec549bbb85696777b687f64d0977daac4883d6ce3f1e26cec0d5f73e8ee97f000'
         'adab09c3f2ce3697e3659e01266120155714b80263bd125808edf556a354291af615540189553b1c32a2d462ac41e28a9df8fb9f7d963a3ca3629d297a46e62d'
-        '83ec6ff756543ee44c18902f2d30dd662a84237b9594a7e0cfc21a1c16fce49e37cf67729b3a17d59cc978cb6675e04457e3b6b0909d94cb234a1dde96f7c9ea'
         '0c7f5eb5b697abf15c1d17888a973e44d0ead1f095778b41841a6a1937a5b9e7ce5fa6a05e4404504990b0a244fdecfc12ce7c33ee7d67b4c837435e9bfe2b57'
         '373aa3be1f0a6bc65403cde63cbc4dcd612336e86b1cae918670a99e8ca639c665ac7efb467ec8823a62cec0a71c485bd3fda4bbf058d759498377f5cfe90f51'
         'ab7fe139630be59b26a72f92f22e4a2b556594d341d82b0f15f99880724f5ea5cfd912a8de6b6e1db902c14d65395c74a03379e3e01ce69bb4512c681518301d'
@@ -114,28 +121,34 @@ b2sums=('51b196e710794ebad8eac28c31c93eb99ac1a7db30919a13271e39e1cb66a0672f242df
         'dac378115906e21fc754267c42e129e2374c9b63f879d1717d79930589618d4d8d17821b2f529d1851db7567d3efdfb0410c18e6869047e3d87443b29d507289'
         'SKIP'
         '55aab849da0fcc69ab3516d9d7ff2858b5f15cbeaddf66282f43f272b52d646c2c41c2ceef632a2ae8f13c25d92e85f49fbc6de989ed4f6ac4bb7bea7fc59a5d'
+        'SKIP'
+        '67d334ac5874b785e449cde3b8e3999fd6fa91da847d7ee28320959ed4db5a0e841681eed29fe2fab20dbb8ff4894d86b04c44435ced1be44a67ca117bc9093e'
+        'SKIP'
+        'd01dc67397e7d85087bcbe5aeddd1a57afc3980e52f53ed8246211d8b282894650b563e52079132f8265da7370c13a76dffefd0a04bcefb7cc2a46575e50672b'
+        'SKIP'
+        '308bdea38fc42c5267046b4e6a1603dc2379b4c92856c9c3431db655a48704887b1d405ba6a4640404d1e06ef30baffaf0fb4e55b015ec5479f9edde170e73e9'
+        'SKIP'
+        'e86b0df8ea7ace1ce4bc6f269de389f2f85fbe20e59e6a1e88abe99b5497382e441c9e9ba9f74c97512e0852179fc35dc781bd0da3ab664c60bed2d5d7f20f19'
+        'SKIP'
+        '4af190d53b498d6d4403f64f39060f1add17edfe3e48b4b58a4377d1e96caa93017aed3df7011a64c99fd908af967603ed287e6bbb0380a8569d170779d8f26a'
         'SKIP')
 
 prepare() {
-  cd $pkgname-$_basever
-
-  msg2 "Applying patches..."
+  cd "${pkgname}-${_basever}"
   for (( _p=1; _p<=$((10#${_patchlevel})); _p++ )); do
     local patch="bash${_basever//.}-$(printf "%03d" $_p)"
     patch -Np0 -i ../"${patch}"
   done
   # add patches from gentoo, fixing various upstream reported issues
   # https://gitweb.gentoo.org/repo/gentoo.git/tree/app-shells/bash/files
-  patch -Np0 -i ../bash-5.2_p15-configure-clang16.patch
   patch -Np0 -i ../bash-5.2_p15-random-ub.patch
-  patch -Np0 -i ../bash-5.2_p21-configure-strtold.patch
   patch -Np0 -i ../bash-5.2_p21-wpointer-to-int.patch
   patch -Np0 -i ../bash-5.2_p32-memory-leaks.patch
   patch -Np0 -i ../bash-5.2_p32-read-delimiter-in-invalid-mbchar.patch
 }
 
 build() {
-  cd $pkgname-$_basever
+  cd "${pkgname}-${_basever}"
 
   _bashconfig=(-DDEFAULT_PATH_VALUE=\'\"/usr/local/sbin:/usr/local/bin:/usr/bin\"\'
                -DSTANDARD_UTILS_PATH=\'\"/usr/bin\"\'
@@ -143,7 +156,7 @@ build() {
                -DSYS_BASH_LOGOUT=\'\"/etc/bash.bash_logout\"\'
                -DNON_INTERACTIVE_LOGIN_SHELLS)
   export CFLAGS="${CFLAGS} ${_bashconfig[@]}"
-    export CFLAGS="${CFLAGS} -fprofile-generate -fprofile-update=atomic -fprofile-partial-training"
+  export CFLAGS="${CFLAGS} -fprofile-generate -fprofile-update=atomic -fprofile-partial-training"
 
     ./configure \
         --prefix=/usr \
@@ -172,23 +185,22 @@ build() {
 }
 
 check() {
-  make -C $pkgname-$_basever check
+  make -C "${pkgname}-${_basever}" check
 }
 
 package() {
-  make -C $pkgname-$_basever DESTDIR="$pkgdir" install
-  ln -s bash "$pkgdir/usr/bin/sh"
-  ln -s bash "$pkgdir/usr/bin/rbash"
+  make -C "${pkgname}-${_basever}" DESTDIR="$pkgdir" install
+  ln -s bash "${pkgdir}/usr/bin/sh"
+  ln -s bash "${pkgdir}/usr/bin/rbash"
 
   # system-wide configuration files
-  install -Dm644 system.bashrc "$pkgdir/etc/bash.bashrc"
-  install -Dm644 system.bash_logout "$pkgdir/etc/bash.bash_logout"
+  install -Dm644 system.bashrc "${pkgdir}/etc/bash.bashrc"
+  install -Dm644 system.bash_logout "${pkgdir}/etc/bash.bash_logout"
 
   # user configuration file skeletons
-  install -dm755 "$pkgdir/etc/skel/"
-  install -m644 dot.bashrc "$pkgdir/etc/skel/.bashrc"
-  install -m644 dot.bash_profile "$pkgdir/etc/skel/.bash_profile"
-  install -m644 dot.bash_logout "$pkgdir/etc/skel/.bash_logout"
+  install -dm755 "${pkgdir}/etc/skel/"
+  install -m644 dot.bashrc "${pkgdir}/etc/skel/.bashrc"
+  install -m644 dot.bash_profile "${pkgdir}/etc/skel/.bash_profile"
+  install -m644 dot.bash_logout "${pkgdir}/etc/skel/.bash_logout"
 }
 
-# vim: ts=2 sw=2 et:
