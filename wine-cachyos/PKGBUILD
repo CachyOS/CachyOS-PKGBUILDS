@@ -6,9 +6,9 @@
 # Contributor: Giovanni Scafora <giovanni@archlinux.org>
 
 pkgname=wine-cachyos
-_srctag=9.0-20240918
+_srctag=9.0-20240928
 pkgver=${_srctag//-/.}
-pkgrel=2
+pkgrel=1
 epoch=2
 
 _pkgbasever=${pkgver/rc/-rc}
@@ -19,11 +19,6 @@ source=(wine-cachyos::git+https://github.com/CachyOS/wine-cachyos.git#tag=cachyo
         30-win32-aliases.conf
         wine-binfmt.conf)
 source+=(
-)
-b2sums=('01500958bca788e2b57d56c108c22ad74b791a247dce3644b505936d56f8635b2532665e9e847f3d7d8b2d5f160157127c43e760bdc6063cd9d930c896b3515c'
-        '45db34fb35a679dc191b4119603eba37b8008326bd4f7d6bd422fbbb2a74b675bdbc9f0cc6995ed0c564cf088b7ecd9fbe2d06d42ff8a4464828f3c4f188075b'
-        'e9de76a32493c601ab32bde28a2c8f8aded12978057159dd9bf35eefbf82f2389a4d5e30170218956101331cf3e7452ae82ad0db6aad623651b0cc2174a61588')
-b2sums+=(
 )
 validpgpkeys=(5AC1A08B03BD7A313E0A955AF5E6E9EEB9461DD7
               DA23579A74D4AD9AF9D3F945CEFAC8EAAF17519D)
@@ -134,7 +129,7 @@ build() {
   local mtune="generic" #"${flags["-mtune"]:-core-avx2}"
 
   # From Proton
-  OPTIMIZE_FLAGS="-O3 -march=$march -mtune=$mtune -mno-avx2 -mfpmath=sse -pipe -fno-semantic-interposition"
+  OPTIMIZE_FLAGS="-O3 -march=$march -mtune=$mtune -mfpmath=sse -pipe -fno-semantic-interposition"
   SANITY_FLAGS="-fwrapv -fno-strict-aliasing"
   WARNING_FLAGS="-Wno-incompatible-pointer-types"
   COMMON_FLAGS="$OPTIMIZE_FLAGS $SANITY_FLAGS $WARNING_FLAGS -s"
@@ -225,3 +220,6 @@ package() {
 }
 
 # vim:set ts=8 sts=2 sw=2 et:
+b2sums=('1f656b9ec4460ed7154a6f2be32d92e5f5658d7fc62e319b2c9f94805d8e9bc85718139821c4e60693673ee12662fb6dd5dc6bee9d4bd631b4df05a8cb42c26a'
+        '45db34fb35a679dc191b4119603eba37b8008326bd4f7d6bd422fbbb2a74b675bdbc9f0cc6995ed0c564cf088b7ecd9fbe2d06d42ff8a4464828f3c4f188075b'
+        'e9de76a32493c601ab32bde28a2c8f8aded12978057159dd9bf35eefbf82f2389a4d5e30170218956101331cf3e7452ae82ad0db6aad623651b0cc2174a61588')
