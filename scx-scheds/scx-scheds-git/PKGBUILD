@@ -33,13 +33,12 @@ provides=("scx-scheds=$pkgver")
 conflicts=("scx-scheds")
 
 _backports=(
-cb9d4c283965b2dcf7035eb4c5644145db0c1906 # scx_bpfland: prevent stall with sched_setaffinity()
-b6b7593c529195c7953757a287d7200d0de5269f # scheds: introduce scx_fair
-3b982c14519dc3b3fc4538a7b3cc9c38cc0cb171 # scx_fair: introduce lowlatency mode
-573d83dfa94c0f6e7612b7580a9e210e68ce9d7d # scx_fair: use cast_mask() from common.bpf.h
 448240de934ce3417ced3fa9f467b9032b4f03f4 # scx_bpfland: always give tasks a chance to run on an idle CPU
-5d50eb993cb82afe01b25f09196292a1198431c7 # scx_bpfland: keep tasks running on full-idle SMT cores
-dc8faf30d1a068da8a1bea8dd6e50360cc9229a8 # scx_bpfland: fix task_avg_nvcsw() return type 
+00cad3c0f3ff8d1188ec174241f850e39903bd4a # scx_bpfland: assign a task slice proportional to the task priority
+d2e70332e919c9cd6fa0b7e50e72cb6a26fc3c41 # scheds: introduce scx_fair
+5f4079fa858aa420d819492139c748a3169a5c27 # scx_fair: introduce lowlatency mode
+a4b0b8be770e9845c74d896917bd28c2501675b2 # scx_fair: use cast_mask() from common.bpf.h
+f2d99a33b64d6bc78aac842e4587d5a8fc1ec805 # scx_fair: always give tasks a chance to run on an idle CPU
 )
 
 _reverts=(
