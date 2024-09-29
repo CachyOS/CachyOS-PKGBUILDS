@@ -5,7 +5,7 @@
 # Contributor: Eduardo Romero <eduardo@archlinux.org>
 # Contributor: Giovanni Scafora <giovanni@archlinux.org>
 
-pkgname=wine-cachyos
+pkgname=wine-cachyos-opt
 _srctag=9.0-20240928
 pkgver=${_srctag//-/.}
 pkgrel=1
@@ -23,7 +23,7 @@ source+=(
 validpgpkeys=(5AC1A08B03BD7A313E0A955AF5E6E9EEB9461DD7
               DA23579A74D4AD9AF9D3F945CEFAC8EAAF17519D)
 
-pkgdesc="A compatibility layer for running Windows programs, with extra CachyOS flavor"
+pkgdesc="A compatibility layer for running Windows programs, with extra CachyOS flavor (installs under /opt)"
 url="https://github.com/CachyOS/wine-cachyos"
 arch=(x86_64 x86_64_v3)
 options=(!staticlibs !lto !debug)
@@ -97,17 +97,18 @@ optdepends=(
   cups
   samba           dosbox
 )
+optdepends+=(
+  wine
+)
 
-provides=("wine=9.0")
-conflicts=('wine')
 install=wine.install
 
 prepare() {
   # Get rid of old build dirs
-  rm -rf $pkgname-{32,64}-build
-  mkdir $pkgname-{32,64}-build
+  rm -rf ${pkgname//-opt}-{32,64}-build
+  mkdir ${pkgname//-opt}-{32,64}-build
 
-  pushd $pkgname
+  pushd ${pkgname//-opt}
       git config user.email "wine@cachyos.org"
       git config user.name "wine cachyos"
       git tag wine-9.0 --annotate -m "$pkgver" --force
@@ -149,10 +150,10 @@ build() {
   export CROSSCFLAGS="$COMMON_FLAGS -mcmodel=small"
   export CROSSCXXFLAGS="$COMMON_FLAGS -mcmodel=small -std=c++17"
   export PKG_CONFIG_PATH="/usr/lib/pkgconfig:/usr/share/pkgconfig"
-  cd "$srcdir/$pkgname-64-build"
-  ../$pkgname/configure \
-    --prefix=/usr \
-    --libdir=/usr/lib \
+  cd "$srcdir/${pkgname//-opt}-64-build"
+  ../${pkgname//-opt}/configure \
+    --prefix=/opt/"${pkgname//-opt}" \
+    --libdir=/opt/"${pkgname//-opt}"/lib \
     --with-x \
     --with-wayland \
     --with-gstreamer \
@@ -174,9 +175,9 @@ build() {
   export CROSSCFLAGS="$COMMON_FLAGS -mstackrealign -mno-avx"
   export CROSSCXXFLAGS="$COMMON_FLAGS -mstackrealign -mno-avx -std=c++17"
   export PKG_CONFIG_PATH="/usr/lib32/pkgconfig:/usr/share/pkgconfig"
-  cd "$srcdir/$pkgname-32-build"
-  ../$pkgname/configure \
-    --prefix=/usr \
+  cd "$srcdir/${pkgname//-opt}-32-build"
+  ../${pkgname//-opt}/configure \
+    --prefix=/opt/"${pkgname//-opt}" \
     --with-x \
     --with-wayland \
     --with-gstreamer \
@@ -186,37 +187,32 @@ build() {
     --disable-winemenubuilder \
     --disable-tests \
     --with-xattr \
-    --libdir=/usr/lib32 \
-    --with-wine64="$srcdir/$pkgname-64-build"
+    --libdir=/opt/"${pkgname//-opt}"/lib32 \
+    --with-wine64="$srcdir/${pkgname//-opt}-64-build"
 
   make
 }
 
 package() {
   msg2 "Packaging Wine-32..."
-  cd "$srcdir/$pkgname-32-build"
+  cd "$srcdir/${pkgname//-opt}-32-build"
 
-  make prefix="$pkgdir/usr" \
-    libdir="$pkgdir/usr/lib32" \
-    dlldir="$pkgdir/usr/lib32/wine" install
+  make prefix="$pkgdir/opt/${pkgname//-opt}" \
+    libdir="$pkgdir/opt/${pkgname//-opt}/lib32" \
+    dlldir="$pkgdir/opt/${pkgname//-opt}/lib32/wine" install
 
   msg2 "Packaging Wine-64..."
-  cd "$srcdir/$pkgname-64-build"
-  make prefix="$pkgdir/usr" \
-    libdir="$pkgdir/usr/lib" \
-    dlldir="$pkgdir/usr/lib/wine" install
+  cd "$srcdir/${pkgname//-opt}-64-build"
+  make prefix="$pkgdir/opt/${pkgname//-opt}" \
+    libdir="$pkgdir/opt/${pkgname//-opt}/lib" \
+    dlldir="$pkgdir/opt/${pkgname//-opt}/lib/wine" install
 
-  # Font aliasing settings for Win32 applications
-  install -d "$pkgdir"/usr/share/fontconfig/conf.{avail,default}
-  install -m644 "$srcdir/30-win32-aliases.conf" "$pkgdir/usr/share/fontconfig/conf.avail"
-  ln -s ../conf.avail/30-win32-aliases.conf "$pkgdir/usr/share/fontconfig/conf.default/30-win32-aliases.conf"
-  install -Dm 644 "$srcdir/wine-binfmt.conf" "$pkgdir/usr/lib/binfmt.d/wine.conf"
 
-  i686-w64-mingw32-strip --strip-unneeded "$pkgdir"/usr/lib32/wine/i386-windows/*.{dll,exe}
-  x86_64-w64-mingw32-strip --strip-unneeded "$pkgdir"/usr/lib/wine/x86_64-windows/*.{dll,exe}
+  i686-w64-mingw32-strip --strip-unneeded "$pkgdir"/opt/"${pkgname//-opt}"/lib32/wine/i386-windows/*.{dll,exe}
+  x86_64-w64-mingw32-strip --strip-unneeded "$pkgdir"/opt/"${pkgname//-opt}"/lib/wine/x86_64-windows/*.{dll,exe}
 
-  find "$pkgdir"/usr/lib{,32}/wine -iname "*.a" -delete
-  find "$pkgdir"/usr/lib{,32}/wine -iname "*.def" -delete
+  find "$pkgdir"/opt/"${pkgname//-opt}"/lib{,32}/wine -iname "*.a" -delete
+  find "$pkgdir"/opt/"${pkgname//-opt}"/lib{,32}/wine -iname "*.def" -delete
 }
 
 # vim:set ts=8 sts=2 sw=2 et:
