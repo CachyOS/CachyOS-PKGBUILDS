@@ -20,7 +20,7 @@ pkgname=('php'
          'php-tidy'
          'php-xsl')
 pkgver=8.3.12
-pkgrel=2
+pkgrel=3
 arch=('x86_64')
 license=('PHP-3.01')
 url='https://www.php.net/'
@@ -45,6 +45,9 @@ validpgpkeys=('1198C0117593497A5EC5C199286AF1F9897469DC'
               '39B641343D8C104B2B146DC3F9C39DC0B9698544'
               'E60913E4DF209907D8E30D96659A97C9CF2A795A')
 _interpreter=${pkgver%.*}
+# LTO is incompatible with global registers and results in reduced performance:
+# https://gitlab.archlinux.org/archlinux/packaging/packages/php/-/merge_requests/3
+options=('!lto')
 
 prepare() {
 	cd "${srcdir}/${pkgbase}-${pkgver}"
@@ -76,7 +79,6 @@ export CFLAGS+=" -fno-semantic-interposition"
 		--with-config-file-scan-dir=/etc/php/conf.d \
 		--disable-rpath \
 		--mandir=/usr/share/man \
-		--disable-gcc-global-regs \
 		"
 
 	local _phpextensions="\
