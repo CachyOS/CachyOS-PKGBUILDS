@@ -3,8 +3,8 @@
 
 pkgname=scx-scheds-git
 _gitname=scx
-pkgver=1.0.4.r152.g896ff0e
-pkgrel=2
+pkgver=1.0.4.r156.g55913e7
+pkgrel=1
 pkgdesc='sched_ext schedulers and tools'
 url='https://github.com/sched-ext/scx'
 arch=('x86_64' 'aarch64')
@@ -33,8 +33,9 @@ provides=("scx-scheds=$pkgver")
 conflicts=("scx-scheds")
 
 _backports=(
-448240de934ce3417ced3fa9f467b9032b4f03f4 # scx_bpfland: always give tasks a chance to run on an idle CPU
-00cad3c0f3ff8d1188ec174241f850e39903bd4a # scx_bpfland: assign a task slice proportional to the task priority
+fa063b4f48c3cf36961b7c6ae75b1478ed46cef1 # scx_bpfland: always give tasks a chance to run on an idle CPU
+2f78bbc4f77a79b15c8afe00c707aa0f7a0407d5 # scx_bpfland: keep tasks running on full-idle SMT cores
+784d5420373d12a33a09d2513629e4371aa2a217 # scx_bpfland: fix task_avg_nvcsw() return type
 d2e70332e919c9cd6fa0b7e50e72cb6a26fc3c41 # scheds: introduce scx_fair
 5f4079fa858aa420d819492139c748a3169a5c27 # scx_fair: introduce lowlatency mode
 a4b0b8be770e9845c74d896917bd28c2501675b2 # scx_fair: use cast_mask() from common.bpf.h
