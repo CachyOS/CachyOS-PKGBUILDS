@@ -3,7 +3,7 @@
 _gitname=CachyOS-Settings
 pkgname=cachyos-settings
 pkgver=1.1.1
-pkgrel=1
+pkgrel=2
 epoch=1
 groups=(cachyos)
 arch=('any')
@@ -28,6 +28,12 @@ optdepends=('ruby: for tunecfs2'
             'lua-luv: for topmem'
             'irqbalance'
             'power-profiles-daemon: For game-performance')
+
+prepare() {
+  cd $_gitname
+  msg2 "kerver: Check for new x86_64 level config"
+  git cherry-pick -n 5ffc0525a09b745590a84d0bea084cf8b9527e08
+}
 
 package() {
   install -d "$pkgdir/etc"
