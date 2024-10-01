@@ -17,7 +17,7 @@ arch=('x86_64')
 license=('PSF-2.0')
 url="https://www.python.org/"
 depends=('bzip2' 'expat' 'gdbm' 'libffi' 'libnsl' 'libxcrypt' 'openssl' 'zlib' 'tzdata' 'mpdecimal')
-makedepends=('tk' 'sqlite' 'bluez-libs' 'llvm' 'gdb' 'xorg-server-xvfb' 'ttf-font' 'llvm-bolt')
+makedepends=('tk' 'sqlite' 'bluez-libs' 'llvm' 'gdb' 'xorg-server-xvfb' 'ttf-font')
 source=("https://www.python.org/ftp/python/${pkgver%rc*}/Python-${pkgver}.tar.xz"{,.asc}
         EXTERNALLY-MANAGED)
 sha512sums=('4a363d3f852ad8f4fd1484aa4cec35494a3811be48ef67fadb2bdf2e2489ed07dc78fad6ab475257db503ddd64d39f9800f23a1c94b6bbd15b7f632cff0c90ae'
@@ -55,7 +55,6 @@ build() {
               --enable-shared \
               --with-computed-gotos \
               --enable-optimizations \
-              --enable-bolt \
               --with-lto \
               --enable-ipv6 \
               --with-system-expat \
