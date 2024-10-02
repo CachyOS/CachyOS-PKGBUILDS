@@ -4,8 +4,8 @@
 
 pkgname=scx-scheds
 _gitname=scx
-pkgver=1.0.4
-pkgrel=3
+pkgver=1.0.5
+pkgrel=1
 pkgdesc='sched_ext schedulers and tools'
 url='https://github.com/sched-ext/scx'
 arch=('x86_64' 'aarch64')
@@ -29,19 +29,13 @@ makedepends=(
 )
 options=(!lto)
 source=("git+https://github.com/sched-ext/scx?signed#tag=v$pkgver")
-sha256sums=('c262e6ae6f804c61c4669bf6b09e9fdc01882d0e36ff0e4d6b9598fd7ad20e94')
+sha256sums=('d756d07c997eceb1b75c48f9e3a21be0c57bfc1a31fcdbdc8d2804886e00cac0')
 validpgpkeys=(
   697C63013E65270255EBC2608744DC1EB26B5A9A  # Tejun Heo <tj@kernel.org>
   F5504C7B7B8107B40EF9E97AA1148BB3207BCC33  # David Vernet
 )
 
 _backports=(
-461cb9a3a0f9e2989e55bfd742e5a67d65862bcb # scx_lavd: fix calculation of greedy_ratio
-ebe9375b6a6593e71c6a4c8eff13bef7b13092b4 # scx_lavd: pretty printing of status
-351a1c6656ded0d76414d52a2f8288a327cf50c0 # scx_lavd: enable autopilot mode by default
-36df970a8f45de2fe97623e25f5ac9be9de70ac8 # scx_lavd: add debug print for turbo cores
-4b4f42fce1f072deed96c7b4dcda08db00c36fbe # scx_lavd: add a short circuit for the case of no turbo core
-95e2f4dabe09e37d77b5fb5ea53e592cd48a2430 # scx_lavd: boost the latency critility of kernel threads
 )
 
 _reverts=(
