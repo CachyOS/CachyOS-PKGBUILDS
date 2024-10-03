@@ -2,21 +2,21 @@
 # Contributor: François Charette <firmicus@gmx.net>
 
 pkgname=xz
-pkgver=5.6.2
-pkgrel=3
+pkgver=5.6.3
+pkgrel=2
 pkgdesc='Library and command line tools for XZ and LZMA compressed files'
 arch=('x86_64')
-url='https://xz.tukaani.org/xz-utils/'
+url='https://tukaani.org/xz/'
 license=('GPL' 'LGPL' 'custom')
 depends=('sh')
 makedepends=('git' 'po4a' 'doxygen')
 provides=('liblzma.so')
 validpgpkeys=('3690C240CE51B4670D30AD1C38EE757D69184620') # Lasse Collin <lasse.collin@tukaani.org>
-source=("git+https://git.tukaani.org/xz.git#tag=v${pkgver}"
+source=("git+https://github.com/tukaani-project/xz#tag=v${pkgver}?signed"
         "add-pgo.patch")
-sha256sums=('32863aadcca14171379fc5dbcba290b8c203863d0277c6e637f69a666f22bbcf'
+sha256sums=('5a4495e85ddec6979a7c34fec7355304588e37830d663ffb5e57069636f47900'
             '25d2b7b9c6d356ed18df7802bd6dae82005310fa065f3703c39e4d9f5ea55a9f')
-sha512sums=('5c9cd3eb2d2126a5ccc6973c66f46ee5787e1808cbcdfada35ea9566206bf77969fb8ba401694ce75f6866fafde3c59114d22694f811f3b251cb073fd0c4ec47'
+sha512sums=('5dab9545bc63249c7716d40464f77b603a4255a91d65743d4fa8163e9819768c8a26b31dc783c1fb65904c954a6d5fd4a974420e4d599c7079828bdd3c78b593'
             'fb9a7ea934555fe3ab2fccc4bd125fb4711d54862082f3a5e68faa2e96abb7c18c48c9b5e7d6be2616861dd1f97b5b3d244736676ec48b3467e61caf4c02a2a5')
 
 prepare() {
@@ -29,8 +29,6 @@ prepare() {
 build() {
   cd ${pkgname}
 
-  export CFLAGS+=" -fno-semantic-interposition"
-  export CXXLAGS+=" -fno-semantic-interposition"
   ./configure \
     --prefix=/usr \
     --disable-rpath
