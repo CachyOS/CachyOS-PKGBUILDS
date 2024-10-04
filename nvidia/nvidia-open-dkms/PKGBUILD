@@ -2,7 +2,7 @@
 
 pkgname=nvidia-open-dkms
 pkgver=560.35.03
-pkgrel=3
+pkgrel=12
 pkgdesc="NVIDIA open kernel modules"
 arch=('x86_64')
 url="https://github.com/NVIDIA/open-gpu-kernel-modules"
@@ -15,7 +15,8 @@ source=("$pkgname-$pkgver.tar.gz::https://github.com/NVIDIA/open-gpu-kernel-modu
         0004-6.11-Add-fix-for-fbdev.patch
         0005-6.12-drm_outpull_pill-changed-check.patch
         0006-Fix-for-6.12.0-rc1-drm_mode_config_funcs.output_poll.patch
-        0007-Replace-PageSwapCache-for-6.12-kernel.patch)
+        0007-Replace-PageSwapCache-for-6.12-kernel.patch
+        0008-silence-event-assert-until-570.patch)
 sha512sums=('a0cbe05fc8acbb4769fa5320d6bfe2033fd31775036e984278cdf7e67ebd801bd8991d4d1626884a4ff729d3900c969f385caea7ae049e3d918a1ea60e45890a'
             '77695f4140b9beaa754c2358805e97bc79c7d0dbb0e45235f5718fea3a8c17036c4f955be4e1cd8ae36234a87086ba086adbdbd3831cd79926feed41ae1f7215'
             '629af798aec732381db0d0a05eac350b65abc9e3d5be70dec638f1deff5e35f506cae6235dccdb80b42614d2cf6d307d0dc548bb3049ff271c79e8e91b6e4c69'
@@ -23,7 +24,8 @@ sha512sums=('a0cbe05fc8acbb4769fa5320d6bfe2033fd31775036e984278cdf7e67ebd801bd89
             '3b6357627ad4672d864b985088908d43f7718dc428e8901c9d27101fd2e9bc109c84e2b414688bbcaa9a05c1e7e55434fff06bf1df5ed33175f1e8bac95dc557'
             '6e0b62f776ded40ab0ac8a2a5616d84723d98ef1ee55ec732b9303207909d5712e3d36273be97a6a0a13f1ff6d798ba9f1b62fc08d75f4e05a606083d725e093'
             'cb4c55f7d9aeac38cf583521bc8781bcffe6026658f9981a7bb6e2749a7668c620b7fdd3cdd32b50e27da0924572ffe36870070d82bb5c620d04adfc6e3900a3'
-            '4c6774a1664391104dba2ee1d21a0a6afaa61357b6afedb2def093feb0c893d6ecdfd943cac3f9610e014ed5797f871a873ad600befcb9cbd5d6f5d05f4f8d8d')
+            '4c6774a1664391104dba2ee1d21a0a6afaa61357b6afedb2def093feb0c893d6ecdfd943cac3f9610e014ed5797f871a873ad600befcb9cbd5d6f5d05f4f8d8d'
+            '8f0d0a4881588e10681060d6006a6c65108a753c3106a1a710cf90f8dba8e52e6d6c10633f8ad19b763a2ab119ef98fddc6db4481262daf644c0206ac2ecd2d9')
 
 prepare() {
   cd open-gpu-kernel-modules-${pkgver}
@@ -34,6 +36,7 @@ prepare() {
   patch -Np1 < "$srcdir"/0004-6.11-Add-fix-for-fbdev.patch
   patch -Np1 < "$srcdir"/0006-Fix-for-6.12.0-rc1-drm_mode_config_funcs.output_poll.patch
   patch -Np1 < "$srcdir"/0007-Replace-PageSwapCache-for-6.12-kernel.patch
+  patch -Np1 < "$srcdir"/0008-silence-event-assert-until-570.patch
 
   # Attempt to make this reproducible
   sed -i "s/^HOSTNAME.*/HOSTNAME = echo cachyos"/ utils.mk
