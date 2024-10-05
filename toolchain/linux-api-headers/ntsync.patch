@@ -1,9 +1,9 @@
-From 10e07b6ee168c6d23fbde9e0de127b025f7b1f5c Mon Sep 17 00:00:00 2001
-From: Eric Naim <dnaim@cachyos.org>
-Date: Thu, 19 Sep 2024 23:22:14 +0800
+From d0a6d18c3ce077b9b944a383d001bc4a8b907006 Mon Sep 17 00:00:00 2001
+From: Peter Jung <admin@ptr1337.dev>
+Date: Mon, 15 Jul 2024 13:26:39 +0200
 Subject: [PATCH 08/11] ntsync
 
-Signed-off-by: Eric Naim <dnaim@cachyos.org>
+Signed-off-by: Peter Jung <admin@ptr1337.dev>
 ---
  Documentation/userspace-api/index.rst         |    1 +
  Documentation/userspace-api/ntsync.rst        |  398 +++++
@@ -24,10 +24,10 @@ Signed-off-by: Eric Naim <dnaim@cachyos.org>
  create mode 100644 tools/testing/selftests/drivers/ntsync/ntsync.c
 
 diff --git a/Documentation/userspace-api/index.rst b/Documentation/userspace-api/index.rst
-index 274cc7546efc..9c1b15cd89ab 100644
+index 8a251d71fa6e..02bea81fb4bf 100644
 --- a/Documentation/userspace-api/index.rst
 +++ b/Documentation/userspace-api/index.rst
-@@ -63,6 +63,7 @@ Everything else
+@@ -64,6 +64,7 @@ Everything else
     vduse
     futex2
     perf_ring_buffer
@@ -440,10 +440,10 @@ index 000000000000..767844637a7d
 +  ``objs`` and in ``alert``. If this is attempted, the function fails
 +  with ``EINVAL``.
 diff --git a/MAINTAINERS b/MAINTAINERS
-index cc40a9d9b8cd..2cd7168dc401 100644
+index 958e935449e5..b25b2a731512 100644
 --- a/MAINTAINERS
 +++ b/MAINTAINERS
-@@ -16319,6 +16319,15 @@ T:	git https://github.com/Paragon-Software-Group/linux-ntfs3.git
+@@ -15976,6 +15976,15 @@ T:	git https://github.com/Paragon-Software-Group/linux-ntfs3.git
  F:	Documentation/filesystems/ntfs3.rst
  F:	fs/ntfs3/
  
@@ -460,7 +460,7 @@ index cc40a9d9b8cd..2cd7168dc401 100644
  M:	Finn Thain <fthain@linux-m68k.org>
  L:	linux-m68k@lists.linux-m68k.org
 diff --git a/drivers/misc/Kconfig b/drivers/misc/Kconfig
-index 41c54051347a..bde398e12696 100644
+index faf983680040..2907b5c23368 100644
 --- a/drivers/misc/Kconfig
 +++ b/drivers/misc/Kconfig
 @@ -507,7 +507,6 @@ config OPEN_DICE
@@ -1633,11 +1633,11 @@ index dcfa38fdc93c..4a8095a3fc34 100644
  
  #endif
 diff --git a/tools/testing/selftests/Makefile b/tools/testing/selftests/Makefile
-index bc8fe9e8f7f2..b1296bd8eb3f 100644
+index 9039f3709aff..d5aeaa8fe3ca 100644
 --- a/tools/testing/selftests/Makefile
 +++ b/tools/testing/selftests/Makefile
-@@ -17,6 +17,7 @@ TARGETS += devices/error_logs
- TARGETS += devices/probe
+@@ -16,6 +16,7 @@ TARGETS += damon
+ TARGETS += devices
  TARGETS += dmabuf-heaps
  TARGETS += drivers/dma-buf
 +TARGETS += drivers/ntsync
@@ -3085,5 +3085,5 @@ index 000000000000..5fa2c9a0768c
 +
 +TEST_HARNESS_MAIN
 -- 
-2.46.1
+2.46.0.rc1
 
