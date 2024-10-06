@@ -3,8 +3,8 @@
 
 pkgname=scx-scheds-git
 _gitname=scx
-pkgver=1.0.5.r43.ga673dcf
-pkgrel=3
+pkgver=1.0.5.r45.g2801b10
+pkgrel=1
 pkgdesc='sched_ext schedulers and tools'
 url='https://github.com/sched-ext/scx'
 arch=('x86_64' 'aarch64')
@@ -33,17 +33,16 @@ provides=("scx-scheds=$pkgver")
 conflicts=("scx-scheds")
 
 _backports=(
-9a29547e5ba24166f4959afa54343b516eacde2b # scx_bpfland: rework lowlatency mode
-189473356f8eb3ea8387726777ba638c1cfb392f # WIP: scx_bpfland: handle user-space futex critical sections
-efb9fdbb3c7a12168e24fcdeea64ab7373d0a89d # scheds: introduce scx_fair
-d1ad85da1cde56841a226e14bd1b27581db426ab # scx_fair: introduce lowlatency mode
-107a520f6bb1ba510c5391215aa7dd7d0ca1b050 # scx_fair: use cast_mask() from common.bpf.h
-7b0d6434b87066d5024b1ed9ed4f83314a64e3a1 # scx_fair: always give tasks a chance to run on an idle CPU
-ea349dba659bb83b4a2b85d2bd618e9adee10187 # scx_fair: introduce per-CPU DSQs
-2ba87a29b0c88aa86db80e0b54c678243067444b # scx_fair: apply minimum vruntime when task is dispatched
-d41a15759af2584f2ff9cafa7a17b89d4d744ac1 # scx_fair: do not scale the assigned time slice based on task priority
-4eec7605e0a323be53ee795c9c814b182f835f4f # scx_fair: make lowlatency default and drop it as an option
-10e45f4fed45f05b99656fe2768759554242feff # WIP: scx_fair: handle user-space futex critical sections
+2086c62b2146fab6c3eb59f0118fe46b91d21039 # WIP: scx_bpfland: handle user-space futex critical sections
+3d083614af4685bebd47b7e55fb3d13451e384ee # scheds: introduce scx_fair
+66b14ec623072958834a4faa4611d624ef5f5867 # scx_fair: introduce lowlatency mode
+e4e6cbe082e47c03e7b96946459dde093e57a76f # scx_fair: use cast_mask() from common.bpf.h
+50e071bc4e1a168687c0a15434dfa5b8927c3258 # scx_fair: always give tasks a chance to run on an idle CPU
+bb92e2c7eeee1fc4a360bf46dda402d0b0b48067 # scx_fair: introduce per-CPU DSQs
+b6e2cdb472aa43f7a46e5e2afc88f7cfc6702815 # scx_fair: apply minimum vruntime when task is dispatched
+a320bd7c75a4f5ed8e72ee9ba0527ad63d5cdc4a # scx_fair: do not scale the assigned time slice based on task priority
+591d30ee1abebf014bc1c9395f7b5fdf2baf470d # scx_fair: make lowlatency default and drop it as an option
+fc16ad16950d387e6971c952aa453fa36456097c # WIP: scx_fair: handle user-space futex critical sections
 7bd61f43342143838deb0dc1c5db280890c8143e # scx_loader: Add SwitchScheduler methods to DBUS interface
 )
 
