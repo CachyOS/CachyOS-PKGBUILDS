@@ -4,7 +4,7 @@
 pkgname=scx-scheds-git
 _gitname=scx
 pkgver=1.0.5.r43.ga673dcf
-pkgrel=2
+pkgrel=3
 pkgdesc='sched_ext schedulers and tools'
 url='https://github.com/sched-ext/scx'
 arch=('x86_64' 'aarch64')
@@ -33,11 +33,17 @@ provides=("scx-scheds=$pkgver")
 conflicts=("scx-scheds")
 
 _backports=(
-d2e70332e919c9cd6fa0b7e50e72cb6a26fc3c41 # scheds: introduce scx_fair
-5f4079fa858aa420d819492139c748a3169a5c27 # scx_fair: introduce lowlatency mode
-a4b0b8be770e9845c74d896917bd28c2501675b2 # scx_fair: use cast_mask() from common.bpf.h
-f2d99a33b64d6bc78aac842e4587d5a8fc1ec805 # scx_fair: always give tasks a chance to run on an idle CPU
 9a29547e5ba24166f4959afa54343b516eacde2b # scx_bpfland: rework lowlatency mode
+189473356f8eb3ea8387726777ba638c1cfb392f # WIP: scx_bpfland: handle user-space futex critical sections
+efb9fdbb3c7a12168e24fcdeea64ab7373d0a89d # scheds: introduce scx_fair
+d1ad85da1cde56841a226e14bd1b27581db426ab # scx_fair: introduce lowlatency mode
+107a520f6bb1ba510c5391215aa7dd7d0ca1b050 # scx_fair: use cast_mask() from common.bpf.h
+7b0d6434b87066d5024b1ed9ed4f83314a64e3a1 # scx_fair: always give tasks a chance to run on an idle CPU
+ea349dba659bb83b4a2b85d2bd618e9adee10187 # scx_fair: introduce per-CPU DSQs
+2ba87a29b0c88aa86db80e0b54c678243067444b # scx_fair: apply minimum vruntime when task is dispatched
+d41a15759af2584f2ff9cafa7a17b89d4d744ac1 # scx_fair: do not scale the assigned time slice based on task priority
+4eec7605e0a323be53ee795c9c814b182f835f4f # scx_fair: make lowlatency default and drop it as an option
+10e45f4fed45f05b99656fe2768759554242feff # WIP: scx_fair: handle user-space futex critical sections
 7bd61f43342143838deb0dc1c5db280890c8143e # scx_loader: Add SwitchScheduler methods to DBUS interface
 )
 
