@@ -3,9 +3,9 @@
 # Contributor: Andrea Scarpino <andrea@archlinux.org>
 
 pkgname=kwin
-pkgver=6.1.5
+pkgver=6.2.0
 _dirver=$(echo $pkgver | cut -d. -f1-3)
-pkgrel=3
+pkgrel=2
 pkgdesc='An easy to use, but flexible, composited Window Manager (CachyOS Version)'
 arch=(x86_64)
 url='https://kde.org/plasma-desktop/'
@@ -43,6 +43,7 @@ depends=(breeze
          kwindowsystem
          kxmlgui
          lcms2
+         libcanberra
          libdisplay-info
          libdrm
          libei
@@ -64,6 +65,7 @@ depends=(breeze
          qt6-declarative
          qt6-multimedia
          qt6-sensors
+         qt6-svg
          qt6-tools
          qt6-wayland
          systemd-libs
@@ -82,31 +84,23 @@ optdepends=('maliit-keyboard: virtual keyboard for kwin-wayland')
 groups=(plasma)
 source=(https://download.kde.org/stable/plasma/$_dirver/$pkgname-$pkgver.tar.xz{,.sig}
 		https://invent.kde.org/plasma/kwin/-/merge_requests/6178.patch # Required for handheld edition
-		tearing-dev.patch # Tearing
-		fix-xwayland-copy-paste.patch::https://invent.kde.org/plasma/kwin/-/commit/7e23386d46d8441d31a1e82c210179546ee6cae1.patch # Fix copy and pasting to Xwayland applications.
-		https://invent.kde.org/plasma/kwin/-/merge_requests/6354.patch # backends/drm: when presentation with tearing+vrr fails, retry first with vrr only
+		fix-mouse-accel.patch::https://invent.kde.org/plasma/kwin/-/commit/6d633e4bd19a32390eb0da26a50e881eb7fbb36d.patch
 		)
 install=$pkgname.install
-sha256sums=('ba0aace323195b58adbfde14ec74cdd4c28c211d78a567c44af70f336dcab3f7'
+sha256sums=('8ae8852e48c042e96f98e76a8b67f7e94f1d601939336fba7f8db8b43bf2fcba'
             'SKIP'
-            'c6a95954f26a68b3def07fd9cd04910653ad8829f0150becee35ccf713d597ff'
-            '26a75cd9b50ffcd705bf99e681f73a6f168bd17540b1976547f869662cd5fccf'
-            'edcac240dc84837462fb8bd17af3bfa77f690b1df5f149ef5a0ae783e24b20e2'
-            '6df476e2a52d1a4861c9128a578d5ae4c94364a89d4c0b4d962eb58bf1c09538')
+            '2a512810f6b0b810a579f8a5c573c850c2e202507182eabb639c6a0ba77cdaf9'
+            '942dfead4e64b0445614ca1194bbef8e51ff49d24420c213c6208e18cfbc086f')
 validpgpkeys=('E0A3EB202F8E57528E13E72FD7574483BB57B18D'  # Jonathan Esk-Riddell <jr@jriddell.org>
               '0AAC775BB6437A8D9AF7A3ACFE0784117FBCE11D'  # Bhushan Shah <bshah@kde.org>
               'D07BD8662C56CB291B316EB2F5675605C74E02CF'  # David Edmundson <davidedmundson@kde.org>
               '1FA881591C26B276D7A5518EEAAF29B42A678C20') # Marco Martin <notmart@gmail.com>
 prepare() {
   cd $pkgname-$pkgver
-  msg2 "Tearing"
-  patch -Np1 < ../tearing-dev.patch
   msg2 "Add an option to allow Xwayland apps use libei input emulation without prompting"
   patch -Np1 < ../6178.patch
-  msg2 "Fix copy and pasting to Xwayland applications."
-  patch -Np1 < ../fix-xwayland-copy-paste.patch
-  msg2 "Tearing fix"
-  patch -Np1 < ../6354.patch
+  msg2 "Fix mouse acceleration"
+  patch -Np1 < ../fix-mouse-accel.patch
 }
 
 build() {
