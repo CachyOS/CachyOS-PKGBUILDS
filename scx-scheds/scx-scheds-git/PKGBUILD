@@ -4,7 +4,7 @@
 pkgname=scx-scheds-git
 _gitname=scx
 pkgver=1.0.5.r69.gd7576d4
-pkgrel=3
+pkgrel=4
 pkgdesc='sched_ext schedulers and tools'
 url='https://github.com/sched-ext/scx'
 arch=('x86_64' 'aarch64')
@@ -34,17 +34,17 @@ conflicts=("scx-scheds")
 
 _backports=(
 c8a920737149ed0882f35589f5e10794a6423d52 # scx_bpfland: prevent per-CPU DSQ stall with per-CPU kthreads
-8b3f5fd7d020ea7a6a687c8f35edd49c2920b4db # WIP: scx_bpfland: handle user-space futex critical sections
-290bfd991ccf078b0d4845ddedcadcafb31cdeb5 # scheds: introduce scx_fair
-2e17c8f4f0bb42e21015afbd3682a7e34584a183 # scx_fair: introduce lowlatency mode
-3a7397b277bc381e4a935b709622e0e73996e610 # scx_fair: use cast_mask() from common.bpf.h
-24adb7ee8406f56056a5a452b3b3326fa06321d0 # scx_fair: always give tasks a chance to run on an idle CPU
-92bf6c349fc66c7265285dd875056908ad485f44 # scx_fair: introduce per-CPU DSQs
-7ad966d80c86aa36eecf3b82da4f0a3e145f8bc1 # scx_fair: apply minimum vruntime when task is dispatched
-3baac16485845dd4a5992d709091afc952da331b # scx_fair: do not scale the assigned time slice based on task priority
-69d32d0458f49a1b2fe097039b131221e8aed251 # scx_fair: make lowlatency default and drop it as an option
-c8135fbe3d959c958b5cbac5946930fed90ce620 # scx_fair: prevent per-CPU DSQ stall with per-CPU kthreads
-45aed1fd23c2d714d15ba3a611d8e31dc0bfbe83 # WIP: scx_fair: handle user-space futex critical sections
+daa96dcd9dd922276ae57bc21f7ffbef42a5030b # WIP: scx_bpfland: handle user-space futex critical sections
+9ea4b56ad679efa6ef813384d93d418dabc106e3 # scheds: introduce scx_fair
+540c81b2f39044979a5f765c8cce09c77a54c7f5 # scx_fair: introduce lowlatency mode
+1d146b20e61282eea165edc1d31e4c913f92ccb2 # scx_fair: use cast_mask() from common.bpf.h
+2eee42b9cc8ec3047fa8a5292a4ec0ebb3c80f3d # scx_fair: always give tasks a chance to run on an idle CPU
+cf582851a645fbfba19c2431d099ffe46694280f # scx_fair: introduce per-CPU DSQs
+77a92c8bc42b1ad1527a756560d00d184532fe67 # scx_fair: apply minimum vruntime when task is dispatched
+dc1da218567be96c81a9fcef1bc2b177c2880120 # scx_fair: do not scale the assigned time slice based on task priority
+f3a0435a09153a87ba7d427f131ac690033f2d71 # scx_fair: make lowlatency default and drop it as an option
+dfba810c3245a3f0f8bf7f4d9d60bad00e8e3baa # scx_fair: prevent per-CPU DSQ stall with per-CPU kthreads
+77c15d72ed92f8f3d55d777fc278c679d93a4203 # WIP: scx_fair: handle user-space futex critical sections
 )
 
 _reverts=(
