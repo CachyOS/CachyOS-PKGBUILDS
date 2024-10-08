@@ -4,7 +4,7 @@
 pkgname=scx-scheds-git
 _gitname=scx
 pkgver=1.0.5.r62.geb73005
-pkgrel=1
+pkgrel=2
 pkgdesc='sched_ext schedulers and tools'
 url='https://github.com/sched-ext/scx'
 arch=('x86_64' 'aarch64')
@@ -33,7 +33,6 @@ provides=("scx-scheds=$pkgver")
 conflicts=("scx-scheds")
 
 _backports=(
-9170d1f22f69ea52b4600815f0e6bd03eee22a2e # scx_bpfland: skip idle CPU selection for tasks with migration disabled
 721a326b9d034ff592237bde7bae478efb10e3e2 # WIP: scx_bpfland: handle user-space futex critical sections
 b6a7ce500be7387532c48fa7c65120598e339801 # scheds: introduce scx_fair
 88a4b64634c25c894d6e74991327b8e78622306d # scx_fair: introduce lowlatency mode
@@ -45,6 +44,7 @@ ae2570c6259dfe0ad285faa905d2b294e64a5f1e # scx_fair: introduce per-CPU DSQs
 73bb973da3bdc9a96195f318d88f4769039cc1fe # scx_fair: make lowlatency default and drop it as an option
 fd07d12361443f864a6dfd7994baa1490438e856 # scx_fair: skip idle CPU selection for tasks with migration disabled
 23345b43bc3f11e999818e188f734f9267aaff93 # WIP: scx_fair: handle user-space futex critical sections
+6fc9c24ed63f191adb6d0b79f5361ec4fc31700c # WIP: scx_fair: prevent per-CPU DSQ stall with per-CPU kthreads
 )
 
 _reverts=(
