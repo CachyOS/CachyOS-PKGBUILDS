@@ -4,7 +4,7 @@
 pkgname=scx-scheds-git
 _gitname=scx
 pkgver=1.0.5.r69.gd7576d4
-pkgrel=2
+pkgrel=3
 pkgdesc='sched_ext schedulers and tools'
 url='https://github.com/sched-ext/scx'
 arch=('x86_64' 'aarch64')
@@ -34,15 +34,17 @@ conflicts=("scx-scheds")
 
 _backports=(
 c8a920737149ed0882f35589f5e10794a6423d52 # scx_bpfland: prevent per-CPU DSQ stall with per-CPU kthreads
-f4296a5f30c73c02fc730fa313f3e2ae29db6e46 # scheds: introduce scx_fair
-506276415868e56a81ce16efbb4f4f7bc26afe71 # scx_fair: introduce lowlatency mode
-fc6d75be561109837c59fe81ee230150b11f5fcd # scx_fair: use cast_mask() from common.bpf.h
-df6ea98413744445192499d15b3423019d058886 # scx_fair: always give tasks a chance to run on an idle CPU
-20f6bb529b08e743fbb23b1061099313a34f15f0 # scx_fair: introduce per-CPU DSQs
-3ce64dfcef4b6d3d97598f535abed7caa5fdc998 # scx_fair: apply minimum vruntime when task is dispatched
-657e8c6861f99cd5b057453519848e6f10c9b25d # scx_fair: do not scale the assigned time slice based on task priority
-e2aadcc0b4fe86aa35f26d337800870d746228e3 # scx_fair: make lowlatency default and drop it as an option
-094e1f05c573aef6fca4832ff4d0b4edfda3d16f # scx_fair: prevent per-CPU DSQ stall with per-CPU kthreads
+8b3f5fd7d020ea7a6a687c8f35edd49c2920b4db # WIP: scx_bpfland: handle user-space futex critical sections
+290bfd991ccf078b0d4845ddedcadcafb31cdeb5 # scheds: introduce scx_fair
+2e17c8f4f0bb42e21015afbd3682a7e34584a183 # scx_fair: introduce lowlatency mode
+3a7397b277bc381e4a935b709622e0e73996e610 # scx_fair: use cast_mask() from common.bpf.h
+24adb7ee8406f56056a5a452b3b3326fa06321d0 # scx_fair: always give tasks a chance to run on an idle CPU
+92bf6c349fc66c7265285dd875056908ad485f44 # scx_fair: introduce per-CPU DSQs
+7ad966d80c86aa36eecf3b82da4f0a3e145f8bc1 # scx_fair: apply minimum vruntime when task is dispatched
+3baac16485845dd4a5992d709091afc952da331b # scx_fair: do not scale the assigned time slice based on task priority
+69d32d0458f49a1b2fe097039b131221e8aed251 # scx_fair: make lowlatency default and drop it as an option
+c8135fbe3d959c958b5cbac5946930fed90ce620 # scx_fair: prevent per-CPU DSQ stall with per-CPU kthreads
+45aed1fd23c2d714d15ba3a611d8e31dc0bfbe83 # WIP: scx_fair: handle user-space futex critical sections
 )
 
 _reverts=(
