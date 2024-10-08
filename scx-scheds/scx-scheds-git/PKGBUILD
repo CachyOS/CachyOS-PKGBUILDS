@@ -4,7 +4,7 @@
 pkgname=scx-scheds-git
 _gitname=scx
 pkgver=1.0.5.r62.geb73005
-pkgrel=2
+pkgrel=3
 pkgdesc='sched_ext schedulers and tools'
 url='https://github.com/sched-ext/scx'
 arch=('x86_64' 'aarch64')
@@ -33,6 +33,7 @@ provides=("scx-scheds=$pkgver")
 conflicts=("scx-scheds")
 
 _backports=(
+9170d1f22f69ea52b4600815f0e6bd03eee22a2e # scx_bpfland: skip idle CPU selection for tasks with migration disabled
 721a326b9d034ff592237bde7bae478efb10e3e2 # WIP: scx_bpfland: handle user-space futex critical sections
 b6a7ce500be7387532c48fa7c65120598e339801 # scheds: introduce scx_fair
 88a4b64634c25c894d6e74991327b8e78622306d # scx_fair: introduce lowlatency mode
