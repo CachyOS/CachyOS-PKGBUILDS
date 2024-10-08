@@ -3,8 +3,8 @@
 
 pkgname=scx-scheds-git
 _gitname=scx
-pkgver=1.0.5.r62.geb73005
-pkgrel=9
+pkgver=1.0.5.r67.g2077b9a
+pkgrel=1
 pkgdesc='sched_ext schedulers and tools'
 url='https://github.com/sched-ext/scx'
 arch=('x86_64' 'aarch64')
@@ -33,16 +33,16 @@ provides=("scx-scheds=$pkgver")
 conflicts=("scx-scheds")
 
 _backports=(
-4b1082dc37a1ce7896f46a2923b9f3108b965daf # scx_bpfland: prevent per-CPU DSQ stall with per-CPU kthreads
-c2f2bb30fdb85cb02bb5b27ad238d99564f505d9 # scheds: introduce scx_fair
-147931668beb9d908ab35ec5f83159efe17e6e32 # scx_fair: introduce lowlatency mode
-534913e28c1129f3735c25b16fa58ca5543500e1 # scx_fair: use cast_mask() from common.bpf.h
-2b44c4fd30a10e7ad397bd4f0f58964f5b13dff2 # scx_fair: always give tasks a chance to run on an idle CPU
-bb2f9637d91850fb8a1af7e164540121267e8ffb # scx_fair: introduce per-CPU DSQs
-a9a4b505fb86d49361e08259b9b771879192b76a # scx_fair: apply minimum vruntime when task is dispatched
-551275c598cf6c072c2e89c70d5aa09e5b6d8421 # scx_fair: do not scale the assigned time slice based on task priority
-cf9fef70bc96822b1c89de5c173bd3a48c5c02c5 # scx_fair: make lowlatency default and drop it as an option
-bd7b99e7fce20ec31af21d63c29289adefdd09da # scx_fair: prevent per-CPU DSQ stall with per-CPU kthreads
+4bd3bbcb10e83a0e67aa95af2300af0fd4e35db2 # scx_bpfland: prevent per-CPU DSQ stall with per-CPU kthreads
+bff2ed5e87a8c462a401fe504b54b6da43910bb2 # scheds: introduce scx_fair
+b9d44ca0dc8d3c719fb556fc9b18e6cf950d43b1 # scx_fair: introduce lowlatency mode
+ea7a6481d593cac61d638026a6e67a4618f56d30 # scx_fair: use cast_mask() from common.bpf.h
+9b28183f8b850f7d25f95bd54ae14dbae376f6e8 # scx_fair: always give tasks a chance to run on an idle CPU
+fd73b4988ff8251a8ebde82502ca6a3e2d466766 # scx_fair: introduce per-CPU DSQs
+95321f6f45a28b36e3149c4aa92a312c1b31f0a8 # scx_fair: apply minimum vruntime when task is dispatched
+fea05f31c6455decb094cc68558fe5c7c45c814b # scx_fair: do not scale the assigned time slice based on task priority
+4942726ecb8b4749584e2d24b1cc341cf23dabd4 # scx_fair: make lowlatency default and drop it as an option
+3417aa2a846e3ecdac353c232679b5bb7d22b094 # scx_fair: prevent per-CPU DSQ stall with per-CPU kthreads
 )
 
 _reverts=(
