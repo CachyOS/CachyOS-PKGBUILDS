@@ -24,7 +24,7 @@ pkgname=(
   mesa-docs
 )
 pkgver=24.2.4
-pkgrel=2
+pkgrel=3
 epoch=1
 pkgdesc="Open-source OpenGL drivers"
 url="https://www.mesa3d.org/"
@@ -99,6 +99,8 @@ options=(
 )
 source=(
   "https://mesa.freedesktop.org/archive/mesa-$pkgver.tar.xz"{,.sig}
+  "https://gitlab.freedesktop.org/mesa/mesa/-/merge_requests/31443.patch"
+  "https://gitlab.freedesktop.org/mesa/mesa/-/merge_requests/31505.patch"
 )
 validpgpkeys=(
   946D09B5E4C9845E63075FF1D961C596A7203456 # Andres Gomez <tanty@igalia.com>
@@ -137,6 +139,8 @@ done
 
 b2sums=('a0a977e5032e1c9a5b59dc9212d50b6f023fb9d42d325e692a3c680e77a06e2ccd66843b9eaeeadbf3614b65798c5c4649fb0bb74f134334e662ee9dd47ac21f'
         'SKIP'
+        '7883601fa9e03ecdd808d77c39f8e62c4911c88cc4e12818578c60edead74f8223628133225ba555a3cef13f439e3c05df99cba0a5b344f23e4fe5162c97279f'
+        '714749ab358916efb52b8529f40416423e140d24ed8a0393089f83a2d1f9d3991d2b339037c02f2b306b166480e8917c9f9281d0e011842cf884adbb30222dae'
         'a6d47c903be6094423d89b8ec3ca899d0a84df6dbd6e76632bb6c9b9f40ad9c216f8fa400310753d392f85072756b43ac3892e0a2c4d55f87ab6463002554823'
         '9c34f1ab14ad5ae124882513e0f14b1d731d06a43203bdc37fa3b202dd3ce93dbe8ebb554d01bab475689fe6ffd3ec0cbc0d5365c9b984cb83fb34ea3e9e732e'
         'fac5cf6339dc3c0a40b100035a5c874cc7b2efeafeb31c51488d25156e392dc9db86a497e76eead351d2126f69d060422faa9c55d73407a0de9f5be18d234123'
@@ -156,6 +160,8 @@ b2sums=('a0a977e5032e1c9a5b59dc9212d50b6f023fb9d42d325e692a3c680e77a06e2ccd66843
 # https://docs.mesa3d.org/relnotes.html
 sha256sums=('5ea42a8bb6d58aec9754c9f553b1e413f67c09403741f8e2786c3f9e63d3461a'
             'SKIP'
+            '22581baa9db479709b7f1592ebb6c034b7e62bca265b5afc2fbe48f9e5521feb'
+            '43511594a8bb33cb81e1f61772e77dc502f1263c3c8e8b0acfc49ca57c35048a'
             'ed646292ffc8188ef8ea4d1e0e0150fb15a5c2e12ad9b8fc191ae7a8a7f3c4b9'
             'a941429fea7e08bedec25e4f6785b6ffaacc6b755da98df5ef3e7dcf4a124c4f'
             '168fb715dda47215e360912c096649d23d58bf392ac62f73919e831745e40f26'
@@ -174,6 +180,11 @@ sha256sums=('5ea42a8bb6d58aec9754c9f553b1e413f67c09403741f8e2786c3f9e63d3461a'
 
 prepare() {
   cd mesa-$pkgver
+
+  msg2 "RADV: Improve RT performance"
+  patch -Np1 < ../31443.patch
+  msg2 "RADV: Fix DEQP crash (#11953)"
+  patch -Np1 < ../31505.patch
 
   # Include package release in version string so Chromium invalidates
   # its GPU cache; otherwise it can cause pages to render incorrectly.
