@@ -4,7 +4,7 @@
 pkgname=scx-scheds-git
 _gitname=scx
 pkgver=1.0.5.r108.g59cfd40
-pkgrel=1
+pkgrel=2
 pkgdesc='sched_ext schedulers and tools'
 url='https://github.com/sched-ext/scx'
 arch=('x86_64' 'aarch64')
@@ -33,6 +33,11 @@ provides=("scx-scheds=$pkgver")
 conflicts=("scx-scheds")
 
 _backports=(
+758ac2d64c2fbe1af886c67f0db4f56e3c42cb27 # scx_bpfland: pick a random idle CPU when prev_cpu is not valid
+23bda0be53462aaeae2d8e2bde753aa2446135db # scx_bpfland: always refill task timeslice in ops.dispatch()
+b98ddcd9c405da38f9e8db23fb00b0b213362932 # scx_bpfland: prioritize only per-CPU kthreads with --local-kthreads
+1a07f0118d7f9cb2e007158c91f28284c3e24395 # scx_bpfland: override wakee's L3 domain with waker's in WAKE_SYNC
+13959423708ffabca55fd0b6b924f839227f5f27 # scx_bpfland: improve WAKE_SYNC by reusing full-idle SMT cores
 3207dbb2be4ea9a9f3d2910843d944b450002f41 # scheds: introduce scx_fair
 df30545ed657a1e286051498ea277859cfcf96b2 # scx_fair: introduce lowlatency mode
 29c9485483dc3659efac20cdadb2679b245366b9 # scx_fair: use cast_mask() from common.bpf.h
