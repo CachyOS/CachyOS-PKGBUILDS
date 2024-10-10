@@ -4,7 +4,7 @@
 pkgname=scx-scheds-git
 _gitname=scx
 pkgver=1.0.5.r108.g59cfd40
-pkgrel=2
+pkgrel=3
 pkgdesc='sched_ext schedulers and tools'
 url='https://github.com/sched-ext/scx'
 arch=('x86_64' 'aarch64')
@@ -37,20 +37,18 @@ _backports=(
 23bda0be53462aaeae2d8e2bde753aa2446135db # scx_bpfland: always refill task timeslice in ops.dispatch()
 b98ddcd9c405da38f9e8db23fb00b0b213362932 # scx_bpfland: prioritize only per-CPU kthreads with --local-kthreads
 1a07f0118d7f9cb2e007158c91f28284c3e24395 # scx_bpfland: override wakee's L3 domain with waker's in WAKE_SYNC
-13959423708ffabca55fd0b6b924f839227f5f27 # scx_bpfland: improve WAKE_SYNC by reusing full-idle SMT cores
-3207dbb2be4ea9a9f3d2910843d944b450002f41 # scheds: introduce scx_fair
-df30545ed657a1e286051498ea277859cfcf96b2 # scx_fair: introduce lowlatency mode
-29c9485483dc3659efac20cdadb2679b245366b9 # scx_fair: use cast_mask() from common.bpf.h
-4e6d2c503d4a3cedc894ffb0f3e5799efdfa37a7 # scx_fair: always give tasks a chance to run on an idle CPU
-2b71d323f493cb593b64299ba30e287e12ed5ef4 # scx_fair: introduce per-CPU DSQs
-c8f1d376676b7715af8bde5a4ec2ef304917f8ae # scx_fair: apply minimum vruntime when task is dispatched
-9a78a40f959eff1f150337e33c8cf2c0e94f1a9f # scx_fair: do not scale the assigned time slice based on task priority
-d1998de8172bdffa9eeaf738a42d6b5df00470e2 # scx_fair: make lowlatency default and drop it as an option
-9813c783fab5021ee3b7d8537cf92d762b9b879a # scx_fair: prevent per-CPU DSQ stall with per-CPU kthreads
-2e9efde4625301a4d332ec604601a7c63bf6ef55 # scx_fair: code cleanup
-1076fd7964b7113c137a03cd4e8bd1494520a69d # scx_fair: custom voluntary context switch metric
-a99d60e9a6e1f73aeed4f1c42eefef0bf99889e4 # scx_fair: override wakee's L3 domain with waker's in WAKE_SYNC
-04abd096b504512a2d6a2fe6697cd024c1137489 # scx_fair: bump up latency weight of wakee on sync wake-up
+f0073757ba2e31b989efa162c9333f189ea65cac # scheds: introduce scx_fair
+2ccdc88adb1b1c8ee298e05904f7fcecb3e8425d # scx_fair: introduce lowlatency mode
+a83f2fdb0f0aede423e2539b08676749e4919c18 # scx_fair: use cast_mask() from common.bpf.h
+a494a3cc2c1f65ddfe4d3854bb87b668ebaa7a40 # scx_fair: always give tasks a chance to run on an idle CPU
+0a9861c2ce9482b14a6d64d3a9e45f050fceb15f # scx_fair: introduce per-CPU DSQs
+b66136a1dae4def47401a1dc9e917bc0f16b9d21 # scx_fair: apply minimum vruntime when task is dispatched
+64e85d6427a54c6c34ae7e87f02a12bca5d1fd15 # scx_fair: do not scale the assigned time slice based on task priority
+5a7701ffa300b969ee98261fe37873350c53f5d1 # scx_fair: make lowlatency default and drop it as an option
+7d440bc5ab5237116cb660ade76fabc8763b773a # scx_fair: prevent per-CPU DSQ stall with per-CPU kthreads
+6e2a31c9a7e50e89e09e8623708c325945b59e8c # scx_fair: code cleanup
+76c1bbb55a720866169e1af686fb69e5de8fcf83 # scx_fair: custom voluntary context switch metric
+f9e393db7f024e1ba82423e3b39333bc2262bffd # scx_fair: always charge at least slice_min to vruntime
 )
 
 _reverts=(
