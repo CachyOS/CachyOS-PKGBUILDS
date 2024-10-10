@@ -15,7 +15,7 @@ _sqlitever=$(curl -s 'https://archlinux.org/packages/search/json/?name=sqlite' |
     if (NF == 4) { printf "%02d", $4 }
     else { printf "00" }
 }')
-pkgrel=2
+pkgrel=3
 pkgdesc="A library-based package manager with dependency support. CachyOS fork."
 arch=('x86_64' 'aarch64')
 url="https://www.archlinux.org/pacman/"
@@ -72,6 +72,7 @@ source=("git+https://github.com/CachyOS/pacman.git#commit=${_commit}?signed"
         "https://www.sqlite.org/2024/sqlite-src-${_sqlitever}.zip"
         disable-always-stale.patch
         https://github.com/CachyOS/pacman/commit/627ff238d90b5194316a7914d2fe11ebcde60db4.patch # updates deps, including alpm crate
+        78cd453.patch # PrettyProgressBar
         )
 source_aarch64=(fix-alpm-crate-for-aarch64.patch)
 sha256sums=('387ab7db82bca2da0fa565fa35695385f2fd67189e84242098b9a2a48c068a88'
@@ -82,16 +83,16 @@ sha256sums=('387ab7db82bca2da0fa565fa35695385f2fd67189e84242098b9a2a48c068a88'
             'bdd8fb13c1cd8606f41347bc1897e261031ac80b33c772d310f417064332f646'
             'def3fc292eb9ecc444f6c1950e5c79d8462ed5e7b3d605fd6152d145e1d5abb4'
             '11e0078c5ac7cdafa625957a9da982989efe19719e4973cd77f28dc5780dccd9'
-            'cf6a780c99dbcd76ac4f2676385f95e57cd10bed8c3a7de2dcb5079f7cd037d9')
+            'cf6a780c99dbcd76ac4f2676385f95e57cd10bed8c3a7de2dcb5079f7cd037d9'
+            '843ad07d4a996ad165f20544c5df5b6deec4496ec30daa38b874bf3fa28afa54')
 sha256sums_aarch64=('98af0b680561b4430c0290d461d28a03b7178cce6b62880c7d0803473bfa543c')
 validpgpkeys=(
   'B1B70BB1CD56047DEF31DE2EB62C3D10C54D5DA9'  # Vladislav Nepogodin <nepogodin.vlad@gmail.com>
 )
 
-if $_staging; then
-    source+=(78cd453.patch)
+#if $_staging; then
     #source+=(https://raw.githubusercontent.com/vnepogodin/my-patches/develop/pacman/0001-libalpm-parallel-signature-check.patch)
-fi
+#fi
 
 pkgver() {
   cd "$pkgname"

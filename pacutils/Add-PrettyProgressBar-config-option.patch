@@ -1,0 +1,73 @@
+From 0979284b4f404401a8f083f9713fc5791d76bd9a Mon Sep 17 00:00:00 2001
+From: Eric Naim <dnaim@cachyos.org>
+Date: Tue, 20 Aug 2024 17:53:00 +0700
+Subject: [PATCH] pacconf: Add PrettyProgressBar config option
+
+Signed-off-by: Eric Naim <dnaim@cachyos.org>
+---
+ lib/pacutils/config.c | 5 +++++
+ lib/pacutils/config.h | 4 ++++
+ src/pacconf.c         | 2 ++
+ 3 files changed, 11 insertions(+)
+
+diff --git a/lib/pacutils/config.c b/lib/pacutils/config.c
+index 9b9397a..bb65e0c 100644
+--- a/lib/pacutils/config.c
++++ b/lib/pacutils/config.c
+@@ -51,6 +51,8 @@ struct _pu_config_setting {
+   {"VerbosePkgLists", PU_CONFIG_OPTION_VERBOSEPKGLISTS},
+   {"ILoveCandy",      PU_CONFIG_OPTION_ILOVECANDY},
+ 
++  {"PrettyProgressBar", PU_CONFIG_OPTION_PRETTYPROGRESSBAR},
++
+   {"DisableDownloadTimeout", PU_CONFIG_OPTION_DISABLEDOWNLOADTIMEOUT},
+   {"ParallelDownloads",      PU_CONFIG_OPTION_PARALLELDOWNLOADS},
+ 
+@@ -880,6 +882,9 @@ int pu_config_reader_next(pu_config_reader_t *reader) {
+         case PU_CONFIG_OPTION_ILOVECANDY:
+           config->ilovecandy = 1;
+           break;
++        case PU_CONFIG_OPTION_PRETTYPROGRESSBAR:
++          config->prettyprogressbar = 1;
++          break;
+         case PU_CONFIG_OPTION_DISABLEDOWNLOADTIMEOUT:
+           config->disabledownloadtimeout = 1;
+           break;
+diff --git a/lib/pacutils/config.h b/lib/pacutils/config.h
+index f842f9d..e3bf813 100644
+--- a/lib/pacutils/config.h
++++ b/lib/pacutils/config.h
+@@ -43,6 +43,8 @@ typedef enum pu_config_option_t {
+   PU_CONFIG_OPTION_DISABLEDOWNLOADTIMEOUT,
+   PU_CONFIG_OPTION_PARALLELDOWNLOADS,
+ 
++  PU_CONFIG_OPTION_PRETTYPROGRESSBAR,
++
+   PU_CONFIG_OPTION_SIGLEVEL,
+   PU_CONFIG_OPTION_LOCAL_SIGLEVEL,
+   PU_CONFIG_OPTION_REMOTE_SIGLEVEL,
+@@ -93,6 +95,8 @@ typedef struct pu_config_t {
+   pu_config_bool_t verbosepkglists;
+   pu_config_bool_t disabledownloadtimeout;
+ 
++  pu_config_bool_t prettyprogressbar;
++
+   int siglevel;
+   int localfilesiglevel;
+   int remotefilesiglevel;
+diff --git a/src/pacconf.c b/src/pacconf.c
+index 7d1e8a7..9fd20fe 100644
+--- a/src/pacconf.c
++++ b/src/pacconf.c
+@@ -311,6 +311,8 @@ void dump_options(void) {
+   show_bool("VerbosePkgLists", config->verbosepkglists);
+   show_bool("ILoveCandy", config->ilovecandy);
+ 
++  show_bool("PrettyProgressBar", config->prettyprogressbar);
++
+   show_int("ParallelDownloads", config->paralleldownloads);
+ 
+   show_cleanmethod("CleanMethod", config->cleanmethod);
+-- 
+2.46.0
+
