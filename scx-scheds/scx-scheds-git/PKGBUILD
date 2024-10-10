@@ -3,7 +3,7 @@
 
 pkgname=scx-scheds-git
 _gitname=scx
-pkgver=1.0.5.r95.g483a565
+pkgver=1.0.5.r108.g59cfd40
 pkgrel=1
 pkgdesc='sched_ext schedulers and tools'
 url='https://github.com/sched-ext/scx'
@@ -33,16 +33,19 @@ provides=("scx-scheds=$pkgver")
 conflicts=("scx-scheds")
 
 _backports=(
-9ea4b56ad679efa6ef813384d93d418dabc106e3 # scheds: introduce scx_fair
-540c81b2f39044979a5f765c8cce09c77a54c7f5 # scx_fair: introduce lowlatency mode
-1d146b20e61282eea165edc1d31e4c913f92ccb2 # scx_fair: use cast_mask() from common.bpf.h
-2eee42b9cc8ec3047fa8a5292a4ec0ebb3c80f3d # scx_fair: always give tasks a chance to run on an idle CPU
-cf582851a645fbfba19c2431d099ffe46694280f # scx_fair: introduce per-CPU DSQs
-77a92c8bc42b1ad1527a756560d00d184532fe67 # scx_fair: apply minimum vruntime when task is dispatched
-dc1da218567be96c81a9fcef1bc2b177c2880120 # scx_fair: do not scale the assigned time slice based on task priority
-f3a0435a09153a87ba7d427f131ac690033f2d71 # scx_fair: make lowlatency default and drop it as an option
-dfba810c3245a3f0f8bf7f4d9d60bad00e8e3baa # scx_fair: prevent per-CPU DSQ stall with per-CPU kthreads
-77c15d72ed92f8f3d55d777fc278c679d93a4203 # WIP: scx_fair: handle user-space futex critical sections
+3207dbb2be4ea9a9f3d2910843d944b450002f41 # scheds: introduce scx_fair
+df30545ed657a1e286051498ea277859cfcf96b2 # scx_fair: introduce lowlatency mode
+29c9485483dc3659efac20cdadb2679b245366b9 # scx_fair: use cast_mask() from common.bpf.h
+4e6d2c503d4a3cedc894ffb0f3e5799efdfa37a7 # scx_fair: always give tasks a chance to run on an idle CPU
+2b71d323f493cb593b64299ba30e287e12ed5ef4 # scx_fair: introduce per-CPU DSQs
+c8f1d376676b7715af8bde5a4ec2ef304917f8ae # scx_fair: apply minimum vruntime when task is dispatched
+9a78a40f959eff1f150337e33c8cf2c0e94f1a9f # scx_fair: do not scale the assigned time slice based on task priority
+d1998de8172bdffa9eeaf738a42d6b5df00470e2 # scx_fair: make lowlatency default and drop it as an option
+9813c783fab5021ee3b7d8537cf92d762b9b879a # scx_fair: prevent per-CPU DSQ stall with per-CPU kthreads
+2e9efde4625301a4d332ec604601a7c63bf6ef55 # scx_fair: code cleanup
+1076fd7964b7113c137a03cd4e8bd1494520a69d # scx_fair: custom voluntary context switch metric
+a99d60e9a6e1f73aeed4f1c42eefef0bf99889e4 # scx_fair: override wakee's L3 domain with waker's in WAKE_SYNC
+04abd096b504512a2d6a2fe6697cd024c1137489 # scx_fair: bump up latency weight of wakee on sync wake-up
 )
 
 _reverts=(
