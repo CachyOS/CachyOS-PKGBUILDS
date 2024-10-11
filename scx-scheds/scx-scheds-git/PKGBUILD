@@ -4,7 +4,7 @@
 pkgname=scx-scheds-git
 _gitname=scx
 pkgver=1.0.5.r114.gb6f09ed
-pkgrel=1
+pkgrel=3
 pkgdesc='sched_ext schedulers and tools'
 url='https://github.com/sched-ext/scx'
 arch=('x86_64' 'aarch64')
@@ -33,25 +33,27 @@ provides=("scx-scheds=$pkgver")
 conflicts=("scx-scheds")
 
 _backports=(
-758ac2d64c2fbe1af886c67f0db4f56e3c42cb27 # scx_bpfland: pick a random idle CPU when prev_cpu is not valid
-23bda0be53462aaeae2d8e2bde753aa2446135db # scx_bpfland: always refill task timeslice in ops.dispatch()
-b98ddcd9c405da38f9e8db23fb00b0b213362932 # scx_bpfland: prioritize only per-CPU kthreads with --local-kthreads
-1a07f0118d7f9cb2e007158c91f28284c3e24395 # scx_bpfland: override wakee's L3 domain with waker's in WAKE_SYNC
-f0073757ba2e31b989efa162c9333f189ea65cac # scheds: introduce scx_fair
-2ccdc88adb1b1c8ee298e05904f7fcecb3e8425d # scx_fair: introduce lowlatency mode
-a83f2fdb0f0aede423e2539b08676749e4919c18 # scx_fair: use cast_mask() from common.bpf.h
-a494a3cc2c1f65ddfe4d3854bb87b668ebaa7a40 # scx_fair: always give tasks a chance to run on an idle CPU
-0a9861c2ce9482b14a6d64d3a9e45f050fceb15f # scx_fair: introduce per-CPU DSQs
-b66136a1dae4def47401a1dc9e917bc0f16b9d21 # scx_fair: apply minimum vruntime when task is dispatched
-64e85d6427a54c6c34ae7e87f02a12bca5d1fd15 # scx_fair: do not scale the assigned time slice based on task priority
-5a7701ffa300b969ee98261fe37873350c53f5d1 # scx_fair: make lowlatency default and drop it as an option
-7d440bc5ab5237116cb660ade76fabc8763b773a # scx_fair: prevent per-CPU DSQ stall with per-CPU kthreads
-6e2a31c9a7e50e89e09e8623708c325945b59e8c # scx_fair: code cleanup
-76c1bbb55a720866169e1af686fb69e5de8fcf83 # scx_fair: custom voluntary context switch metric
-f9e393db7f024e1ba82423e3b39333bc2262bffd # scx_fair: always charge at least slice_min to vruntime
-be6ca45664a21ea2af7aa7602fa59f7f802dafb0 # scx_fair: prevent DSQ starvation
-d12942b5059c45943ac35bec6cfad012ea7c39a2 # WIP: scx-fair: drop per-CPU DSQs
-4e8e6bef4f2b19c5a5e5e99179b861740c0c4369 # WIP: scx_fair: drop BPF iterator
+e0c4591837585cb170dc51c67439fb5465e69304 # scx_bpfland: pick a random idle CPU when prev_cpu is not valid
+0c64d577a84ee7546980ffa5afd592478a01b0f8 # scx_bpfland: always refill task timeslice in ops.dispatch()
+26945ab61c92588a3f12b44946c51bc0906b5d52 # scx_bpfland: get rid of per-CPU DSQs
+b2ada8c87663e196beff90b47212a6d03ecf15f0 # scx_bpfland: clarify error code returned by pick_idle_cpu()
+c5fe626960e24d04b825c43dbbb10650b94b0579 # scx_bpfland: rework lowlatency mode to adjust tasks priority
+584b6dd3c2ffebe9f085eafbf846c928745de352 # scx_bpfland: tune default settings
+2e40f34beb2b6cf92ac5af2e9b5fb84bcc678198 # scheds: introduce scx_fair
+7a788bed05da3c91d350b6819d8ee638e5e4c64d # scx_fair: introduce lowlatency mode
+6026d8af7f15bab9d5a6c58ff3b9eba10faaa54a # scx_fair: use cast_mask() from common.bpf.h
+05587afd1a95bd03842e0c29794e5a254f385102 # scx_fair: always give tasks a chance to run on an idle CPU
+6c201b3628732d42a6346ed6ede7246b19b9142b # scx_fair: introduce per-CPU DSQs
+3321ca638c016ea6c5d8bd7488578534e58560d5 # scx_fair: apply minimum vruntime when task is dispatched
+fafa51571cf15f2cbeb9433fa3900631810d9d41 # scx_fair: do not scale the assigned time slice based on task priority
+d88679954488da0921acbce425f889faf8fb2169 # scx_fair: make lowlatency default and drop it as an option
+c403356e1e81d4f9b7c8361f37e5ae7b64c7416c # scx_fair: prevent per-CPU DSQ stall with per-CPU kthreads
+53dc5feae738e87df7c1a63e8adc7599303c9726 # scx_fair: code cleanup
+cff8f0f9494916b34c2dad03e5e3890bae6dd999 # scx_fair: custom voluntary context switch metric
+f8eccedcc41f10243c98415502893dc284e69076 # scx_fair: always charge at least slice_min to vruntime
+efd1de6df465577d6646bb2588fb77a0c07e7ca7 # scx_fair: prevent DSQ starvation
+badd1de274a61f5df32a248c6cc8486be62bbab9 # WIP: scx-fair: drop per-CPU DSQs
+60a073a4a6d68a39fa3f1cb052b2ed12626b0aed # WIP: scx_fair: drop BPF iterator
 77b8e655712f6179fcc4b677a2c5f60526ca5454 # scx_lavd: tracing all blocking locks and futexes
 bd17589a6e2dfcb406b0646cff367c9350be1155 # scx_lavd: boost latency criticality when a task holds a lock
 5b4b255cbbad670091f0d92b0d78769491ccdb0e # scx_lavd: do not preempt while holding a lock
