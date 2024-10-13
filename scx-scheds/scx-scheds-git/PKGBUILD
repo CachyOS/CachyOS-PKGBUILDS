@@ -3,8 +3,8 @@
 
 pkgname=scx-scheds-git
 _gitname=scx
-pkgver=1.0.5.r117.gb88f567
-pkgrel=2
+pkgver=1.0.5.r144.g03f078a
+pkgrel=1
 pkgdesc='sched_ext schedulers and tools'
 url='https://github.com/sched-ext/scx'
 arch=('x86_64' 'aarch64')
@@ -33,10 +33,6 @@ provides=("scx-scheds=$pkgver")
 conflicts=("scx-scheds")
 
 _backports=(
-e0c4591837585cb170dc51c67439fb5465e69304 # scx_bpfland: pick a random idle CPU when prev_cpu is not valid
-0c64d577a84ee7546980ffa5afd592478a01b0f8 # scx_bpfland: always refill task timeslice in ops.dispatch()
-a1fbd91eb95120eb7f995b32497fcb6f73b305b2 # scx_bpfland: clarify error code returned by pick_idle_cpu()
-90a571b13411c2472a45c3bbeea17b5fb7050f41 # scx_bpfland: get rid of per-CPU DSQs
 112a5d480b00a183b77184527ef2c6eb7c22446e # scx_bpfland: rework lowlatency mode to adjust tasks priority
 19939ee8a0969fbd92daed208055479560338384 # scx_bpfland: tune default settings
 2e40f34beb2b6cf92ac5af2e9b5fb84bcc678198 # scheds: introduce scx_fair
@@ -54,10 +50,9 @@ f8eccedcc41f10243c98415502893dc284e69076 # scx_fair: always charge at least slic
 efd1de6df465577d6646bb2588fb77a0c07e7ca7 # scx_fair: prevent DSQ starvation
 badd1de274a61f5df32a248c6cc8486be62bbab9 # WIP: scx-fair: drop per-CPU DSQs
 60a073a4a6d68a39fa3f1cb052b2ed12626b0aed # WIP: scx_fair: drop BPF iterator
-77b8e655712f6179fcc4b677a2c5f60526ca5454 # scx_lavd: tracing all blocking locks and futexes
-bd17589a6e2dfcb406b0646cff367c9350be1155 # scx_lavd: boost latency criticality when a task holds a lock
-5b4b255cbbad670091f0d92b0d78769491ccdb0e # scx_lavd: do not preempt while holding a lock
-648c95be9e4f2b5ea904865856ff4c7c0ec5dabf # scx_lavd: fix incorrect task comparison for preemption
+3de396232e621df664710215395a7120f61f3e45 # scx_rustland_core: update CPU idle selection logic
+189fa815facb8342891d81c3a37d48496133069c # scx_rustland_core: pass nvcsw, slice and dsq_vtime to user-space
+578f4f02a4cb516f417cce70f504d491f45cc8b5 # scx_rustland: use built-in nvcsw metrics
 )
 
 _reverts=(
