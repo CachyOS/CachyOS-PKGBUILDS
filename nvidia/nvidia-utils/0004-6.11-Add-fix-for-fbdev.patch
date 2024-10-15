@@ -4,18 +4,18 @@ Date: Thu, 26 Sep 2024 14:52:57 +0200
 Subject: [PATCH 4/5] 6.11: Add fix for fbdev
 
 ---
- kernel/conftest.sh                       | 23 ++++++++++++++++++-
- kernel/header-presence-tests.mk          |  1 +
- kernel/nvidia-drm/nvidia-drm-drv.c       | 22 +++++++++++-------
- kernel/nvidia-drm/nvidia-drm-linux.c     |  2 +-
+ kernel-open/conftest.sh                       | 23 ++++++++++++++++++-
+ kernel-open/header-presence-tests.mk          |  1 +
+ kernel-open/nvidia-drm/nvidia-drm-drv.c       | 22 +++++++++++-------
+ kernel-open/nvidia-drm/nvidia-drm-linux.c     |  2 +-
  .../nvidia-drm/nvidia-drm-os-interface.h      |  8 ++++++-
- kernel/nvidia-drm/nvidia-drm-sources.mk  |  1 +
+ kernel-open/nvidia-drm/nvidia-drm-sources.mk  |  1 +
  6 files changed, 46 insertions(+), 11 deletions(-)
 
-diff --git a/kernel/conftest.sh b/kernel/conftest.sh
+diff --git a/conftest.sh b/conftest.sh
 index 1226cea2..4a239e63 100755
---- a/kernel/conftest.sh
-+++ b/kernel/conftest.sh
+--- a/conftest.sh
++++ b/conftest.sh
 @@ -6596,7 +6596,9 @@ compile_test() {
              # Determine whether drm_fbdev_generic_setup is present.
              #
@@ -53,10 +53,10 @@ index 1226cea2..4a239e63 100755
          drm_aperture_remove_conflicting_pci_framebuffers)
              #
              # Determine whether drm_aperture_remove_conflicting_pci_framebuffers is present.
-diff --git a/kernel/header-presence-tests.mk b/kernel/header-presence-tests.mk
+diff --git a/header-presence-tests.mk b/header-presence-tests.mk
 index e8d2e02b..40204ae4 100644
---- a/kernel/header-presence-tests.mk
-+++ b/kernel/header-presence-tests.mk
+--- a/header-presence-tests.mk
++++ b/header-presence-tests.mk
 @@ -15,6 +15,7 @@ NV_HEADER_PRESENCE_TESTS = \
    drm/drm_atomic_uapi.h \
    drm/drm_drv.h \
@@ -65,10 +65,10 @@ index e8d2e02b..40204ae4 100644
    drm/drm_framebuffer.h \
    drm/drm_connector.h \
    drm/drm_probe_helper.h \
-diff --git a/kernel/nvidia-drm/nvidia-drm-drv.c b/kernel/nvidia-drm/nvidia-drm-drv.c
+diff --git a/nvidia-drm/nvidia-drm-drv.c b/nvidia-drm/nvidia-drm-drv.c
 index 359ff0c4..50028c26 100644
---- a/kernel/nvidia-drm/nvidia-drm-drv.c
-+++ b/kernel/nvidia-drm/nvidia-drm-drv.c
+--- a/nvidia-drm/nvidia-drm-drv.c
++++ b/nvidia-drm/nvidia-drm-drv.c
 @@ -64,12 +64,14 @@
  #include <drm/drm_ioctl.h>
  #endif
@@ -143,10 +143,10 @@ index 359ff0c4..50028c26 100644
              drm_fb_helper_set_suspend_unlocked(dev->fb_helper, 0);
  #endif
              drm_kms_helper_poll_enable(dev);
-diff --git a/kernel/nvidia-drm/nvidia-drm-linux.c b/kernel/nvidia-drm/nvidia-drm-linux.c
+diff --git a/nvidia-drm/nvidia-drm-linux.c b/nvidia-drm/nvidia-drm-linux.c
 index c7f4a239..83d40983 100644
---- a/kernel/nvidia-drm/nvidia-drm-linux.c
-+++ b/kernel/nvidia-drm/nvidia-drm-linux.c
+--- a/nvidia-drm/nvidia-drm-linux.c
++++ b/nvidia-drm/nvidia-drm-linux.c
 @@ -34,7 +34,7 @@ MODULE_PARM_DESC(
      "Enable atomic kernel modesetting (1 = enable (default), 0 = disable)");
  module_param_named(modeset, nv_drm_modeset_module_param, bool, 0400);
@@ -156,10 +156,10 @@ index c7f4a239..83d40983 100644
  MODULE_PARM_DESC(
      fbdev,
      "Create a framebuffer device (1 = enable (default), 0 = disable) (EXPERIMENTAL)");
-diff --git a/kernel/nvidia-drm/nvidia-drm-os-interface.h b/kernel/nvidia-drm/nvidia-drm-os-interface.h
+diff --git a/nvidia-drm/nvidia-drm-os-interface.h b/nvidia-drm/nvidia-drm-os-interface.h
 index 6f8cfea9..a6b0f947 100644
---- a/kernel/nvidia-drm/nvidia-drm-os-interface.h
-+++ b/kernel/nvidia-drm/nvidia-drm-os-interface.h
+--- a/nvidia-drm/nvidia-drm-os-interface.h
++++ b/nvidia-drm/nvidia-drm-os-interface.h
 @@ -59,14 +59,20 @@ typedef struct nv_timer nv_drm_timer;
  #endif
  
@@ -182,10 +182,10 @@ index 6f8cfea9..a6b0f947 100644
  /* Set to true when the nvidia-drm driver should install a framebuffer device */
  extern bool nv_drm_fbdev_module_param;
  #endif
-diff --git a/kernel/nvidia-drm/nvidia-drm-sources.mk b/kernel/nvidia-drm/nvidia-drm-sources.mk
+diff --git a/nvidia-drm/nvidia-drm-sources.mk b/nvidia-drm/nvidia-drm-sources.mk
 index 7ef0c5b8..247096b7 100644
---- a/kernel/nvidia-drm/nvidia-drm-sources.mk
-+++ b/kernel/nvidia-drm/nvidia-drm-sources.mk
+--- a/nvidia-drm/nvidia-drm-sources.mk
++++ b/nvidia-drm/nvidia-drm-sources.mk
 @@ -67,6 +67,7 @@ NV_CONFTEST_FUNCTION_COMPILE_TESTS += fence_set_error
  NV_CONFTEST_FUNCTION_COMPILE_TESTS += sync_file_get_fence
  NV_CONFTEST_FUNCTION_COMPILE_TESTS += drm_aperture_remove_conflicting_pci_framebuffers
@@ -196,4 +196,3 @@ index 7ef0c5b8..247096b7 100644
  NV_CONFTEST_FUNCTION_COMPILE_TESTS += drm_crtc_enable_color_mgmt
 -- 
 2.46.2
-
