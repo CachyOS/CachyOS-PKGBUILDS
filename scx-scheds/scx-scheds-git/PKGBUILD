@@ -3,8 +3,8 @@
 
 pkgname=scx-scheds-git
 _gitname=scx
-pkgver=1.0.5.r144.g03f078a
-pkgrel=10
+pkgver=1.0.5.r162.g730052a
+pkgrel=1
 pkgdesc='sched_ext schedulers and tools'
 url='https://github.com/sched-ext/scx'
 arch=('x86_64' 'aarch64')
@@ -50,19 +50,24 @@ f8eccedcc41f10243c98415502893dc284e69076 # scx_fair: always charge at least slic
 efd1de6df465577d6646bb2588fb77a0c07e7ca7 # scx_fair: prevent DSQ starvation
 badd1de274a61f5df32a248c6cc8486be62bbab9 # WIP: scx-fair: drop per-CPU DSQs
 60a073a4a6d68a39fa3f1cb052b2ed12626b0aed # WIP: scx_fair: drop BPF iterator
-1c523971ed335905ffeec57cb9ef63b7bdbfc547 # scx_rustland_core: update CPU idle selection logic
-2a94e6a67b9beae3293415163a5a15ec767fbc9e # scx_rustland_core: pass nvcsw, slice and dsq_vtime to user-space
-c6f0fc69a12c6e058662d47d613d3e1c4a0a2cb0 # scx_rustland_core: allow user-space scheduler to run indefinitely
-3df9c42ea2dff7078b71f517ea903ce37af1cf12 # scx_rustland_core: restart scheduler on hotplug events
-d4261278f329f34565675e28bd020b6fef4cc311 # scx_rustland_core: bump up version to 2.2.2
-8e3c0fe538ad49d646972f02d79be93228e2565e # scx_rustland: use built-in nvcsw metrics
-7d0c1e341e27d6b7379405f851c05ef755e6d916 # scx_rustland: smooth vruntime update
-6e2e4fc9c73ad89df54f679f0fa45c3b9274a4cf # scx_rustland: clarify EDF scheduling
-fce43892413513610b5b4110f9910db689d9e41e # scx_rustland: prioritize WAKE_SYNC tasks
-9d643487f9d8640ed3b2defbb16791bb0ef63b8a # scx_rlfifo: operate in a more work-conserving way
+1bbae64dc7b4aac925305f6895c02c3872b2feaa # scx_rustland_core: update CPU idle selection logic
+be681c731a4f925b58623ef4c863f4c93b118cfd # scx_rustland_core: pass nvcsw, slice and dsq_vtime to user-space
+4432e64d85a9de26b871686d2b2166d51878ad74 # scx_rustland_core: allow user-space scheduler to run indefinitely
+abfb4c53f5310c06e4113fcf54cbde7983a8f6bf # scx_rustland_core: restart scheduler on hotplug events
+0a05f1f1930e15cce8adb0213e15428c770dddb9 # scx_rustland_core: keep CPUs alive with pending tasks
+67ec1af5cf5f96fca6702b28c376915c865b1f28 # scx_rustland_core: kick an idle CPU after global dispatch
+704fe95f51803e215eb5e037ae7581e8a693fe12 # scx_rustland_core: get rid of the SCX_ENQ_WAKEUP logic
+97629178e2a186b1d226f3bc9440d59ad2ba84b4 # scx_rustland_core: bump up version to 2.2.2
+0b2de2c10c93b6a50399cef00f9ffc27b6fbeb7f # scx_rustland: use built-in nvcsw metrics
+c4b6408e925e182e155f5bb405e6a6f5f58a8149 # scx_rustland: smooth vruntime update
+b07de1d7d54824fd7c7c07b39250160b92042c4d # scx_rustland: clarify EDF scheduling
+763da6ab559c64e087a1a3b707d82ba17e5449f8 # scx_rlfifo: operate in a more work-conserving way
 )
 
 _reverts=(
+a23f3566e3d2c4b9119d3eeed656a02e693b12d3 # scx_mitosis: Fix static assertion of scx_bpf_task_cgroup failing __weak check
+70670925553ee1fe0e92428c2bef7c88a7c0fdce # Add vmlinux.h for multiple arch
+f7cdf087541eaccffdc5042d45f633995479c600 # Use per-arch vmlinux.h
 )
 
 pkgver() {
