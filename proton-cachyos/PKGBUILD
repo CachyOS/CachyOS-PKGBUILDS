@@ -182,14 +182,18 @@ prepare() {
     patch -Np1 -i "$srcdir"/nvapi-optical-flow.patch
     popd
 
-    echo "vkd3d: use latest"
-    pushd $srcdir/proton-cachyos/vkd3d-proton
-    git checkout c9a3cb05b2494271b081c1da98bd6e4dd8c75801
-    popd
+# This is required, but somehow does not compile with a lot of errors
+# Needs to be fixed
+#    echo "vkd3d-proton: use latest"
+#    pushd $srcdir/proton-cachyos/vkd3d-proton
+#    git checkout c9a3cb05b2494271b081c1da98bd6e4dd8c75801
+#    popd
 
     echo "Patch Proton Script for Optical Flow"
-    push $srcdir/proton-cachyos
+    pushd $srcdir/proton-cachyos
     patch -Np1 -i "$srcdir"/proton-optical-flow.patch
+    popd
+
 }
 
 build() {
@@ -283,6 +287,6 @@ sha256sums=('2fbadfaf813b95949f8f780a4ab3df6b09cc1c654f93cb07aa4b398dd1f1e9d9'
             'c23deb9e3217a574f242b78d74cb94c4948a37d1f2715941b803a02e535854a6'
             'a5cfd3090ebf7fb694bce573ef87b300b86f61204987ecbd068a2fe5079b7e6e'
             '678bba12f4881cd5b6ffb6a503106232619d46d8bbc6d7ec95e719d63fcb1c37'
-            '80cfa17faddb07bf0417d1c3155897daedca8f9329ce569d4e0a54fc1f12b719'
+            '6ac01613eedff0ce45c6d87040eb26b29fa282443e19056ed868bde7a4a0977f'
             'bbbe9487cfa2892e1e3c930e620e88f605242db0f5868ee5d44f107b017d30f6'
             '3de6cd9293d38f1b723081bfea5c3e0dfaed0e8e6ec6db22cf6e1e127aa534ab')
