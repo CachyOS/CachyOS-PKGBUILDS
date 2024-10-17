@@ -97,6 +97,9 @@ source=(
     https://github.com/madewokherd/wine-mono/releases/download/wine-mono-${_monover}/wine-mono-${_monover}-x86.tar.xz
     https://github.com/madewokherd/xalia/releases/download/xalia-${_xaliaver}/xalia-${_xaliaver}-net48-mono.zip
     dxvk-reflex.patch
+    wine-optical-flow.patch
+    nvapi-optical-flow.patch
+    proton-optical-flow.patch
 )
 noextract=(
     wine-gecko-${_geckover}-{x86,x86_64}.tar.xz
@@ -168,6 +171,25 @@ prepare() {
     pushd $srcdir/proton-cachyos/dxvk
     patch -Np1 -i "$srcdir"/dxvk-reflex.patch
     popd
+
+    echo "Wine: Optical Flow"
+    pushd $srcdir/proton-cachyos/wine
+    patch -Np1 -i "$srcdir"/wine-optical-flow.patch
+    popd
+
+    echo "nvapi: Optical Flow"
+    pushd $srcdir/proton-cachyos/dxvk-nvapi
+    patch -Np1 -i "$srcdir"/nvapi-optical-flow.patch
+    popd
+
+    echo "vkd3d: use latest"
+    pushd $srcdir/proton-cachyos/vkd3d-proton
+    git checkout c9a3cb05b2494271b081c1da98bd6e4dd8c75801
+    popd
+
+    echo "Patch Proton Script for Optical Flow"
+    push $srcdir/proton-cachyos
+    patch -Np1 -i "$srcdir"/proton-optical-flow.patch
 }
 
 build() {
@@ -260,4 +282,7 @@ sha256sums=('2fbadfaf813b95949f8f780a4ab3df6b09cc1c654f93cb07aa4b398dd1f1e9d9'
             'fd88fc7e537d058d7a8abf0c1ebc90c574892a466de86706a26d254710a82814'
             'c23deb9e3217a574f242b78d74cb94c4948a37d1f2715941b803a02e535854a6'
             'a5cfd3090ebf7fb694bce573ef87b300b86f61204987ecbd068a2fe5079b7e6e'
-            '678bba12f4881cd5b6ffb6a503106232619d46d8bbc6d7ec95e719d63fcb1c37')
+            '678bba12f4881cd5b6ffb6a503106232619d46d8bbc6d7ec95e719d63fcb1c37'
+            '80cfa17faddb07bf0417d1c3155897daedca8f9329ce569d4e0a54fc1f12b719'
+            'bbbe9487cfa2892e1e3c930e620e88f605242db0f5868ee5d44f107b017d30f6'
+            '3de6cd9293d38f1b723081bfea5c3e0dfaed0e8e6ec6db22cf6e1e127aa534ab')

@@ -1,0 +1,420 @@
+From f25c0d02d997b7ddde259091965eb1f0f5e8d75c Mon Sep 17 00:00:00 2001
+From: Liam Middlebrook <lmiddlebrook@nvidia.com>
+Date: Sat, 12 Oct 2024 15:15:30 -0700
+Subject: [PATCH] gdi32: Implement D3DKMTEnumAdapters2
+
+Signed-off-by: Liam Middlebrook <lmiddlebrook@nvidia.com>
+
+Note: This commit is specifically targeted towards ValveSoftware/wine experimental_9.0 branch.
+Upstream wine contains commits which already implement this, but are part of a larger series of
+changes inter-twined with WoW64 and unification of GDI backends.
+---
+ dlls/gdi32/objects.c | 74 ++++++++++++++++++++++++++++++++++++++++++--
+ 1 file changed, 71 insertions(+), 3 deletions(-)
+
+diff --git a/dlls/gdi32/objects.c b/dlls/gdi32/objects.c
+index bddc29a3007..093039c3509 100644
+--- a/dlls/gdi32/objects.c
++++ b/dlls/gdi32/objects.c
+@@ -971,10 +971,78 @@ NTSTATUS WINAPI D3DKMTOpenAdapterFromGdiDisplayName( D3DKMT_OPENADAPTERFROMGDIDI
+     return status;
+ }
+ 
+-NTSTATUS WINAPI D3DKMTEnumAdapters2( const void *param )
++NTSTATUS WINAPI D3DKMTEnumAdapters2( D3DKMT_ENUMADAPTERS2 *enumAdapters )
+ {
+-    FIXME( "param %p stub.\n", param );
+-    return STATUS_NOT_SUPPORTED;
++    NTSTATUS status = STATUS_SUCCESS;
++    SP_DEVINFO_DATA device_data;
++    DEVPROPTYPE type;
++    HDEVINFO devinfo;
++    UINT dev_count = 0;
++    HANDLE mutex;
++
++    TRACE("(%p)\n", enumAdapters);
++
++    mutex = get_display_device_init_mutex();
++    devinfo = SetupDiGetClassDevsW(&GUID_DEVCLASS_DISPLAY, L"PCI", NULL, 0);
++    device_data.cbSize = sizeof(device_data);
++
++    while(SetupDiEnumDeviceInfo(devinfo, dev_count++, &device_data))
++    {
++        D3DKMT_OPENADAPTERFROMLUID luid_desc;
++        UINT dev_idx = dev_count - 1;
++        D3DKMT_ADAPTERINFO *adapter;
++
++        TRACE("Device: %u\n", dev_idx);
++
++        /* If nothing to write, just pass through the loop */
++        if (!enumAdapters->pAdapters)
++            continue;
++
++        adapter = (D3DKMT_ADAPTERINFO*)(enumAdapters->pAdapters + dev_idx);
++
++        if (SetupDiGetDevicePropertyW(devinfo, &device_data, &DEVPROPKEY_GPU_LUID, &type,
++                (BYTE *)&luid_desc.AdapterLuid, sizeof(luid_desc.AdapterLuid), NULL, 0))
++        {
++            /* NumOfSources appears to be in reference to displays. This could mean connected
++             * displays, maximum number of "heads", surfaces for direct scanout, or something else
++             * entirely. It's not clear from the MSDN page what kind of value is actually expected
++             * here.
++             *
++             * bPrecisePresentRegionsPreferred sounds like a scanout-level optimization. Again, MSDN
++             * isn't very descriptive about what this really means. Given that it's typical for
++             * modern GPUs to scanout an entire surface at once, leave this falsey.
++             */
++            adapter->NumOfSources = 0;
++            adapter->bPrecisePresentRegionsPreferred = FALSE;
++            FIXME("NumOfSources and bPrecisePresentRegionsPreferred not set, need implementation.\n");
++
++            if ((status = NtGdiDdDDIOpenAdapterFromLuid(&luid_desc)))
++                break;
++
++            adapter->AdapterLuid = luid_desc.AdapterLuid;
++            adapter->hAdapter = luid_desc.hAdapter;
++
++            TRACE("hAdapter: %u AdapterLuid: %08lx:%08lx NumOfSources: %lu bPrecisePresentRegionsPreferred: %d\n",
++                  adapter->hAdapter,
++                  adapter->AdapterLuid.HighPart,
++                  adapter->AdapterLuid.LowPart,
++                  adapter->NumOfSources,
++                  adapter->bPrecisePresentRegionsPreferred);
++        }
++        else
++        {
++            TRACE("no known adapter\n");
++        }
++    }
++    /* decrement dev count to actual count */
++    dev_count--;
++    SetupDiDestroyDeviceInfoList(devinfo);
++    release_display_device_init_mutex(mutex);
++
++    TRACE("Devices enumerated: %u\n", dev_count);
++    enumAdapters->NumAdapters = dev_count;
++
++    return status;
+ }
+ 
+ /***********************************************************************
+
+
+From 23d772f57155b90ae886845f34282467c4478579 Mon Sep 17 00:00:00 2001
+From: Liam Middlebrook <lmiddlebrook@nvidia.com>
+Date: Sat, 12 Oct 2024 15:31:38 -0700
+Subject: [PATCH] win32u: Move D3DKMTQueryAdapterInfo into gdi_dc_funcs
+
+Signed-off-by: Liam Middlebrook <lmiddlebrook@nvidia.com>
+
+Note: This commit is specifically targeted towards ValveSoftware/wine experimental_9.0 branch.
+Upstream wine contains commits which already implement this, but are part of a larger series of
+changes inter-twined with WoW64 and unification of GDI backends.
+---
+ dlls/win32u/dibdrv/dc.c        |  2 ++
+ dlls/win32u/driver.c           | 15 ++++++++++++---
+ dlls/win32u/emfdrv.c           |  1 +
+ dlls/win32u/font.c             |  1 +
+ dlls/win32u/path.c             |  1 +
+ dlls/winex11.drv/init.c        |  1 +
+ dlls/winex11.drv/x11drv.h      |  1 +
+ dlls/winex11.drv/x11drv_main.c | 19 +++++++++++++++++++
+ dlls/winex11.drv/xrender.c     |  1 +
+ include/wine/gdi_driver.h      |  1 +
+ 10 files changed, 40 insertions(+), 3 deletions(-)
+
+diff --git a/dlls/win32u/dibdrv/dc.c b/dlls/win32u/dibdrv/dc.c
+index 7fe4b765a78..737c28adc8a 100644
+--- a/dlls/win32u/dibdrv/dc.c
++++ b/dlls/win32u/dibdrv/dc.c
+@@ -710,6 +710,7 @@ const struct gdi_dc_funcs dib_driver =
+     NULL,                               /* pD3DKMTCheckVidPnExclusiveOwnership */
+     NULL,                               /* pD3DKMTCloseAdapter */
+     NULL,                               /* pD3DKMTOpenAdapterFromLuid */
++    NULL,                               /* pD3DKMTQueryAdapterInfo */
+     NULL,                               /* pD3DKMTQueryVideoMemoryInfo */
+     NULL,                               /* pD3DKMTSetVidPnSourceOwner */
+     GDI_PRIORITY_DIB_DRV                /* priority */
+@@ -1271,6 +1272,7 @@ static const struct gdi_dc_funcs window_driver =
+     NULL,                               /* pD3DKMTCheckVidPnExclusiveOwnership */
+     NULL,                               /* pD3DKMTCloseAdapter */
+     NULL,                               /* pD3DKMTOpenAdapterFromLuid */
++    NULL,                               /* pD3DKMTQueryAdapterInfo */
+     NULL,                               /* pD3DKMTQueryVideoMemoryInfo */
+     NULL,                               /* pD3DKMTSetVidPnSourceOwner */
+     GDI_PRIORITY_DIB_DRV + 10           /* priority */
+diff --git a/dlls/win32u/driver.c b/dlls/win32u/driver.c
+index bc3409a9e34..ccfe684b28e 100644
+--- a/dlls/win32u/driver.c
++++ b/dlls/win32u/driver.c
+@@ -554,6 +554,11 @@ static NTSTATUS nulldrv_D3DKMTOpenAdapterFromLuid( D3DKMT_OPENADAPTERFROMLUID *d
+     return STATUS_PROCEDURE_NOT_FOUND;
+ }
+ 
++static NTSTATUS nulldrv_D3DKMTQueryAdapterInfo( D3DKMT_QUERYADAPTERINFO *desc )
++{
++    return STATUS_PROCEDURE_NOT_FOUND;
++}
++
+ static NTSTATUS nulldrv_D3DKMTQueryVideoMemoryInfo( D3DKMT_QUERYVIDEOMEMORYINFO *desc )
+ {
+     return STATUS_PROCEDURE_NOT_FOUND;
+@@ -658,6 +663,7 @@ const struct gdi_dc_funcs null_driver =
+     nulldrv_D3DKMTCheckVidPnExclusiveOwnership, /* pD3DKMTCheckVidPnExclusiveOwnership */
+     nulldrv_D3DKMTCloseAdapter,         /* pD3DKMTCloseAdapter */
+     nulldrv_D3DKMTOpenAdapterFromLuid,  /* pD3DKMTOpenAdapterFromLuid */
++    nulldrv_D3DKMTQueryAdapterInfo,     /* pD3DKMTQueryAdapterInfo */
+     nulldrv_D3DKMTQueryVideoMemoryInfo, /* pD3DKMTQueryVideoMemoryInfo */
+     nulldrv_D3DKMTSetVidPnSourceOwner,  /* pD3DKMTSetVidPnSourceOwner */
+ 
+@@ -1637,11 +1643,14 @@ NTSTATUS WINAPI NtGdiDdDDIDestroyDevice( const D3DKMT_DESTROYDEVICE *desc )
+  */
+ NTSTATUS WINAPI NtGdiDdDDIQueryAdapterInfo( D3DKMT_QUERYADAPTERINFO *desc )
+ {
+-    if (!desc)
++    TRACE("(%p)\n", desc);
++
++    if (!desc || !desc->hAdapter)
+         return STATUS_INVALID_PARAMETER;
+ 
+-    FIXME("desc %p, type %d stub\n", desc, desc->Type);
+-    return STATUS_NOT_IMPLEMENTED;
++    if (!get_display_driver()->pD3DKMTQueryAdapterInfo)
++        return STATUS_PROCEDURE_NOT_FOUND;
++    return get_display_driver()->pD3DKMTQueryAdapterInfo(desc);
+ }
+ 
+ /******************************************************************************
+diff --git a/dlls/win32u/emfdrv.c b/dlls/win32u/emfdrv.c
+index 069ad9d1297..28bc47772d4 100644
+--- a/dlls/win32u/emfdrv.c
++++ b/dlls/win32u/emfdrv.c
+@@ -522,6 +522,7 @@ static const struct gdi_dc_funcs emfdrv_driver =
+     NULL,                            /* pD3DKMTCheckVidPnExclusiveOwnership */
+     NULL,                            /* pD3DKMTCloseAdapter */
+     NULL,                            /* pD3DKMTOpenAdapterFromLuid */
++    NULL,                            /* pD3DKMTQueryAdapterInfo */
+     NULL,                            /* pD3DKMTQueryVideoMemoryInfo */
+     NULL,                            /* pD3DKMTSetVidPnSourceOwner */
+     GDI_PRIORITY_GRAPHICS_DRV        /* priority */
+diff --git a/dlls/win32u/font.c b/dlls/win32u/font.c
+index a7739e64da2..eebb687b935 100644
+--- a/dlls/win32u/font.c
++++ b/dlls/win32u/font.c
+@@ -4814,6 +4814,7 @@ const struct gdi_dc_funcs font_driver =
+     NULL,                           /* pD3DKMTCheckVidPnExclusiveOwnership */
+     NULL,                           /* pD3DKMTCloseAdapter */
+     NULL,                           /* pD3DKMTOpenAdapterFromLuid */
++    NULL,                           /* pD3DKMTQueryAdapterInfo */
+     NULL,                           /* pD3DKMTQueryVideoMemoryInfo */
+     NULL,                           /* pD3DKMTSetVidPnSourceOwner */
+     GDI_PRIORITY_FONT_DRV           /* priority */
+diff --git a/dlls/win32u/path.c b/dlls/win32u/path.c
+index e0c96f5ef6f..2783cd51832 100644
+--- a/dlls/win32u/path.c
++++ b/dlls/win32u/path.c
+@@ -2121,6 +2121,7 @@ const struct gdi_dc_funcs path_driver =
+     NULL,                               /* pD3DKMTCheckVidPnExclusiveOwnership */
+     NULL,                               /* pD3DKMTCloseAdapter */
+     NULL,                               /* pD3DKMTOpenAdapterFromLuid */
++    NULL,                               /* pD3DKMTQueryAdapterInfo */
+     NULL,                               /* pD3DKMTQueryVideoMemoryInfo */
+     NULL,                               /* pD3DKMTSetVidPnSourceOwner */
+     GDI_PRIORITY_PATH_DRV               /* priority */
+diff --git a/dlls/winex11.drv/init.c b/dlls/winex11.drv/init.c
+index 5576fdd50e6..9bce0740fd3 100644
+--- a/dlls/winex11.drv/init.c
++++ b/dlls/winex11.drv/init.c
+@@ -389,6 +389,7 @@ static const struct user_driver_funcs x11drv_funcs =
+     .dc_funcs.pD3DKMTCheckVidPnExclusiveOwnership = X11DRV_D3DKMTCheckVidPnExclusiveOwnership,
+     .dc_funcs.pD3DKMTCloseAdapter = X11DRV_D3DKMTCloseAdapter,
+     .dc_funcs.pD3DKMTOpenAdapterFromLuid = X11DRV_D3DKMTOpenAdapterFromLuid,
++    .dc_funcs.pD3DKMTQueryAdapterInfo = X11DRV_D3DKMTQueryAdapterInfo,
+     .dc_funcs.pD3DKMTQueryVideoMemoryInfo = X11DRV_D3DKMTQueryVideoMemoryInfo,
+     .dc_funcs.pD3DKMTSetVidPnSourceOwner = X11DRV_D3DKMTSetVidPnSourceOwner,
+     .dc_funcs.priority = GDI_PRIORITY_GRAPHICS_DRV,
+diff --git a/dlls/winex11.drv/x11drv.h b/dlls/winex11.drv/x11drv.h
+index 4ebc9f5ca59..d65e68b89ae 100644
+--- a/dlls/winex11.drv/x11drv.h
++++ b/dlls/winex11.drv/x11drv.h
+@@ -163,6 +163,7 @@ extern BOOL X11DRV_Chord( PHYSDEV dev, INT left, INT top, INT right, INT bottom,
+ extern NTSTATUS X11DRV_D3DKMTCheckVidPnExclusiveOwnership( const D3DKMT_CHECKVIDPNEXCLUSIVEOWNERSHIP *desc );
+ extern NTSTATUS X11DRV_D3DKMTCloseAdapter( const D3DKMT_CLOSEADAPTER *desc );
+ extern NTSTATUS X11DRV_D3DKMTOpenAdapterFromLuid( D3DKMT_OPENADAPTERFROMLUID *desc );
++extern NTSTATUS X11DRV_D3DKMTQueryAdapterInfo( D3DKMT_QUERYADAPTERINFO *desc );
+ extern NTSTATUS X11DRV_D3DKMTQueryVideoMemoryInfo( D3DKMT_QUERYVIDEOMEMORYINFO *desc );
+ extern NTSTATUS X11DRV_D3DKMTSetVidPnSourceOwner( const D3DKMT_SETVIDPNSOURCEOWNER *desc );
+ extern BOOL X11DRV_Ellipse( PHYSDEV dev, INT left, INT top, INT right, INT bottom );
+diff --git a/dlls/winex11.drv/x11drv_main.c b/dlls/winex11.drv/x11drv_main.c
+index 6a878cbf98c..d5461e1124e 100644
+--- a/dlls/winex11.drv/x11drv_main.c
++++ b/dlls/winex11.drv/x11drv_main.c
+@@ -1399,6 +1399,25 @@ NTSTATUS X11DRV_D3DKMTOpenAdapterFromLuid( D3DKMT_OPENADAPTERFROMLUID *desc )
+     return status;
+ }
+ 
++NTSTATUS X11DRV_D3DKMTQueryAdapterInfo( D3DKMT_QUERYADAPTERINFO *desc )
++{
++    NTSTATUS status = STATUS_INVALID_PARAMETER;
++    struct x11_d3dkmt_adapter *adapter;
++
++    pthread_mutex_lock(&d3dkmt_mutex);
++    LIST_FOR_EACH_ENTRY(adapter, &x11_d3dkmt_adapters, struct x11_d3dkmt_adapter, entry)
++    {
++        if (adapter->handle != desc->hAdapter)
++            continue;
++
++        FIXME("desc %p, type %d stub\n", desc, desc->Type);
++        status = STATUS_NOT_IMPLEMENTED;
++        break;
++    }
++    pthread_mutex_unlock(&d3dkmt_mutex);
++    return status;
++}
++
+ NTSTATUS X11DRV_D3DKMTQueryVideoMemoryInfo( D3DKMT_QUERYVIDEOMEMORYINFO *desc )
+ {
+     const struct vulkan_funcs *vulkan_funcs = get_vulkan_driver(WINE_VULKAN_DRIVER_VERSION);
+diff --git a/dlls/winex11.drv/xrender.c b/dlls/winex11.drv/xrender.c
+index 7656c0637df..c69c260138f 100644
+--- a/dlls/winex11.drv/xrender.c
++++ b/dlls/winex11.drv/xrender.c
+@@ -2434,6 +2434,7 @@ static const struct gdi_dc_funcs xrender_funcs =
+     NULL,                               /* pD3DKMTCheckVidPnExclusiveOwnership */
+     NULL,                               /* pD3DKMTCloseAdapter */
+     NULL,                               /* pD3DKMTOpenAdapterFromLuid */
++    NULL,                               /* pD3DKMTQueryAdapterInfo */
+     NULL,                               /* pD3DKMTQueryVideoMemoryInfo */
+     NULL,                               /* pD3DKMTSetVidPnSourceOwner */
+     GDI_PRIORITY_GRAPHICS_DRV + 10      /* priority */
+diff --git a/include/wine/gdi_driver.h b/include/wine/gdi_driver.h
+index 26562bfef2b..bd1ae446f73 100644
+--- a/include/wine/gdi_driver.h
++++ b/include/wine/gdi_driver.h
+@@ -169,6 +169,7 @@ struct gdi_dc_funcs
+     NTSTATUS (*pD3DKMTCheckVidPnExclusiveOwnership)(const D3DKMT_CHECKVIDPNEXCLUSIVEOWNERSHIP *);
+     NTSTATUS (*pD3DKMTCloseAdapter)(const D3DKMT_CLOSEADAPTER *);
+     NTSTATUS (*pD3DKMTOpenAdapterFromLuid)(D3DKMT_OPENADAPTERFROMLUID *);
++    NTSTATUS (*pD3DKMTQueryAdapterInfo)(D3DKMT_QUERYADAPTERINFO *);
+     NTSTATUS (*pD3DKMTQueryVideoMemoryInfo)(D3DKMT_QUERYVIDEOMEMORYINFO *);
+     NTSTATUS (*pD3DKMTSetVidPnSourceOwner)(const D3DKMT_SETVIDPNSOURCEOWNER *);
+
+
+From b9f481afb7b5dbb9fdb8663b93bd92063f7f2110 Mon Sep 17 00:00:00 2001
+From: Liam Middlebrook <lmiddlebrook@nvidia.com>
+Date: Sat, 12 Oct 2024 15:35:53 -0700
+Subject: [PATCH] winex11.drv: Implement D3DKMTQueryAdapterInfo WDDM_2_7_CAPS
+
+Used by applications to query support for "Hardware Scheduling" for GPU
+workloads. This is used as a proxy to determine scheduling guarantees
+between userspace command submission and GPU execution.
+
+Signed-off-by: Liam Middlebrook <lmiddlebrook@nvidia.com>
+
+Note: This commit is specifically targeted towards ValveSoftware/wine experimental_9.0 branch.
+Upstream wine contains commits which change how this would be implemented. Notably, the changes in
+`dlls/winex11.drv/x11drv_main.c` should be instead made in `dlls/win32u/d3dkmt.c`.
+---
+ dlls/winex11.drv/x11drv_main.c | 50 ++++++++++++++++++++++++++++++++++
+ include/ddk/d3dkmthk.h         | 14 ++++++++++
+ 2 files changed, 64 insertions(+)
+
+diff --git a/dlls/winex11.drv/x11drv_main.c b/dlls/winex11.drv/x11drv_main.c
+index d5461e1124e..ea29548eb41 100644
+--- a/dlls/winex11.drv/x11drv_main.c
++++ b/dlls/winex11.drv/x11drv_main.c
+@@ -1401,19 +1401,69 @@ NTSTATUS X11DRV_D3DKMTOpenAdapterFromLuid( D3DKMT_OPENADAPTERFROMLUID *desc )
+ 
+ NTSTATUS X11DRV_D3DKMTQueryAdapterInfo( D3DKMT_QUERYADAPTERINFO *desc )
+ {
++    const struct vulkan_funcs *vulkan_funcs = get_vulkan_driver(WINE_VULKAN_DRIVER_VERSION);
++    PFN_vkGetPhysicalDeviceProperties2KHR pvkGetPhysicalDeviceProperties2KHR;
++    VkPhysicalDeviceDriverPropertiesKHR driverProperties;
++    VkPhysicalDeviceProperties2KHR properties2;
+     NTSTATUS status = STATUS_INVALID_PARAMETER;
+     struct x11_d3dkmt_adapter *adapter;
+ 
++    if (!vulkan_funcs)
++    {
++        WARN("Vulkan is unavailable.\n");
++        return STATUS_UNSUCCESSFUL;
++    }
++
+     pthread_mutex_lock(&d3dkmt_mutex);
+     LIST_FOR_EACH_ENTRY(adapter, &x11_d3dkmt_adapters, struct x11_d3dkmt_adapter, entry)
+     {
+         if (adapter->handle != desc->hAdapter)
+             continue;
+ 
++        if (!(pvkGetPhysicalDeviceProperties2KHR = (void *)vulkan_funcs->p_vkGetInstanceProcAddr(d3dkmt_vk_instance, "vkGetPhysicalDeviceProperties2KHR")))
++        {
++            WARN("Failed to load vkGetPhysicalDeviceProperties2KHR.\n");
++            status = STATUS_UNSUCCESSFUL;
++            goto done;
++        }
++
++        memset(&driverProperties, 0, sizeof(driverProperties));
++        memset(&properties2, 0, sizeof(properties2));
++        driverProperties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DRIVER_PROPERTIES_KHR;
++        properties2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2_KHR;
++        properties2.pNext = &driverProperties;
++        pvkGetPhysicalDeviceProperties2KHR(adapter->vk_device, &properties2);
++
++        if (desc->Type == KMTQAITYPE_WDDM_2_7_CAPS)
++        {
++            /*
++             * Advertise Hardware-Scheduling as enabled for NVIDIA Adapters. NVIDIA driver does
++             * userspace submission.
++             */
++            D3DKMT_WDDM_2_7_CAPS *data = desc->pPrivateDriverData;
++            if (driverProperties.driverID == VK_DRIVER_ID_NVIDIA_PROPRIETARY)
++            {
++                data->HwSchEnabled = 1;
++                data->HwSchSupported = 1;
++                data->HwSchEnabledByDefault = 1;
++                status = STATUS_SUCCESS;
++                goto done;
++            }
++            else
++            {
++                data->HwSchEnabled = 0;
++                data->HwSchSupported = 0;
++                data->HwSchEnabledByDefault = 0;
++                status = STATUS_SUCCESS;
++                goto done;
++            }
++        }
++
+         FIXME("desc %p, type %d stub\n", desc, desc->Type);
+         status = STATUS_NOT_IMPLEMENTED;
+         break;
+     }
++done:
+     pthread_mutex_unlock(&d3dkmt_mutex);
+     return status;
+ }
+diff --git a/include/ddk/d3dkmthk.h b/include/ddk/d3dkmthk.h
+index 2d30bdd8777..d4d4f88a605 100644
+--- a/include/ddk/d3dkmthk.h
++++ b/include/ddk/d3dkmthk.h
+@@ -266,6 +266,20 @@ typedef struct _D3DKMT_QUERYADAPTERINFO
+     UINT                    PrivateDriverDataSize;
+ } D3DKMT_QUERYADAPTERINFO;
+ 
++typedef struct _D3DKMT_WDDM_2_7_CAPS
++{
++    union {
++        struct {
++            UINT HwSchSupported : 1;
++            UINT HwSchEnabled : 1;
++            UINT HwSchEnabledByDefault : 1;
++            UINT IndependentVidPnVSyncControl : 1;
++            UINT Reserved : 28;
++        };
++        UINT Value;
++    };
++} D3DKMT_WDDM_2_7_CAPS;
++
+ typedef enum _D3DKMT_QUERYRESULT_PREEMPTION_ATTEMPT_RESULT
+ {
+     D3DKMT_PreemptionAttempt                               = 0,

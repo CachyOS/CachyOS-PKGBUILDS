@@ -1,0 +1,17 @@
+diff --git a/proton b/proton
+index 57c6a91e..bdfba06b 100755
+--- a/proton
++++ b/proton
+@@ -986,8 +986,12 @@ class CompatData:
+                 if use_nvapi:
+                     try_copy(g_proton.lib64_dir + "wine/nvapi/nvapi64.dll", "drive_c/windows/system32",
+                             prefix=self.prefix_dir, track_file=tracked_files, link_debug=True)
++                    try_copy(g_proton.lib64_dir + "wine/nvapi/nvofapi64.dll", "drive_c/windows/system32",
++                            prefix=self.prefix_dir, track_file=tracked_files, link_debug=True)
+                     try_copy(g_proton.lib_dir + "wine/nvapi/nvapi.dll", "drive_c/windows/syswow64",
+                             prefix=self.prefix_dir, track_file=tracked_files, link_debug=True)
++                    try_copy(g_proton.lib_dir + "wine/nvapi/nvofapi.dll", "drive_c/windows/syswow64",
++                            prefix=self.prefix_dir, track_file=tracked_files, link_debug=True)
+                     g_session.dlloverrides["nvapi64"] = "n"
+                     g_session.dlloverrides["nvapi"] = "n"
+                     g_session.dlloverrides["nvcuda"] = "b"
