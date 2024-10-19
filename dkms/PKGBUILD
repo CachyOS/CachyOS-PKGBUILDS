@@ -1,9 +1,10 @@
 # Maintainer: Sébastien Luttringer
+# Maintainer: Christian Heusel <gromit@archlinux.org>
 # Contributor: Balwinder S "bsd" Dheeman (bdheeman AT gmail.com)
 
 pkgname=dkms
-pkgver=3.0.13
-pkgrel=4
+pkgver=3.1.0
+pkgrel=1
 pkgdesc='Dynamic Kernel Modules System'
 arch=('any')
 url='https://github.com/dell/dkms'
@@ -24,7 +25,6 @@ depends=(
 makedepends=(
   git
 )
-makedepends=('git')
 optdepends=('linux-headers: build modules against the Arch kernel'
             'linux-lts-headers: build modules against the LTS kernel'
             'linux-zen-headers: build modules against the ZEN kernel'
@@ -37,20 +37,15 @@ source=("git+https://github.com/dell/dkms.git#tag=v$pkgver"
         'hook.upgrade'
         'hook.sh'
         'https://github.com/dell/dkms/commit/51b7cd3cf769bf792ff813ecd4c9a2cea3d1aa2b.patch')
-sha256sums=('70b7f13f2b9fda11aeb41a1bf1a0dbec75947e044adc9d1d47113dbb1e54fd42'
+sha256sums=('a0981564d46636e0d5f9c04f07716995237e1894c4dbd3228897f640f2656adb'
             'acdc5b45cc018cea04ee1aec56fd8fc3a2de62cf7bc41acf53b3790872120998'
             '326515cc7d00f93760beb844434ca7442caf7a9424614aa95a8f6d1ab79e15df'
             '4f8dff7716e73a8bba885638f12e3cdc9e87daec1896f75e700b981527e43870'
             'c1b4a4e2e4e0e0e59ee0887403e79d60b209f3878dbbec6612573f13b90cce01'
-            '699304df13ab52935f9aafba8522fe1fdb0ed4a7cb60d29fe40ec8f37758fb74')
+            '31110489230531ae34c9f338f22908fdb37b965148093248bbccf966e3603432')
 
 prepare() {
   cd dkms
-
-  # kmod does now also add "weakdep"
-  # Fix that with upstream commit
-  # https://github.com/dell/dkms/issues/437
-  git cherry-pick -n a894e3b0bd1b511baba1c9c515322811566fbef9
 
   # apply patch from the source array (should be a pacman feature)
   local filename
@@ -80,10 +75,10 @@ package() {
   # we install them outside of $pkgdir
   make \
     DESTDIR="$pkgdir" \
-    MODDIR=/usr/lib/modules \
     SBIN=/usr/bin \
     KCONF=/../trash \
     LIBDIR=/../trash \
+    MODDIR=/usr/lib/modules \
     install
 }
 
