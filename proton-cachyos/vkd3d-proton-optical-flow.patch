@@ -1,0 +1,130 @@
+From 4042977993535e90edb8a795f2c887b9a53053d6 Mon Sep 17 00:00:00 2001
+From: Liam Middlebrook <lmiddlebrook@nvidia.com>
+Date: Sun, 23 Jun 2024 14:20:34 -0700
+Subject: [PATCH] vkd3d: Create a VK_NV_optical_flow queue when available
+
+Needed for implementation of nvofapi64 DLL D3D12 functionality in
+dxvk-nvapi.
+
+Signed-off-by: Liam Middlebrook <lmiddlebrook@nvidia.com>
+---
+ include/vkd3d_vk_includes.h   |  3 ++-
+ libs/vkd3d/device.c           | 13 +++++++++++++
+ libs/vkd3d/device_vkd3d_ext.c |  3 +++
+ libs/vkd3d/utils.c            |  1 +
+ libs/vkd3d/vkd3d_private.h    |  3 +++
+ 5 files changed, 22 insertions(+), 1 deletion(-)
+
+diff --git a/include/vkd3d_vk_includes.h b/include/vkd3d_vk_includes.h
+index 068e000ebf..fc770ba034 100644
+--- a/include/vkd3d_vk_includes.h
++++ b/include/vkd3d_vk_includes.h
+@@ -43,7 +43,8 @@ typedef enum D3D12_VK_EXTENSION
+ {
+     D3D12_VK_NVX_BINARY_IMPORT      = 0x1,
+     D3D12_VK_NVX_IMAGE_VIEW_HANDLE  = 0x2,
+-    D3D12_VK_NV_LOW_LATENCY_2       = 0x3
++    D3D12_VK_NV_LOW_LATENCY_2       = 0x3,
++    D3D12_VK_NV_OPTICAL_FLOW        = 0x4
+ } D3D12_VK_EXTENSION;
+ 
+ typedef enum D3D12_OUT_OF_BAND_CQ_TYPE
+diff --git a/libs/vkd3d/device.c b/libs/vkd3d/device.c
+index f3663cdcb1..59bedc836d 100644
+--- a/libs/vkd3d/device.c
++++ b/libs/vkd3d/device.c
+@@ -124,6 +124,7 @@ static const struct vkd3d_optional_extension_info optional_device_extensions[] =
+     VK_EXTENSION(AMD_SHADER_CORE_PROPERTIES, AMD_shader_core_properties),
+     VK_EXTENSION(AMD_SHADER_CORE_PROPERTIES_2, AMD_shader_core_properties2),
+     /* NV extensions */
++    VK_EXTENSION(NV_OPTICAL_FLOW, NV_optical_flow),
+     VK_EXTENSION(NV_SHADER_SM_BUILTINS, NV_shader_sm_builtins),
+     VK_EXTENSION(NVX_BINARY_IMPORT, NVX_binary_import),
+     VK_EXTENSION(NVX_IMAGE_VIEW_HANDLE, NVX_image_view_handle),
+@@ -1986,6 +1987,12 @@ static void vkd3d_physical_device_info_init(struct vkd3d_physical_device_info *i
+         vk_prepend_struct(&info->properties2, &info->image_alignment_control_properties);
+     }
+ 
++    if (vulkan_info->NV_optical_flow)
++    {
++        info->optical_flow_nv_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_OPTICAL_FLOW_FEATURES_NV;
++        vk_prepend_struct(&info->features2, &info->optical_flow_nv_features);
++    }
++
+     VK_CALL(vkGetPhysicalDeviceFeatures2(device->vk_physical_device, &info->features2));
+     VK_CALL(vkGetPhysicalDeviceProperties2(device->vk_physical_device, &info->properties2));
+ }
+@@ -2928,6 +2935,10 @@ static HRESULT vkd3d_select_queues(const struct d3d12_device *device,
+     info->family_index[VKD3D_QUEUE_FAMILY_SPARSE_BINDING] = vkd3d_find_queue(count, queue_properties,
+             VK_QUEUE_SPARSE_BINDING_BIT, VK_QUEUE_SPARSE_BINDING_BIT);
+ 
++    if (device->vk_info.NV_optical_flow)
++        info->family_index[VKD3D_QUEUE_FAMILY_OPTICAL_FLOW] = vkd3d_find_queue(count, queue_properties,
++                VK_QUEUE_OPTICAL_FLOW_BIT_NV, VK_QUEUE_OPTICAL_FLOW_BIT_NV);
++
+     if (info->family_index[VKD3D_QUEUE_FAMILY_COMPUTE] == VK_QUEUE_FAMILY_IGNORED)
+         info->family_index[VKD3D_QUEUE_FAMILY_COMPUTE] = info->family_index[VKD3D_QUEUE_FAMILY_GRAPHICS];
+ 
+@@ -3033,6 +3044,8 @@ static HRESULT vkd3d_create_vk_device(struct d3d12_device *device,
+             device_queue_info.family_index[VKD3D_QUEUE_FAMILY_TRANSFER]);
+     TRACE("Using queue family %u for sparse binding.\n",
+             device_queue_info.family_index[VKD3D_QUEUE_FAMILY_SPARSE_BINDING]);
++    TRACE("Using queue family %u for optical flow.\n",
++            device_queue_info.family_index[VKD3D_QUEUE_FAMILY_OPTICAL_FLOW]);
+ 
+     VK_CALL(vkGetPhysicalDeviceMemoryProperties(physical_device, &device->memory_properties));
+ 
+diff --git a/libs/vkd3d/device_vkd3d_ext.c b/libs/vkd3d/device_vkd3d_ext.c
+index a294a6145d..13bfa030da 100644
+--- a/libs/vkd3d/device_vkd3d_ext.c
++++ b/libs/vkd3d/device_vkd3d_ext.c
+@@ -78,6 +78,9 @@ static BOOL STDMETHODCALLTYPE d3d12_device_vkd3d_ext_GetExtensionSupport(d3d12_d
+         case D3D12_VK_NV_LOW_LATENCY_2:
+             ret_val = device->vk_info.NV_low_latency2;
+             break;
++        case D3D12_VK_NV_OPTICAL_FLOW:
++            ret_val = device->vk_info.NV_optical_flow;
++            break;
+         default:
+             WARN("Invalid extension %x.\n", extension);
+     }
+diff --git a/libs/vkd3d/utils.c b/libs/vkd3d/utils.c
+index 487baabd3b..d0f0237791 100644
+--- a/libs/vkd3d/utils.c
++++ b/libs/vkd3d/utils.c
+@@ -1235,6 +1235,7 @@ const char *debug_vk_queue_flags(VkQueueFlags flags, char buffer[VKD3D_DEBUG_FLA
+     FLAG_TO_STR(VK_QUEUE_TRANSFER_BIT)
+     FLAG_TO_STR(VK_QUEUE_SPARSE_BINDING_BIT)
+     FLAG_TO_STR(VK_QUEUE_PROTECTED_BIT)
++    FLAG_TO_STR(VK_QUEUE_OPTICAL_FLOW_BIT_NV)
+ #undef FLAG_TO_STR
+     if (flags)
+         FIXME("Unrecognized flag(s) %#x.\n", flags);
+diff --git a/libs/vkd3d/vkd3d_private.h b/libs/vkd3d/vkd3d_private.h
+index ee7270a8d8..643fa24442 100644
+--- a/libs/vkd3d/vkd3d_private.h
++++ b/libs/vkd3d/vkd3d_private.h
+@@ -170,6 +170,7 @@ struct vkd3d_vulkan_info
+     bool AMD_shader_core_properties;
+     bool AMD_shader_core_properties2;
+     /* NV device extensions */
++    bool NV_optical_flow;
+     bool NV_shader_sm_builtins;
+     bool NVX_binary_import;
+     bool NVX_image_view_handle;
+@@ -4554,6 +4555,7 @@ struct vkd3d_physical_device_info
+     VkPhysicalDeviceImageAlignmentControlFeaturesMESA image_alignment_control_features;
+     VkPhysicalDeviceImageAlignmentControlPropertiesMESA image_alignment_control_properties;
+     VkPhysicalDeviceDepthBiasControlFeaturesEXT depth_bias_control_features;
++    VkPhysicalDeviceOpticalFlowFeaturesNV optical_flow_nv_features;
+ 
+     VkPhysicalDeviceFeatures2 features2;
+ 
+@@ -4603,6 +4605,7 @@ enum vkd3d_queue_family
+     VKD3D_QUEUE_FAMILY_COMPUTE,
+     VKD3D_QUEUE_FAMILY_TRANSFER,
+     VKD3D_QUEUE_FAMILY_SPARSE_BINDING,
++    VKD3D_QUEUE_FAMILY_OPTICAL_FLOW,
+     /* Keep internal queues at the end */
+     VKD3D_QUEUE_FAMILY_INTERNAL_COMPUTE,
+ 
