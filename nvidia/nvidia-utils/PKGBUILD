@@ -123,8 +123,8 @@ DEST_MODULE_LOCATION[4]="/kernel/drivers/video"' dkms.conf
     patch -Np1 --no-backup-if-mismatch -i "$srcdir"/0009-fix-hdmi-names.patch
 
     # Attempt to make this reproducible
-    sed -i "s/^HOSTNAME.*/HOSTNAME = echo archlinux"/ utils.mk
-    sed -i "s/^WHOAMI.*/WHOAMI = echo archlinux-builder"/ utils.mk
+    sed -i "s/^HOSTNAME.*/HOSTNAME = echo cachyos"/ utils.mk
+    sed -i "s/^WHOAMI.*/WHOAMI = echo cachyos-builder"/ utils.mk
     sed -i "s/^DATE.*/DATE = date -r version.mk"/ utils.mk
 
     sed -i "s/__VERSION_STRING/${pkgver}/" kernel-open/dkms.conf
