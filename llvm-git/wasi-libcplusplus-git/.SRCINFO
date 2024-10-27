@@ -1,0 +1,36 @@
+pkgbase = wasi-libc++-git
+	pkgver = 19.0.0_r504090.8426b51e0e94
+	pkgrel = 1
+	epoch = 1
+	url = https://libcxx.llvm.org/
+	arch = any
+	license = Apache-2.0 WITH LLVM-exception
+	makedepends = cmake
+	makedepends = ninja
+	makedepends = python
+	makedepends = clang
+	makedepends = llvm
+	makedepends = wasi-libc-git
+	makedepends = wasi-compiler-rt-git
+	makedepends = lld
+	makedepends = util-linux
+	options = staticlibs
+	options = !lto
+	options = !debug
+	source = llvm-project::git+https://github.com/llvm/llvm-project.git
+	source = WASI.cmake
+	source = wasi-sdk.cmake
+	b2sums = SKIP
+	b2sums = SKIP
+	b2sums = c829d807c257921fddb8c4d3752ad2291a2beb116d414dd31e34b7f6b01599d8c4807db87ef9930456ed8c9f30e8648e77028fa0b903c3a5ea840514f6022cf4
+	b2sums = 0da3e98a7e09eb500a593f78f92a3b23238cf969be326e2711313f95daff39f8a890a7826b2526a81d8c22a035772ed420fddc2d6182f216be9b732755b94f8e
+
+pkgname = wasi-libc++-git
+	pkgdesc = WASI LLVM C++ standard library
+	provides = wasi-libc++
+	conflicts = wasi-libc++
+
+pkgname = wasi-libc++abi-git
+	pkgdesc = WASI Low level support for the LLVM C++ standard library.
+	provides = wasi-libc++abi
+	conflicts = wasi-libc++abi
