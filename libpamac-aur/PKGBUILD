@@ -1,20 +1,18 @@
 # Contributor: Zeph <zeph33@gmail.com>
 # Maintainer: Zeph <zeph33@gmail.com>
 # https://gitlab.manjaro.org/packages/extra/libpamac
-ENABLE_FLATPAK=1
+ENABLE_FLATPAK=0
 ENABLE_SNAPD=0
 
 pkgname=libpamac-aur
 pkgver=11.7.0
-pkgrel=2
+pkgrel=4
 _pkgfixver=$pkgver
 
 _commit='49bfde599ed00c127869a2797b5bb26e28e11c2a'
 sha256sums=('6191f2cf6955a0041fbf72449efe000803cc2a81654a6da96653e27fc9d08452'
             '6e0c25f0fcb0076ce78845b037e32925fcc3f1cd1670062c48ed35f564a10244'
             'b5236af02c25cd7de4b2c9c2d0f064dac3c2f54da5cc72bf72fc6236a34bd9c4'
-            'e90cb38ce31fac5eae86b73dfd94936f920b50f260afd4979b7cc7f62ca93bae'
-            '06fcfece7de3ebebacaab895e62eac842e521e73868679394adf6171d3e43514'
             '23862d7ba3507670cbdd00b949c453bf8b8f2bb876cbd5943b2ceb60cc13cc6f')
 
 pkgdesc="Pamac package manager library based on libalpm"
@@ -33,7 +31,6 @@ options=(!emptydirs !strip)
 install=pamac.install
 source=("libpamac-$pkgver-$pkgrel.zip::$url/archive/$_commit.zip"
         'fix-appstream-data.sh' 'fix-appstream-data.hook'
-        '0001-flatpak_trans_run.patch' '0002-flatpak_runtime.patch'
         https://github.com/vnepogodin/my-patches/raw/develop/libpamac/0001-add-arches-from-pacman-func-call.patch)
 
 define_meson=''
