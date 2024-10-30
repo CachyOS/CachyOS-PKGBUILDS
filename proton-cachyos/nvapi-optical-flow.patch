@@ -2810,3 +2810,2494 @@ index 00000000..308ccad4
 +        return NV_OF_SUCCESS;
 +    }
 +}
+
+From 6bb7775ec62a9f2b03c4cba212104bd50f7fc798 Mon Sep 17 00:00:00 2001
+From: Liam Middlebrook <lmiddlebrook@nvidia.com>
+Date: Tue, 29 Oct 2024 20:44:47 -0700
+Subject: [PATCH] nvofapi: Address feedback from Saancreed
+
+---
+ src/nvofapi/nvofapi.h               |  7 +++----
+ src/nvofapi/nvofapi_common.cpp      |  2 +-
+ src/nvofapi/nvofapi_entrypoints.cpp | 20 ++++++++++++++++++++
+ 3 files changed, 24 insertions(+), 5 deletions(-)
+
+diff --git a/src/nvofapi/nvofapi.h b/src/nvofapi/nvofapi.h
+index d74d028b..216e1752 100644
+--- a/src/nvofapi/nvofapi.h
++++ b/src/nvofapi/nvofapi.h
+@@ -29,7 +29,7 @@
+ #include "../inc/nvofapi/nvOpticalFlowVulkan.h"
+ 
+ namespace nvofapi {
+-    constexpr uint32_t CMDS_IN_FLIGHT = 1;
++    constexpr uint32_t CMDS_IN_FLIGHT = 8;
+     class NvOFInstance;
+     class NvOFImageVk;
+ 
+@@ -107,7 +107,7 @@ namespace nvofapi {
+         }
+         virtual ~NvOFInstanceVk() {
+             // free cmdbuffers
+-            m_vkFreeCommandBuffers(m_vkDevice, m_commandPool, 8, m_commandBuffers);
++            m_vkFreeCommandBuffers(m_vkDevice, m_commandPool, CMDS_IN_FLIGHT, m_commandBuffers);
+             m_vkDestroyCommandPool(m_vkDevice, m_commandPool, nullptr);
+         }
+         bool Initialize();
+@@ -119,8 +119,7 @@ namespace nvofapi {
+         VkCommandPool m_commandPool;
+         PFN_vkCreateCommandPool m_vkCreateCommandPool;
+         PFN_vkDestroyCommandPool m_vkDestroyCommandPool;
+-        VkCommandBuffer m_commandBuffers[CMDS_IN_FLIGHT]; // eight ought to be more than
+-                                                          // enough for anybody ;)
++        VkCommandBuffer m_commandBuffers[CMDS_IN_FLIGHT];
+ 
+         PFN_vkAllocateCommandBuffers m_vkAllocateCommandBuffers;
+         PFN_vkFreeCommandBuffers m_vkFreeCommandBuffers;
+diff --git a/src/nvofapi/nvofapi_common.cpp b/src/nvofapi/nvofapi_common.cpp
+index 4a54cd41..9a15333d 100644
+--- a/src/nvofapi/nvofapi_common.cpp
++++ b/src/nvofapi/nvofapi_common.cpp
+@@ -181,7 +181,7 @@ namespace nvofapi {
+                 }
+             }
+         }
+-        VkRect2D* regions;
++        VkRect2D* regions = nullptr;
+ 
+         if (inParams->numRois) {
+             regions = (VkRect2D*)calloc(sizeof(VkRect2D), inParams->numRois);
+diff --git a/src/nvofapi/nvofapi_entrypoints.cpp b/src/nvofapi/nvofapi_entrypoints.cpp
+index 65eb9144..ac501c89 100644
+--- a/src/nvofapi/nvofapi_entrypoints.cpp
++++ b/src/nvofapi/nvofapi_entrypoints.cpp
+@@ -184,9 +184,15 @@ extern "C" {
+ 
+     // ETBLs
+     NV_OF_STATUS __cdecl NvOFAPICreateInstanceVk(uint32_t apiVer, NV_OF_VK_API_FUNCTION_LIST* functionList) {
++        uint32_t apiVerMajor = (apiVer & 0xfffffff0) >> 4;
++        uint32_t apiVerMinor = (apiVer & 0xf);
+         constexpr auto n = __func__;
+ 
+         dxvk::log::info(dxvk::str::format("DXVK-NVOFAPI ", DXVK_NVAPI_VERSION, " (", dxvk::env::getExecutableName(), ") VK"));
++        dxvk::log::info(dxvk::str::format("OFAPI Client Version: ", apiVerMajor, ".", apiVerMinor));
++
++        if (apiVerMajor != 5)
++            return NV_OF_ERR_INVALID_VERSION;
+ 
+         functionList->nvCreateOpticalFlowVk = CreateOpticalFlowVk;
+         functionList->nvOFInit = OFSessionInit;
+@@ -203,9 +209,15 @@ extern "C" {
+     }
+ 
+     NV_OF_STATUS __stdcall NvOFAPICreateInstanceD3D12(uint32_t apiVer, NV_OF_D3D12_API_FUNCTION_LIST* functionList) {
++        uint32_t apiVerMajor = (apiVer & 0xfffffff0) >> 4;
++        uint32_t apiVerMinor = (apiVer & 0xf);
+         constexpr auto n = __func__;
+ 
+         dxvk::log::info(dxvk::str::format("DXVK-NVOFAPI ", DXVK_NVAPI_VERSION, " (", dxvk::env::getExecutableName(), ") D3D12"));
++        dxvk::log::info(dxvk::str::format("OFAPI Client Version: ", apiVerMajor, ".", apiVerMinor));
++
++        if (apiVerMajor != 5)
++            return NV_OF_ERR_INVALID_VERSION;
+ 
+         functionList->nvCreateOpticalFlowD3D12 = CreateOpticalFlowD3D12;
+         functionList->nvOFInit = OFSessionInit;
+@@ -220,4 +232,12 @@ extern "C" {
+ 
+         return NV_OF_SUCCESS;
+     }
++
++    NV_OF_STATUS __cdecl NvOFGetMaxSupportedApiVersion(uint32_t *version) {
++        if (!version)
++            return NV_OF_ERR_INVALID_PTR;
++
++        *version = NV_OF_API_VERSION;
++        return NV_OF_SUCCESS;
++    }
+ }
+
+From c1a0ba102038f44cdbfeb47177bbf496655d2a7b Mon Sep 17 00:00:00 2001
+From: Liam Middlebrook <lmiddlebrook@nvidia.com>
+Date: Tue, 29 Oct 2024 21:25:02 -0700
+Subject: [PATCH] nvofapi: Refactor to match suggested layout from Jens
+
+---
+ .../nvofapi_d3d12_instance.cpp}               |   5 +-
+ src/d3d12/nvofapi_d3d12_instance.h            |  69 +++++
+ src/meson.build                               |   9 +-
+ src/nvofapi.cpp                               |  77 ++++++
+ src/nvofapi/nvofapi.h                         | 176 -------------
+ src/nvofapi/nvofapi_common.cpp                |  25 +-
+ src/nvofapi/nvofapi_entrypoints.cpp           | 243 ------------------
+ src/nvofapi/nvofapi_entrypoints.h             |  37 +++
+ src/nvofapi/nvofapi_image.cpp                 |  46 ++++
+ src/nvofapi/nvofapi_image.h                   |  46 ++++
+ src/nvofapi/nvofapi_instance.h                |  82 ++++++
+ src/nvofapi_d3d12.cpp                         | 123 +++++++++
+ src/nvofapi_vulkan.cpp                        | 108 ++++++++
+ .../nvofapi_vulkan_instance.cpp}              |  22 +-
+ src/vulkan/nvofapi_vulkan_instance.h          |  60 +++++
+ 15 files changed, 669 insertions(+), 459 deletions(-)
+ rename src/{nvofapi/nvofapi_d3d12.cpp => d3d12/nvofapi_d3d12_instance.cpp} (98%)
+ create mode 100644 src/d3d12/nvofapi_d3d12_instance.h
+ create mode 100644 src/nvofapi.cpp
+ delete mode 100644 src/nvofapi/nvofapi.h
+ delete mode 100644 src/nvofapi/nvofapi_entrypoints.cpp
+ create mode 100644 src/nvofapi/nvofapi_entrypoints.h
+ create mode 100644 src/nvofapi/nvofapi_image.cpp
+ create mode 100644 src/nvofapi/nvofapi_image.h
+ create mode 100644 src/nvofapi/nvofapi_instance.h
+ create mode 100644 src/nvofapi_d3d12.cpp
+ create mode 100644 src/nvofapi_vulkan.cpp
+ rename src/{nvofapi/nvofapi_vulkan.cpp => vulkan/nvofapi_vulkan_instance.cpp} (89%)
+ create mode 100644 src/vulkan/nvofapi_vulkan_instance.h
+
+diff --git a/src/nvofapi/nvofapi_d3d12.cpp b/src/d3d12/nvofapi_d3d12_instance.cpp
+similarity index 98%
+rename from src/nvofapi/nvofapi_d3d12.cpp
+rename to src/d3d12/nvofapi_d3d12_instance.cpp
+index f224ea05..4e638c9c 100644
+--- a/src/nvofapi/nvofapi_d3d12.cpp
++++ b/src/d3d12/nvofapi_d3d12_instance.cpp
+@@ -26,10 +26,7 @@
+ #include "util/util_log.h"
+ #include "util/util_string.h"
+ 
+-#include "vkd3d-proton/vkd3d-proton_interfaces.h"
+-#include "../inc/nvofapi/nvOpticalFlowD3D12.h"
+-
+-#include "nvofapi.h"
++#include "d3d12/nvofapi_d3d12_instance.h"
+ 
+ namespace nvofapi {
+ 
+diff --git a/src/d3d12/nvofapi_d3d12_instance.h b/src/d3d12/nvofapi_d3d12_instance.h
+new file mode 100644
+index 00000000..7b7ccdc5
+--- /dev/null
++++ b/src/d3d12/nvofapi_d3d12_instance.h
+@@ -0,0 +1,69 @@
++/*
++ * SPDX-FileCopyrightText: Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
++ * SPDX-License-Identifier: MIT
++ *
++ * Permission is hereby granted, free of charge, to any person obtaining a
++ * copy of this software and associated documentation files (the "Software"),
++ * to deal in the Software without restriction, including without limitation
++ * the rights to use, copy, modify, merge, publish, distribute, sublicense,
++ * and/or sell copies of the Software, and to permit persons to whom the
++ * Software is furnished to do so, subject to the following conditions:
++ *
++ * The above copyright notice and this permission notice shall be included in
++ * all copies or substantial portions of the Software.
++ *
++ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
++ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
++ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
++ * THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
++ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
++ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
++ * DEALINGS IN THE SOFTWARE.
++ */
++
++#pragma once
++
++#include "nvofapi/nvofapi_instance.h"
++
++namespace nvofapi {
++    class NvOFInstanceD3D12 : public NvOFInstance {
++      private:
++        ID3D12DXVKInteropDevice1* m_device{};
++        ID3D12DeviceExt* m_deviceExt{};
++        ID3D12Device4* m_d3ddevice{};
++        ID3D12CommandQueue* m_commandQueue{};
++        ID3D12GraphicsCommandList* m_cmdList[CMDS_IN_FLIGHT]{};
++        uint32_t m_cmdListIndex = 0;
++        ID3D12CommandAllocator* m_cmdAllocator{};
++
++        uint32_t m_vkQueueFamilyIndex = 0;
++
++      public:
++        bool Initialize();
++        NvOFInstanceD3D12(ID3D12Device* pD3D12Device);
++        virtual ~NvOFInstanceD3D12() {
++            for (int i = 0; i < CMDS_IN_FLIGHT; i++) {
++                if (m_cmdList[i])
++                    m_cmdList[i]->Release();
++            }
++            if (m_cmdAllocator)
++                m_cmdAllocator->Release();
++
++            if (m_commandQueue)
++                m_commandQueue->Release();
++
++            if (m_deviceExt)
++                m_deviceExt->Release();
++
++            if (m_d3ddevice)
++                m_d3ddevice->Release();
++
++            if (m_device)
++                m_device->Release();
++        }
++
++        NV_OF_STATUS RegisterBuffer(const NV_OF_REGISTER_RESOURCE_PARAMS_D3D12* registerParams);
++
++        NV_OF_STATUS Execute(const NV_OF_EXECUTE_INPUT_PARAMS_D3D12* inParams, NV_OF_EXECUTE_OUTPUT_PARAMS_D3D12* outParams);
++    };
++}
+diff --git a/src/meson.build b/src/meson.build
+index 9d40fa1e..204376aa 100644
+--- a/src/meson.build
++++ b/src/meson.build
+@@ -36,10 +36,13 @@ nvofapi_src = files([
+   'util/util_string.cpp',
+   'util/util_env.cpp',
+   'util/util_log.cpp',
++  'nvofapi.cpp',
++  'nvofapi_d3d12.cpp',
++  'nvofapi_vulkan.cpp',
++  'd3d12/nvofapi_d3d12_instance.cpp',
++  'vulkan/nvofapi_vulkan_instance.cpp',
+   'nvofapi/nvofapi_common.cpp',
+-  'nvofapi/nvofapi_d3d12.cpp',
+-  'nvofapi/nvofapi_vulkan.cpp',
+-  'nvofapi/nvofapi_entrypoints.cpp'
++  'nvofapi/nvofapi_image.cpp',
+ ])
+ 
+ nvofapi_dll = shared_library('nvofapi'+target_suffix, [ nvofapi_src, dxvk_nvapi_version ],
+diff --git a/src/nvofapi.cpp b/src/nvofapi.cpp
+new file mode 100644
+index 00000000..016f02ab
+--- /dev/null
++++ b/src/nvofapi.cpp
+@@ -0,0 +1,77 @@
++/*
++ * SPDX-FileCopyrightText: Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
++ * SPDX-License-Identifier: MIT
++ *
++ * Permission is hereby granted, free of charge, to any person obtaining a
++ * copy of this software and associated documentation files (the "Software"),
++ * to deal in the Software without restriction, including without limitation
++ * the rights to use, copy, modify, merge, publish, distribute, sublicense,
++ * and/or sell copies of the Software, and to permit persons to whom the
++ * Software is furnished to do so, subject to the following conditions:
++ *
++ * The above copyright notice and this permission notice shall be included in
++ * all copies or substantial portions of the Software.
++ *
++ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
++ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
++ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
++ * THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
++ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
++ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
++ * DEALINGS IN THE SOFTWARE.
++ */
++
++#include "nvofapi/nvofapi_entrypoints.h"
++
++#include "util/util_env.h"
++#include "util/util_log.h"
++#include "util/util_string.h"
++#include "../version.h"
++
++extern "C" {
++    // Common entrypoints
++    NV_OF_STATUS NVOFAPI OFSessionInit(NvOFHandle hOf, const NV_OF_INIT_PARAMS* initParams) {
++        dxvk::log::info("OFSessionInit called");
++        nvofapi::NvOFInstance* nvOF = reinterpret_cast<nvofapi::NvOFInstance*>(hOf);
++
++        if (!nvOF) {
++            dxvk::log::info(dxvk::str::format("OFSessionInit failed!"));
++            return NV_OF_ERR_GENERIC;
++        }
++
++        return nvOF->InitSession(initParams);
++    }
++
++    NV_OF_STATUS NVOFAPI OFSessionDestroy(NvOFHandle hOf) {
++        dxvk::log::info("OFSessionDestroy called");
++        nvofapi::NvOFInstance* nvOF = reinterpret_cast<nvofapi::NvOFInstance*>(hOf);
++        if (!nvOF) {
++            dxvk::log::info(dxvk::str::format("OFSessionDestroy failed!"));
++            return NV_OF_ERR_GENERIC;
++        }
++
++        delete nvOF;
++        return NV_OF_SUCCESS;
++    }
++
++    NV_OF_STATUS NVOFAPI OFSessionGetLastError(NvOFHandle hOf, char lastError[], uint32_t* size) {
++        dxvk::log::info("OFSessionGetLastError called");
++        dxvk::log::info(dxvk::str::format("OFSessionGetLastError failed!"));
++        return NV_OF_ERR_GENERIC;
++    }
++
++    NV_OF_STATUS NVOFAPI OFSessionGetCaps(NvOFHandle hOf, NV_OF_CAPS capsParam, uint32_t* capsVal, uint32_t* size) {
++        dxvk::log::info("OFSessionGetCaps called");
++        nvofapi::NvOFInstance* nvOF = reinterpret_cast<nvofapi::NvOFInstance*>(hOf);
++
++        return nvOF->getCaps(capsParam, capsVal, size);
++    }
++
++    NV_OF_STATUS __cdecl NvOFGetMaxSupportedApiVersion(uint32_t* version) {
++        if (!version)
++            return NV_OF_ERR_INVALID_PTR;
++
++        *version = NV_OF_API_VERSION;
++        return NV_OF_SUCCESS;
++    }
++}
+diff --git a/src/nvofapi/nvofapi.h b/src/nvofapi/nvofapi.h
+deleted file mode 100644
+index 216e1752..00000000
+--- a/src/nvofapi/nvofapi.h
++++ /dev/null
+@@ -1,176 +0,0 @@
+-/*
+- * SPDX-FileCopyrightText: Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+- * SPDX-License-Identifier: MIT
+- *
+- * Permission is hereby granted, free of charge, to any person obtaining a
+- * copy of this software and associated documentation files (the "Software"),
+- * to deal in the Software without restriction, including without limitation
+- * the rights to use, copy, modify, merge, publish, distribute, sublicense,
+- * and/or sell copies of the Software, and to permit persons to whom the
+- * Software is furnished to do so, subject to the following conditions:
+- *
+- * The above copyright notice and this permission notice shall be included in
+- * all copies or substantial portions of the Software.
+- *
+- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+- * THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+- * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+- * DEALINGS IN THE SOFTWARE.
+- */
+-
+-#pragma once
+-
+-#include "vkd3d-proton/vkd3d-proton_interfaces.h"
+-
+-#include "../inc/nvofapi/nvOpticalFlowD3D12.h"
+-#include "../inc/nvofapi/nvOpticalFlowVulkan.h"
+-
+-namespace nvofapi {
+-    constexpr uint32_t CMDS_IN_FLIGHT = 8;
+-    class NvOFInstance;
+-    class NvOFImageVk;
+-
+-    class NvOFInstance {
+-
+-      protected:
+-        VkInstance m_vkInstance;
+-        VkPhysicalDevice m_vkPhysicalDevice;
+-        VkDevice m_vkDevice;
+-        VkOpticalFlowSessionNV m_vkOfaSession{};
+-        PFN_vkGetInstanceProcAddr m_vkGetInstanceProcAddr{};
+-        PFN_vkGetDeviceProcAddr m_vkGetDeviceProcAddr{};
+-        PFN_vkCreateOpticalFlowSessionNV m_vkCreateOpticalFlowSessionNV{};
+-        PFN_vkDestroyOpticalFlowSessionNV m_vkDestroyOpticalFlowSessionNV{};
+-        PFN_vkCreateImageView m_vkCreateImageView{};
+-        PFN_vkDestroyImageView m_vkDestroyImageView{};
+-        PFN_vkBindOpticalFlowSessionImageNV m_vkBindOpticalFlowSessionImageNV{};
+-        PFN_vkCmdOpticalFlowExecuteNV m_vkCmdOpticalFlowExecuteNV{};
+-
+-        PFN_vkGetPhysicalDeviceQueueFamilyProperties m_vkGetPhysicalDeviceQueueFamilyProperties;
+-        HMODULE m_library;
+-
+-        uint32_t GetVkOFAQueue();
+-
+-      public:
+-        VkDevice GetVkDevice() { return m_vkDevice; }
+-        VkOpticalFlowSessionNV GetOfaSession() { return m_vkOfaSession; }
+-
+-        NvOFInstance(VkInstance vkInstance,
+-            VkPhysicalDevice vkPhysicalDevice,
+-            VkDevice vkDevice) : m_vkInstance(vkInstance),
+-                                 m_vkPhysicalDevice(vkPhysicalDevice), m_vkDevice(vkDevice) {
+-        }
+-
+-        NvOFInstance() {};
+-        virtual ~NvOFInstance() {
+-            m_vkDestroyOpticalFlowSessionNV(m_vkDevice, m_vkOfaSession, nullptr);
+-            FreeLibrary(m_library);
+-        }
+-
+-        NV_OF_STATUS getCaps(NV_OF_CAPS param, uint32_t* capsVal, uint32_t* size);
+-
+-        NV_OF_STATUS InitSession(const NV_OF_INIT_PARAMS* initParams);
+-
+-        NV_OF_STATUS RegisterBuffer(const NV_OF_REGISTER_RESOURCE_PARAMS_VK* registerParams);
+-
+-        NV_OF_STATUS BindImageToSession(NvOFImageVk* image, VkOpticalFlowSessionBindingPointNV bindingPoint);
+-
+-        NV_OF_STATUS RecordCmdBuf(const NV_OF_EXECUTE_INPUT_PARAMS_VK* inParams, NV_OF_EXECUTE_OUTPUT_PARAMS_VK* outParams, VkCommandBuffer cmdBuf);
+-    };
+-
+-    class NvOFImageVk {
+-      private:
+-        NvOFInstance* m_ofInstance;
+-        VkImage m_image;
+-        VkImageView m_imageView;
+-        VkFormat m_format;
+-        PFN_vkDestroyImageView m_vkDestroyImageView{};
+-
+-      public:
+-        VkImageView ImageView() { return m_imageView; }
+-        NvOFImageVk(NvOFInstance* ofInstance, VkImage image, VkFormat format) : m_ofInstance(ofInstance), m_image(image), m_format(format) {
+-        }
+-        ~NvOFImageVk() {
+-            m_vkDestroyImageView(m_ofInstance->GetVkDevice(), m_imageView, nullptr);
+-        }
+-
+-        bool Initialize(PFN_vkCreateImageView CreateImageView,
+-            PFN_vkDestroyImageView DestroyImageView);
+-    };
+-
+-    class NvOFInstanceVk : public NvOFInstance {
+-      public:
+-        NvOFInstanceVk(VkInstance vkInstance, VkPhysicalDevice vkPhysicalDevice, VkDevice vkDevice) : NvOFInstance(vkInstance, vkPhysicalDevice, vkDevice) {
+-        }
+-        virtual ~NvOFInstanceVk() {
+-            // free cmdbuffers
+-            m_vkFreeCommandBuffers(m_vkDevice, m_commandPool, CMDS_IN_FLIGHT, m_commandBuffers);
+-            m_vkDestroyCommandPool(m_vkDevice, m_commandPool, nullptr);
+-        }
+-        bool Initialize();
+-
+-        NV_OF_STATUS Execute(const NV_OF_EXECUTE_INPUT_PARAMS_VK* inParams, NV_OF_EXECUTE_OUTPUT_PARAMS_VK* outParams);
+-
+-      private:
+-        VkQueue m_queue;
+-        VkCommandPool m_commandPool;
+-        PFN_vkCreateCommandPool m_vkCreateCommandPool;
+-        PFN_vkDestroyCommandPool m_vkDestroyCommandPool;
+-        VkCommandBuffer m_commandBuffers[CMDS_IN_FLIGHT];
+-
+-        PFN_vkAllocateCommandBuffers m_vkAllocateCommandBuffers;
+-        PFN_vkFreeCommandBuffers m_vkFreeCommandBuffers;
+-
+-        uint32_t m_cmdBufIndex = 0;
+-        PFN_vkResetCommandBuffer m_vkResetCommandBuffer;
+-        PFN_vkBeginCommandBuffer m_vkBeginCommandBuffer;
+-        PFN_vkEndCommandBuffer m_vkEndCommandBuffer;
+-
+-        PFN_vkGetDeviceQueue m_vkGetDeviceQueue;
+-        PFN_vkQueueSubmit2 m_vkQueueSubmit2{};
+-    };
+-
+-    class NvOFInstanceD3D12 : public NvOFInstance {
+-      private:
+-        ID3D12DXVKInteropDevice1* m_device{};
+-        ID3D12DeviceExt* m_deviceExt{};
+-        ID3D12Device4* m_d3ddevice{};
+-        ID3D12CommandQueue* m_commandQueue{};
+-        ID3D12GraphicsCommandList* m_cmdList[CMDS_IN_FLIGHT]{};
+-        uint32_t m_cmdListIndex = 0;
+-        ID3D12CommandAllocator* m_cmdAllocator{};
+-
+-        uint32_t m_vkQueueFamilyIndex = 0;
+-
+-      public:
+-        bool Initialize();
+-        NvOFInstanceD3D12(ID3D12Device* pD3D12Device);
+-        virtual ~NvOFInstanceD3D12() {
+-            for (int i = 0; i < CMDS_IN_FLIGHT; i++) {
+-                if (m_cmdList[i])
+-                    m_cmdList[i]->Release();
+-            }
+-            if (m_cmdAllocator)
+-                m_cmdAllocator->Release();
+-
+-            if (m_commandQueue)
+-                m_commandQueue->Release();
+-
+-            if (m_deviceExt)
+-                m_deviceExt->Release();
+-
+-            if (m_d3ddevice)
+-                m_d3ddevice->Release();
+-
+-            if (m_device)
+-                m_device->Release();
+-        }
+-
+-        NV_OF_STATUS RegisterBuffer(const NV_OF_REGISTER_RESOURCE_PARAMS_D3D12* registerParams);
+-
+-        NV_OF_STATUS Execute(const NV_OF_EXECUTE_INPUT_PARAMS_D3D12* inParams, NV_OF_EXECUTE_OUTPUT_PARAMS_D3D12* outParams);
+-    };
+-}
+diff --git a/src/nvofapi/nvofapi_common.cpp b/src/nvofapi/nvofapi_common.cpp
+index 9a15333d..1a298b7a 100644
+--- a/src/nvofapi/nvofapi_common.cpp
++++ b/src/nvofapi/nvofapi_common.cpp
+@@ -26,7 +26,8 @@
+ 
+ #include "../inc/nvofapi/nvOpticalFlowVulkan.h"
+ 
+-#include "nvofapi.h"
++#include "nvofapi_image.h"
++#include "nvofapi_instance.h"
+ 
+ namespace nvofapi {
+ 
+@@ -126,7 +127,7 @@ namespace nvofapi {
+         return NV_OF_ERR_GENERIC;
+     }
+ 
+-    NV_OF_STATUS NvOFInstance::BindImageToSession(NvOFImageVk* image, VkOpticalFlowSessionBindingPointNV bindingPoint) {
++    NV_OF_STATUS NvOFInstance::BindImageToSession(NvOFImage* image, VkOpticalFlowSessionBindingPointNV bindingPoint) {
+         VkImageLayout layout = VK_IMAGE_LAYOUT_GENERAL;
+ 
+         if (!image)
+@@ -157,27 +158,27 @@ namespace nvofapi {
+     }
+ 
+     NV_OF_STATUS NvOFInstance::RegisterBuffer(const NV_OF_REGISTER_RESOURCE_PARAMS_VK* registerParams) {
+-        NvOFImageVk* nvOFImage = new NvOFImageVk(this, registerParams->image, registerParams->format);
++        NvOFImage* nvOFImage = new NvOFImage(m_vkDevice, registerParams->image, registerParams->format);
+         nvOFImage->Initialize(m_vkCreateImageView, m_vkDestroyImageView);
+         *registerParams->hOFGpuBuffer = reinterpret_cast<NvOFGPUBufferHandle>(nvOFImage);
+         return NV_OF_SUCCESS;
+     }
+ 
+     NV_OF_STATUS NvOFInstance::RecordCmdBuf(const NV_OF_EXECUTE_INPUT_PARAMS_VK* inParams, NV_OF_EXECUTE_OUTPUT_PARAMS_VK* outParams, VkCommandBuffer cmdBuf) {
+-        BindImageToSession(reinterpret_cast<NvOFImageVk*>(inParams->inputFrame), VK_OPTICAL_FLOW_SESSION_BINDING_POINT_INPUT_NV);
+-        BindImageToSession(reinterpret_cast<NvOFImageVk*>(inParams->referenceFrame), VK_OPTICAL_FLOW_SESSION_BINDING_POINT_REFERENCE_NV);
+-        BindImageToSession(reinterpret_cast<NvOFImageVk*>(outParams->outputBuffer), VK_OPTICAL_FLOW_SESSION_BINDING_POINT_FLOW_VECTOR_NV);
+-        BindImageToSession(reinterpret_cast<NvOFImageVk*>(outParams->outputCostBuffer), VK_OPTICAL_FLOW_SESSION_BINDING_POINT_COST_NV);
+-        BindImageToSession(reinterpret_cast<NvOFImageVk*>(outParams->bwdOutputBuffer), VK_OPTICAL_FLOW_SESSION_BINDING_POINT_BACKWARD_FLOW_VECTOR_NV);
+-        BindImageToSession(reinterpret_cast<NvOFImageVk*>(outParams->bwdOutputCostBuffer), VK_OPTICAL_FLOW_SESSION_BINDING_POINT_BACKWARD_COST_NV);
+-        BindImageToSession(reinterpret_cast<NvOFImageVk*>(outParams->globalFlowBuffer), VK_OPTICAL_FLOW_SESSION_BINDING_POINT_GLOBAL_FLOW_NV);
++        BindImageToSession(reinterpret_cast<NvOFImage*>(inParams->inputFrame), VK_OPTICAL_FLOW_SESSION_BINDING_POINT_INPUT_NV);
++        BindImageToSession(reinterpret_cast<NvOFImage*>(inParams->referenceFrame), VK_OPTICAL_FLOW_SESSION_BINDING_POINT_REFERENCE_NV);
++        BindImageToSession(reinterpret_cast<NvOFImage*>(outParams->outputBuffer), VK_OPTICAL_FLOW_SESSION_BINDING_POINT_FLOW_VECTOR_NV);
++        BindImageToSession(reinterpret_cast<NvOFImage*>(outParams->outputCostBuffer), VK_OPTICAL_FLOW_SESSION_BINDING_POINT_COST_NV);
++        BindImageToSession(reinterpret_cast<NvOFImage*>(outParams->bwdOutputBuffer), VK_OPTICAL_FLOW_SESSION_BINDING_POINT_BACKWARD_FLOW_VECTOR_NV);
++        BindImageToSession(reinterpret_cast<NvOFImage*>(outParams->bwdOutputCostBuffer), VK_OPTICAL_FLOW_SESSION_BINDING_POINT_BACKWARD_COST_NV);
++        BindImageToSession(reinterpret_cast<NvOFImage*>(outParams->globalFlowBuffer), VK_OPTICAL_FLOW_SESSION_BINDING_POINT_GLOBAL_FLOW_NV);
+         // Support INPUT_MIPS execute priv data
+         if (((NV_OF_PRIV_DATA*)inParams->hPrivData)->id == NV_OF_EXECUTE_PRIV_DATA_ID_INPUT_MIPS) {
+             NV_OF_EXECUTE_PRIV_DATA_INPUT_MIPS* mipData = ((NV_OF_EXECUTE_PRIV_DATA_INPUT_MIPS*)((NV_OF_PRIV_DATA*)inParams->hPrivData)->data);
+             for (int i = 0; i < 6; i++) {
+                 if (mipData->input[i] && mipData->reference[i]) {
+-                    BindImageToSession(reinterpret_cast<NvOFImageVk*>(mipData->input[i]), VK_OPTICAL_FLOW_SESSION_BINDING_POINT_INPUT_NV);
+-                    BindImageToSession(reinterpret_cast<NvOFImageVk*>(mipData->reference[i]), VK_OPTICAL_FLOW_SESSION_BINDING_POINT_REFERENCE_NV);
++                    BindImageToSession(reinterpret_cast<NvOFImage*>(mipData->input[i]), VK_OPTICAL_FLOW_SESSION_BINDING_POINT_INPUT_NV);
++                    BindImageToSession(reinterpret_cast<NvOFImage*>(mipData->reference[i]), VK_OPTICAL_FLOW_SESSION_BINDING_POINT_REFERENCE_NV);
+                 }
+             }
+         }
+diff --git a/src/nvofapi/nvofapi_entrypoints.cpp b/src/nvofapi/nvofapi_entrypoints.cpp
+deleted file mode 100644
+index ac501c89..00000000
+--- a/src/nvofapi/nvofapi_entrypoints.cpp
++++ /dev/null
+@@ -1,243 +0,0 @@
+-/*
+- * SPDX-FileCopyrightText: Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+- * SPDX-License-Identifier: MIT
+- *
+- * Permission is hereby granted, free of charge, to any person obtaining a
+- * copy of this software and associated documentation files (the "Software"),
+- * to deal in the Software without restriction, including without limitation
+- * the rights to use, copy, modify, merge, publish, distribute, sublicense,
+- * and/or sell copies of the Software, and to permit persons to whom the
+- * Software is furnished to do so, subject to the following conditions:
+- *
+- * The above copyright notice and this permission notice shall be included in
+- * all copies or substantial portions of the Software.
+- *
+- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+- * THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+- * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+- * DEALINGS IN THE SOFTWARE.
+- */
+-
+-#include "nvofapi.h"
+-
+-#include "util/util_env.h"
+-#include "util/util_log.h"
+-#include "util/util_string.h"
+-#include "../version.h"
+-
+-extern "C" {
+-
+-    // Common entrypoints
+-    NV_OF_STATUS NVOFAPI OFSessionInit(NvOFHandle hOf, const NV_OF_INIT_PARAMS* initParams) {
+-        dxvk::log::info("OFSessionInit called");
+-        nvofapi::NvOFInstance* nvOF = reinterpret_cast<nvofapi::NvOFInstance*>(hOf);
+-
+-        if (!nvOF) {
+-            dxvk::log::info(dxvk::str::format("OFSessionInit failed!"));
+-            return NV_OF_ERR_GENERIC;
+-        }
+-
+-        return nvOF->InitSession(initParams);
+-    }
+-
+-    NV_OF_STATUS NVOFAPI OFSessionDestroy(NvOFHandle hOf) {
+-        dxvk::log::info("OFSessionDestroy called");
+-        nvofapi::NvOFInstance* nvOF = reinterpret_cast<nvofapi::NvOFInstance*>(hOf);
+-        if (!nvOF) {
+-            dxvk::log::info(dxvk::str::format("OFSessionDestroy failed!"));
+-            return NV_OF_ERR_GENERIC;
+-        }
+-
+-        delete nvOF;
+-        return NV_OF_SUCCESS;
+-    }
+-
+-    NV_OF_STATUS NVOFAPI OFSessionGetLastError(NvOFHandle hOf, char lastError[], uint32_t* size) {
+-        dxvk::log::info("OFSessionGetLastError called");
+-        dxvk::log::info(dxvk::str::format("OFSessionGetLastError failed!"));
+-        return NV_OF_ERR_GENERIC;
+-    }
+-
+-    NV_OF_STATUS NVOFAPI OFSessionGetCaps(NvOFHandle hOf, NV_OF_CAPS capsParam, uint32_t* capsVal, uint32_t* size) {
+-        dxvk::log::info("OFSessionGetCaps called");
+-        nvofapi::NvOFInstanceVk* nvOF = reinterpret_cast<nvofapi::NvOFInstanceVk*>(hOf);
+-
+-        return nvOF->getCaps(capsParam, capsVal, size);
+-    }
+-
+-    // D3D12 entrypoints
+-    NV_OF_STATUS NVOFAPI CreateOpticalFlowD3D12(ID3D12Device* pD3D12Device, NvOFHandle* hOFInstance) {
+-        dxvk::log::info("CreateOpticalFlowD3D12 called");
+-
+-        nvofapi::NvOFInstanceD3D12* nvOF = nullptr;
+-        try {
+-            nvOF = new nvofapi::NvOFInstanceD3D12(pD3D12Device);
+-        } catch (std::exception e) {
+-            dxvk::log::info(dxvk::str::format("CreateOpticalFlowD3D12 exception, %s", e.what()));
+-        }
+-
+-        if (!nvOF) {
+-            dxvk::log::info(dxvk::str::format("CreateOpticalFlowD3D12 failed allocation"));
+-            return NV_OF_ERR_GENERIC;
+-        }
+-
+-        if (!nvOF->Initialize()) {
+-            dxvk::log::info(dxvk::str::format("CreateOpticalFlowD3D12 failed creation"));
+-            delete nvOF;
+-            return NV_OF_ERR_GENERIC;
+-        }
+-
+-        *hOFInstance = reinterpret_cast<NvOFHandle>(nvOF);
+-        dxvk::log::info(dxvk::str::format("CreateOpticalFlowD3D12 end"));
+-        return NV_OF_SUCCESS;
+-    }
+-
+-    NV_OF_STATUS NVOFAPI GetSurfaceFormatCountD3D12(NvOFHandle hOf, const NV_OF_BUFFER_USAGE bufferUsage, const NV_OF_MODE ofMode, uint32_t* const pCount) {
+-        dxvk::log::info("GetSurfaceFormatCountD3D12 called");
+-        *pCount = 1;
+-        return NV_OF_SUCCESS;
+-    }
+-
+-    NV_OF_STATUS NVOFAPI GetSurfaceFormatD3D12(NvOFHandle hOf, const NV_OF_BUFFER_USAGE bufferUsage, const NV_OF_MODE ofMode, DXGI_FORMAT* const pFormat) {
+-        dxvk::log::info("GetSurfaceFormatD3D12 called");
+-        if (bufferUsage == NV_OF_BUFFER_USAGE_INPUT)
+-            *pFormat = DXGI_FORMAT_R8_UNORM;
+-        else
+-            *pFormat = DXGI_FORMAT_R16G16_SINT;
+-        return NV_OF_SUCCESS;
+-    }
+-
+-    NV_OF_STATUS NVOFAPI RegisterResourceD3D12(NvOFHandle hOf, NV_OF_REGISTER_RESOURCE_PARAMS_D3D12* registerParams) {
+-        dxvk::log::info("RegisterResourceD3D12 called");
+-        nvofapi::NvOFInstanceD3D12* nvOF = reinterpret_cast<nvofapi::NvOFInstanceD3D12*>(hOf);
+-
+-        return nvOF->RegisterBuffer(registerParams);
+-    }
+-
+-    NV_OF_STATUS NVOFAPI UnregisterResourceD3D12(NV_OF_UNREGISTER_RESOURCE_PARAMS_D3D12* registerParams) {
+-        dxvk::log::info("UnregisterResourceD3D12 called");
+-        nvofapi::NvOFImageVk* nvRes = reinterpret_cast<nvofapi::NvOFImageVk*>(registerParams->hOFGpuBuffer);
+-        delete nvRes;
+-        return NV_OF_SUCCESS;
+-    }
+-
+-    NV_OF_STATUS NVOFAPI ExecuteD3D12(NvOFHandle hOf, const NV_OF_EXECUTE_INPUT_PARAMS_D3D12* executeInParams, NV_OF_EXECUTE_OUTPUT_PARAMS_D3D12* executeOutParams) {
+-        dxvk::log::info("ExecuteD3D12 called");
+-        dxvk::log::info(dxvk::str::format("handle: %p", hOf));
+-        nvofapi::NvOFInstanceD3D12* nvOF = reinterpret_cast<nvofapi::NvOFInstanceD3D12*>(hOf);
+-
+-        return nvOF->Execute(executeInParams, executeOutParams);
+-    }
+-
+-    // VK entrypoints
+-    NV_OF_STATUS NVOFAPI CreateOpticalFlowVk(VkInstance vkInstance, VkPhysicalDevice vkPhysicalDevice, VkDevice vkDevice, NvOFHandle* hOFInstance) {
+-        dxvk::log::info("CreateOpticalFlowVk called");
+-        nvofapi::NvOFInstanceVk* nvOF = new nvofapi::NvOFInstanceVk(vkInstance, vkPhysicalDevice, vkDevice);
+-
+-        if (!nvOF) {
+-            dxvk::log::info(dxvk::str::format("CreateOpticalFlowVK failed allocation"));
+-            return NV_OF_ERR_GENERIC;
+-        }
+-
+-        if (!nvOF->Initialize()) {
+-            dxvk::log::info(dxvk::str::format("CreateOpticalFlowVK failed creation"));
+-            delete nvOF;
+-            return NV_OF_ERR_GENERIC;
+-        }
+-
+-        *hOFInstance = reinterpret_cast<NvOFHandle>(nvOF);
+-        return NV_OF_SUCCESS;
+-    }
+-
+-    NV_OF_STATUS NVOFAPI GetSurfaceFormatCountVk(NvOFHandle hOf, const NV_OF_BUFFER_USAGE bufferUsage, const NV_OF_MODE ofMode, uint32_t* const pCount) {
+-        dxvk::log::info("GetSurfaceFormatCountVk called");
+-        dxvk::log::info(dxvk::str::format("GetSurfaceFormatCountVk failed!"));
+-        return NV_OF_ERR_GENERIC;
+-    }
+-
+-    NV_OF_STATUS NVOFAPI GetSurfaceFormatVk(NvOFHandle hOf, const NV_OF_BUFFER_USAGE bufferUsage, const NV_OF_MODE ofMode, VkFormat* const pFormat) {
+-        dxvk::log::info("GetSurfaceFormatVk called");
+-        dxvk::log::info(dxvk::str::format("GetSurfaceFormatVk failed!"));
+-        return NV_OF_ERR_GENERIC;
+-    }
+-
+-    NV_OF_STATUS NVOFAPI RegisterResourceVk(NvOFHandle hOf, NV_OF_REGISTER_RESOURCE_PARAMS_VK* registerParams) {
+-        dxvk::log::info("RegisterResourceVk called");
+-        nvofapi::NvOFInstanceVk* nvOF = reinterpret_cast<nvofapi::NvOFInstanceVk*>(hOf);
+-        return nvOF->RegisterBuffer(registerParams);
+-    }
+-
+-    NV_OF_STATUS NVOFAPI UnregisterResourceVk(NV_OF_UNREGISTER_RESOURCE_PARAMS_VK* registerParams) {
+-        dxvk::log::info("UnregisterResourceVk called");
+-        nvofapi::NvOFImageVk* nvRes = reinterpret_cast<nvofapi::NvOFImageVk*>(registerParams->hOFGpuBuffer);
+-        delete nvRes;
+-        return NV_OF_SUCCESS;
+-    }
+-    NV_OF_STATUS NVOFAPI ExecuteVk(NvOFHandle hOf, const NV_OF_EXECUTE_INPUT_PARAMS_VK* executeInParams, NV_OF_EXECUTE_OUTPUT_PARAMS_VK* executeOutParams) {
+-        nvofapi::NvOFInstanceVk* nvOF = reinterpret_cast<nvofapi::NvOFInstanceVk*>(hOf);
+-
+-        return nvOF->Execute(executeInParams, executeOutParams);
+-    }
+-
+-    // ETBLs
+-    NV_OF_STATUS __cdecl NvOFAPICreateInstanceVk(uint32_t apiVer, NV_OF_VK_API_FUNCTION_LIST* functionList) {
+-        uint32_t apiVerMajor = (apiVer & 0xfffffff0) >> 4;
+-        uint32_t apiVerMinor = (apiVer & 0xf);
+-        constexpr auto n = __func__;
+-
+-        dxvk::log::info(dxvk::str::format("DXVK-NVOFAPI ", DXVK_NVAPI_VERSION, " (", dxvk::env::getExecutableName(), ") VK"));
+-        dxvk::log::info(dxvk::str::format("OFAPI Client Version: ", apiVerMajor, ".", apiVerMinor));
+-
+-        if (apiVerMajor != 5)
+-            return NV_OF_ERR_INVALID_VERSION;
+-
+-        functionList->nvCreateOpticalFlowVk = CreateOpticalFlowVk;
+-        functionList->nvOFInit = OFSessionInit;
+-        functionList->nvOFGetSurfaceFormatCountVk = GetSurfaceFormatCountVk;
+-        functionList->nvOFGetSurfaceFormatVk = GetSurfaceFormatVk;
+-        functionList->nvOFRegisterResourceVk = RegisterResourceVk;
+-        functionList->nvOFUnregisterResourceVk = UnregisterResourceVk;
+-        functionList->nvOFExecuteVk = ExecuteVk;
+-        functionList->nvOFDestroy = OFSessionDestroy;
+-        functionList->nvOFGetLastError = OFSessionGetLastError;
+-        functionList->nvOFGetCaps = OFSessionGetCaps;
+-
+-        return NV_OF_SUCCESS;
+-    }
+-
+-    NV_OF_STATUS __stdcall NvOFAPICreateInstanceD3D12(uint32_t apiVer, NV_OF_D3D12_API_FUNCTION_LIST* functionList) {
+-        uint32_t apiVerMajor = (apiVer & 0xfffffff0) >> 4;
+-        uint32_t apiVerMinor = (apiVer & 0xf);
+-        constexpr auto n = __func__;
+-
+-        dxvk::log::info(dxvk::str::format("DXVK-NVOFAPI ", DXVK_NVAPI_VERSION, " (", dxvk::env::getExecutableName(), ") D3D12"));
+-        dxvk::log::info(dxvk::str::format("OFAPI Client Version: ", apiVerMajor, ".", apiVerMinor));
+-
+-        if (apiVerMajor != 5)
+-            return NV_OF_ERR_INVALID_VERSION;
+-
+-        functionList->nvCreateOpticalFlowD3D12 = CreateOpticalFlowD3D12;
+-        functionList->nvOFInit = OFSessionInit;
+-        functionList->nvOFGetSurfaceFormatCountD3D12 = GetSurfaceFormatCountD3D12;
+-        functionList->nvOFGetSurfaceFormatD3D12 = GetSurfaceFormatD3D12;
+-        functionList->nvOFRegisterResourceD3D12 = RegisterResourceD3D12;
+-        functionList->nvOFUnregisterResourceD3D12 = UnregisterResourceD3D12;
+-        functionList->nvOFExecuteD3D12 = ExecuteD3D12;
+-        functionList->nvOFDestroy = OFSessionDestroy;
+-        functionList->nvOFGetLastError = OFSessionGetLastError;
+-        functionList->nvOFGetCaps = OFSessionGetCaps;
+-
+-        return NV_OF_SUCCESS;
+-    }
+-
+-    NV_OF_STATUS __cdecl NvOFGetMaxSupportedApiVersion(uint32_t *version) {
+-        if (!version)
+-            return NV_OF_ERR_INVALID_PTR;
+-
+-        *version = NV_OF_API_VERSION;
+-        return NV_OF_SUCCESS;
+-    }
+-}
+diff --git a/src/nvofapi/nvofapi_entrypoints.h b/src/nvofapi/nvofapi_entrypoints.h
+new file mode 100644
+index 00000000..7281f629
+--- /dev/null
++++ b/src/nvofapi/nvofapi_entrypoints.h
+@@ -0,0 +1,37 @@
++/*
++ * SPDX-FileCopyrightText: Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
++ * SPDX-License-Identifier: MIT
++ *
++ * Permission is hereby granted, free of charge, to any person obtaining a
++ * copy of this software and associated documentation files (the "Software"),
++ * to deal in the Software without restriction, including without limitation
++ * the rights to use, copy, modify, merge, publish, distribute, sublicense,
++ * and/or sell copies of the Software, and to permit persons to whom the
++ * Software is furnished to do so, subject to the following conditions:
++ *
++ * The above copyright notice and this permission notice shall be included in
++ * all copies or substantial portions of the Software.
++ *
++ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
++ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
++ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
++ * THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
++ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
++ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
++ * DEALINGS IN THE SOFTWARE.
++ */
++
++#pragma once
++
++#include "nvofapi_instance.h"
++
++extern "C" {
++    // Common entrypoints
++    NV_OF_STATUS NVOFAPI OFSessionInit(NvOFHandle hOf, const NV_OF_INIT_PARAMS* initParams);
++
++    NV_OF_STATUS NVOFAPI OFSessionDestroy(NvOFHandle hOf);
++
++    NV_OF_STATUS NVOFAPI OFSessionGetLastError(NvOFHandle hOf, char lastError[], uint32_t* size);
++
++    NV_OF_STATUS NVOFAPI OFSessionGetCaps(NvOFHandle hOf, NV_OF_CAPS capsParam, uint32_t* capsVal, uint32_t* size);
++}
+diff --git a/src/nvofapi/nvofapi_image.cpp b/src/nvofapi/nvofapi_image.cpp
+new file mode 100644
+index 00000000..e99dc2cb
+--- /dev/null
++++ b/src/nvofapi/nvofapi_image.cpp
+@@ -0,0 +1,46 @@
++/*
++ * SPDX-FileCopyrightText: Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
++ * SPDX-License-Identifier: MIT
++ *
++ * Permission is hereby granted, free of charge, to any person obtaining a
++ * copy of this software and associated documentation files (the "Software"),
++ * to deal in the Software without restriction, including without limitation
++ * the rights to use, copy, modify, merge, publish, distribute, sublicense,
++ * and/or sell copies of the Software, and to permit persons to whom the
++ * Software is furnished to do so, subject to the following conditions:
++ *
++ * The above copyright notice and this permission notice shall be included in
++ * all copies or substantial portions of the Software.
++ *
++ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
++ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
++ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
++ * THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
++ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
++ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
++ * DEALINGS IN THE SOFTWARE.
++ */
++
++#include "nvofapi_image.h"
++
++namespace nvofapi {
++    bool NvOFImage::Initialize(PFN_vkCreateImageView fpCreateImageView,
++        PFN_vkDestroyImageView fpDestroyImageView) {
++        m_vkDestroyImageView = fpDestroyImageView;
++        VkOpticalFlowSessionBindingPointNV bindingPoint;
++        VkImageViewCreateInfo viewInfo = {VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO};
++        viewInfo.image = m_image;
++        viewInfo.format = m_format;
++
++        // XXX[ljm] remaining or 1???
++        viewInfo.subresourceRange = {VK_IMAGE_ASPECT_COLOR_BIT, 0, VK_REMAINING_MIP_LEVELS, 0, VK_REMAINING_ARRAY_LAYERS};
++        viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
++        viewInfo.flags = 0;
++
++        auto ret = fpCreateImageView(m_vkDevice, &viewInfo, NULL, &m_imageView);
++        if (ret != VK_SUCCESS) {
++            return false;
++        }
++        return true;
++    }
++}
+diff --git a/src/nvofapi/nvofapi_image.h b/src/nvofapi/nvofapi_image.h
+new file mode 100644
+index 00000000..bc297aa7
+--- /dev/null
++++ b/src/nvofapi/nvofapi_image.h
+@@ -0,0 +1,46 @@
++/*
++ * SPDX-FileCopyrightText: Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
++ * SPDX-License-Identifier: MIT
++ *
++ * Permission is hereby granted, free of charge, to any person obtaining a
++ * copy of this software and associated documentation files (the "Software"),
++ * to deal in the Software without restriction, including without limitation
++ * the rights to use, copy, modify, merge, publish, distribute, sublicense,
++ * and/or sell copies of the Software, and to permit persons to whom the
++ * Software is furnished to do so, subject to the following conditions:
++ *
++ * The above copyright notice and this permission notice shall be included in
++ * all copies or substantial portions of the Software.
++ *
++ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
++ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
++ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
++ * THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
++ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
++ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
++ * DEALINGS IN THE SOFTWARE.
++ */
++
++#include <vulkan/vulkan_core.h>
++
++namespace nvofapi {
++    class NvOFImage {
++      private:
++        VkDevice m_vkDevice;
++        VkImage m_image;
++        VkImageView m_imageView;
++        VkFormat m_format;
++        PFN_vkDestroyImageView m_vkDestroyImageView{};
++
++      public:
++        VkImageView ImageView() { return m_imageView; }
++        NvOFImage(VkDevice device, VkImage image, VkFormat format) : m_vkDevice(device), m_image(image), m_format(format) {
++        }
++        ~NvOFImage() {
++            m_vkDestroyImageView(m_vkDevice, m_imageView, nullptr);
++        }
++
++        bool Initialize(PFN_vkCreateImageView CreateImageView,
++            PFN_vkDestroyImageView DestroyImageView);
++    };
++}
+diff --git a/src/nvofapi/nvofapi_instance.h b/src/nvofapi/nvofapi_instance.h
+new file mode 100644
+index 00000000..f886aee1
+--- /dev/null
++++ b/src/nvofapi/nvofapi_instance.h
+@@ -0,0 +1,82 @@
++/*
++ * SPDX-FileCopyrightText: Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
++ * SPDX-License-Identifier: MIT
++ *
++ * Permission is hereby granted, free of charge, to any person obtaining a
++ * copy of this software and associated documentation files (the "Software"),
++ * to deal in the Software without restriction, including without limitation
++ * the rights to use, copy, modify, merge, publish, distribute, sublicense,
++ * and/or sell copies of the Software, and to permit persons to whom the
++ * Software is furnished to do so, subject to the following conditions:
++ *
++ * The above copyright notice and this permission notice shall be included in
++ * all copies or substantial portions of the Software.
++ *
++ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
++ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
++ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
++ * THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
++ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
++ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
++ * DEALINGS IN THE SOFTWARE.
++ */
++
++#pragma once
++
++#include "vkd3d-proton/vkd3d-proton_interfaces.h"
++#include "../inc/nvofapi/nvOpticalFlowD3D12.h"
++#include "../inc/nvofapi/nvOpticalFlowVulkan.h"
++
++namespace nvofapi {
++    constexpr uint32_t CMDS_IN_FLIGHT = 8;
++    class NvOFInstance;
++    class NvOFImage;
++
++    class NvOFInstance {
++
++      protected:
++        VkInstance m_vkInstance;
++        VkPhysicalDevice m_vkPhysicalDevice;
++        VkDevice m_vkDevice;
++        VkOpticalFlowSessionNV m_vkOfaSession{};
++        PFN_vkGetInstanceProcAddr m_vkGetInstanceProcAddr{};
++        PFN_vkGetDeviceProcAddr m_vkGetDeviceProcAddr{};
++        PFN_vkCreateOpticalFlowSessionNV m_vkCreateOpticalFlowSessionNV{};
++        PFN_vkDestroyOpticalFlowSessionNV m_vkDestroyOpticalFlowSessionNV{};
++        PFN_vkCreateImageView m_vkCreateImageView{};
++        PFN_vkDestroyImageView m_vkDestroyImageView{};
++        PFN_vkBindOpticalFlowSessionImageNV m_vkBindOpticalFlowSessionImageNV{};
++        PFN_vkCmdOpticalFlowExecuteNV m_vkCmdOpticalFlowExecuteNV{};
++
++        PFN_vkGetPhysicalDeviceQueueFamilyProperties m_vkGetPhysicalDeviceQueueFamilyProperties;
++        HMODULE m_library;
++
++        uint32_t GetVkOFAQueue();
++
++      public:
++        VkDevice GetVkDevice() { return m_vkDevice; }
++        VkOpticalFlowSessionNV GetOfaSession() { return m_vkOfaSession; }
++
++        NvOFInstance(VkInstance vkInstance,
++            VkPhysicalDevice vkPhysicalDevice,
++            VkDevice vkDevice) : m_vkInstance(vkInstance),
++                                 m_vkPhysicalDevice(vkPhysicalDevice), m_vkDevice(vkDevice) {
++        }
++
++        NvOFInstance() {};
++        virtual ~NvOFInstance() {
++            m_vkDestroyOpticalFlowSessionNV(m_vkDevice, m_vkOfaSession, nullptr);
++            FreeLibrary(m_library);
++        }
++
++        NV_OF_STATUS getCaps(NV_OF_CAPS param, uint32_t* capsVal, uint32_t* size);
++
++        NV_OF_STATUS InitSession(const NV_OF_INIT_PARAMS* initParams);
++
++        NV_OF_STATUS RegisterBuffer(const NV_OF_REGISTER_RESOURCE_PARAMS_VK* registerParams);
++
++        NV_OF_STATUS BindImageToSession(NvOFImage* image, VkOpticalFlowSessionBindingPointNV bindingPoint);
++
++        NV_OF_STATUS RecordCmdBuf(const NV_OF_EXECUTE_INPUT_PARAMS_VK* inParams, NV_OF_EXECUTE_OUTPUT_PARAMS_VK* outParams, VkCommandBuffer cmdBuf);
++    };
++}
+diff --git a/src/nvofapi_d3d12.cpp b/src/nvofapi_d3d12.cpp
+new file mode 100644
+index 00000000..ec8cfc8a
+--- /dev/null
++++ b/src/nvofapi_d3d12.cpp
+@@ -0,0 +1,123 @@
++/*
++ * SPDX-FileCopyrightText: Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
++ * SPDX-License-Identifier: MIT
++ *
++ * Permission is hereby granted, free of charge, to any person obtaining a
++ * copy of this software and associated documentation files (the "Software"),
++ * to deal in the Software without restriction, including without limitation
++ * the rights to use, copy, modify, merge, publish, distribute, sublicense,
++ * and/or sell copies of the Software, and to permit persons to whom the
++ * Software is furnished to do so, subject to the following conditions:
++ *
++ * The above copyright notice and this permission notice shall be included in
++ * all copies or substantial portions of the Software.
++ *
++ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
++ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
++ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
++ * THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
++ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
++ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
++ * DEALINGS IN THE SOFTWARE.
++ */
++
++#include "nvofapi/nvofapi_entrypoints.h"
++#include "d3d12/nvofapi_d3d12_instance.h"
++
++#include "util/util_env.h"
++#include "util/util_log.h"
++#include "util/util_string.h"
++#include "../version.h"
++
++extern "C" {
++
++    // D3D12 entrypoints
++    NV_OF_STATUS NVOFAPI CreateOpticalFlowD3D12(ID3D12Device* pD3D12Device, NvOFHandle* hOFInstance) {
++        dxvk::log::info("CreateOpticalFlowD3D12 called");
++
++        nvofapi::NvOFInstanceD3D12* nvOF = nullptr;
++        try {
++            nvOF = new nvofapi::NvOFInstanceD3D12(pD3D12Device);
++        } catch (std::exception e) {
++            dxvk::log::info(dxvk::str::format("CreateOpticalFlowD3D12 exception, %s", e.what()));
++        }
++
++        if (!nvOF) {
++            dxvk::log::info(dxvk::str::format("CreateOpticalFlowD3D12 failed allocation"));
++            return NV_OF_ERR_GENERIC;
++        }
++
++        if (!nvOF->Initialize()) {
++            dxvk::log::info(dxvk::str::format("CreateOpticalFlowD3D12 failed creation"));
++            delete nvOF;
++            return NV_OF_ERR_GENERIC;
++        }
++
++        *hOFInstance = reinterpret_cast<NvOFHandle>(nvOF);
++        dxvk::log::info(dxvk::str::format("CreateOpticalFlowD3D12 end"));
++        return NV_OF_SUCCESS;
++    }
++
++    NV_OF_STATUS NVOFAPI GetSurfaceFormatCountD3D12(NvOFHandle hOf, const NV_OF_BUFFER_USAGE bufferUsage, const NV_OF_MODE ofMode, uint32_t* const pCount) {
++        dxvk::log::info("GetSurfaceFormatCountD3D12 called");
++        *pCount = 1;
++        return NV_OF_SUCCESS;
++    }
++
++    NV_OF_STATUS NVOFAPI GetSurfaceFormatD3D12(NvOFHandle hOf, const NV_OF_BUFFER_USAGE bufferUsage, const NV_OF_MODE ofMode, DXGI_FORMAT* const pFormat) {
++        dxvk::log::info("GetSurfaceFormatD3D12 called");
++        if (bufferUsage == NV_OF_BUFFER_USAGE_INPUT)
++            *pFormat = DXGI_FORMAT_R8_UNORM;
++        else
++            *pFormat = DXGI_FORMAT_R16G16_SINT;
++        return NV_OF_SUCCESS;
++    }
++
++    NV_OF_STATUS NVOFAPI RegisterResourceD3D12(NvOFHandle hOf, NV_OF_REGISTER_RESOURCE_PARAMS_D3D12* registerParams) {
++        dxvk::log::info("RegisterResourceD3D12 called");
++        nvofapi::NvOFInstanceD3D12* nvOF = reinterpret_cast<nvofapi::NvOFInstanceD3D12*>(hOf);
++
++        return nvOF->RegisterBuffer(registerParams);
++    }
++
++    NV_OF_STATUS NVOFAPI UnregisterResourceD3D12(NV_OF_UNREGISTER_RESOURCE_PARAMS_D3D12* registerParams) {
++        dxvk::log::info("UnregisterResourceD3D12 called");
++        nvofapi::NvOFImage* nvRes = reinterpret_cast<nvofapi::NvOFImage*>(registerParams->hOFGpuBuffer);
++        delete nvRes;
++        return NV_OF_SUCCESS;
++    }
++
++    NV_OF_STATUS NVOFAPI ExecuteD3D12(NvOFHandle hOf, const NV_OF_EXECUTE_INPUT_PARAMS_D3D12* executeInParams, NV_OF_EXECUTE_OUTPUT_PARAMS_D3D12* executeOutParams) {
++        dxvk::log::info("ExecuteD3D12 called");
++        dxvk::log::info(dxvk::str::format("handle: %p", hOf));
++        nvofapi::NvOFInstanceD3D12* nvOF = reinterpret_cast<nvofapi::NvOFInstanceD3D12*>(hOf);
++
++        return nvOF->Execute(executeInParams, executeOutParams);
++    }
++
++    // ETBLs
++    NV_OF_STATUS __stdcall NvOFAPICreateInstanceD3D12(uint32_t apiVer, NV_OF_D3D12_API_FUNCTION_LIST* functionList) {
++        uint32_t apiVerMajor = (apiVer & 0xfffffff0) >> 4;
++        uint32_t apiVerMinor = (apiVer & 0xf);
++        constexpr auto n = __func__;
++
++        dxvk::log::info(dxvk::str::format("DXVK-NVOFAPI ", DXVK_NVAPI_VERSION, " (", dxvk::env::getExecutableName(), ") D3D12"));
++        dxvk::log::info(dxvk::str::format("OFAPI Client Version: ", apiVerMajor, ".", apiVerMinor));
++
++        if (apiVerMajor != 5)
++            return NV_OF_ERR_INVALID_VERSION;
++
++        functionList->nvCreateOpticalFlowD3D12 = CreateOpticalFlowD3D12;
++        functionList->nvOFInit = OFSessionInit;
++        functionList->nvOFGetSurfaceFormatCountD3D12 = GetSurfaceFormatCountD3D12;
++        functionList->nvOFGetSurfaceFormatD3D12 = GetSurfaceFormatD3D12;
++        functionList->nvOFRegisterResourceD3D12 = RegisterResourceD3D12;
++        functionList->nvOFUnregisterResourceD3D12 = UnregisterResourceD3D12;
++        functionList->nvOFExecuteD3D12 = ExecuteD3D12;
++        functionList->nvOFDestroy = OFSessionDestroy;
++        functionList->nvOFGetLastError = OFSessionGetLastError;
++        functionList->nvOFGetCaps = OFSessionGetCaps;
++
++        return NV_OF_SUCCESS;
++    }
++}
+diff --git a/src/nvofapi_vulkan.cpp b/src/nvofapi_vulkan.cpp
+new file mode 100644
+index 00000000..25f08256
+--- /dev/null
++++ b/src/nvofapi_vulkan.cpp
+@@ -0,0 +1,108 @@
++/*
++ * SPDX-FileCopyrightText: Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
++ * SPDX-License-Identifier: MIT
++ *
++ * Permission is hereby granted, free of charge, to any person obtaining a
++ * copy of this software and associated documentation files (the "Software"),
++ * to deal in the Software without restriction, including without limitation
++ * the rights to use, copy, modify, merge, publish, distribute, sublicense,
++ * and/or sell copies of the Software, and to permit persons to whom the
++ * Software is furnished to do so, subject to the following conditions:
++ *
++ * The above copyright notice and this permission notice shall be included in
++ * all copies or substantial portions of the Software.
++ *
++ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
++ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
++ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
++ * THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
++ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
++ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
++ * DEALINGS IN THE SOFTWARE.
++ */
++
++#include "nvofapi/nvofapi_entrypoints.h"
++#include "vulkan/nvofapi_vulkan_instance.h"
++
++#include "util/util_env.h"
++#include "util/util_log.h"
++#include "util/util_string.h"
++#include "../version.h"
++
++extern "C" {
++    // VK entrypoints
++    NV_OF_STATUS NVOFAPI CreateOpticalFlowVk(VkInstance vkInstance, VkPhysicalDevice vkPhysicalDevice, VkDevice vkDevice, NvOFHandle* hOFInstance) {
++        dxvk::log::info("CreateOpticalFlowVk called");
++        nvofapi::NvOFInstanceVk* nvOF = new nvofapi::NvOFInstanceVk(vkInstance, vkPhysicalDevice, vkDevice);
++
++        if (!nvOF) {
++            dxvk::log::info(dxvk::str::format("CreateOpticalFlowVK failed allocation"));
++            return NV_OF_ERR_GENERIC;
++        }
++
++        if (!nvOF->Initialize()) {
++            dxvk::log::info(dxvk::str::format("CreateOpticalFlowVK failed creation"));
++            delete nvOF;
++            return NV_OF_ERR_GENERIC;
++        }
++
++        *hOFInstance = reinterpret_cast<NvOFHandle>(nvOF);
++        return NV_OF_SUCCESS;
++    }
++
++    NV_OF_STATUS NVOFAPI GetSurfaceFormatCountVk(NvOFHandle hOf, const NV_OF_BUFFER_USAGE bufferUsage, const NV_OF_MODE ofMode, uint32_t* const pCount) {
++        dxvk::log::info("GetSurfaceFormatCountVk called");
++        dxvk::log::info(dxvk::str::format("GetSurfaceFormatCountVk failed!"));
++        return NV_OF_ERR_GENERIC;
++    }
++
++    NV_OF_STATUS NVOFAPI GetSurfaceFormatVk(NvOFHandle hOf, const NV_OF_BUFFER_USAGE bufferUsage, const NV_OF_MODE ofMode, VkFormat* const pFormat) {
++        dxvk::log::info("GetSurfaceFormatVk called");
++        dxvk::log::info(dxvk::str::format("GetSurfaceFormatVk failed!"));
++        return NV_OF_ERR_GENERIC;
++    }
++
++    NV_OF_STATUS NVOFAPI RegisterResourceVk(NvOFHandle hOf, NV_OF_REGISTER_RESOURCE_PARAMS_VK* registerParams) {
++        dxvk::log::info("RegisterResourceVk called");
++        nvofapi::NvOFInstanceVk* nvOF = reinterpret_cast<nvofapi::NvOFInstanceVk*>(hOf);
++        return nvOF->RegisterBuffer(registerParams);
++    }
++
++    NV_OF_STATUS NVOFAPI UnregisterResourceVk(NV_OF_UNREGISTER_RESOURCE_PARAMS_VK* registerParams) {
++        dxvk::log::info("UnregisterResourceVk called");
++        nvofapi::NvOFImage* nvRes = reinterpret_cast<nvofapi::NvOFImage*>(registerParams->hOFGpuBuffer);
++        delete nvRes;
++        return NV_OF_SUCCESS;
++    }
++
++    NV_OF_STATUS NVOFAPI ExecuteVk(NvOFHandle hOf, const NV_OF_EXECUTE_INPUT_PARAMS_VK* executeInParams, NV_OF_EXECUTE_OUTPUT_PARAMS_VK* executeOutParams) {
++        nvofapi::NvOFInstanceVk* nvOF = reinterpret_cast<nvofapi::NvOFInstanceVk*>(hOf);
++
++        return nvOF->Execute(executeInParams, executeOutParams);
++    }
++
++    NV_OF_STATUS __cdecl NvOFAPICreateInstanceVk(uint32_t apiVer, NV_OF_VK_API_FUNCTION_LIST* functionList) {
++        uint32_t apiVerMajor = (apiVer & 0xfffffff0) >> 4;
++        uint32_t apiVerMinor = (apiVer & 0xf);
++        constexpr auto n = __func__;
++
++        dxvk::log::info(dxvk::str::format("DXVK-NVOFAPI ", DXVK_NVAPI_VERSION, " (", dxvk::env::getExecutableName(), ") VK"));
++        dxvk::log::info(dxvk::str::format("OFAPI Client Version: ", apiVerMajor, ".", apiVerMinor));
++
++        if (apiVerMajor != 5)
++            return NV_OF_ERR_INVALID_VERSION;
++
++        functionList->nvCreateOpticalFlowVk = CreateOpticalFlowVk;
++        functionList->nvOFInit = OFSessionInit;
++        functionList->nvOFGetSurfaceFormatCountVk = GetSurfaceFormatCountVk;
++        functionList->nvOFGetSurfaceFormatVk = GetSurfaceFormatVk;
++        functionList->nvOFRegisterResourceVk = RegisterResourceVk;
++        functionList->nvOFUnregisterResourceVk = UnregisterResourceVk;
++        functionList->nvOFExecuteVk = ExecuteVk;
++        functionList->nvOFDestroy = OFSessionDestroy;
++        functionList->nvOFGetLastError = OFSessionGetLastError;
++        functionList->nvOFGetCaps = OFSessionGetCaps;
++
++        return NV_OF_SUCCESS;
++    }
++}
+diff --git a/src/nvofapi/nvofapi_vulkan.cpp b/src/vulkan/nvofapi_vulkan_instance.cpp
+similarity index 89%
+rename from src/nvofapi/nvofapi_vulkan.cpp
+rename to src/vulkan/nvofapi_vulkan_instance.cpp
+index 308ccad4..b1dcd93d 100644
+--- a/src/nvofapi/nvofapi_vulkan.cpp
++++ b/src/vulkan/nvofapi_vulkan_instance.cpp
+@@ -26,7 +26,7 @@
+ 
+ #include "../inc/nvofapi/nvOpticalFlowVulkan.h"
+ 
+-#include "nvofapi.h"
++#include "vulkan/nvofapi_vulkan_instance.h"
+ 
+ namespace nvofapi {
+ 
+@@ -84,26 +84,6 @@ namespace nvofapi {
+         return true;
+     }
+ 
+-    bool NvOFImageVk::Initialize(PFN_vkCreateImageView fpCreateImageView,
+-        PFN_vkDestroyImageView fpDestroyImageView) {
+-        m_vkDestroyImageView = fpDestroyImageView;
+-        VkOpticalFlowSessionBindingPointNV bindingPoint;
+-        VkImageViewCreateInfo viewInfo = {VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO};
+-        viewInfo.image = m_image;
+-        viewInfo.format = m_format;
+-
+-        // XXX[ljm] remaining or 1???
+-        viewInfo.subresourceRange = {VK_IMAGE_ASPECT_COLOR_BIT, 0, VK_REMAINING_MIP_LEVELS, 0, VK_REMAINING_ARRAY_LAYERS};
+-        viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+-        viewInfo.flags = 0;
+-
+-        auto ret = fpCreateImageView(m_ofInstance->GetVkDevice(), &viewInfo, NULL, &m_imageView);
+-        if (ret != VK_SUCCESS) {
+-            return false;
+-        }
+-        return true;
+-    }
+-
+     NV_OF_STATUS NvOFInstanceVk::Execute(const NV_OF_EXECUTE_INPUT_PARAMS_VK* inParams, NV_OF_EXECUTE_OUTPUT_PARAMS_VK* outParams) {
+         dxvk::log::info(
+             dxvk::str::format("OFExecuteVK params:",
+diff --git a/src/vulkan/nvofapi_vulkan_instance.h b/src/vulkan/nvofapi_vulkan_instance.h
+new file mode 100644
+index 00000000..dd4ba616
+--- /dev/null
++++ b/src/vulkan/nvofapi_vulkan_instance.h
+@@ -0,0 +1,60 @@
++/*
++ * SPDX-FileCopyrightText: Copyright (c) 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
++ * SPDX-License-Identifier: MIT
++ *
++ * Permission is hereby granted, free of charge, to any person obtaining a
++ * copy of this software and associated documentation files (the "Software"),
++ * to deal in the Software without restriction, including without limitation
++ * the rights to use, copy, modify, merge, publish, distribute, sublicense,
++ * and/or sell copies of the Software, and to permit persons to whom the
++ * Software is furnished to do so, subject to the following conditions:
++ *
++ * The above copyright notice and this permission notice shall be included in
++ * all copies or substantial portions of the Software.
++ *
++ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
++ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
++ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
++ * THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
++ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
++ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
++ * DEALINGS IN THE SOFTWARE.
++ */
++
++#pragma once
++
++#include "nvofapi/nvofapi_instance.h"
++
++namespace nvofapi {
++    class NvOFInstanceVk : public NvOFInstance {
++      public:
++        NvOFInstanceVk(VkInstance vkInstance, VkPhysicalDevice vkPhysicalDevice, VkDevice vkDevice) : NvOFInstance(vkInstance, vkPhysicalDevice, vkDevice) {
++        }
++        virtual ~NvOFInstanceVk() {
++            // free cmdbuffers
++            m_vkFreeCommandBuffers(m_vkDevice, m_commandPool, CMDS_IN_FLIGHT, m_commandBuffers);
++            m_vkDestroyCommandPool(m_vkDevice, m_commandPool, nullptr);
++        }
++        bool Initialize();
++
++        NV_OF_STATUS Execute(const NV_OF_EXECUTE_INPUT_PARAMS_VK* inParams, NV_OF_EXECUTE_OUTPUT_PARAMS_VK* outParams);
++
++      private:
++        VkQueue m_queue;
++        VkCommandPool m_commandPool;
++        PFN_vkCreateCommandPool m_vkCreateCommandPool;
++        PFN_vkDestroyCommandPool m_vkDestroyCommandPool;
++        VkCommandBuffer m_commandBuffers[CMDS_IN_FLIGHT];
++
++        PFN_vkAllocateCommandBuffers m_vkAllocateCommandBuffers;
++        PFN_vkFreeCommandBuffers m_vkFreeCommandBuffers;
++
++        uint32_t m_cmdBufIndex = 0;
++        PFN_vkResetCommandBuffer m_vkResetCommandBuffer;
++        PFN_vkBeginCommandBuffer m_vkBeginCommandBuffer;
++        PFN_vkEndCommandBuffer m_vkEndCommandBuffer;
++
++        PFN_vkGetDeviceQueue m_vkGetDeviceQueue;
++        PFN_vkQueueSubmit2 m_vkQueueSubmit2{};
++    };
++}
+
+From f862c17492a99eb6e5abb0bc19881bed560bc22a Mon Sep 17 00:00:00 2001
+From: Liam Middlebrook <lmiddlebrook@nvidia.com>
+Date: Tue, 29 Oct 2024 22:08:52 -0700
+Subject: [PATCH] util/statuscode: Add NvOFAPI functions
+
+---
+ src/util/util_statuscode.h | 184 +++++++++++++++++++++++++++++++++++++
+ 1 file changed, 184 insertions(+)
+
+diff --git a/src/util/util_statuscode.h b/src/util/util_statuscode.h
+index 5fd1675c..6de378d0 100644
+--- a/src/util/util_statuscode.h
++++ b/src/util/util_statuscode.h
+@@ -1,6 +1,7 @@
+ #pragma once
+ 
+ #include "../nvapi_private.h"
++#include "../inc/nvofapi/nvOpticalFlowCommon.h"
+ #include "util_string.h"
+ #include "util_log.h"
+ 
+@@ -151,4 +152,187 @@ namespace dxvk {
+         log::info(str::format("<-", logMessage, ": Insufficient Buffer"));
+         return NVAPI_INSUFFICIENT_BUFFER;
+     }
++
++    inline NV_OF_STATUS Success() {
++        return NV_OF_SUCCESS;
++    }
++
++    inline NV_OF_STATUS Success(const std::string& logMessage) {
++        log::info(str::format("<-", logMessage, ": Success"));
++        return NV_OF_SUCCESS;
++    }
++
++    inline NV_OF_STATUS Success(const std::string& logMessage, bool& alreadyLogged) {
++        if (log::tracing() || !std::exchange(alreadyLogged, true))
++            log::info(str::format("<-", logMessage, ": Success"));
++
++        return NV_OF_SUCCESS;
++    }
++
++    inline NV_OF_STATUS OFNotAvailable() {
++        return NV_OF_ERR_OF_NOT_AVAILABLE;
++    }
++
++    inline NV_OF_STATUS OFNotAvailable(const std::string& logMessage) {
++        log::info(str::format("<-", logMessage, ": OpticalFlow Not Available"));
++        return NV_OF_ERR_OF_NOT_AVAILABLE;
++    }
++
++    inline NV_OF_STATUS OFNotAvailable(const std::string& logMessage, bool& alreadyLogged) {
++        if (log::tracing() || !std::exchange(alreadyLogged, true))
++            log::info(str::format("<-", logMessage, ": OpticalFlow Not Available"));
++
++        return NV_OF_ERR_OF_NOT_AVAILABLE;
++    }
++
++    inline NV_OF_STATUS UnsupportedDevice() {
++        return NV_OF_ERR_UNSUPPORTED_DEVICE;
++    }
++
++    inline NV_OF_STATUS UnsupportedDevice(const std::string& logMessage) {
++        log::info(str::format("<-", logMessage, ": Unsupported Device"));
++        return NV_OF_ERR_UNSUPPORTED_DEVICE;
++    }
++
++    inline NV_OF_STATUS UnsupportedDevice(const std::string& logMessage, bool& alreadyLogged) {
++        if (log::tracing() || !std::exchange(alreadyLogged, true))
++            log::info(str::format("<-", logMessage, ": Unsupported Device"));
++
++        return NV_OF_ERR_UNSUPPORTED_DEVICE;
++    }
++
++    inline NV_OF_STATUS DeviceDoesNotExist() {
++        return NV_OF_ERR_DEVICE_DOES_NOT_EXIST;
++    }
++
++    inline NV_OF_STATUS DeviceDoesNotExist(const std::string& logMessage) {
++        log::info(str::format("<-", logMessage, ": Device Does Not Exist"));
++        return NV_OF_ERR_DEVICE_DOES_NOT_EXIST;
++    }
++
++    inline NV_OF_STATUS DeviceDoesNotExist(const std::string& logMessage, bool& alreadyLogged) {
++        if (log::tracing() || !std::exchange(alreadyLogged, true))
++            log::info(str::format("<-", logMessage, ": Device Does Not Exist"));
++        return NV_OF_ERR_DEVICE_DOES_NOT_EXIST;
++    }
++
++    inline NV_OF_STATUS InvalidPtr() {
++        return NV_OF_ERR_INVALID_PTR;
++    }
++
++    inline NV_OF_STATUS InvalidPtr(const std::string& logMessage) {
++        log::info(str::format("<-", logMessage, ": Invalid Pointer"));
++        return NV_OF_ERR_INVALID_PTR;
++    }
++
++    inline NV_OF_STATUS InvalidPtr(const std::string& logMessage, bool& alreadyLogged) {
++        if (log::tracing() || !std::exchange(alreadyLogged, true))
++            log::info(str::format("<-", logMessage, ": Invalid Pointer"));
++        return NV_OF_ERR_INVALID_PTR;
++    }
++
++    inline NV_OF_STATUS InvalidParam() {
++        return NV_OF_ERR_INVALID_PARAM;
++    }
++
++    inline NV_OF_STATUS InvalidParam(const std::string& logMessage) {
++        log::info(str::format("<-", logMessage, ": Invalid Parameter"));
++        return NV_OF_ERR_INVALID_PARAM;
++    }
++
++    inline NV_OF_STATUS InvalidParam(const std::string& logMessage, bool& alreadyLogged) {
++        if (log::tracing() || !std::exchange(alreadyLogged, true))
++            log::info(str::format("<-", logMessage, ": Invalid Parameter"));
++        return NV_OF_ERR_INVALID_PARAM;
++    }
++
++    inline NV_OF_STATUS InvalidCall() {
++        return NV_OF_ERR_INVALID_CALL;
++    }
++
++    inline NV_OF_STATUS InvalidCall(const std::string& logMessage) {
++        log::info(str::format("<-", logMessage, ": Invalid Call"));
++        return NV_OF_ERR_INVALID_CALL;
++    }
++
++    inline NV_OF_STATUS InvalidCall(const std::string& logMessage, bool& alreadyLogged) {
++        if (log::tracing() || !std::exchange(alreadyLogged, true))
++            log::info(str::format("<-", logMessage, ": Invalid Call"));
++        return NV_OF_ERR_INVALID_CALL;
++    }
++
++    inline NV_OF_STATUS InvalidVersion() {
++        return NV_OF_ERR_INVALID_VERSION;
++    }
++
++    inline NV_OF_STATUS InvalidVersion(const std::string& logMessage) {
++        log::info(str::format("<-", logMessage, ": Invalid Version"));
++        return NV_OF_ERR_INVALID_VERSION;
++    }
++
++    inline NV_OF_STATUS InvalidVersion(const std::string& logMessage, bool& alreadyLogged) {
++        if (log::tracing() || !std::exchange(alreadyLogged, true))
++            log::info(str::format("<-", logMessage, ": Invalid Version"));
++        return NV_OF_ERR_INVALID_VERSION;
++    }
++
++    inline NV_OF_STATUS OutOfMemory() {
++        return NV_OF_ERR_OUT_OF_MEMORY;
++    }
++
++    inline NV_OF_STATUS OutOfMemory(const std::string& logMessage) {
++        log::info(str::format("<-", logMessage, ": Out of Memory"));
++        return NV_OF_ERR_OUT_OF_MEMORY;
++    }
++
++    inline NV_OF_STATUS OutOfMemory(const std::string& logMessage, bool& alreadyLogged) {
++        if (log::tracing() || !std::exchange(alreadyLogged, true))
++            log::info(str::format("<-", logMessage, ": Out of Memory"));
++        return NV_OF_ERR_OUT_OF_MEMORY;
++    }
++
++    inline NV_OF_STATUS NotInitialized() {
++        return NV_OF_ERR_NOT_INITIALIZED;
++    }
++
++    inline NV_OF_STATUS NotInitialized(const std::string& logMessage) {
++        log::info(str::format("<-", logMessage, ": Not Initialized"));
++        return NV_OF_ERR_NOT_INITIALIZED;
++    }
++
++    inline NV_OF_STATUS NotInitialized(const std::string& logMessage, bool& alreadyLogged) {
++        if (log::tracing() || !std::exchange(alreadyLogged, true))
++            log::info(str::format("<-", logMessage, ": Not Initialized"));
++        return NV_OF_ERR_NOT_INITIALIZED;
++    }
++
++    inline NV_OF_STATUS UnsupportedFeature() {
++        return NV_OF_ERR_UNSUPPORTED_FEATURE;
++    }
++
++    inline NV_OF_STATUS UnsupportedFeature(const std::string& logMessage) {
++        log::info(str::format("<-", logMessage, ": Unsupported Feature"));
++        return NV_OF_ERR_UNSUPPORTED_FEATURE;
++    }
++
++    inline NV_OF_STATUS UnsupportedFeature(const std::string& logMessage, bool& alreadyLogged) {
++        if (log::tracing() || !std::exchange(alreadyLogged, true))
++            log::info(str::format("<-", logMessage, ": Unsupported Feature"));
++        return NV_OF_ERR_UNSUPPORTED_FEATURE;
++    }
++
++    inline NV_OF_STATUS GenericError() {
++        return NV_OF_ERR_GENERIC;
++    }
++
++    inline NV_OF_STATUS GenericError(const std::string& logMessage) {
++        log::info(str::format("<-", logMessage, ": Generic Error"));
++        return NV_OF_ERR_GENERIC;
++    }
++
++    inline NV_OF_STATUS GenericError(const std::string& logMessage, bool& alreadyLogged) {
++        if (log::tracing() || !std::exchange(alreadyLogged, true))
++            log::info(str::format("<-", logMessage, ": Generic Error"));
++        return NV_OF_ERR_GENERIC;
++    }
+ }
+
+From 29f2f98629e16376888221a687476a86a8110bf2 Mon Sep 17 00:00:00 2001
+From: Liam Middlebrook <lmiddlebrook@nvidia.com>
+Date: Tue, 29 Oct 2024 22:28:49 -0700
+Subject: [PATCH] nvofapi: Use statuscode util and improve logging
+
+Additionally, fixup some stray warnings in affected files.
+---
+ src/d3d12/nvofapi_d3d12_instance.cpp   | 14 ++---
+ src/d3d12/nvofapi_d3d12_instance.h     |  6 +-
+ src/nvofapi.cpp                        | 49 ++++++++++++-----
+ src/nvofapi/nvofapi_common.cpp         | 74 ++++++++++++++-----------
+ src/nvofapi/nvofapi_image.cpp          |  4 +-
+ src/nvofapi/nvofapi_instance.h         |  4 +-
+ src/nvofapi_d3d12.cpp                  | 76 ++++++++++++++++++--------
+ src/nvofapi_vulkan.cpp                 | 72 +++++++++++++++++-------
+ src/util/util_statuscode.h             | 10 ++--
+ src/vulkan/nvofapi_vulkan_instance.cpp | 25 +++++----
+ src/vulkan/nvofapi_vulkan_instance.h   |  2 +-
+ 11 files changed, 213 insertions(+), 123 deletions(-)
+
+diff --git a/src/d3d12/nvofapi_d3d12_instance.cpp b/src/d3d12/nvofapi_d3d12_instance.cpp
+index 4e638c9c..d811e73a 100644
+--- a/src/d3d12/nvofapi_d3d12_instance.cpp
++++ b/src/d3d12/nvofapi_d3d12_instance.cpp
+@@ -68,7 +68,7 @@ namespace nvofapi {
+             return false;
+         }
+ 
+-        m_vkGetInstanceProcAddr = (PFN_vkGetInstanceProcAddr)GetProcAddress(m_library, "vkGetInstanceProcAddr");
++        m_vkGetInstanceProcAddr = (PFN_vkGetInstanceProcAddr) reinterpret_cast<void*>(GetProcAddress(m_library, "vkGetInstanceProcAddr"));
+         m_vkGetDeviceProcAddr = (PFN_vkGetDeviceProcAddr)m_vkGetInstanceProcAddr(m_vkInstance, "vkGetDeviceProcAddr");
+         m_vkGetPhysicalDeviceQueueFamilyProperties = (PFN_vkGetPhysicalDeviceQueueFamilyProperties)m_vkGetInstanceProcAddr(m_vkInstance, "vkGetPhysicalDeviceQueueFamilyProperties");
+ 
+@@ -94,7 +94,7 @@ namespace nvofapi {
+             != S_OK) {
+             return false;
+         }
+-        for (int i = 0; i < CMDS_IN_FLIGHT; i++) {
++        for (uint32_t i = 0; i < CMDS_IN_FLIGHT; i++) {
+             if (m_d3ddevice->CreateCommandList1(0, D3D12_COMMAND_LIST_TYPE_DIRECT, (D3D12_COMMAND_LIST_FLAGS)0, IID_PPV_ARGS(&m_cmdList[i]))
+                 != S_OK) {
+                 return false;
+@@ -103,7 +103,7 @@ namespace nvofapi {
+         return true;
+     }
+ 
+-    NV_OF_STATUS NvOFInstanceD3D12::RegisterBuffer(const NV_OF_REGISTER_RESOURCE_PARAMS_D3D12* registerParams) {
++    void NvOFInstanceD3D12::RegisterBuffer(const NV_OF_REGISTER_RESOURCE_PARAMS_D3D12* registerParams) {
+         NV_OF_REGISTER_RESOURCE_PARAMS_VK vkParams{};
+         dxvk::log::info(
+             dxvk::str::format("RegisterBuffer DX: resource: ",
+@@ -124,10 +124,10 @@ namespace nvofapi {
+         assert(registerParams->inputFencePoint.value == 0);
+         assert(registerParams->outputFencePoint.fence == nullptr);
+         assert(registerParams->outputFencePoint.value == 0);
+-        return ((NvOFInstance*)this)->RegisterBuffer(&vkParams);
++        ((NvOFInstance*)this)->RegisterBuffer(&vkParams);
+     }
+ 
+-    NV_OF_STATUS NvOFInstanceD3D12::Execute(const NV_OF_EXECUTE_INPUT_PARAMS_D3D12* inParams, NV_OF_EXECUTE_OUTPUT_PARAMS_D3D12* outParams) {
++    void NvOFInstanceD3D12::Execute(const NV_OF_EXECUTE_INPUT_PARAMS_D3D12* inParams, NV_OF_EXECUTE_OUTPUT_PARAMS_D3D12* outParams) {
+         // Convert the D3D12 parameters to VK parameters
+         NV_OF_EXECUTE_INPUT_PARAMS_VK vkInputParams{};
+         NV_OF_EXECUTE_OUTPUT_PARAMS_VK vkOutputParams{};
+@@ -152,7 +152,7 @@ namespace nvofapi {
+         // happens using D3D12.
+         m_cmdList[m_cmdListIndex]->Reset(m_cmdAllocator, nullptr);
+ 
+-        for (int i = 0; i < inParams->numFencePoints; i++) {
++        for (uint32_t i = 0; i < inParams->numFencePoints; i++) {
+             m_commandQueue->Wait(inParams->fencePoint[i].fence, inParams->fencePoint[i].value);
+         }
+ 
+@@ -171,8 +171,6 @@ namespace nvofapi {
+         m_cmdListIndex++;
+         if (m_cmdListIndex >= CMDS_IN_FLIGHT)
+             m_cmdListIndex = 0;
+-
+-        return NV_OF_SUCCESS;
+     }
+ 
+ }
+diff --git a/src/d3d12/nvofapi_d3d12_instance.h b/src/d3d12/nvofapi_d3d12_instance.h
+index 7b7ccdc5..aa7ca243 100644
+--- a/src/d3d12/nvofapi_d3d12_instance.h
++++ b/src/d3d12/nvofapi_d3d12_instance.h
+@@ -42,7 +42,7 @@ namespace nvofapi {
+         bool Initialize();
+         NvOFInstanceD3D12(ID3D12Device* pD3D12Device);
+         virtual ~NvOFInstanceD3D12() {
+-            for (int i = 0; i < CMDS_IN_FLIGHT; i++) {
++            for (uint32_t i = 0; i < CMDS_IN_FLIGHT; i++) {
+                 if (m_cmdList[i])
+                     m_cmdList[i]->Release();
+             }
+@@ -62,8 +62,8 @@ namespace nvofapi {
+                 m_device->Release();
+         }
+ 
+-        NV_OF_STATUS RegisterBuffer(const NV_OF_REGISTER_RESOURCE_PARAMS_D3D12* registerParams);
++        void RegisterBuffer(const NV_OF_REGISTER_RESOURCE_PARAMS_D3D12* registerParams);
+ 
+-        NV_OF_STATUS Execute(const NV_OF_EXECUTE_INPUT_PARAMS_D3D12* inParams, NV_OF_EXECUTE_OUTPUT_PARAMS_D3D12* outParams);
++        void Execute(const NV_OF_EXECUTE_INPUT_PARAMS_D3D12* inParams, NV_OF_EXECUTE_OUTPUT_PARAMS_D3D12* outParams);
+     };
+ }
+diff --git a/src/nvofapi.cpp b/src/nvofapi.cpp
+index 016f02ab..6096c256 100644
+--- a/src/nvofapi.cpp
++++ b/src/nvofapi.cpp
+@@ -26,52 +26,73 @@
+ #include "util/util_env.h"
+ #include "util/util_log.h"
+ #include "util/util_string.h"
++#include "util/util_statuscode.h"
+ #include "../version.h"
+ 
++using namespace dxvk;
++
+ extern "C" {
+     // Common entrypoints
+     NV_OF_STATUS NVOFAPI OFSessionInit(NvOFHandle hOf, const NV_OF_INIT_PARAMS* initParams) {
+-        dxvk::log::info("OFSessionInit called");
++        constexpr auto n = __func__;
++
++        if (log::tracing())
++            log::trace(n, log::fmt::hnd(hOf), log::fmt::ptr(initParams));
++
+         nvofapi::NvOFInstance* nvOF = reinterpret_cast<nvofapi::NvOFInstance*>(hOf);
+ 
+         if (!nvOF) {
+-            dxvk::log::info(dxvk::str::format("OFSessionInit failed!"));
+-            return NV_OF_ERR_GENERIC;
++            return ErrorGeneric(n);
+         }
+ 
+         return nvOF->InitSession(initParams);
+     }
+ 
+     NV_OF_STATUS NVOFAPI OFSessionDestroy(NvOFHandle hOf) {
+-        dxvk::log::info("OFSessionDestroy called");
++        constexpr auto n = __func__;
++
++        if (log::tracing())
++            log::trace(n, log::fmt::hnd(hOf));
++
+         nvofapi::NvOFInstance* nvOF = reinterpret_cast<nvofapi::NvOFInstance*>(hOf);
+         if (!nvOF) {
+-            dxvk::log::info(dxvk::str::format("OFSessionDestroy failed!"));
+-            return NV_OF_ERR_GENERIC;
++            return ErrorGeneric(n);
+         }
+ 
+         delete nvOF;
+-        return NV_OF_SUCCESS;
++        return Success(n);
+     }
+ 
+     NV_OF_STATUS NVOFAPI OFSessionGetLastError(NvOFHandle hOf, char lastError[], uint32_t* size) {
+-        dxvk::log::info("OFSessionGetLastError called");
+-        dxvk::log::info(dxvk::str::format("OFSessionGetLastError failed!"));
+-        return NV_OF_ERR_GENERIC;
++        constexpr auto n = __func__;
++
++        if (log::tracing())
++            log::trace(n, log::fmt::hnd(hOf), log::fmt::ptr(lastError), log::fmt::ptr(size));
++
++        return ErrorGeneric(n);
+     }
+ 
+     NV_OF_STATUS NVOFAPI OFSessionGetCaps(NvOFHandle hOf, NV_OF_CAPS capsParam, uint32_t* capsVal, uint32_t* size) {
+-        dxvk::log::info("OFSessionGetCaps called");
++        constexpr auto n = __func__;
++
++        if (log::tracing())
++            log::trace(n, log::fmt::hnd(hOf), capsParam, log::fmt::ptr(capsVal), log::fmt::ptr(size));
++
+         nvofapi::NvOFInstance* nvOF = reinterpret_cast<nvofapi::NvOFInstance*>(hOf);
+ 
+         return nvOF->getCaps(capsParam, capsVal, size);
+     }
+ 
+-    NV_OF_STATUS __cdecl NvOFGetMaxSupportedApiVersion(uint32_t* version) {
++    NV_OF_STATUS NVOFAPI NvOFGetMaxSupportedApiVersion(uint32_t* version) {
++        constexpr auto n = __func__;
++
++        if (log::tracing())
++            log::trace(n, log::fmt::ptr(version));
++
+         if (!version)
+-            return NV_OF_ERR_INVALID_PTR;
++            return InvalidPtr(n);
+ 
+         *version = NV_OF_API_VERSION;
+-        return NV_OF_SUCCESS;
++        return Success(n);
+     }
+ }
+diff --git a/src/nvofapi/nvofapi_common.cpp b/src/nvofapi/nvofapi_common.cpp
+index 1a298b7a..c483aec7 100644
+--- a/src/nvofapi/nvofapi_common.cpp
++++ b/src/nvofapi/nvofapi_common.cpp
+@@ -23,12 +23,14 @@
+ 
+ #include "util/util_log.h"
+ #include "util/util_string.h"
++#include "util/util_statuscode.h"
+ 
+ #include "../inc/nvofapi/nvOpticalFlowVulkan.h"
+ 
+ #include "nvofapi_image.h"
+ #include "nvofapi_instance.h"
+ 
++using namespace dxvk;
+ namespace nvofapi {
+ 
+     typedef struct NV_OF_PRIV_DATA {
+@@ -51,7 +53,7 @@ namespace nvofapi {
+         VkQueueFamilyProperties* queueFamProps = (VkQueueFamilyProperties*)calloc(sizeof(VkQueueFamilyProperties), count);
+         m_vkGetPhysicalDeviceQueueFamilyProperties(m_vkPhysicalDevice, &count, queueFamProps);
+ 
+-        for (int i = 0; i < count; i++) {
++        for (uint32_t i = 0; i < count; i++) {
+             if (queueFamProps[i].queueFlags & VK_QUEUE_OPTICAL_FLOW_BIT_NV) {
+                 free(queueFamProps);
+                 return i;
+@@ -62,23 +64,26 @@ namespace nvofapi {
+     }
+ 
+     NV_OF_STATUS NvOFInstance::InitSession(const NV_OF_INIT_PARAMS* initParams) {
+-        dxvk::log::info(
+-            dxvk::str::format("OFSessionInit params:",
+-                " width: ", initParams->width,
+-                " height: ", initParams->height,
+-                " outGrid: ", initParams->outGridSize,
+-                " hintGrid: ", initParams->hintGridSize,
+-                " mode: ", initParams->mode,
+-                " perfLevel: ", initParams->perfLevel,
+-                " enableExternalHints: ", initParams->enableExternalHints,
+-                " enableOutputCost: ", initParams->enableOutputCost,
+-                " hPrivData: ", initParams->hPrivData,
+-                " enableRoi: ", initParams->enableRoi,
+-                " predDirection: ", initParams->predDirection,
+-                " enableGlobalFlow: ", initParams->enableGlobalFlow,
+-                " inputBufferFormat: ", initParams->inputBufferFormat));
+-
+-        VkOpticalFlowSessionCreateInfoNV createInfo = {VK_STRUCTURE_TYPE_OPTICAL_FLOW_SESSION_CREATE_INFO_NV};
++        constexpr auto n = __func__;
++
++        if (log::tracing())
++            log::trace(n,
++                initParams->width,
++                initParams->height,
++                initParams->outGridSize,
++                initParams->hintGridSize,
++                initParams->mode,
++                initParams->perfLevel,
++                initParams->enableExternalHints,
++                initParams->enableOutputCost,
++                log::fmt::hnd(initParams->hPrivData),
++                initParams->enableRoi,
++                initParams->predDirection,
++                initParams->enableGlobalFlow,
++                initParams->inputBufferFormat);
++
++        VkOpticalFlowSessionCreateInfoNV createInfo{};
++        createInfo.sType = VK_STRUCTURE_TYPE_OPTICAL_FLOW_SESSION_CREATE_INFO_NV;
+         createInfo.width = initParams->width;
+         createInfo.height = initParams->height;
+         createInfo.outputGridSize = VK_OPTICAL_FLOW_GRID_SIZE_4X4_BIT_NV;
+@@ -108,10 +113,14 @@ namespace nvofapi {
+             case NV_OF_BUFFER_FORMAT_ABGR8:
+                 createInfo.imageFormat = VK_FORMAT_B8G8R8A8_UNORM;
+                 break;
++            default:
++                createInfo.imageFormat = VK_FORMAT_UNDEFINED;
++                break;
+         }
+ 
+         // Need to get the size/id for the private data to pass it along to VK...
+-        VkOpticalFlowSessionCreatePrivateDataInfoNV privData = {VK_STRUCTURE_TYPE_OPTICAL_FLOW_SESSION_CREATE_PRIVATE_DATA_INFO_NV};
++        VkOpticalFlowSessionCreatePrivateDataInfoNV privData{};
++        privData.sType = VK_STRUCTURE_TYPE_OPTICAL_FLOW_SESSION_CREATE_PRIVATE_DATA_INFO_NV;
+         privData.size = ((NV_OF_PRIV_DATA*)initParams->hPrivData)->size;
+         privData.id = ((NV_OF_PRIV_DATA*)initParams->hPrivData)->id;
+         privData.pPrivateData = ((NV_OF_PRIV_DATA*)initParams->hPrivData)->data;
+@@ -121,17 +130,17 @@ namespace nvofapi {
+         auto ret = m_vkCreateOpticalFlowSessionNV(m_vkDevice, &createInfo, NULL, &m_vkOfaSession);
+ 
+         if (ret == VK_SUCCESS) {
+-            return NV_OF_SUCCESS;
++            return Success();
+         }
+ 
+-        return NV_OF_ERR_GENERIC;
++        return ErrorGeneric();
+     }
+ 
+     NV_OF_STATUS NvOFInstance::BindImageToSession(NvOFImage* image, VkOpticalFlowSessionBindingPointNV bindingPoint) {
+         VkImageLayout layout = VK_IMAGE_LAYOUT_GENERAL;
+ 
+         if (!image)
+-            return NV_OF_ERR_GENERIC;
++            return ErrorGeneric();
+ 
+         auto ret = m_vkBindOpticalFlowSessionImageNV(m_vkDevice,
+             m_vkOfaSession,
+@@ -139,9 +148,9 @@ namespace nvofapi {
+             image->ImageView(),
+             layout);
+         if (ret != VK_SUCCESS) {
+-            return NV_OF_ERR_GENERIC;
++            return ErrorGeneric();
+         }
+-        return NV_OF_SUCCESS;
++        return Success();
+     }
+ 
+     NV_OF_STATUS NvOFInstance::getCaps(NV_OF_CAPS param, uint32_t* capsVal, uint32_t* size) {
+@@ -152,19 +161,18 @@ namespace nvofapi {
+             }
+ 
+             // XXX[ljm] query VkPhysicalDevice for actual support
+-            return NV_OF_SUCCESS;
++            return Success();
+         }
+-        return NV_OF_ERR_GENERIC;
++        return ErrorGeneric();
+     }
+ 
+-    NV_OF_STATUS NvOFInstance::RegisterBuffer(const NV_OF_REGISTER_RESOURCE_PARAMS_VK* registerParams) {
++    void NvOFInstance::RegisterBuffer(const NV_OF_REGISTER_RESOURCE_PARAMS_VK* registerParams) {
+         NvOFImage* nvOFImage = new NvOFImage(m_vkDevice, registerParams->image, registerParams->format);
+         nvOFImage->Initialize(m_vkCreateImageView, m_vkDestroyImageView);
+         *registerParams->hOFGpuBuffer = reinterpret_cast<NvOFGPUBufferHandle>(nvOFImage);
+-        return NV_OF_SUCCESS;
+     }
+ 
+-    NV_OF_STATUS NvOFInstance::RecordCmdBuf(const NV_OF_EXECUTE_INPUT_PARAMS_VK* inParams, NV_OF_EXECUTE_OUTPUT_PARAMS_VK* outParams, VkCommandBuffer cmdBuf) {
++    void NvOFInstance::RecordCmdBuf(const NV_OF_EXECUTE_INPUT_PARAMS_VK* inParams, NV_OF_EXECUTE_OUTPUT_PARAMS_VK* outParams, VkCommandBuffer cmdBuf) {
+         BindImageToSession(reinterpret_cast<NvOFImage*>(inParams->inputFrame), VK_OPTICAL_FLOW_SESSION_BINDING_POINT_INPUT_NV);
+         BindImageToSession(reinterpret_cast<NvOFImage*>(inParams->referenceFrame), VK_OPTICAL_FLOW_SESSION_BINDING_POINT_REFERENCE_NV);
+         BindImageToSession(reinterpret_cast<NvOFImage*>(outParams->outputBuffer), VK_OPTICAL_FLOW_SESSION_BINDING_POINT_FLOW_VECTOR_NV);
+@@ -175,7 +183,7 @@ namespace nvofapi {
+         // Support INPUT_MIPS execute priv data
+         if (((NV_OF_PRIV_DATA*)inParams->hPrivData)->id == NV_OF_EXECUTE_PRIV_DATA_ID_INPUT_MIPS) {
+             NV_OF_EXECUTE_PRIV_DATA_INPUT_MIPS* mipData = ((NV_OF_EXECUTE_PRIV_DATA_INPUT_MIPS*)((NV_OF_PRIV_DATA*)inParams->hPrivData)->data);
+-            for (int i = 0; i < 6; i++) {
++            for (uint32_t i = 0; i < 6; i++) {
+                 if (mipData->input[i] && mipData->reference[i]) {
+                     BindImageToSession(reinterpret_cast<NvOFImage*>(mipData->input[i]), VK_OPTICAL_FLOW_SESSION_BINDING_POINT_INPUT_NV);
+                     BindImageToSession(reinterpret_cast<NvOFImage*>(mipData->reference[i]), VK_OPTICAL_FLOW_SESSION_BINDING_POINT_REFERENCE_NV);
+@@ -186,7 +194,7 @@ namespace nvofapi {
+ 
+         if (inParams->numRois) {
+             regions = (VkRect2D*)calloc(sizeof(VkRect2D), inParams->numRois);
+-            for (int i = 0; i < inParams->numRois; i++) {
++            for (uint32_t i = 0; i < inParams->numRois; i++) {
+                 regions[i].offset.x = inParams->roiData[i].start_x;
+                 regions[i].offset.y = inParams->roiData[i].start_y;
+                 regions[i].extent.width = inParams->roiData[i].width;
+@@ -194,7 +202,8 @@ namespace nvofapi {
+             }
+         }
+ 
+-        VkOpticalFlowExecuteInfoNV ofaExecuteInfo = {VK_STRUCTURE_TYPE_OPTICAL_FLOW_EXECUTE_INFO_NV};
++        VkOpticalFlowExecuteInfoNV ofaExecuteInfo{};
++        ofaExecuteInfo.sType = VK_STRUCTURE_TYPE_OPTICAL_FLOW_EXECUTE_INFO_NV;
+         ofaExecuteInfo.regionCount = inParams->numRois;
+         ofaExecuteInfo.pRegions = regions;
+ 
+@@ -205,6 +214,5 @@ namespace nvofapi {
+         m_vkCmdOpticalFlowExecuteNV(cmdBuf, m_vkOfaSession, &ofaExecuteInfo);
+ 
+         free(regions);
+-        return NV_OF_SUCCESS;
+     }
+ }
+diff --git a/src/nvofapi/nvofapi_image.cpp b/src/nvofapi/nvofapi_image.cpp
+index e99dc2cb..0786010a 100644
+--- a/src/nvofapi/nvofapi_image.cpp
++++ b/src/nvofapi/nvofapi_image.cpp
+@@ -27,8 +27,8 @@ namespace nvofapi {
+     bool NvOFImage::Initialize(PFN_vkCreateImageView fpCreateImageView,
+         PFN_vkDestroyImageView fpDestroyImageView) {
+         m_vkDestroyImageView = fpDestroyImageView;
+-        VkOpticalFlowSessionBindingPointNV bindingPoint;
+-        VkImageViewCreateInfo viewInfo = {VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO};
++        VkImageViewCreateInfo viewInfo{};
++        viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+         viewInfo.image = m_image;
+         viewInfo.format = m_format;
+ 
+diff --git a/src/nvofapi/nvofapi_instance.h b/src/nvofapi/nvofapi_instance.h
+index f886aee1..c06a6d86 100644
+--- a/src/nvofapi/nvofapi_instance.h
++++ b/src/nvofapi/nvofapi_instance.h
+@@ -73,10 +73,10 @@ namespace nvofapi {
+ 
+         NV_OF_STATUS InitSession(const NV_OF_INIT_PARAMS* initParams);
+ 
+-        NV_OF_STATUS RegisterBuffer(const NV_OF_REGISTER_RESOURCE_PARAMS_VK* registerParams);
++        void RegisterBuffer(const NV_OF_REGISTER_RESOURCE_PARAMS_VK* registerParams);
+ 
+         NV_OF_STATUS BindImageToSession(NvOFImage* image, VkOpticalFlowSessionBindingPointNV bindingPoint);
+ 
+-        NV_OF_STATUS RecordCmdBuf(const NV_OF_EXECUTE_INPUT_PARAMS_VK* inParams, NV_OF_EXECUTE_OUTPUT_PARAMS_VK* outParams, VkCommandBuffer cmdBuf);
++        void RecordCmdBuf(const NV_OF_EXECUTE_INPUT_PARAMS_VK* inParams, NV_OF_EXECUTE_OUTPUT_PARAMS_VK* outParams, VkCommandBuffer cmdBuf);
+     };
+ }
+diff --git a/src/nvofapi_d3d12.cpp b/src/nvofapi_d3d12.cpp
+index ec8cfc8a..b095866a 100644
+--- a/src/nvofapi_d3d12.cpp
++++ b/src/nvofapi_d3d12.cpp
+@@ -22,77 +22,102 @@
+  */
+ 
+ #include "nvofapi/nvofapi_entrypoints.h"
++#include "nvofapi/nvofapi_image.h"
+ #include "d3d12/nvofapi_d3d12_instance.h"
+ 
+ #include "util/util_env.h"
+ #include "util/util_log.h"
+ #include "util/util_string.h"
++#include "util/util_statuscode.h"
+ #include "../version.h"
+ 
++using namespace dxvk;
+ extern "C" {
+ 
+     // D3D12 entrypoints
+     NV_OF_STATUS NVOFAPI CreateOpticalFlowD3D12(ID3D12Device* pD3D12Device, NvOFHandle* hOFInstance) {
+-        dxvk::log::info("CreateOpticalFlowD3D12 called");
++        constexpr auto n = __func__;
++
++        if (log::tracing())
++            log::trace(n, log::fmt::ptr(pD3D12Device), log::fmt::ptr(hOFInstance));
+ 
+         nvofapi::NvOFInstanceD3D12* nvOF = nullptr;
+         try {
+             nvOF = new nvofapi::NvOFInstanceD3D12(pD3D12Device);
+-        } catch (std::exception e) {
+-            dxvk::log::info(dxvk::str::format("CreateOpticalFlowD3D12 exception, %s", e.what()));
++        } catch (std::exception const& e) {
++            log::info(str::format("CreateOpticalFlowD3D12 exception, %s", e.what()));
+         }
+ 
+         if (!nvOF) {
+-            dxvk::log::info(dxvk::str::format("CreateOpticalFlowD3D12 failed allocation"));
+-            return NV_OF_ERR_GENERIC;
++            return ErrorGeneric(n);
+         }
+ 
+         if (!nvOF->Initialize()) {
+-            dxvk::log::info(dxvk::str::format("CreateOpticalFlowD3D12 failed creation"));
+             delete nvOF;
+-            return NV_OF_ERR_GENERIC;
++            return ErrorGeneric(n);
+         }
+ 
+         *hOFInstance = reinterpret_cast<NvOFHandle>(nvOF);
+-        dxvk::log::info(dxvk::str::format("CreateOpticalFlowD3D12 end"));
+-        return NV_OF_SUCCESS;
++        return Success(n);
+     }
+ 
+     NV_OF_STATUS NVOFAPI GetSurfaceFormatCountD3D12(NvOFHandle hOf, const NV_OF_BUFFER_USAGE bufferUsage, const NV_OF_MODE ofMode, uint32_t* const pCount) {
+-        dxvk::log::info("GetSurfaceFormatCountD3D12 called");
++        constexpr auto n = __func__;
++
++        if (log::tracing())
++            log::trace(n, log::fmt::hnd(hOf), bufferUsage, ofMode, log::fmt::ptr(pCount));
++
+         *pCount = 1;
+-        return NV_OF_SUCCESS;
++        return Success(n);
+     }
+ 
+     NV_OF_STATUS NVOFAPI GetSurfaceFormatD3D12(NvOFHandle hOf, const NV_OF_BUFFER_USAGE bufferUsage, const NV_OF_MODE ofMode, DXGI_FORMAT* const pFormat) {
+-        dxvk::log::info("GetSurfaceFormatD3D12 called");
++        constexpr auto n = __func__;
++
++        if (log::tracing())
++            log::trace(n, log::fmt::hnd(hOf), bufferUsage, ofMode, log::fmt::ptr(pFormat));
++
+         if (bufferUsage == NV_OF_BUFFER_USAGE_INPUT)
+             *pFormat = DXGI_FORMAT_R8_UNORM;
+         else
+             *pFormat = DXGI_FORMAT_R16G16_SINT;
+-        return NV_OF_SUCCESS;
++        return Success(n);
+     }
+ 
+     NV_OF_STATUS NVOFAPI RegisterResourceD3D12(NvOFHandle hOf, NV_OF_REGISTER_RESOURCE_PARAMS_D3D12* registerParams) {
+-        dxvk::log::info("RegisterResourceD3D12 called");
++        constexpr auto n = __func__;
++
++        if (log::tracing())
++            log::trace(n, log::fmt::hnd(hOf), log::fmt::ptr(registerParams));
++
+         nvofapi::NvOFInstanceD3D12* nvOF = reinterpret_cast<nvofapi::NvOFInstanceD3D12*>(hOf);
+ 
+-        return nvOF->RegisterBuffer(registerParams);
++        nvOF->RegisterBuffer(registerParams);
++        return Success(n);
+     }
+ 
+     NV_OF_STATUS NVOFAPI UnregisterResourceD3D12(NV_OF_UNREGISTER_RESOURCE_PARAMS_D3D12* registerParams) {
+-        dxvk::log::info("UnregisterResourceD3D12 called");
++        constexpr auto n = __func__;
++
++        if (log::tracing())
++            log::trace(n, log::fmt::ptr(registerParams));
++
+         nvofapi::NvOFImage* nvRes = reinterpret_cast<nvofapi::NvOFImage*>(registerParams->hOFGpuBuffer);
+         delete nvRes;
+-        return NV_OF_SUCCESS;
++        return Success(n);
+     }
+ 
+     NV_OF_STATUS NVOFAPI ExecuteD3D12(NvOFHandle hOf, const NV_OF_EXECUTE_INPUT_PARAMS_D3D12* executeInParams, NV_OF_EXECUTE_OUTPUT_PARAMS_D3D12* executeOutParams) {
+-        dxvk::log::info("ExecuteD3D12 called");
+-        dxvk::log::info(dxvk::str::format("handle: %p", hOf));
++        constexpr auto n = __func__;
++        thread_local bool alreadyLoggedOk = false;
++
++        if (log::tracing())
++            log::trace(n, log::fmt::hnd(hOf), log::fmt::ptr(executeInParams), log::fmt::ptr(executeOutParams));
++
+         nvofapi::NvOFInstanceD3D12* nvOF = reinterpret_cast<nvofapi::NvOFInstanceD3D12*>(hOf);
+ 
+-        return nvOF->Execute(executeInParams, executeOutParams);
++        nvOF->Execute(executeInParams, executeOutParams);
++        return Success(n, alreadyLoggedOk);
+     }
+ 
+     // ETBLs
+@@ -101,11 +126,14 @@ extern "C" {
+         uint32_t apiVerMinor = (apiVer & 0xf);
+         constexpr auto n = __func__;
+ 
+-        dxvk::log::info(dxvk::str::format("DXVK-NVOFAPI ", DXVK_NVAPI_VERSION, " (", dxvk::env::getExecutableName(), ") D3D12"));
+-        dxvk::log::info(dxvk::str::format("OFAPI Client Version: ", apiVerMajor, ".", apiVerMinor));
++        if (log::tracing())
++            log::trace(n, apiVer, log::fmt::ptr(functionList));
++
++        log::info(str::format("DXVK-NVOFAPI ", DXVK_NVAPI_VERSION, " (", env::getExecutableName(), ") D3D12"));
++        log::info(str::format("OFAPI Client Version: ", apiVerMajor, ".", apiVerMinor));
+ 
+         if (apiVerMajor != 5)
+-            return NV_OF_ERR_INVALID_VERSION;
++            return InvalidVersion(n);
+ 
+         functionList->nvCreateOpticalFlowD3D12 = CreateOpticalFlowD3D12;
+         functionList->nvOFInit = OFSessionInit;
+@@ -118,6 +146,6 @@ extern "C" {
+         functionList->nvOFGetLastError = OFSessionGetLastError;
+         functionList->nvOFGetCaps = OFSessionGetCaps;
+ 
+-        return NV_OF_SUCCESS;
++        return Success(n);
+     }
+ }
+diff --git a/src/nvofapi_vulkan.cpp b/src/nvofapi_vulkan.cpp
+index 25f08256..b5d4790a 100644
+--- a/src/nvofapi_vulkan.cpp
++++ b/src/nvofapi_vulkan.cpp
+@@ -22,63 +22,90 @@
+  */
+ 
+ #include "nvofapi/nvofapi_entrypoints.h"
++#include "nvofapi/nvofapi_image.h"
+ #include "vulkan/nvofapi_vulkan_instance.h"
+ 
+ #include "util/util_env.h"
+ #include "util/util_log.h"
+ #include "util/util_string.h"
++#include "util/util_statuscode.h"
+ #include "../version.h"
+ 
++using namespace dxvk;
+ extern "C" {
+     // VK entrypoints
+     NV_OF_STATUS NVOFAPI CreateOpticalFlowVk(VkInstance vkInstance, VkPhysicalDevice vkPhysicalDevice, VkDevice vkDevice, NvOFHandle* hOFInstance) {
+-        dxvk::log::info("CreateOpticalFlowVk called");
++        constexpr auto n = __func__;
++
++        if (log::tracing())
++            log::trace(n, log::fmt::hnd(vkInstance), log::fmt::hnd(vkPhysicalDevice), log::fmt::hnd(vkDevice), log::fmt::ptr(hOFInstance));
++
+         nvofapi::NvOFInstanceVk* nvOF = new nvofapi::NvOFInstanceVk(vkInstance, vkPhysicalDevice, vkDevice);
+ 
+         if (!nvOF) {
+-            dxvk::log::info(dxvk::str::format("CreateOpticalFlowVK failed allocation"));
+-            return NV_OF_ERR_GENERIC;
++            return ErrorGeneric(n);
+         }
+ 
+         if (!nvOF->Initialize()) {
+-            dxvk::log::info(dxvk::str::format("CreateOpticalFlowVK failed creation"));
+             delete nvOF;
+-            return NV_OF_ERR_GENERIC;
++            return ErrorGeneric(n);
+         }
+ 
+         *hOFInstance = reinterpret_cast<NvOFHandle>(nvOF);
+-        return NV_OF_SUCCESS;
++        return Success(n);
+     }
+ 
+     NV_OF_STATUS NVOFAPI GetSurfaceFormatCountVk(NvOFHandle hOf, const NV_OF_BUFFER_USAGE bufferUsage, const NV_OF_MODE ofMode, uint32_t* const pCount) {
+-        dxvk::log::info("GetSurfaceFormatCountVk called");
+-        dxvk::log::info(dxvk::str::format("GetSurfaceFormatCountVk failed!"));
+-        return NV_OF_ERR_GENERIC;
++        constexpr auto n = __func__;
++
++        if (log::tracing())
++            log::trace(n, log::fmt::hnd(hOf), bufferUsage, ofMode, log::fmt::ptr(pCount));
++
++        return ErrorGeneric(n);
+     }
+ 
+     NV_OF_STATUS NVOFAPI GetSurfaceFormatVk(NvOFHandle hOf, const NV_OF_BUFFER_USAGE bufferUsage, const NV_OF_MODE ofMode, VkFormat* const pFormat) {
+-        dxvk::log::info("GetSurfaceFormatVk called");
+-        dxvk::log::info(dxvk::str::format("GetSurfaceFormatVk failed!"));
+-        return NV_OF_ERR_GENERIC;
++        constexpr auto n = __func__;
++
++        if (log::tracing())
++            log::trace(n, log::fmt::hnd(hOf), bufferUsage, ofMode, log::fmt::ptr(pFormat));
++
++        return ErrorGeneric(n);
+     }
+ 
+     NV_OF_STATUS NVOFAPI RegisterResourceVk(NvOFHandle hOf, NV_OF_REGISTER_RESOURCE_PARAMS_VK* registerParams) {
+-        dxvk::log::info("RegisterResourceVk called");
++        constexpr auto n = __func__;
++
++        if (log::tracing())
++            log::trace(n, log::fmt::hnd(hOf), log::fmt::ptr(registerParams));
++
+         nvofapi::NvOFInstanceVk* nvOF = reinterpret_cast<nvofapi::NvOFInstanceVk*>(hOf);
+-        return nvOF->RegisterBuffer(registerParams);
++        nvOF->RegisterBuffer(registerParams);
++        return Success(n);
+     }
+ 
+     NV_OF_STATUS NVOFAPI UnregisterResourceVk(NV_OF_UNREGISTER_RESOURCE_PARAMS_VK* registerParams) {
+-        dxvk::log::info("UnregisterResourceVk called");
++        constexpr auto n = __func__;
++
++        if (log::tracing())
++            log::trace(n, log::fmt::ptr(registerParams));
++
+         nvofapi::NvOFImage* nvRes = reinterpret_cast<nvofapi::NvOFImage*>(registerParams->hOFGpuBuffer);
+         delete nvRes;
+-        return NV_OF_SUCCESS;
++        return ErrorGeneric(n);
+     }
+ 
+     NV_OF_STATUS NVOFAPI ExecuteVk(NvOFHandle hOf, const NV_OF_EXECUTE_INPUT_PARAMS_VK* executeInParams, NV_OF_EXECUTE_OUTPUT_PARAMS_VK* executeOutParams) {
++        constexpr auto n = __func__;
++        thread_local bool alreadyLoggedOk = false;
++
++        if (log::tracing())
++            log::trace(n, log::fmt::hnd(hOf), log::fmt::ptr(executeInParams), log::fmt::ptr(executeOutParams));
++
+         nvofapi::NvOFInstanceVk* nvOF = reinterpret_cast<nvofapi::NvOFInstanceVk*>(hOf);
+ 
+-        return nvOF->Execute(executeInParams, executeOutParams);
++        nvOF->Execute(executeInParams, executeOutParams);
++        return Success(n, alreadyLoggedOk);
+     }
+ 
+     NV_OF_STATUS __cdecl NvOFAPICreateInstanceVk(uint32_t apiVer, NV_OF_VK_API_FUNCTION_LIST* functionList) {
+@@ -86,11 +113,14 @@ extern "C" {
+         uint32_t apiVerMinor = (apiVer & 0xf);
+         constexpr auto n = __func__;
+ 
+-        dxvk::log::info(dxvk::str::format("DXVK-NVOFAPI ", DXVK_NVAPI_VERSION, " (", dxvk::env::getExecutableName(), ") VK"));
+-        dxvk::log::info(dxvk::str::format("OFAPI Client Version: ", apiVerMajor, ".", apiVerMinor));
++        if (log::tracing())
++            log::trace(n, apiVer, log::fmt::ptr(functionList));
++
++        log::info(str::format("DXVK-NVOFAPI ", DXVK_NVAPI_VERSION, " (", env::getExecutableName(), ") VK"));
++        log::info(str::format("OFAPI Client Version: ", apiVerMajor, ".", apiVerMinor));
+ 
+         if (apiVerMajor != 5)
+-            return NV_OF_ERR_INVALID_VERSION;
++            return InvalidVersion(n);
+ 
+         functionList->nvCreateOpticalFlowVk = CreateOpticalFlowVk;
+         functionList->nvOFInit = OFSessionInit;
+@@ -103,6 +133,6 @@ extern "C" {
+         functionList->nvOFGetLastError = OFSessionGetLastError;
+         functionList->nvOFGetCaps = OFSessionGetCaps;
+ 
+-        return NV_OF_SUCCESS;
++        return Success(n);
+     }
+ }
+diff --git a/src/util/util_statuscode.h b/src/util/util_statuscode.h
+index 6de378d0..292cebf7 100644
+--- a/src/util/util_statuscode.h
++++ b/src/util/util_statuscode.h
+@@ -321,18 +321,18 @@ namespace dxvk {
+         return NV_OF_ERR_UNSUPPORTED_FEATURE;
+     }
+ 
+-    inline NV_OF_STATUS GenericError() {
++    inline NV_OF_STATUS ErrorGeneric() {
+         return NV_OF_ERR_GENERIC;
+     }
+ 
+-    inline NV_OF_STATUS GenericError(const std::string& logMessage) {
+-        log::info(str::format("<-", logMessage, ": Generic Error"));
++    inline NV_OF_STATUS ErrorGeneric(const std::string& logMessage) {
++        log::info(str::format("<-", logMessage, ": Error"));
+         return NV_OF_ERR_GENERIC;
+     }
+ 
+-    inline NV_OF_STATUS GenericError(const std::string& logMessage, bool& alreadyLogged) {
++    inline NV_OF_STATUS ErrorGeneric(const std::string& logMessage, bool& alreadyLogged) {
+         if (log::tracing() || !std::exchange(alreadyLogged, true))
+-            log::info(str::format("<-", logMessage, ": Generic Error"));
++            log::info(str::format("<-", logMessage, ": Error"));
+         return NV_OF_ERR_GENERIC;
+     }
+ }
+diff --git a/src/vulkan/nvofapi_vulkan_instance.cpp b/src/vulkan/nvofapi_vulkan_instance.cpp
+index b1dcd93d..f0463bac 100644
+--- a/src/vulkan/nvofapi_vulkan_instance.cpp
++++ b/src/vulkan/nvofapi_vulkan_instance.cpp
+@@ -36,7 +36,7 @@ namespace nvofapi {
+             return false;
+         }
+ 
+-        m_vkGetInstanceProcAddr = (PFN_vkGetInstanceProcAddr)GetProcAddress(m_library, "vkGetInstanceProcAddr");
++        m_vkGetInstanceProcAddr = (PFN_vkGetInstanceProcAddr) reinterpret_cast<void*>(GetProcAddress(m_library, "vkGetInstanceProcAddr"));
+         m_vkGetDeviceProcAddr = (PFN_vkGetDeviceProcAddr)m_vkGetInstanceProcAddr(m_vkInstance, "vkGetDeviceProcAddr");
+         m_vkGetPhysicalDeviceQueueFamilyProperties = (PFN_vkGetPhysicalDeviceQueueFamilyProperties)m_vkGetInstanceProcAddr(m_vkInstance, "vkGetPhysicalDeviceQueueFamilyProperties");
+ 
+@@ -62,7 +62,8 @@ namespace nvofapi {
+         m_vkCmdOpticalFlowExecuteNV = (PFN_vkCmdOpticalFlowExecuteNV)m_vkGetDeviceProcAddr(m_vkDevice, "vkCmdOpticalFlowExecuteNV");
+ 
+         // Get the OFA queue
+-        VkCommandPoolCreateInfo createInfo = {VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO};
++        VkCommandPoolCreateInfo createInfo{};
++        createInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+         createInfo.queueFamilyIndex = GetVkOFAQueue();
+         m_vkGetDeviceQueue(m_vkDevice, createInfo.queueFamilyIndex, 0, &m_queue);
+ 
+@@ -72,7 +73,8 @@ namespace nvofapi {
+         }
+ 
+         // ALlocate command buffers
+-        VkCommandBufferAllocateInfo allocInfo = {VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO};
++        VkCommandBufferAllocateInfo allocInfo{};
++        allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+         allocInfo.commandPool = m_commandPool;
+         allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+         allocInfo.commandBufferCount = CMDS_IN_FLIGHT; // more than enough for anybody ;)
+@@ -84,7 +86,7 @@ namespace nvofapi {
+         return true;
+     }
+ 
+-    NV_OF_STATUS NvOFInstanceVk::Execute(const NV_OF_EXECUTE_INPUT_PARAMS_VK* inParams, NV_OF_EXECUTE_OUTPUT_PARAMS_VK* outParams) {
++    void NvOFInstanceVk::Execute(const NV_OF_EXECUTE_INPUT_PARAMS_VK* inParams, NV_OF_EXECUTE_OUTPUT_PARAMS_VK* outParams) {
+         dxvk::log::info(
+             dxvk::str::format("OFExecuteVK params:",
+                 " inputFrame: ", inParams->inputFrame,
+@@ -101,7 +103,7 @@ namespace nvofapi {
+ 
+         if (inParams->numWaitSyncs) {
+             waitSyncs = (VkSemaphoreSubmitInfo*)calloc(sizeof(VkSemaphoreSubmitInfo), inParams->numWaitSyncs);
+-            for (int i = 0; i < inParams->numWaitSyncs; i++) {
++            for (uint32_t i = 0; i < inParams->numWaitSyncs; i++) {
+                 waitSyncs[i].sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
+                 waitSyncs[i].semaphore = inParams->pWaitSyncs[i].semaphore;
+                 waitSyncs[i].value = inParams->pWaitSyncs[i].value;
+@@ -109,18 +111,21 @@ namespace nvofapi {
+             }
+         }
+ 
+-        VkSemaphoreSubmitInfo signalSync = {VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO};
++        VkSemaphoreSubmitInfo signalSync{};
++        signalSync.sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
+         if (outParams->pSignalSync) {
+             signalSync.semaphore = outParams->pSignalSync->semaphore;
+             signalSync.value = outParams->pSignalSync->value;
+             signalSync.stageMask = VK_PIPELINE_STAGE_2_OPTICAL_FLOW_BIT_NV;
+         }
+ 
+-        VkCommandBufferSubmitInfo cmdbufInfo = {VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO};
++        VkCommandBufferSubmitInfo cmdbufInfo{};
++        cmdbufInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO;
+         cmdbufInfo.commandBuffer = m_commandBuffers[m_cmdBufIndex];
+         cmdbufInfo.deviceMask = 1;
+ 
+-        VkCommandBufferBeginInfo begInfo = {VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO};
++        VkCommandBufferBeginInfo begInfo{};
++        begInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+         m_vkResetCommandBuffer(m_commandBuffers[m_cmdBufIndex], 0);
+         m_vkBeginCommandBuffer(m_commandBuffers[m_cmdBufIndex], &begInfo);
+ 
+@@ -128,7 +133,8 @@ namespace nvofapi {
+ 
+         m_vkEndCommandBuffer(m_commandBuffers[m_cmdBufIndex]);
+ 
+-        VkSubmitInfo2 submit = {VK_STRUCTURE_TYPE_SUBMIT_INFO_2};
++        VkSubmitInfo2 submit{};
++        submit.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO_2;
+         submit.waitSemaphoreInfoCount = inParams->numWaitSyncs;
+         submit.pWaitSemaphoreInfos = waitSyncs;
+         submit.commandBufferInfoCount = 1;
+@@ -143,6 +149,5 @@ namespace nvofapi {
+         m_cmdBufIndex++;
+         if (m_cmdBufIndex >= CMDS_IN_FLIGHT)
+             m_cmdBufIndex = 0;
+-        return NV_OF_SUCCESS;
+     }
+ }
+diff --git a/src/vulkan/nvofapi_vulkan_instance.h b/src/vulkan/nvofapi_vulkan_instance.h
+index dd4ba616..59b27757 100644
+--- a/src/vulkan/nvofapi_vulkan_instance.h
++++ b/src/vulkan/nvofapi_vulkan_instance.h
+@@ -37,7 +37,7 @@ namespace nvofapi {
+         }
+         bool Initialize();
+ 
+-        NV_OF_STATUS Execute(const NV_OF_EXECUTE_INPUT_PARAMS_VK* inParams, NV_OF_EXECUTE_OUTPUT_PARAMS_VK* outParams);
++        void Execute(const NV_OF_EXECUTE_INPUT_PARAMS_VK* inParams, NV_OF_EXECUTE_OUTPUT_PARAMS_VK* outParams);
+ 
+       private:
+         VkQueue m_queue;
+
+From a0d7c83ccb0f09bfe0f065ed4994e64bc3ed9dbc Mon Sep 17 00:00:00 2001
+From: Liam Middlebrook <lmiddlebrook@nvidia.com>
+Date: Tue, 29 Oct 2024 23:40:00 -0700
+Subject: [PATCH] nvofapi-vulkan: Load vulkan-1.dll instead of winevulkan.dll
+
+---
+ src/vulkan/nvofapi_vulkan_instance.cpp | 4 +++-
+ 1 file changed, 3 insertions(+), 1 deletion(-)
+
+diff --git a/src/vulkan/nvofapi_vulkan_instance.cpp b/src/vulkan/nvofapi_vulkan_instance.cpp
+index f0463bac..90c04c41 100644
+--- a/src/vulkan/nvofapi_vulkan_instance.cpp
++++ b/src/vulkan/nvofapi_vulkan_instance.cpp
+@@ -31,7 +31,9 @@
+ namespace nvofapi {
+ 
+     bool NvOFInstanceVk::Initialize() {
+-        m_library = LoadLibraryA("winevulkan.dll");
++        // For VK we cannot load winevulkan directly or we may break handle
++        // opacity.
++        m_library = LoadLibraryA("vulkan-1.dll");
+         if (!m_library) {
+             return false;
+         }
