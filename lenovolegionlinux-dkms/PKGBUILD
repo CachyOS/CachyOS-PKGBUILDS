@@ -2,34 +2,33 @@
 # Maintainer: xenhat <aur@xenh.at>
 # Maintainer: johnfanv2 <https://github.com/johnfanv2>
 
-_pkgname=lenovolegionlinux
-pkgname=${_pkgname}-dkms
+pkgname=lenovolegionlinux-dkms
 pkgver=0.0.18
-pkgrel=0
+pkgrel=1
 pkgdesc="LenovoLegionLinux (LLL) DKMS module"
 arch=("x86_64")
 url="https://github.com/johnfanv2/LenovoLegionLinux"
 license=('GPL-2.0-only')
 makedepends=(
-	"lm_sensors"
-	"i2c-tools" 
-	"dmidecode"
-	"lenovolegionlinux"
+  lm_sensors
+  i2c-tools
+  dmidecode
+  git
 )
 depends=(
-	"dkms"
-	"lenovolegionlinux"
+  dkms
+  lenovolegionlinux
 )
-source=("$url/archive/refs/tags/v$pkgver.tar.gz")
-sha256sums=('af4ad84bc5caabfba1afb607903b5d3a700d0e4e9c0ca7600c35085462d52dea')
+source=(lenovolegionlinux::git+https://github.com/johnfanv2/LenovoLegionLinux.git#tag=v${pkgver})
+sha256sums=('d70575888e8ca5cdc735f9647d9506dde8a1820f23c154b998e617c763699779')
 install="lenovolegionlinux.install"
 
 package() {
-	cd "${srcdir}/${_pkgname}/kernel_module/"
+	cd "${srcdir}/${pkgname}/kernel_module/"
 	install -Dm644 dkms.conf ${pkgdir}/usr/src/${_pkgname}-1.0.0/dkms.conf
 	cp -r {issue-warning.sh,legion-laptop-unused-snippets.c,legion-laptop.c,Makefile} ${pkgdir}/usr/src/$_pkgname-1.0.0/
 
-	cd "${srcdir}/${_pkgname}/deploy/"
+	cd "${srcdir}/${_kgname}/deploy/"
 	install -Dm644 LenovoLegionLinux.hook ${pkgdir}/etc/pacman.d/hooks/LenovoLegionLinux.hook
 	install -Dm775 LenovoLegionLinux ${pkgdir}/usr/bin/LenovoLegionLinux
 }
