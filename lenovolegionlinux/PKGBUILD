@@ -1,0 +1,60 @@
+# Maintainer: MrDuartePT <gonegrier.duarte@gmail.com>
+# Maintainer: johnfanv2 <https://github.com/johnfanv2>
+_pkgname=lenovolegionlinux
+pkgname=${_pkgname}
+pkgver=0.0.18
+pkgrel=0
+pkgdesc="LenovoLegionLinux (LLL) brings additional drivers and tools for Lenovo Legion series laptops to Linux. PLEASE READ THE REPO BEFORE INSTALL THIS PACKAGE!!!"
+arch=("x86_64")
+url="https://github.com/johnfanv2/LenovoLegionLinux"
+license=('GPL-2.0-only')
+
+depends=(
+  python-argcomplete
+  python-yaml
+  python-pyqt6
+  polkit
+  python-darkdetect
+)
+makedepends=(
+  python-build
+  python-installer
+  python-setuptools
+  python-wheel
+  libinih
+)
+optdepends=(
+  "lenovolegionlinux-dkms: DKMS module"
+)
+
+source=("$url/archive/refs/tags/v$pkgver.tar.gz")
+sha256sums=('af4ad84bc5caabfba1afb607903b5d3a700d0e4e9c0ca7600c35085462d52dea')
+install="lenovolegionlinux.install"
+
+prepare() {
+  cd "${_pkgname}"
+  sed -i "s/version = _VERSION/version = ${pkgver}/g" "${srcdir}/${_pkgname}/python/legion_linux/setup.cfg"
+}
+
+build() {
+ cd "${srcdir}/${_pkgname}/python/legion_linux"
+ python -m build --wheel --no-isolation
+ # Build legiond daemon
+ cd legion_linux/extra/service/legiond
+ make
+}
+package() {
+  mkdir -p ${pkgdir}/etc/systemd/system
+
+  cd "${srcdir}/${_pkgname}/python/legion_linux"
+  python -m installer --destdir="$pkgdir" dist/*.whl
+
+# Systemd service
+  cd "${srcdir}/${_pkgname}/extra"
+  install -Dm664 service/*.service "${pkgdir}/etc/systemd/system"
+  install -Dm664 service/*.timer "${pkgdir}/etc/systemd/system" 
+  
+# legiond daemon
+  install -Dm775 service/legiond/legiond "${pkgdir}/usr/bin"
+  install -Dm775 service/legiond/legiond-ctl "${pkgdir}/usr/bin"	
+}
