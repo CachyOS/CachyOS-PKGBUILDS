@@ -5301,3 +5301,1124 @@ index f0463bac..90c04c41 100644
          if (!m_library) {
              return false;
          }
+
+From aec1b74a1ea416cb0d5e92d9be4e35809ae8322e Mon Sep 17 00:00:00 2001
+From: Liam Middlebrook <lmiddlebrook@nvidia.com>
+Date: Wed, 30 Oct 2024 21:39:25 -0700
+Subject: [PATCH] nvofapi: Address style feedback
+
+---
+ src/d3d12/nvofapi_d3d12_instance.cpp   | 35 ++++++------------
+ src/d3d12/nvofapi_d3d12_instance.h     | 27 +++++++-------
+ src/nvofapi.cpp                        |  6 ++--
+ src/nvofapi/nvofapi_common.cpp         | 32 ++++++++---------
+ src/nvofapi/nvofapi_image.cpp          |  2 +-
+ src/nvofapi/nvofapi_image.h            | 18 +++++-----
+ src/nvofapi/nvofapi_instance.h         | 50 +++++++++++++-------------
+ src/nvofapi_d3d12.cpp                  |  4 +--
+ src/nvofapi_vulkan.cpp                 |  6 ++--
+ src/vulkan/nvofapi_vulkan_instance.cpp |  2 +-
+ src/vulkan/nvofapi_vulkan_instance.h   |  3 +-
+ 11 files changed, 88 insertions(+), 97 deletions(-)
+
+diff --git a/src/d3d12/nvofapi_d3d12_instance.cpp b/src/d3d12/nvofapi_d3d12_instance.cpp
+index d811e73a..3bb4ed31 100644
+--- a/src/d3d12/nvofapi_d3d12_instance.cpp
++++ b/src/d3d12/nvofapi_d3d12_instance.cpp
+@@ -33,27 +33,18 @@ namespace nvofapi {
+     NvOFInstanceD3D12::NvOFInstanceD3D12(ID3D12Device* pD3D12Device) {
+         // Query for the extension interface
+         // Grab the vk triad
+-        HRESULT status = pD3D12Device->QueryInterface(IID_PPV_ARGS(&m_device));
+-
+-        if (S_OK != status) {
++        if (FAILED(pD3D12Device->QueryInterface(IID_PPV_ARGS(&m_device))))
+             throw std::invalid_argument("Failed to query interface for m_device");
+-        }
+ 
+         m_device->GetVulkanHandles(&m_vkInstance,
+             &m_vkPhysicalDevice,
+             &m_vkDevice);
+ 
+-        status = pD3D12Device->QueryInterface(IID_PPV_ARGS(&m_d3ddevice));
+-
+-        if (S_OK != status) {
++        if (FAILED(pD3D12Device->QueryInterface(IID_PPV_ARGS(&m_d3ddevice))))
+             throw std::invalid_argument("Failed to query interface for m_d3ddevice");
+-        }
+-
+-        status = pD3D12Device->QueryInterface(IID_PPV_ARGS(&m_deviceExt));
+ 
+-        if (S_OK != status) {
++        if (FAILED(pD3D12Device->QueryInterface(IID_PPV_ARGS(&m_deviceExt))))
+             throw std::invalid_argument("Failed to query interface for m_deviceExt");
+-        }
+     }
+ 
+     bool NvOFInstanceD3D12::Initialize() {
+@@ -86,19 +77,15 @@ namespace nvofapi {
+         m_vkQueueFamilyIndex = GetVkOFAQueue();
+ 
+         D3D12_COMMAND_QUEUE_DESC desc{};
+-        if (m_device->CreateInteropCommandQueue(&desc, m_vkQueueFamilyIndex, &m_commandQueue)
+-            != S_OK) {
++        if (FAILED(m_device->CreateInteropCommandQueue(&desc, m_vkQueueFamilyIndex, &m_commandQueue)))
+             return false;
+-        }
+-        if (m_device->CreateInteropCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, m_vkQueueFamilyIndex, &m_cmdAllocator)
+-            != S_OK) {
++
++        if (FAILED(m_device->CreateInteropCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, m_vkQueueFamilyIndex, &m_cmdAllocator)))
+             return false;
+-        }
++
+         for (uint32_t i = 0; i < CMDS_IN_FLIGHT; i++) {
+-            if (m_d3ddevice->CreateCommandList1(0, D3D12_COMMAND_LIST_TYPE_DIRECT, (D3D12_COMMAND_LIST_FLAGS)0, IID_PPV_ARGS(&m_cmdList[i]))
+-                != S_OK) {
++            if (FAILED(m_d3ddevice->CreateCommandList1(0, D3D12_COMMAND_LIST_TYPE_DIRECT, (D3D12_COMMAND_LIST_FLAGS)0, IID_PPV_ARGS(&m_cmdList[i]))))
+                 return false;
+-            }
+         }
+         return true;
+     }
+@@ -108,14 +95,14 @@ namespace nvofapi {
+         dxvk::log::info(
+             dxvk::str::format("RegisterBuffer DX: resource: ",
+                 registerParams->resource, " inputFencePoint: ",
+-                registerParams->inputFencePoint.fence, " ouputFencePoint: ",
++                registerParams->inputFencePoint.fence, " outputFencePoint: ",
+                 registerParams->outputFencePoint.fence));
+         // Convert D3D12 params to VK params
+         //
+         // ID3D12Resource -> VK Image / VkFormat pair
+         vkParams.hOFGpuBuffer = registerParams->hOFGpuBuffer;
+         uint64_t offset;
+-        m_device->GetVulkanResourceInfo1(registerParams->resource, (UINT64*)&vkParams.image, &offset, &vkParams.format);
++        m_device->GetVulkanResourceInfo1(registerParams->resource, reinterpret_cast<UINT64*>(&vkParams.image), &offset, &vkParams.format);
+ 
+         // ID3D12 fence to timeline semaphore
+         // no inputFencePoint/outputFencePoint equivalents for VK, leaving as
+@@ -124,7 +111,7 @@ namespace nvofapi {
+         assert(registerParams->inputFencePoint.value == 0);
+         assert(registerParams->outputFencePoint.fence == nullptr);
+         assert(registerParams->outputFencePoint.value == 0);
+-        ((NvOFInstance*)this)->RegisterBuffer(&vkParams);
++        NvOFInstance::RegisterBuffer(&vkParams);
+     }
+ 
+     void NvOFInstanceD3D12::Execute(const NV_OF_EXECUTE_INPUT_PARAMS_D3D12* inParams, NV_OF_EXECUTE_OUTPUT_PARAMS_D3D12* outParams) {
+diff --git a/src/d3d12/nvofapi_d3d12_instance.h b/src/d3d12/nvofapi_d3d12_instance.h
+index aa7ca243..e8f933cc 100644
+--- a/src/d3d12/nvofapi_d3d12_instance.h
++++ b/src/d3d12/nvofapi_d3d12_instance.h
+@@ -27,20 +27,10 @@
+ 
+ namespace nvofapi {
+     class NvOFInstanceD3D12 : public NvOFInstance {
+-      private:
+-        ID3D12DXVKInteropDevice1* m_device{};
+-        ID3D12DeviceExt* m_deviceExt{};
+-        ID3D12Device4* m_d3ddevice{};
+-        ID3D12CommandQueue* m_commandQueue{};
+-        ID3D12GraphicsCommandList* m_cmdList[CMDS_IN_FLIGHT]{};
+-        uint32_t m_cmdListIndex = 0;
+-        ID3D12CommandAllocator* m_cmdAllocator{};
+-
+-        uint32_t m_vkQueueFamilyIndex = 0;
+ 
+       public:
+-        bool Initialize();
+         NvOFInstanceD3D12(ID3D12Device* pD3D12Device);
++
+         virtual ~NvOFInstanceD3D12() {
+             for (uint32_t i = 0; i < CMDS_IN_FLIGHT; i++) {
+                 if (m_cmdList[i])
+@@ -62,8 +52,21 @@ namespace nvofapi {
+                 m_device->Release();
+         }
+ 
++        void Execute(const NV_OF_EXECUTE_INPUT_PARAMS_D3D12* inParams, NV_OF_EXECUTE_OUTPUT_PARAMS_D3D12* outParams);
++
++        bool Initialize();
++
+         void RegisterBuffer(const NV_OF_REGISTER_RESOURCE_PARAMS_D3D12* registerParams);
+ 
+-        void Execute(const NV_OF_EXECUTE_INPUT_PARAMS_D3D12* inParams, NV_OF_EXECUTE_OUTPUT_PARAMS_D3D12* outParams);
++      private:
++        ID3D12DXVKInteropDevice1* m_device{};
++        ID3D12DeviceExt* m_deviceExt{};
++        ID3D12Device4* m_d3ddevice{};
++        ID3D12CommandQueue* m_commandQueue{};
++        ID3D12GraphicsCommandList* m_cmdList[CMDS_IN_FLIGHT]{};
++        uint32_t m_cmdListIndex = 0;
++        ID3D12CommandAllocator* m_cmdAllocator{};
++
++        uint32_t m_vkQueueFamilyIndex = 0;
+     };
+ }
+diff --git a/src/nvofapi.cpp b/src/nvofapi.cpp
+index 6096c256..06be6182 100644
+--- a/src/nvofapi.cpp
++++ b/src/nvofapi.cpp
+@@ -39,7 +39,7 @@ extern "C" {
+         if (log::tracing())
+             log::trace(n, log::fmt::hnd(hOf), log::fmt::ptr(initParams));
+ 
+-        nvofapi::NvOFInstance* nvOF = reinterpret_cast<nvofapi::NvOFInstance*>(hOf);
++        auto nvOF = reinterpret_cast<nvofapi::NvOFInstance*>(hOf);
+ 
+         if (!nvOF) {
+             return ErrorGeneric(n);
+@@ -54,7 +54,7 @@ extern "C" {
+         if (log::tracing())
+             log::trace(n, log::fmt::hnd(hOf));
+ 
+-        nvofapi::NvOFInstance* nvOF = reinterpret_cast<nvofapi::NvOFInstance*>(hOf);
++        auto nvOF = reinterpret_cast<nvofapi::NvOFInstance*>(hOf);
+         if (!nvOF) {
+             return ErrorGeneric(n);
+         }
+@@ -78,7 +78,7 @@ extern "C" {
+         if (log::tracing())
+             log::trace(n, log::fmt::hnd(hOf), capsParam, log::fmt::ptr(capsVal), log::fmt::ptr(size));
+ 
+-        nvofapi::NvOFInstance* nvOF = reinterpret_cast<nvofapi::NvOFInstance*>(hOf);
++        auto nvOF = reinterpret_cast<nvofapi::NvOFInstance*>(hOf);
+ 
+         return nvOF->getCaps(capsParam, capsVal, size);
+     }
+diff --git a/src/nvofapi/nvofapi_common.cpp b/src/nvofapi/nvofapi_common.cpp
+index c483aec7..989860b3 100644
+--- a/src/nvofapi/nvofapi_common.cpp
++++ b/src/nvofapi/nvofapi_common.cpp
+@@ -127,7 +127,7 @@ namespace nvofapi {
+ 
+         createInfo.pNext = &privData;
+ 
+-        auto ret = m_vkCreateOpticalFlowSessionNV(m_vkDevice, &createInfo, NULL, &m_vkOfaSession);
++        auto ret = m_vkCreateOpticalFlowSessionNV(m_vkDevice, &createInfo, nullptr, &m_vkOfaSession);
+ 
+         if (ret == VK_SUCCESS) {
+             return Success();
+@@ -136,17 +136,17 @@ namespace nvofapi {
+         return ErrorGeneric();
+     }
+ 
+-    NV_OF_STATUS NvOFInstance::BindImageToSession(NvOFImage* image, VkOpticalFlowSessionBindingPointNV bindingPoint) {
+-        VkImageLayout layout = VK_IMAGE_LAYOUT_GENERAL;
++    NV_OF_STATUS NvOFInstance::BindImageToSession(NvOFGPUBufferHandle hBuffer, VkOpticalFlowSessionBindingPointNV bindingPoint) {
++        auto nvOFImage = reinterpret_cast<NvOFImage*>(hBuffer);
+ 
+-        if (!image)
++        if (!nvOFImage)
+             return ErrorGeneric();
+ 
+         auto ret = m_vkBindOpticalFlowSessionImageNV(m_vkDevice,
+             m_vkOfaSession,
+             bindingPoint,
+-            image->ImageView(),
+-            layout);
++            nvOFImage->ImageView(),
++            VK_IMAGE_LAYOUT_GENERAL);
+         if (ret != VK_SUCCESS) {
+             return ErrorGeneric();
+         }
+@@ -167,26 +167,26 @@ namespace nvofapi {
+     }
+ 
+     void NvOFInstance::RegisterBuffer(const NV_OF_REGISTER_RESOURCE_PARAMS_VK* registerParams) {
+-        NvOFImage* nvOFImage = new NvOFImage(m_vkDevice, registerParams->image, registerParams->format);
++        auto nvOFImage = new NvOFImage(m_vkDevice, registerParams->image, registerParams->format);
+         nvOFImage->Initialize(m_vkCreateImageView, m_vkDestroyImageView);
+         *registerParams->hOFGpuBuffer = reinterpret_cast<NvOFGPUBufferHandle>(nvOFImage);
+     }
+ 
+     void NvOFInstance::RecordCmdBuf(const NV_OF_EXECUTE_INPUT_PARAMS_VK* inParams, NV_OF_EXECUTE_OUTPUT_PARAMS_VK* outParams, VkCommandBuffer cmdBuf) {
+-        BindImageToSession(reinterpret_cast<NvOFImage*>(inParams->inputFrame), VK_OPTICAL_FLOW_SESSION_BINDING_POINT_INPUT_NV);
+-        BindImageToSession(reinterpret_cast<NvOFImage*>(inParams->referenceFrame), VK_OPTICAL_FLOW_SESSION_BINDING_POINT_REFERENCE_NV);
+-        BindImageToSession(reinterpret_cast<NvOFImage*>(outParams->outputBuffer), VK_OPTICAL_FLOW_SESSION_BINDING_POINT_FLOW_VECTOR_NV);
+-        BindImageToSession(reinterpret_cast<NvOFImage*>(outParams->outputCostBuffer), VK_OPTICAL_FLOW_SESSION_BINDING_POINT_COST_NV);
+-        BindImageToSession(reinterpret_cast<NvOFImage*>(outParams->bwdOutputBuffer), VK_OPTICAL_FLOW_SESSION_BINDING_POINT_BACKWARD_FLOW_VECTOR_NV);
+-        BindImageToSession(reinterpret_cast<NvOFImage*>(outParams->bwdOutputCostBuffer), VK_OPTICAL_FLOW_SESSION_BINDING_POINT_BACKWARD_COST_NV);
+-        BindImageToSession(reinterpret_cast<NvOFImage*>(outParams->globalFlowBuffer), VK_OPTICAL_FLOW_SESSION_BINDING_POINT_GLOBAL_FLOW_NV);
++        BindImageToSession(inParams->inputFrame, VK_OPTICAL_FLOW_SESSION_BINDING_POINT_INPUT_NV);
++        BindImageToSession(inParams->referenceFrame, VK_OPTICAL_FLOW_SESSION_BINDING_POINT_REFERENCE_NV);
++        BindImageToSession(outParams->outputBuffer, VK_OPTICAL_FLOW_SESSION_BINDING_POINT_FLOW_VECTOR_NV);
++        BindImageToSession(outParams->outputCostBuffer, VK_OPTICAL_FLOW_SESSION_BINDING_POINT_COST_NV);
++        BindImageToSession(outParams->bwdOutputBuffer, VK_OPTICAL_FLOW_SESSION_BINDING_POINT_BACKWARD_FLOW_VECTOR_NV);
++        BindImageToSession(outParams->bwdOutputCostBuffer, VK_OPTICAL_FLOW_SESSION_BINDING_POINT_BACKWARD_COST_NV);
++        BindImageToSession(outParams->globalFlowBuffer, VK_OPTICAL_FLOW_SESSION_BINDING_POINT_GLOBAL_FLOW_NV);
+         // Support INPUT_MIPS execute priv data
+         if (((NV_OF_PRIV_DATA*)inParams->hPrivData)->id == NV_OF_EXECUTE_PRIV_DATA_ID_INPUT_MIPS) {
+             NV_OF_EXECUTE_PRIV_DATA_INPUT_MIPS* mipData = ((NV_OF_EXECUTE_PRIV_DATA_INPUT_MIPS*)((NV_OF_PRIV_DATA*)inParams->hPrivData)->data);
+             for (uint32_t i = 0; i < 6; i++) {
+                 if (mipData->input[i] && mipData->reference[i]) {
+-                    BindImageToSession(reinterpret_cast<NvOFImage*>(mipData->input[i]), VK_OPTICAL_FLOW_SESSION_BINDING_POINT_INPUT_NV);
+-                    BindImageToSession(reinterpret_cast<NvOFImage*>(mipData->reference[i]), VK_OPTICAL_FLOW_SESSION_BINDING_POINT_REFERENCE_NV);
++                    BindImageToSession(mipData->input[i], VK_OPTICAL_FLOW_SESSION_BINDING_POINT_INPUT_NV);
++                    BindImageToSession(mipData->reference[i], VK_OPTICAL_FLOW_SESSION_BINDING_POINT_REFERENCE_NV);
+                 }
+             }
+         }
+diff --git a/src/nvofapi/nvofapi_image.cpp b/src/nvofapi/nvofapi_image.cpp
+index 0786010a..14c1c0a3 100644
+--- a/src/nvofapi/nvofapi_image.cpp
++++ b/src/nvofapi/nvofapi_image.cpp
+@@ -37,7 +37,7 @@ namespace nvofapi {
+         viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+         viewInfo.flags = 0;
+ 
+-        auto ret = fpCreateImageView(m_vkDevice, &viewInfo, NULL, &m_imageView);
++        auto ret = fpCreateImageView(m_vkDevice, &viewInfo, nullptr, &m_imageView);
+         if (ret != VK_SUCCESS) {
+             return false;
+         }
+diff --git a/src/nvofapi/nvofapi_image.h b/src/nvofapi/nvofapi_image.h
+index bc297aa7..e60ba307 100644
+--- a/src/nvofapi/nvofapi_image.h
++++ b/src/nvofapi/nvofapi_image.h
+@@ -25,22 +25,24 @@
+ 
+ namespace nvofapi {
+     class NvOFImage {
+-      private:
+-        VkDevice m_vkDevice;
+-        VkImage m_image;
+-        VkImageView m_imageView;
+-        VkFormat m_format;
+-        PFN_vkDestroyImageView m_vkDestroyImageView{};
+-
+       public:
+-        VkImageView ImageView() { return m_imageView; }
+         NvOFImage(VkDevice device, VkImage image, VkFormat format) : m_vkDevice(device), m_image(image), m_format(format) {
+         }
++
+         ~NvOFImage() {
+             m_vkDestroyImageView(m_vkDevice, m_imageView, nullptr);
+         }
+ 
++        VkImageView ImageView() { return m_imageView; }
++
+         bool Initialize(PFN_vkCreateImageView CreateImageView,
+             PFN_vkDestroyImageView DestroyImageView);
++
++      private:
++        VkDevice m_vkDevice{};
++        VkImage m_image{};
++        VkImageView m_imageView{};
++        VkFormat m_format{};
++        PFN_vkDestroyImageView m_vkDestroyImageView{};
+     };
+ }
+diff --git a/src/nvofapi/nvofapi_instance.h b/src/nvofapi/nvofapi_instance.h
+index c06a6d86..0bbf3d7f 100644
+--- a/src/nvofapi/nvofapi_instance.h
++++ b/src/nvofapi/nvofapi_instance.h
+@@ -29,34 +29,9 @@
+ 
+ namespace nvofapi {
+     constexpr uint32_t CMDS_IN_FLIGHT = 8;
+-    class NvOFInstance;
+-    class NvOFImage;
+ 
+     class NvOFInstance {
+-
+-      protected:
+-        VkInstance m_vkInstance;
+-        VkPhysicalDevice m_vkPhysicalDevice;
+-        VkDevice m_vkDevice;
+-        VkOpticalFlowSessionNV m_vkOfaSession{};
+-        PFN_vkGetInstanceProcAddr m_vkGetInstanceProcAddr{};
+-        PFN_vkGetDeviceProcAddr m_vkGetDeviceProcAddr{};
+-        PFN_vkCreateOpticalFlowSessionNV m_vkCreateOpticalFlowSessionNV{};
+-        PFN_vkDestroyOpticalFlowSessionNV m_vkDestroyOpticalFlowSessionNV{};
+-        PFN_vkCreateImageView m_vkCreateImageView{};
+-        PFN_vkDestroyImageView m_vkDestroyImageView{};
+-        PFN_vkBindOpticalFlowSessionImageNV m_vkBindOpticalFlowSessionImageNV{};
+-        PFN_vkCmdOpticalFlowExecuteNV m_vkCmdOpticalFlowExecuteNV{};
+-
+-        PFN_vkGetPhysicalDeviceQueueFamilyProperties m_vkGetPhysicalDeviceQueueFamilyProperties;
+-        HMODULE m_library;
+-
+-        uint32_t GetVkOFAQueue();
+-
+       public:
+-        VkDevice GetVkDevice() { return m_vkDevice; }
+-        VkOpticalFlowSessionNV GetOfaSession() { return m_vkOfaSession; }
+-
+         NvOFInstance(VkInstance vkInstance,
+             VkPhysicalDevice vkPhysicalDevice,
+             VkDevice vkDevice) : m_vkInstance(vkInstance),
+@@ -64,19 +39,42 @@ namespace nvofapi {
+         }
+ 
+         NvOFInstance() {};
++
+         virtual ~NvOFInstance() {
+             m_vkDestroyOpticalFlowSessionNV(m_vkDevice, m_vkOfaSession, nullptr);
+             FreeLibrary(m_library);
+         }
+ 
++        VkDevice GetVkDevice() { return m_vkDevice; }
++        VkOpticalFlowSessionNV GetOfaSession() { return m_vkOfaSession; }
++
+         NV_OF_STATUS getCaps(NV_OF_CAPS param, uint32_t* capsVal, uint32_t* size);
+ 
+         NV_OF_STATUS InitSession(const NV_OF_INIT_PARAMS* initParams);
+ 
+         void RegisterBuffer(const NV_OF_REGISTER_RESOURCE_PARAMS_VK* registerParams);
+ 
+-        NV_OF_STATUS BindImageToSession(NvOFImage* image, VkOpticalFlowSessionBindingPointNV bindingPoint);
++        NV_OF_STATUS BindImageToSession(NvOFGPUBufferHandle hBuffer, VkOpticalFlowSessionBindingPointNV bindingPoint);
+ 
+         void RecordCmdBuf(const NV_OF_EXECUTE_INPUT_PARAMS_VK* inParams, NV_OF_EXECUTE_OUTPUT_PARAMS_VK* outParams, VkCommandBuffer cmdBuf);
++
++      protected:
++        VkInstance m_vkInstance;
++        VkPhysicalDevice m_vkPhysicalDevice;
++        VkDevice m_vkDevice;
++        VkOpticalFlowSessionNV m_vkOfaSession{};
++        PFN_vkGetInstanceProcAddr m_vkGetInstanceProcAddr{};
++        PFN_vkGetDeviceProcAddr m_vkGetDeviceProcAddr{};
++        PFN_vkCreateOpticalFlowSessionNV m_vkCreateOpticalFlowSessionNV{};
++        PFN_vkDestroyOpticalFlowSessionNV m_vkDestroyOpticalFlowSessionNV{};
++        PFN_vkCreateImageView m_vkCreateImageView{};
++        PFN_vkDestroyImageView m_vkDestroyImageView{};
++        PFN_vkBindOpticalFlowSessionImageNV m_vkBindOpticalFlowSessionImageNV{};
++        PFN_vkCmdOpticalFlowExecuteNV m_vkCmdOpticalFlowExecuteNV{};
++
++        PFN_vkGetPhysicalDeviceQueueFamilyProperties m_vkGetPhysicalDeviceQueueFamilyProperties;
++        HMODULE m_library;
++
++        uint32_t GetVkOFAQueue();
+     };
+ }
+diff --git a/src/nvofapi_d3d12.cpp b/src/nvofapi_d3d12.cpp
+index b095866a..1d5c6983 100644
+--- a/src/nvofapi_d3d12.cpp
++++ b/src/nvofapi_d3d12.cpp
+@@ -90,7 +90,7 @@ extern "C" {
+         if (log::tracing())
+             log::trace(n, log::fmt::hnd(hOf), log::fmt::ptr(registerParams));
+ 
+-        nvofapi::NvOFInstanceD3D12* nvOF = reinterpret_cast<nvofapi::NvOFInstanceD3D12*>(hOf);
++        auto nvOF = reinterpret_cast<nvofapi::NvOFInstanceD3D12*>(hOf);
+ 
+         nvOF->RegisterBuffer(registerParams);
+         return Success(n);
+@@ -114,7 +114,7 @@ extern "C" {
+         if (log::tracing())
+             log::trace(n, log::fmt::hnd(hOf), log::fmt::ptr(executeInParams), log::fmt::ptr(executeOutParams));
+ 
+-        nvofapi::NvOFInstanceD3D12* nvOF = reinterpret_cast<nvofapi::NvOFInstanceD3D12*>(hOf);
++        auto nvOF = reinterpret_cast<nvofapi::NvOFInstanceD3D12*>(hOf);
+ 
+         nvOF->Execute(executeInParams, executeOutParams);
+         return Success(n, alreadyLoggedOk);
+diff --git a/src/nvofapi_vulkan.cpp b/src/nvofapi_vulkan.cpp
+index b5d4790a..8267a524 100644
+--- a/src/nvofapi_vulkan.cpp
++++ b/src/nvofapi_vulkan.cpp
+@@ -40,7 +40,7 @@ extern "C" {
+         if (log::tracing())
+             log::trace(n, log::fmt::hnd(vkInstance), log::fmt::hnd(vkPhysicalDevice), log::fmt::hnd(vkDevice), log::fmt::ptr(hOFInstance));
+ 
+-        nvofapi::NvOFInstanceVk* nvOF = new nvofapi::NvOFInstanceVk(vkInstance, vkPhysicalDevice, vkDevice);
++        auto nvOF = new nvofapi::NvOFInstanceVk(vkInstance, vkPhysicalDevice, vkDevice);
+ 
+         if (!nvOF) {
+             return ErrorGeneric(n);
+@@ -79,7 +79,7 @@ extern "C" {
+         if (log::tracing())
+             log::trace(n, log::fmt::hnd(hOf), log::fmt::ptr(registerParams));
+ 
+-        nvofapi::NvOFInstanceVk* nvOF = reinterpret_cast<nvofapi::NvOFInstanceVk*>(hOf);
++        auto nvOF = reinterpret_cast<nvofapi::NvOFInstanceVk*>(hOf);
+         nvOF->RegisterBuffer(registerParams);
+         return Success(n);
+     }
+@@ -102,7 +102,7 @@ extern "C" {
+         if (log::tracing())
+             log::trace(n, log::fmt::hnd(hOf), log::fmt::ptr(executeInParams), log::fmt::ptr(executeOutParams));
+ 
+-        nvofapi::NvOFInstanceVk* nvOF = reinterpret_cast<nvofapi::NvOFInstanceVk*>(hOf);
++        auto nvOF = reinterpret_cast<nvofapi::NvOFInstanceVk*>(hOf);
+ 
+         nvOF->Execute(executeInParams, executeOutParams);
+         return Success(n, alreadyLoggedOk);
+diff --git a/src/vulkan/nvofapi_vulkan_instance.cpp b/src/vulkan/nvofapi_vulkan_instance.cpp
+index 90c04c41..640fbd14 100644
+--- a/src/vulkan/nvofapi_vulkan_instance.cpp
++++ b/src/vulkan/nvofapi_vulkan_instance.cpp
+@@ -69,7 +69,7 @@ namespace nvofapi {
+         createInfo.queueFamilyIndex = GetVkOFAQueue();
+         m_vkGetDeviceQueue(m_vkDevice, createInfo.queueFamilyIndex, 0, &m_queue);
+ 
+-        if (m_vkCreateCommandPool(m_vkDevice, &createInfo, NULL, &m_commandPool)
++        if (m_vkCreateCommandPool(m_vkDevice, &createInfo, nullptr, &m_commandPool)
+             != VK_SUCCESS) {
+             return false;
+         }
+diff --git a/src/vulkan/nvofapi_vulkan_instance.h b/src/vulkan/nvofapi_vulkan_instance.h
+index 59b27757..7fc02840 100644
+--- a/src/vulkan/nvofapi_vulkan_instance.h
++++ b/src/vulkan/nvofapi_vulkan_instance.h
+@@ -35,10 +35,11 @@ namespace nvofapi {
+             m_vkFreeCommandBuffers(m_vkDevice, m_commandPool, CMDS_IN_FLIGHT, m_commandBuffers);
+             m_vkDestroyCommandPool(m_vkDevice, m_commandPool, nullptr);
+         }
+-        bool Initialize();
+ 
+         void Execute(const NV_OF_EXECUTE_INPUT_PARAMS_VK* inParams, NV_OF_EXECUTE_OUTPUT_PARAMS_VK* outParams);
+ 
++        bool Initialize();
++
+       private:
+         VkQueue m_queue;
+         VkCommandPool m_commandPool;
+
+From 2789cb5bbcad5b6cfa5c129eee7e44f1066c9e65 Mon Sep 17 00:00:00 2001
+From: Liam Middlebrook <lmiddlebrook@nvidia.com>
+Date: Wed, 30 Oct 2024 21:35:43 -0700
+Subject: [PATCH] nvofapi_vulkan_instance: Create reset-able cmdbufs
+
+---
+ src/vulkan/nvofapi_vulkan_instance.cpp | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/src/vulkan/nvofapi_vulkan_instance.cpp b/src/vulkan/nvofapi_vulkan_instance.cpp
+index 640fbd14..8f2fab05 100644
+--- a/src/vulkan/nvofapi_vulkan_instance.cpp
++++ b/src/vulkan/nvofapi_vulkan_instance.cpp
+@@ -67,6 +67,7 @@ namespace nvofapi {
+         VkCommandPoolCreateInfo createInfo{};
+         createInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+         createInfo.queueFamilyIndex = GetVkOFAQueue();
++        createInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+         m_vkGetDeviceQueue(m_vkDevice, createInfo.queueFamilyIndex, 0, &m_queue);
+ 
+         if (m_vkCreateCommandPool(m_vkDevice, &createInfo, nullptr, &m_commandPool)
+
+From ce91e29d0a2499df38f2e13a0124af6f9d5355e2 Mon Sep 17 00:00:00 2001
+From: Liam Middlebrook <lmiddlebrook@nvidia.com>
+Date: Wed, 30 Oct 2024 21:39:04 -0700
+Subject: [PATCH] nvofapi: Check if hPrivData is set before usage
+
+---
+ src/nvofapi/nvofapi_common.cpp | 15 +++++++++------
+ 1 file changed, 9 insertions(+), 6 deletions(-)
+
+diff --git a/src/nvofapi/nvofapi_common.cpp b/src/nvofapi/nvofapi_common.cpp
+index 989860b3..8b6887be 100644
+--- a/src/nvofapi/nvofapi_common.cpp
++++ b/src/nvofapi/nvofapi_common.cpp
+@@ -120,12 +120,15 @@ namespace nvofapi {
+ 
+         // Need to get the size/id for the private data to pass it along to VK...
+         VkOpticalFlowSessionCreatePrivateDataInfoNV privData{};
+-        privData.sType = VK_STRUCTURE_TYPE_OPTICAL_FLOW_SESSION_CREATE_PRIVATE_DATA_INFO_NV;
+-        privData.size = ((NV_OF_PRIV_DATA*)initParams->hPrivData)->size;
+-        privData.id = ((NV_OF_PRIV_DATA*)initParams->hPrivData)->id;
+-        privData.pPrivateData = ((NV_OF_PRIV_DATA*)initParams->hPrivData)->data;
+ 
+-        createInfo.pNext = &privData;
++        if (initParams->hPrivData != nullptr) {
++            privData.sType = VK_STRUCTURE_TYPE_OPTICAL_FLOW_SESSION_CREATE_PRIVATE_DATA_INFO_NV;
++            privData.size = ((NV_OF_PRIV_DATA*)initParams->hPrivData)->size;
++            privData.id = ((NV_OF_PRIV_DATA*)initParams->hPrivData)->id;
++            privData.pPrivateData = ((NV_OF_PRIV_DATA*)initParams->hPrivData)->data;
++
++            createInfo.pNext = &privData;
++        }
+ 
+         auto ret = m_vkCreateOpticalFlowSessionNV(m_vkDevice, &createInfo, nullptr, &m_vkOfaSession);
+ 
+@@ -181,7 +184,7 @@ namespace nvofapi {
+         BindImageToSession(outParams->bwdOutputCostBuffer, VK_OPTICAL_FLOW_SESSION_BINDING_POINT_BACKWARD_COST_NV);
+         BindImageToSession(outParams->globalFlowBuffer, VK_OPTICAL_FLOW_SESSION_BINDING_POINT_GLOBAL_FLOW_NV);
+         // Support INPUT_MIPS execute priv data
+-        if (((NV_OF_PRIV_DATA*)inParams->hPrivData)->id == NV_OF_EXECUTE_PRIV_DATA_ID_INPUT_MIPS) {
++        if (inParams->hPrivData != nullptr && ((NV_OF_PRIV_DATA*)inParams->hPrivData)->id == NV_OF_EXECUTE_PRIV_DATA_ID_INPUT_MIPS) {
+             NV_OF_EXECUTE_PRIV_DATA_INPUT_MIPS* mipData = ((NV_OF_EXECUTE_PRIV_DATA_INPUT_MIPS*)((NV_OF_PRIV_DATA*)inParams->hPrivData)->data);
+             for (uint32_t i = 0; i < 6; i++) {
+                 if (mipData->input[i] && mipData->reference[i]) {
+
+From ced97fac5f507c47abdf28b3022484ff59c9abfb Mon Sep 17 00:00:00 2001
+From: Liam Middlebrook <lmiddlebrook@nvidia.com>
+Date: Wed, 30 Oct 2024 21:47:04 -0700
+Subject: [PATCH] nvofapi: Use std::vector rather than callocing arrays
+
+---
+ src/nvofapi/nvofapi_common.cpp         | 26 +++++++++-----------------
+ src/vulkan/nvofapi_vulkan_instance.cpp | 22 ++++++++--------------
+ 2 files changed, 17 insertions(+), 31 deletions(-)
+
+diff --git a/src/nvofapi/nvofapi_common.cpp b/src/nvofapi/nvofapi_common.cpp
+index 8b6887be..0b6253ae 100644
+--- a/src/nvofapi/nvofapi_common.cpp
++++ b/src/nvofapi/nvofapi_common.cpp
+@@ -50,16 +50,14 @@ namespace nvofapi {
+     uint32_t NvOFInstance::GetVkOFAQueue() {
+         uint32_t count = 0;
+         m_vkGetPhysicalDeviceQueueFamilyProperties(m_vkPhysicalDevice, &count, nullptr);
+-        VkQueueFamilyProperties* queueFamProps = (VkQueueFamilyProperties*)calloc(sizeof(VkQueueFamilyProperties), count);
+-        m_vkGetPhysicalDeviceQueueFamilyProperties(m_vkPhysicalDevice, &count, queueFamProps);
++        auto queueFamProps = std::vector<VkQueueFamilyProperties>(count);
++        m_vkGetPhysicalDeviceQueueFamilyProperties(m_vkPhysicalDevice, &count, queueFamProps.data());
+ 
+         for (uint32_t i = 0; i < count; i++) {
+             if (queueFamProps[i].queueFlags & VK_QUEUE_OPTICAL_FLOW_BIT_NV) {
+-                free(queueFamProps);
+                 return i;
+             }
+         }
+-        free(queueFamProps);
+         return -1;
+     }
+ 
+@@ -193,29 +191,23 @@ namespace nvofapi {
+                 }
+             }
+         }
+-        VkRect2D* regions = nullptr;
+-
+-        if (inParams->numRois) {
+-            regions = (VkRect2D*)calloc(sizeof(VkRect2D), inParams->numRois);
+-            for (uint32_t i = 0; i < inParams->numRois; i++) {
+-                regions[i].offset.x = inParams->roiData[i].start_x;
+-                regions[i].offset.y = inParams->roiData[i].start_y;
+-                regions[i].extent.width = inParams->roiData[i].width;
+-                regions[i].extent.height = inParams->roiData[i].height;
+-            }
++        auto regions = std::vector<VkRect2D>(inParams->numRois);
++        for (uint32_t i = 0; i < inParams->numRois; i++) {
++            regions[i].offset.x = inParams->roiData[i].start_x;
++            regions[i].offset.y = inParams->roiData[i].start_y;
++            regions[i].extent.width = inParams->roiData[i].width;
++            regions[i].extent.height = inParams->roiData[i].height;
+         }
+ 
+         VkOpticalFlowExecuteInfoNV ofaExecuteInfo{};
+         ofaExecuteInfo.sType = VK_STRUCTURE_TYPE_OPTICAL_FLOW_EXECUTE_INFO_NV;
+         ofaExecuteInfo.regionCount = inParams->numRois;
+-        ofaExecuteInfo.pRegions = regions;
++        ofaExecuteInfo.pRegions = regions.data();
+ 
+         if (inParams->disableTemporalHints) {
+             ofaExecuteInfo.flags |= VK_OPTICAL_FLOW_EXECUTE_DISABLE_TEMPORAL_HINTS_BIT_NV;
+         }
+ 
+         m_vkCmdOpticalFlowExecuteNV(cmdBuf, m_vkOfaSession, &ofaExecuteInfo);
+-
+-        free(regions);
+     }
+ }
+diff --git a/src/vulkan/nvofapi_vulkan_instance.cpp b/src/vulkan/nvofapi_vulkan_instance.cpp
+index 8f2fab05..d7c0487e 100644
+--- a/src/vulkan/nvofapi_vulkan_instance.cpp
++++ b/src/vulkan/nvofapi_vulkan_instance.cpp
+@@ -102,16 +102,12 @@ namespace nvofapi {
+                 " numWaitSync: ", inParams->numWaitSyncs,
+                 " pWaitSyncs: ", inParams->pWaitSyncs));
+ 
+-        VkSemaphoreSubmitInfo* waitSyncs = nullptr;
+-
+-        if (inParams->numWaitSyncs) {
+-            waitSyncs = (VkSemaphoreSubmitInfo*)calloc(sizeof(VkSemaphoreSubmitInfo), inParams->numWaitSyncs);
+-            for (uint32_t i = 0; i < inParams->numWaitSyncs; i++) {
+-                waitSyncs[i].sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
+-                waitSyncs[i].semaphore = inParams->pWaitSyncs[i].semaphore;
+-                waitSyncs[i].value = inParams->pWaitSyncs[i].value;
+-                waitSyncs[i].stageMask = VK_PIPELINE_STAGE_2_OPTICAL_FLOW_BIT_NV;
+-            }
++        auto waitSyncs = std::vector<VkSemaphoreSubmitInfo>(inParams->numWaitSyncs);
++        for (uint32_t i = 0; i < inParams->numWaitSyncs; i++) {
++            waitSyncs[i].sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO;
++            waitSyncs[i].semaphore = inParams->pWaitSyncs[i].semaphore;
++            waitSyncs[i].value = inParams->pWaitSyncs[i].value;
++            waitSyncs[i].stageMask = VK_PIPELINE_STAGE_2_OPTICAL_FLOW_BIT_NV;
+         }
+ 
+         VkSemaphoreSubmitInfo signalSync{};
+@@ -138,8 +134,8 @@ namespace nvofapi {
+ 
+         VkSubmitInfo2 submit{};
+         submit.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO_2;
+-        submit.waitSemaphoreInfoCount = inParams->numWaitSyncs;
+-        submit.pWaitSemaphoreInfos = waitSyncs;
++        submit.waitSemaphoreInfoCount = waitSyncs.size();
++        submit.pWaitSemaphoreInfos = waitSyncs.data();
+         submit.commandBufferInfoCount = 1;
+         submit.pCommandBufferInfos = &cmdbufInfo;
+         submit.signalSemaphoreInfoCount = (outParams->pSignalSync) ? 1 : 0;
+@@ -147,8 +143,6 @@ namespace nvofapi {
+ 
+         m_vkQueueSubmit2(m_queue, 1, &submit, VK_NULL_HANDLE);
+ 
+-        free(waitSyncs);
+-
+         m_cmdBufIndex++;
+         if (m_cmdBufIndex >= CMDS_IN_FLIGHT)
+             m_cmdBufIndex = 0;
+
+From 5ab53d12d975fee7b7674667a4dd23c62be9d06d Mon Sep 17 00:00:00 2001
+From: Liam Middlebrook <lmiddlebrook@nvidia.com>
+Date: Wed, 30 Oct 2024 22:09:40 -0700
+Subject: [PATCH] nvofapi: Fix initalization failure error handling
+
+---
+ src/nvofapi_d3d12.cpp  | 3 ---
+ src/nvofapi_vulkan.cpp | 8 +++++---
+ 2 files changed, 5 insertions(+), 6 deletions(-)
+
+diff --git a/src/nvofapi_d3d12.cpp b/src/nvofapi_d3d12.cpp
+index 1d5c6983..8c6db9dc 100644
+--- a/src/nvofapi_d3d12.cpp
++++ b/src/nvofapi_d3d12.cpp
+@@ -46,9 +46,6 @@ extern "C" {
+             nvOF = new nvofapi::NvOFInstanceD3D12(pD3D12Device);
+         } catch (std::exception const& e) {
+             log::info(str::format("CreateOpticalFlowD3D12 exception, %s", e.what()));
+-        }
+-
+-        if (!nvOF) {
+             return ErrorGeneric(n);
+         }
+ 
+diff --git a/src/nvofapi_vulkan.cpp b/src/nvofapi_vulkan.cpp
+index 8267a524..92733e8d 100644
+--- a/src/nvofapi_vulkan.cpp
++++ b/src/nvofapi_vulkan.cpp
+@@ -40,9 +40,11 @@ extern "C" {
+         if (log::tracing())
+             log::trace(n, log::fmt::hnd(vkInstance), log::fmt::hnd(vkPhysicalDevice), log::fmt::hnd(vkDevice), log::fmt::ptr(hOFInstance));
+ 
+-        auto nvOF = new nvofapi::NvOFInstanceVk(vkInstance, vkPhysicalDevice, vkDevice);
+-
+-        if (!nvOF) {
++        nvofapi::NvOFInstanceVk* nvOF = nullptr;
++        try {
++            nvOF = new nvofapi::NvOFInstanceVk(vkInstance, vkPhysicalDevice, vkDevice);
++        } catch (std::exception const& e) {
++            log::info(str::format("CreateOpticalFlowD3D12 exception, %s", e.what()));
+             return ErrorGeneric(n);
+         }
+ 
+
+From 5dfb3aa51e96b203782d07e3c927d535e4a1d070 Mon Sep 17 00:00:00 2001
+From: Liam Middlebrook <lmiddlebrook@nvidia.com>
+Date: Wed, 30 Oct 2024 22:12:56 -0700
+Subject: [PATCH] nvofapi: Use std::array instead of C-arrays for cmdbufs
+
+---
+ src/d3d12/nvofapi_d3d12_instance.cpp   | 12 ++++++------
+ src/d3d12/nvofapi_d3d12_instance.h     |  8 ++++----
+ src/vulkan/nvofapi_vulkan_instance.cpp |  2 +-
+ src/vulkan/nvofapi_vulkan_instance.h   |  4 ++--
+ 4 files changed, 13 insertions(+), 13 deletions(-)
+
+diff --git a/src/d3d12/nvofapi_d3d12_instance.cpp b/src/d3d12/nvofapi_d3d12_instance.cpp
+index 3bb4ed31..09d8b748 100644
+--- a/src/d3d12/nvofapi_d3d12_instance.cpp
++++ b/src/d3d12/nvofapi_d3d12_instance.cpp
+@@ -84,7 +84,7 @@ namespace nvofapi {
+             return false;
+ 
+         for (uint32_t i = 0; i < CMDS_IN_FLIGHT; i++) {
+-            if (FAILED(m_d3ddevice->CreateCommandList1(0, D3D12_COMMAND_LIST_TYPE_DIRECT, (D3D12_COMMAND_LIST_FLAGS)0, IID_PPV_ARGS(&m_cmdList[i]))))
++            if (FAILED(m_d3ddevice->CreateCommandList1(0, D3D12_COMMAND_LIST_TYPE_DIRECT, (D3D12_COMMAND_LIST_FLAGS)0, IID_PPV_ARGS(&m_cmdLists[i]))))
+                 return false;
+         }
+         return true;
+@@ -137,21 +137,21 @@ namespace nvofapi {
+         // Use vkd3d-proton's interop functionality to grab a VkCommandBuffer
+         // that we record our commands into. Work submission and syncrhonization
+         // happens using D3D12.
+-        m_cmdList[m_cmdListIndex]->Reset(m_cmdAllocator, nullptr);
++        m_cmdLists[m_cmdListIndex]->Reset(m_cmdAllocator, nullptr);
+ 
+         for (uint32_t i = 0; i < inParams->numFencePoints; i++) {
+             m_commandQueue->Wait(inParams->fencePoint[i].fence, inParams->fencePoint[i].value);
+         }
+ 
+         VkCommandBuffer vkCmdBuf;
+-        m_device->BeginVkCommandBufferInterop(m_cmdList[m_cmdListIndex], &vkCmdBuf);
++        m_device->BeginVkCommandBufferInterop(m_cmdLists[m_cmdListIndex], &vkCmdBuf);
+ 
+         this->RecordCmdBuf(&vkInputParams, &vkOutputParams, vkCmdBuf);
+ 
+-        m_device->EndVkCommandBufferInterop(m_cmdList[m_cmdListIndex]);
+-        m_cmdList[m_cmdListIndex]->Close();
++        m_device->EndVkCommandBufferInterop(m_cmdLists[m_cmdListIndex]);
++        m_cmdLists[m_cmdListIndex]->Close();
+ 
+-        m_commandQueue->ExecuteCommandLists(1, (ID3D12CommandList**)&m_cmdList[m_cmdListIndex]);
++        m_commandQueue->ExecuteCommandLists(1, (ID3D12CommandList**)&m_cmdLists[m_cmdListIndex]);
+ 
+         m_commandQueue->Signal(outParams->fencePoint->fence, outParams->fencePoint->value);
+ 
+diff --git a/src/d3d12/nvofapi_d3d12_instance.h b/src/d3d12/nvofapi_d3d12_instance.h
+index e8f933cc..03324f2f 100644
+--- a/src/d3d12/nvofapi_d3d12_instance.h
++++ b/src/d3d12/nvofapi_d3d12_instance.h
+@@ -32,9 +32,9 @@ namespace nvofapi {
+         NvOFInstanceD3D12(ID3D12Device* pD3D12Device);
+ 
+         virtual ~NvOFInstanceD3D12() {
+-            for (uint32_t i = 0; i < CMDS_IN_FLIGHT; i++) {
+-                if (m_cmdList[i])
+-                    m_cmdList[i]->Release();
++            for (auto& cmdList : m_cmdLists) {
++                if (cmdList)
++                    cmdList->Release();
+             }
+             if (m_cmdAllocator)
+                 m_cmdAllocator->Release();
+@@ -63,7 +63,7 @@ namespace nvofapi {
+         ID3D12DeviceExt* m_deviceExt{};
+         ID3D12Device4* m_d3ddevice{};
+         ID3D12CommandQueue* m_commandQueue{};
+-        ID3D12GraphicsCommandList* m_cmdList[CMDS_IN_FLIGHT]{};
++        std::array<ID3D12GraphicsCommandList*, CMDS_IN_FLIGHT> m_cmdLists;
+         uint32_t m_cmdListIndex = 0;
+         ID3D12CommandAllocator* m_cmdAllocator{};
+ 
+diff --git a/src/vulkan/nvofapi_vulkan_instance.cpp b/src/vulkan/nvofapi_vulkan_instance.cpp
+index d7c0487e..3f113480 100644
+--- a/src/vulkan/nvofapi_vulkan_instance.cpp
++++ b/src/vulkan/nvofapi_vulkan_instance.cpp
+@@ -81,7 +81,7 @@ namespace nvofapi {
+         allocInfo.commandPool = m_commandPool;
+         allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+         allocInfo.commandBufferCount = CMDS_IN_FLIGHT; // more than enough for anybody ;)
+-        if (m_vkAllocateCommandBuffers(m_vkDevice, &allocInfo, m_commandBuffers)
++        if (m_vkAllocateCommandBuffers(m_vkDevice, &allocInfo, m_commandBuffers.data())
+             != VK_SUCCESS) {
+             return false;
+         }
+diff --git a/src/vulkan/nvofapi_vulkan_instance.h b/src/vulkan/nvofapi_vulkan_instance.h
+index 7fc02840..49c612a3 100644
+--- a/src/vulkan/nvofapi_vulkan_instance.h
++++ b/src/vulkan/nvofapi_vulkan_instance.h
+@@ -32,7 +32,7 @@ namespace nvofapi {
+         }
+         virtual ~NvOFInstanceVk() {
+             // free cmdbuffers
+-            m_vkFreeCommandBuffers(m_vkDevice, m_commandPool, CMDS_IN_FLIGHT, m_commandBuffers);
++            m_vkFreeCommandBuffers(m_vkDevice, m_commandPool, CMDS_IN_FLIGHT, m_commandBuffers.data());
+             m_vkDestroyCommandPool(m_vkDevice, m_commandPool, nullptr);
+         }
+ 
+@@ -45,7 +45,7 @@ namespace nvofapi {
+         VkCommandPool m_commandPool;
+         PFN_vkCreateCommandPool m_vkCreateCommandPool;
+         PFN_vkDestroyCommandPool m_vkDestroyCommandPool;
+-        VkCommandBuffer m_commandBuffers[CMDS_IN_FLIGHT];
++        std::array<VkCommandBuffer, CMDS_IN_FLIGHT> m_commandBuffers;
+ 
+         PFN_vkAllocateCommandBuffers m_vkAllocateCommandBuffers;
+         PFN_vkFreeCommandBuffers m_vkFreeCommandBuffers;
+
+From e2233ff9459ea1b7e28a11dbe3d30a6b62e4946f Mon Sep 17 00:00:00 2001
+From: Liam Middlebrook <lmiddlebrook@nvidia.com>
+Date: Wed, 30 Oct 2024 22:32:50 -0700
+Subject: [PATCH] nvofapi: Migrate to dxvk namespace
+
+---
+ src/d3d12/nvofapi_d3d12_instance.cpp   |  8 ++++----
+ src/d3d12/nvofapi_d3d12_instance.h     |  2 +-
+ src/nvofapi.cpp                        |  6 +++---
+ src/nvofapi/nvofapi_common.cpp         |  3 +--
+ src/nvofapi/nvofapi_image.cpp          |  2 +-
+ src/nvofapi/nvofapi_image.h            |  2 +-
+ src/nvofapi/nvofapi_instance.h         |  2 +-
+ src/nvofapi_d3d12.cpp                  | 10 +++++-----
+ src/nvofapi_vulkan.cpp                 | 10 +++++-----
+ src/vulkan/nvofapi_vulkan_instance.cpp |  6 +++---
+ src/vulkan/nvofapi_vulkan_instance.h   |  2 +-
+ 11 files changed, 26 insertions(+), 27 deletions(-)
+
+diff --git a/src/d3d12/nvofapi_d3d12_instance.cpp b/src/d3d12/nvofapi_d3d12_instance.cpp
+index 09d8b748..07af5983 100644
+--- a/src/d3d12/nvofapi_d3d12_instance.cpp
++++ b/src/d3d12/nvofapi_d3d12_instance.cpp
+@@ -28,7 +28,7 @@
+ 
+ #include "d3d12/nvofapi_d3d12_instance.h"
+ 
+-namespace nvofapi {
++namespace dxvk {
+ 
+     NvOFInstanceD3D12::NvOFInstanceD3D12(ID3D12Device* pD3D12Device) {
+         // Query for the extension interface
+@@ -55,7 +55,7 @@ namespace nvofapi {
+ 
+         // Confirm that OPTICAL_FLOW extension is available
+         if (!m_deviceExt->GetExtensionSupport(D3D12_VK_NV_OPTICAL_FLOW)) {
+-            dxvk::log::info("Missing VK_NV_optical_flow extension!");
++            log::info("Missing VK_NV_optical_flow extension!");
+             return false;
+         }
+ 
+@@ -92,8 +92,8 @@ namespace nvofapi {
+ 
+     void NvOFInstanceD3D12::RegisterBuffer(const NV_OF_REGISTER_RESOURCE_PARAMS_D3D12* registerParams) {
+         NV_OF_REGISTER_RESOURCE_PARAMS_VK vkParams{};
+-        dxvk::log::info(
+-            dxvk::str::format("RegisterBuffer DX: resource: ",
++        log::info(
++            str::format("RegisterBuffer DX: resource: ",
+                 registerParams->resource, " inputFencePoint: ",
+                 registerParams->inputFencePoint.fence, " outputFencePoint: ",
+                 registerParams->outputFencePoint.fence));
+diff --git a/src/d3d12/nvofapi_d3d12_instance.h b/src/d3d12/nvofapi_d3d12_instance.h
+index 03324f2f..bfbbda33 100644
+--- a/src/d3d12/nvofapi_d3d12_instance.h
++++ b/src/d3d12/nvofapi_d3d12_instance.h
+@@ -25,7 +25,7 @@
+ 
+ #include "nvofapi/nvofapi_instance.h"
+ 
+-namespace nvofapi {
++namespace dxvk {
+     class NvOFInstanceD3D12 : public NvOFInstance {
+ 
+       public:
+diff --git a/src/nvofapi.cpp b/src/nvofapi.cpp
+index 06be6182..7bc2cd53 100644
+--- a/src/nvofapi.cpp
++++ b/src/nvofapi.cpp
+@@ -39,7 +39,7 @@ extern "C" {
+         if (log::tracing())
+             log::trace(n, log::fmt::hnd(hOf), log::fmt::ptr(initParams));
+ 
+-        auto nvOF = reinterpret_cast<nvofapi::NvOFInstance*>(hOf);
++        auto nvOF = reinterpret_cast<NvOFInstance*>(hOf);
+ 
+         if (!nvOF) {
+             return ErrorGeneric(n);
+@@ -54,7 +54,7 @@ extern "C" {
+         if (log::tracing())
+             log::trace(n, log::fmt::hnd(hOf));
+ 
+-        auto nvOF = reinterpret_cast<nvofapi::NvOFInstance*>(hOf);
++        auto nvOF = reinterpret_cast<NvOFInstance*>(hOf);
+         if (!nvOF) {
+             return ErrorGeneric(n);
+         }
+@@ -78,7 +78,7 @@ extern "C" {
+         if (log::tracing())
+             log::trace(n, log::fmt::hnd(hOf), capsParam, log::fmt::ptr(capsVal), log::fmt::ptr(size));
+ 
+-        auto nvOF = reinterpret_cast<nvofapi::NvOFInstance*>(hOf);
++        auto nvOF = reinterpret_cast<NvOFInstance*>(hOf);
+ 
+         return nvOF->getCaps(capsParam, capsVal, size);
+     }
+diff --git a/src/nvofapi/nvofapi_common.cpp b/src/nvofapi/nvofapi_common.cpp
+index 0b6253ae..821131fa 100644
+--- a/src/nvofapi/nvofapi_common.cpp
++++ b/src/nvofapi/nvofapi_common.cpp
+@@ -30,8 +30,7 @@
+ #include "nvofapi_image.h"
+ #include "nvofapi_instance.h"
+ 
+-using namespace dxvk;
+-namespace nvofapi {
++namespace dxvk {
+ 
+     typedef struct NV_OF_PRIV_DATA {
+         uint32_t size;
+diff --git a/src/nvofapi/nvofapi_image.cpp b/src/nvofapi/nvofapi_image.cpp
+index 14c1c0a3..56b10a32 100644
+--- a/src/nvofapi/nvofapi_image.cpp
++++ b/src/nvofapi/nvofapi_image.cpp
+@@ -23,7 +23,7 @@
+ 
+ #include "nvofapi_image.h"
+ 
+-namespace nvofapi {
++namespace dxvk {
+     bool NvOFImage::Initialize(PFN_vkCreateImageView fpCreateImageView,
+         PFN_vkDestroyImageView fpDestroyImageView) {
+         m_vkDestroyImageView = fpDestroyImageView;
+diff --git a/src/nvofapi/nvofapi_image.h b/src/nvofapi/nvofapi_image.h
+index e60ba307..99799f54 100644
+--- a/src/nvofapi/nvofapi_image.h
++++ b/src/nvofapi/nvofapi_image.h
+@@ -23,7 +23,7 @@
+ 
+ #include <vulkan/vulkan_core.h>
+ 
+-namespace nvofapi {
++namespace dxvk {
+     class NvOFImage {
+       public:
+         NvOFImage(VkDevice device, VkImage image, VkFormat format) : m_vkDevice(device), m_image(image), m_format(format) {
+diff --git a/src/nvofapi/nvofapi_instance.h b/src/nvofapi/nvofapi_instance.h
+index 0bbf3d7f..0382b1d4 100644
+--- a/src/nvofapi/nvofapi_instance.h
++++ b/src/nvofapi/nvofapi_instance.h
+@@ -27,7 +27,7 @@
+ #include "../inc/nvofapi/nvOpticalFlowD3D12.h"
+ #include "../inc/nvofapi/nvOpticalFlowVulkan.h"
+ 
+-namespace nvofapi {
++namespace dxvk {
+     constexpr uint32_t CMDS_IN_FLIGHT = 8;
+ 
+     class NvOFInstance {
+diff --git a/src/nvofapi_d3d12.cpp b/src/nvofapi_d3d12.cpp
+index 8c6db9dc..40f4189a 100644
+--- a/src/nvofapi_d3d12.cpp
++++ b/src/nvofapi_d3d12.cpp
+@@ -41,9 +41,9 @@ extern "C" {
+         if (log::tracing())
+             log::trace(n, log::fmt::ptr(pD3D12Device), log::fmt::ptr(hOFInstance));
+ 
+-        nvofapi::NvOFInstanceD3D12* nvOF = nullptr;
++        NvOFInstanceD3D12* nvOF = nullptr;
+         try {
+-            nvOF = new nvofapi::NvOFInstanceD3D12(pD3D12Device);
++            nvOF = new NvOFInstanceD3D12(pD3D12Device);
+         } catch (std::exception const& e) {
+             log::info(str::format("CreateOpticalFlowD3D12 exception, %s", e.what()));
+             return ErrorGeneric(n);
+@@ -87,7 +87,7 @@ extern "C" {
+         if (log::tracing())
+             log::trace(n, log::fmt::hnd(hOf), log::fmt::ptr(registerParams));
+ 
+-        auto nvOF = reinterpret_cast<nvofapi::NvOFInstanceD3D12*>(hOf);
++        auto nvOF = reinterpret_cast<NvOFInstanceD3D12*>(hOf);
+ 
+         nvOF->RegisterBuffer(registerParams);
+         return Success(n);
+@@ -99,7 +99,7 @@ extern "C" {
+         if (log::tracing())
+             log::trace(n, log::fmt::ptr(registerParams));
+ 
+-        nvofapi::NvOFImage* nvRes = reinterpret_cast<nvofapi::NvOFImage*>(registerParams->hOFGpuBuffer);
++        NvOFImage* nvRes = reinterpret_cast<NvOFImage*>(registerParams->hOFGpuBuffer);
+         delete nvRes;
+         return Success(n);
+     }
+@@ -111,7 +111,7 @@ extern "C" {
+         if (log::tracing())
+             log::trace(n, log::fmt::hnd(hOf), log::fmt::ptr(executeInParams), log::fmt::ptr(executeOutParams));
+ 
+-        auto nvOF = reinterpret_cast<nvofapi::NvOFInstanceD3D12*>(hOf);
++        auto nvOF = reinterpret_cast<NvOFInstanceD3D12*>(hOf);
+ 
+         nvOF->Execute(executeInParams, executeOutParams);
+         return Success(n, alreadyLoggedOk);
+diff --git a/src/nvofapi_vulkan.cpp b/src/nvofapi_vulkan.cpp
+index 92733e8d..853bd75f 100644
+--- a/src/nvofapi_vulkan.cpp
++++ b/src/nvofapi_vulkan.cpp
+@@ -40,9 +40,9 @@ extern "C" {
+         if (log::tracing())
+             log::trace(n, log::fmt::hnd(vkInstance), log::fmt::hnd(vkPhysicalDevice), log::fmt::hnd(vkDevice), log::fmt::ptr(hOFInstance));
+ 
+-        nvofapi::NvOFInstanceVk* nvOF = nullptr;
++        NvOFInstanceVk* nvOF = nullptr;
+         try {
+-            nvOF = new nvofapi::NvOFInstanceVk(vkInstance, vkPhysicalDevice, vkDevice);
++            nvOF = new NvOFInstanceVk(vkInstance, vkPhysicalDevice, vkDevice);
+         } catch (std::exception const& e) {
+             log::info(str::format("CreateOpticalFlowD3D12 exception, %s", e.what()));
+             return ErrorGeneric(n);
+@@ -81,7 +81,7 @@ extern "C" {
+         if (log::tracing())
+             log::trace(n, log::fmt::hnd(hOf), log::fmt::ptr(registerParams));
+ 
+-        auto nvOF = reinterpret_cast<nvofapi::NvOFInstanceVk*>(hOf);
++        auto nvOF = reinterpret_cast<NvOFInstanceVk*>(hOf);
+         nvOF->RegisterBuffer(registerParams);
+         return Success(n);
+     }
+@@ -92,7 +92,7 @@ extern "C" {
+         if (log::tracing())
+             log::trace(n, log::fmt::ptr(registerParams));
+ 
+-        nvofapi::NvOFImage* nvRes = reinterpret_cast<nvofapi::NvOFImage*>(registerParams->hOFGpuBuffer);
++        NvOFImage* nvRes = reinterpret_cast<NvOFImage*>(registerParams->hOFGpuBuffer);
+         delete nvRes;
+         return ErrorGeneric(n);
+     }
+@@ -104,7 +104,7 @@ extern "C" {
+         if (log::tracing())
+             log::trace(n, log::fmt::hnd(hOf), log::fmt::ptr(executeInParams), log::fmt::ptr(executeOutParams));
+ 
+-        auto nvOF = reinterpret_cast<nvofapi::NvOFInstanceVk*>(hOf);
++        auto nvOF = reinterpret_cast<NvOFInstanceVk*>(hOf);
+ 
+         nvOF->Execute(executeInParams, executeOutParams);
+         return Success(n, alreadyLoggedOk);
+diff --git a/src/vulkan/nvofapi_vulkan_instance.cpp b/src/vulkan/nvofapi_vulkan_instance.cpp
+index 3f113480..ec7e47ec 100644
+--- a/src/vulkan/nvofapi_vulkan_instance.cpp
++++ b/src/vulkan/nvofapi_vulkan_instance.cpp
+@@ -28,7 +28,7 @@
+ 
+ #include "vulkan/nvofapi_vulkan_instance.h"
+ 
+-namespace nvofapi {
++namespace dxvk {
+ 
+     bool NvOFInstanceVk::Initialize() {
+         // For VK we cannot load winevulkan directly or we may break handle
+@@ -90,8 +90,8 @@ namespace nvofapi {
+     }
+ 
+     void NvOFInstanceVk::Execute(const NV_OF_EXECUTE_INPUT_PARAMS_VK* inParams, NV_OF_EXECUTE_OUTPUT_PARAMS_VK* outParams) {
+-        dxvk::log::info(
+-            dxvk::str::format("OFExecuteVK params:",
++        log::info(
++            str::format("OFExecuteVK params:",
+                 " inputFrame: ", inParams->inputFrame,
+                 " referenceFrame: ", inParams->referenceFrame,
+                 " externalHints: ", inParams->externalHints,
+diff --git a/src/vulkan/nvofapi_vulkan_instance.h b/src/vulkan/nvofapi_vulkan_instance.h
+index 49c612a3..699d9ebc 100644
+--- a/src/vulkan/nvofapi_vulkan_instance.h
++++ b/src/vulkan/nvofapi_vulkan_instance.h
+@@ -25,7 +25,7 @@
+ 
+ #include "nvofapi/nvofapi_instance.h"
+ 
+-namespace nvofapi {
++namespace dxvk {
+     class NvOFInstanceVk : public NvOFInstance {
+       public:
+         NvOFInstanceVk(VkInstance vkInstance, VkPhysicalDevice vkPhysicalDevice, VkDevice vkDevice) : NvOFInstance(vkInstance, vkPhysicalDevice, vkDevice) {
+
+From 520a49c80f1e8468089e5070732f6dd752f85b4f Mon Sep 17 00:00:00 2001
+From: Liam Middlebrook <lmiddlebrook@nvidia.com>
+Date: Wed, 30 Oct 2024 22:37:34 -0700
+Subject: [PATCH] nvofapi: Disable 32-bit builds
+
+---
+ src/meson.build | 13 ++++++++-----
+ 1 file changed, 8 insertions(+), 5 deletions(-)
+
+diff --git a/src/meson.build b/src/meson.build
+index 204376aa..d2644e97 100644
+--- a/src/meson.build
++++ b/src/meson.build
+@@ -45,8 +45,11 @@ nvofapi_src = files([
+   'nvofapi/nvofapi_image.cpp',
+ ])
+ 
+-nvofapi_dll = shared_library('nvofapi'+target_suffix, [ nvofapi_src, dxvk_nvapi_version ],
+-  name_prefix         : '',
+-  dependencies        : [ lib_version ],
+-  include_directories : [ nvapi_headers, vk_headers ],
+-  install             : true)
++# Only build 64-bit versions of nvofapi
++if dxvk_cpu_family == 'x86_64'
++  nvofapi_dll = shared_library('nvofapi'+target_suffix, [ nvofapi_src, dxvk_nvapi_version ],
++    name_prefix         : '',
++    dependencies        : [ lib_version ],
++    include_directories : [ nvapi_headers, vk_headers ],
++    install             : true)
++endif
