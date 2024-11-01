@@ -6,19 +6,20 @@
 # Contributor: Giovanni Scafora <giovanni@archlinux.org>
 
 pkgname=wine-cachyos-opt
-_srctag=9.0-20240928
+_srctag=9.0-20241031
 pkgver=${_srctag//-/.}
 pkgrel=1
-epoch=2
+epoch=1
 
 _pkgbasever=${pkgver/rc/-rc}
 _winever=$_pkgbasever
 #_winever=${_pkgbasever%.*}
 
-source=(wine-cachyos::git+https://github.com/CachyOS/wine-cachyos.git#tag=cachyos-wine-${_srctag}
+source=(wine-cachyos::git+https://github.com/CachyOS/wine-cachyos.git#tag=cachyos-${_srctag}-wine
         30-win32-aliases.conf
         wine-binfmt.conf)
 source+=(
+        wine-optical-flow.patch
 )
 validpgpkeys=(5AC1A08B03BD7A313E0A955AF5E6E9EEB9461DD7
               DA23579A74D4AD9AF9D3F945CEFAC8EAAF17519D)
@@ -47,7 +48,6 @@ depends+=(
 )
 
 makedepends=(autoconf bison perl flex mingw-w64-gcc
-  git
   python
   giflib                lib32-giflib
   gnutls                lib32-gnutls
@@ -73,6 +73,7 @@ makedepends=(autoconf bison perl flex mingw-w64-gcc
   ffmpeg
   samba
   opencl-headers
+  git
 )
 
 optdepends=(
@@ -112,6 +113,7 @@ prepare() {
       git config user.email "wine@cachyos.org"
       git config user.name "wine cachyos"
       git tag wine-9.0 --annotate -m "$pkgver" --force
+      patch -Np1 -i "$srcdir"/wine-optical-flow.patch
       ./dlls/winevulkan/make_vulkan -x vk.xml
       ./tools/make_specfiles
       ./tools/make_requests
@@ -216,6 +218,7 @@ package() {
 }
 
 # vim:set ts=8 sts=2 sw=2 et:
-b2sums=('1f656b9ec4460ed7154a6f2be32d92e5f5658d7fc62e319b2c9f94805d8e9bc85718139821c4e60693673ee12662fb6dd5dc6bee9d4bd631b4df05a8cb42c26a'
+b2sums=('07db0f26144e00738fbbdeff3a96c303a62c706fa56d346d8c4b5a4956697fb9a05f7a91ae1235bdb922a8ec89ebf85479e7fdc5a99a19a02ea7bde4f5416d66'
         '45db34fb35a679dc191b4119603eba37b8008326bd4f7d6bd422fbbb2a74b675bdbc9f0cc6995ed0c564cf088b7ecd9fbe2d06d42ff8a4464828f3c4f188075b'
-        'e9de76a32493c601ab32bde28a2c8f8aded12978057159dd9bf35eefbf82f2389a4d5e30170218956101331cf3e7452ae82ad0db6aad623651b0cc2174a61588')
+        'e9de76a32493c601ab32bde28a2c8f8aded12978057159dd9bf35eefbf82f2389a4d5e30170218956101331cf3e7452ae82ad0db6aad623651b0cc2174a61588'
+        '3c4516dd44c8bbec45fc30e75c45e3a87ca6d0275f22e1ba8a9b9a423768ea789166140519cceae3c8e24476d1d9acab5439075b073c3422c4fead4fa7a18b88')
