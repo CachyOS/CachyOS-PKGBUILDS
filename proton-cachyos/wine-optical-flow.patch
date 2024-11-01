@@ -1003,11 +1003,10 @@ index 26562bfef2b..bd1ae446f73 100644
 -- 
 2.47.0.rc0
 
-From f6eaffd3c3a9b8570b918df2a39dc31e71892f6c Mon Sep 17 00:00:00 2001
+From b239fbc3f17f4e464c634064d15037471ea0985c Mon Sep 17 00:00:00 2001
 From: Liam Middlebrook <lmiddlebrook@nvidia.com>
 Date: Sat, 12 Oct 2024 15:35:53 -0700
-Subject: [PATCH 6/6] winex11.drv: Implement D3DKMTQueryAdapterInfo
- WDDM_2_7_CAPS
+Subject: [PATCH] winex11.drv: Implement D3DKMTQueryAdapterInfo WDDM_2_7_CAPS
 
 Used by applications to query support for "Hardware Scheduling" for GPU
 workloads. This is used as a proxy to determine scheduling guarantees
@@ -1019,15 +1018,15 @@ Note: This commit is specifically targeted towards ValveSoftware/wine experiment
 Upstream wine contains commits which change how this would be implemented. Notably, the changes in
 `dlls/winex11.drv/x11drv_main.c` should be instead made in `dlls/win32u/d3dkmt.c`.
 ---
- dlls/winex11.drv/x11drv_main.c | 50 ++++++++++++++++++++++++++++++++++
- include/ddk/d3dkmthk.h         | 14 ++++++++++
- 2 files changed, 64 insertions(+)
+ dlls/winex11.drv/x11drv_main.c | 53 ++++++++++++++++++++++++++++++++++
+ include/ddk/d3dkmthk.h         | 14 +++++++++
+ 2 files changed, 67 insertions(+)
 
 diff --git a/dlls/winex11.drv/x11drv_main.c b/dlls/winex11.drv/x11drv_main.c
-index 1dbf2e78623..bb0880514ae 100644
+index d5461e1124e..4ee4a372367 100644
 --- a/dlls/winex11.drv/x11drv_main.c
 +++ b/dlls/winex11.drv/x11drv_main.c
-@@ -1487,19 +1487,69 @@ done:
+@@ -1401,19 +1401,72 @@ NTSTATUS X11DRV_D3DKMTOpenAdapterFromLuid( D3DKMT_OPENADAPTERFROMLUID *desc )
  
  NTSTATUS X11DRV_D3DKMTQueryAdapterInfo( D3DKMT_QUERYADAPTERINFO *desc )
  {
@@ -1068,10 +1067,13 @@ index 1dbf2e78623..bb0880514ae 100644
 +        {
 +            /*
 +             * Advertise Hardware-Scheduling as enabled for NVIDIA Adapters. NVIDIA driver does
-+             * userspace submission.
++             * userspace submission. Allow overriding this value via the
++             * WINE_DISABLE_HARDWARE_SCHEDULING environment variable.
 +             */
 +            D3DKMT_WDDM_2_7_CAPS *data = desc->pPrivateDriverData;
-+            if (driverProperties.driverID == VK_DRIVER_ID_NVIDIA_PROPRIETARY)
++            const char *e = getenv("WINE_DISABLE_HARDWARE_SCHEDULING");
++            if ((!e || *e == '\0' || *e == '0') &&
++                    (driverProperties.driverID == VK_DRIVER_ID_NVIDIA_PROPRIETARY))
 +            {
 +                data->HwSchEnabled = 1;
 +                data->HwSchSupported = 1;
@@ -1122,6 +1124,3 @@ index 2d30bdd8777..d4d4f88a605 100644
  typedef enum _D3DKMT_QUERYRESULT_PREEMPTION_ATTEMPT_RESULT
  {
      D3DKMT_PreemptionAttempt                               = 0,
--- 
-2.47.0.rc0
-
