@@ -1,0 +1,60 @@
+# Maintainer: Maxime Gauduin <alucryd@archlinux.org>
+# Maintainer: Peter Jung <ptr1337@archlinux.org>
+# Contributor: soloturn <soloturn@gmail.com>
+# Contributor: Mark Wagie <mark.wagie@proton.me>
+
+pkgname=cosmic-comp
+pkgver=1.0.0.alpha.3
+pkgrel=2
+pkgdesc='Compositor for the COSMIC desktop environment'
+arch=(x86_64)
+url='https://github.com/pop-os/cosmic-comp'
+license=(GPL-3.0-only)
+groups=(cosmic)
+depends=(
+  fontconfig
+  gcc-libs
+  glibc
+  libseat.so
+  libinput
+  libxcb
+  libxkbcommon
+  mesa
+  pixman
+  systemd-libs
+  wayland
+)
+makedepends=(
+  cargo
+  git
+  lld
+)
+_tag=90883c6ab12533da08a31da338881c38aa773634
+source=(git+https://github.com/pop-os/cosmic-comp.git#tag=${_tag})
+b2sums=('c410ffb333bd7bb010f795e79b308698f8370e3ac65f411a59337bff4a10e93cfd5b7078b0b9afc1d9de998cf4a87d0afb941489fb57fb0c22bb4de93620ec62')
+
+prepare() {
+  cd cosmic-comp
+  msg2 "Apply Explicit Sync to cosmic-comp"
+  git cherry-pick -n 575b6611bc2e6c82c267b9e6e48af66875dc4f46
+  cargo fetch --locked
+  sed 's/lto = "fat"/lto = "thin"/' -i Cargo.toml
+}
+
+pkgver() {
+  cd cosmic-comp
+  git describe --tags | sed 's/^epoch-//; s/-/./g'
+}
+
+build() {
+  cd cosmic-comp
+  RUSTFLAGS+=" -C link-arg=-fuse-ld=lld"
+  make ARGS+=" --frozen --release"
+}
+
+package() {
+  cd cosmic-comp
+  make prefix='/usr' libexecdir='/usr/lib' DESTDIR="${pkgdir}" install
+}
+
+# vim: ts=2 sw=2 et:
