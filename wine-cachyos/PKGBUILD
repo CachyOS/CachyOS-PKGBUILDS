@@ -9,7 +9,7 @@ pkgname=wine-cachyos
 _srctag=9.0-20241031
 pkgver=${_srctag//-/.}
 pkgrel=1
-epoch=1
+epoch=2
 
 _pkgbasever=${pkgver/rc/-rc}
 _winever=$_pkgbasever
