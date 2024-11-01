@@ -14,7 +14,7 @@ pkgname=(
   'x86_energy_perf_policy'
 )
 pkgver=6.10
-pkgrel=3
+pkgrel=4
 license=('GPL-2.0-only')
 arch=('x86_64')
 url='https://www.kernel.org'
@@ -91,8 +91,8 @@ build() {
     perfexecdir=lib/perf \
     WERROR=0 \
     NO_SDT=1 \
+    LIBPFM4=1 \
     BUILD_BPF_SKEL=1 \
-    NO_LIBPFM4=0 \
     PYTHON=python \
     PYTHON_CONFIG=python-config \
     DESTDIR="$pkgdir"
@@ -180,8 +180,8 @@ package_perf() {
     EXTRA_CFLAGS=' -Wno-error=bad-function-cast -Wno-error=declaration-after-statement -Wno-error=switch-enum' \
     NO_SDT=1 \
     BUILD_BPF_SKEL=1 \
-    NO_LIBPFM4=0 \
     PYTHON=python \
+    LIBPFM4=1 \
     PYTHON_CONFIG=python-config \
     DESTDIR="$pkgdir" \
     install install-python_ext
