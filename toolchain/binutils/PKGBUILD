@@ -8,7 +8,7 @@
 pkgname=binutils
 pkgver=2.43+r4+g7999dae6961
 _commit=7999dae69612295e1bbffe64aff87044372a0059
-pkgrel=2
+pkgrel=3
 pkgdesc='A set of programs to assemble and manipulate binary and object files'
 arch=(x86_64)
 url='https://www.gnu.org/software/binutils/'
@@ -27,9 +27,12 @@ provides=(
 backup=('etc/gprofng.rc')
 options=(staticlibs !distcc !ccache)
 source=(git+https://sourceware.org/git/binutils-gdb.git#commit=${_commit}
-        gold-warn-unsupported.patch)
+        gold-warn-unsupported.patch
+        revert-strip.patch # AutoFDO issue
+        )
 sha256sums=('4726efb1f887c659cfb6aa198f18ca638d405f58ee1eeda4df3eb201c1169a67'
-            '2d430b66f84a19c154725ec535280c493be1d34f1a90f95208dce02fecd0e4e4')
+            '2d430b66f84a19c154725ec535280c493be1d34f1a90f95208dce02fecd0e4e4'
+            'c783401be72ebfc954efe5c3e5f151ec2c6083757562cd43b3af10638008defa')
 validpgpkeys=(3A24BC1E8FB409FA9F14371813FCEF89DD9E3C4F)
 
 #pkgver() {
@@ -51,6 +54,11 @@ prepare() {
   # unsupported targets.  This allows the binutils to be built with
   # BPF support enabled.
   patch -Np1 -i "${srcdir}"/gold-warn-unsupported.patch
+
+  # AutoFDO packaging is currently broken, since strip is failing
+  # Rever the commit and wait till upstream fixes this
+  # We are not running in the mentioned objtool amdgpu issue, therefore it should be pretty safe to revert it
+  patch -Rp1 -i "${srcdir}"/revert-strip.patch
 }
 
 build() {

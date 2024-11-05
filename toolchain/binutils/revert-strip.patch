@@ -1,0 +1,36 @@
+From b20ab53f81db7eefa0db00d14f06c04527ac324c Mon Sep 17 00:00:00 2001
+From: Alan Modra <amodra@gmail.com>
+Date: Tue, 11 Jun 2024 09:22:49 +0930
+Subject: [PATCH] PR31872, Segfault in objdump
+ (elf_slurp_reloc_table_from_section)
+
+This one was triggered by trying to dump an AMDGPU object.
+elf64-amdgcn.c lacks support for objdump relocation handling.
+
+	PR 31872
+	* elfcode.h (elf_slurp_reloc_table_from_section): Don't segfault
+	on NULL elf_info_to_howto_rel.
+---
+ bfd/elfcode.h | 8 ++++----
+ 1 file changed, 4 insertions(+), 4 deletions(-)
+
+diff --git a/bfd/elfcode.h b/bfd/elfcode.h
+index 39dfe0ba234b..3dcba4c4fd77 100644
+--- a/bfd/elfcode.h
++++ b/bfd/elfcode.h
+@@ -1614,11 +1614,11 @@ elf_slurp_reloc_table_from_section (bfd *abfd,
+ 
+       relent->addend = rela.r_addend;
+ 
+-      if ((entsize == sizeof (Elf_External_Rela)
+-	   && ebd->elf_info_to_howto != NULL)
+-	  || ebd->elf_info_to_howto_rel == NULL)
++      res = false;
++      if (entsize == sizeof (Elf_External_Rela)
++	  && ebd->elf_info_to_howto != NULL)
+ 	res = ebd->elf_info_to_howto (abfd, relent, &rela);
+-      else
++      else if (ebd->elf_info_to_howto_rel != NULL)
+ 	res = ebd->elf_info_to_howto_rel (abfd, relent, &rela);
+ 
+       if (! res || relent->howto == NULL)
