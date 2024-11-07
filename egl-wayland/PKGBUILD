@@ -1,0 +1,50 @@
+# Maintainer: Jan Alexander Steffens (heftig) <heftig@archlinux.org>
+
+pkgname=egl-wayland
+pkgver=1.1.16
+pkgrel=3
+epoch=4
+pkgdesc="EGLStream-based Wayland external platform (CachyOS version with newer upstream commits)"
+url="https://github.com/NVIDIA/egl-wayland"
+arch=(x86_64)
+license=(MIT)
+depends=(
+  eglexternalplatform
+  glibc
+  libdrm
+  wayland
+)
+makedepends=(
+  git
+  'libglvnd>=1.3.4'
+  meson
+  wayland-protocols
+)
+provides=(libnvidia-egl-wayland.so)
+source=(
+  "git+$url#commit=218f67846472c9310355210ee9a7e1fabed95062"
+  10_nvidia_wayland.json
+)
+b2sums=('2e2e31ddd00b62b5a52f1e3012bfef27a7ff9d9f6224b13c8a7e4ba7f0e6b824642cd64a5e66ef4c8c1c45cf3ee46ab054b2eed25541f3f00d1a1250f46732c1'
+        'b10206c742e8966d1192b9b0604137e6b296d2be74a437841c63844c0716343578b11565a34fb4c534d5908c0b5775305581b68039a6ff9ed7421c9d385a2b7a')
+
+prepare() {
+  cd $pkgname
+}
+
+build() {
+  arch-meson $pkgname build
+  meson compile -C build
+}
+
+check() {
+  meson test -C build --print-errorlogs
+}
+
+package() {
+  meson install -C build --destdir "$pkgdir"
+  install -Dt "$pkgdir/usr/share/egl/egl_external_platform.d" -m644 10_nvidia_wayland.json
+  install -Dt "$pkgdir/usr/share/licenses/$pkgname" -m644 $pkgname/COPYING
+}
+
+# vim:set sw=2 sts=-1 et:
