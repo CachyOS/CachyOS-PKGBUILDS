@@ -114,9 +114,17 @@ generate_entries() {
 
     srcdev="$(findmnt -no SOURCE /)"
     srcdev_uuid="$(findmnt -no UUID /)"
+    srcdev_partuuid="$(findmnt -no PARTUUID /)"
     srcdev_fsroot="$(findmnt -no FSROOT /)"
     root_fstype="$(findmnt -no FSTYPE /)"
-    sdoptions="root=UUID=${srcdev_uuid} rw"
+
+    if [ -n "$srcdev_uuid" ]; then
+        sdoptions="root=UUID=${srcdev_uuid} rw"
+    elif [ -n "$srcdev_partuuid" ]; then
+        sdoptions="root=PARTUUID=${srcdev_partuuid} rw"
+    else
+        sdoptions="root=${srcdev} rw"
+    fi
 
     # generate an appropriate options line
     case "${root_fstype}" in
