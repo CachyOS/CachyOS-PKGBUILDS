@@ -12,15 +12,18 @@ url="https://github.com/cachyos/cachyos-welcome"
 depends=(
   glib2
   gtk3
+  pciutils
   procps-ng
   qt6-tools
 )
 makedepends=(
+  cargo
+  clang
   clang
   git
+  lld
+  llvm
   meson
-  mold
-  rust
 )
 source=("${pkgname}-${pkgver}.tar.gz::$url/archive/v$pkgver.tar.gz")
 sha512sums=('1b5c6d40643de7e9351df54a1d42d2bbf0de8ccb31acafc57fb61217bd31965f07a9ff55f627e69667e6722410c8749cf64fcf2c260b63ee5e98091e2ea32b5d')
@@ -31,7 +34,15 @@ options=(strip)
 build() {
   cd "${srcdir}/${_pkgname}-${pkgver}"
 
-  export RUSTFLAGS="-Cembed-bitcode -C opt-level=3 -Ccodegen-units=1 -Clinker=clang -C link-arg=-flto -Clink-arg=-fuse-ld=/usr/bin/mold"
+  # Compile with clang
+  export AR=llvm-ar
+  export CC=clang
+  export CXX=clang++
+  export NM=llvm-nm
+  export RANLIB=llvm-ranlib
+
+  export RUSTFLAGS="-Cembed-bitcode -C opt-level=3 -Ccodegen-units=1 -Clinker=clang -C link-arg=-flto -Clink-arg=-fuse-ld=/usr/bin/ld.lld"
+
   meson setup --buildtype=release --prefix=/usr build
   meson compile -C build
 }
@@ -39,7 +50,14 @@ build() {
 package() {
   cd "${srcdir}/${_pkgname}-${pkgver}"/build
 
-  export RUSTFLAGS="-Cembed-bitcode -C opt-level=3 -Ccodegen-units=1 -Clinker=clang -C link-arg=-flto -Clink-arg=-fuse-ld=/usr/bin/mold"
+  # Compile with clang
+  export AR=llvm-ar
+  export CC=clang
+  export CXX=clang++
+  export NM=llvm-nm
+  export RANLIB=llvm-ranlib
+
+  export RUSTFLAGS="-Cembed-bitcode -C opt-level=3 -Ccodegen-units=1 -Clinker=clang -C link-arg=-flto -Clink-arg=-fuse-ld=/usr/bin/ld.lld"
   DESTDIR="${pkgdir}" meson install
 
   install -Dvm644 ../$pkgname.desktop \
