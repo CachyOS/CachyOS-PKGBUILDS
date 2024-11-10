@@ -23,10 +23,8 @@ makedepends=(
 provides=(libnvidia-egl-wayland.so)
 source=(
   "git+$url#tag=$pkgver"
-  10_nvidia_wayland.json
 )
-b2sums=('5c44c6ad89b8e725b46e8edbc1477743006ffcf98601a7177f7e51f439fcbe4fab75258b980d0f20f5d9e2a4dbf551fa9f3722a42da6971ef574462b425ae33c'
-        'b10206c742e8966d1192b9b0604137e6b296d2be74a437841c63844c0716343578b11565a34fb4c534d5908c0b5775305581b68039a6ff9ed7421c9d385a2b7a')
+b2sums=('5c44c6ad89b8e725b46e8edbc1477743006ffcf98601a7177f7e51f439fcbe4fab75258b980d0f20f5d9e2a4dbf551fa9f3722a42da6971ef574462b425ae33c')
 
 prepare() {
   cd $pkgname
@@ -43,7 +41,6 @@ check() {
 
 package() {
   meson install -C build --destdir "$pkgdir"
-  install -Dt "$pkgdir/usr/share/egl/egl_external_platform.d" -m644 10_nvidia_wayland.json
   install -Dt "$pkgdir/usr/share/licenses/$pkgname" -m644 $pkgname/COPYING
 }
 
