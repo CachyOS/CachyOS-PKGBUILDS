@@ -3,7 +3,7 @@
 pkgname=cachyos-hello
 _pkgname=CachyOS-Welcome
 pkgver=0.15.2
-pkgrel=1
+pkgrel=2
 pkgdesc='Welcome screen for CachyOS'
 arch=('x86_64')
 groups=('cachyos')
@@ -31,6 +31,11 @@ provides=('cachyos-hello')
 conflicts=('cachyos-hello')
 options=(strip)
 
+prepare() {
+	cd "${srcdir}/${_pkgname}-${pkgver}"
+	# Cherry Pick Version tag issue
+	git cherry-pick -n e10e5c710ac0b3786be9c5e0f1243ba0d35316cf
+}
 build() {
   cd "${srcdir}/${_pkgname}-${pkgver}"
 
