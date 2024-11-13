@@ -82,7 +82,7 @@ install=cachy-browser.install
 # TODO(vnepogodin): enable back on next firefox release
 #backup=('usr/lib/cachy-browser/distribution/policies.json')
 _settings_commit=14cae4340660147e877d95acfe4dfc2222ceaf2a
-_common_commit=524caa1d703824ef8ded4888f464c1e246d2a424
+_common_commit=b6d75f96db889d6217568dc04568f629087a30b5
 source=(
   "https://archive.mozilla.org/pub/firefox/releases/${pkgver}/source/firefox-${pkgver}.source.tar.xz"
   "https://archive.mozilla.org/pub/firefox/releases/${pkgver}/source/firefox-${pkgver}.source.tar.xz.asc"
@@ -229,7 +229,7 @@ END
 
   echo "Building optimized browser..."
   cat >.mozconfig ../mozconfig - <<END
-ac_add_options --enable-lto=cross,full
+ac_add_options --enable-lto=cross
 ac_add_options --enable-profile-use=cross
 ac_add_options --with-pgo-profile-path=${PWD@Q}/merged.profdata
 ac_add_options --with-pgo-jarlog=${PWD@Q}/jarlog
@@ -286,6 +286,9 @@ END
     # arch upstream provides a separate svg for this. we don't have that, so let's re-use 16.png
     install -Dvm644 browser/branding/${__pkgname}/default16.png \
         "$pkgdir/usr/share/icons/hicolor/symbolic/apps/$pkgname-symbolic.png"
+
+    install -Dvm644 ../$pkgname.desktop \
+        "$pkgdir/usr/share/applications/$pkgname.desktop"
 
   # Install a wrapper to avoid confusion about binary path
   install -Dvm755 /dev/stdin "$pkgdir/usr/bin/$pkgname" <<END
