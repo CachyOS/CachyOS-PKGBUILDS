@@ -20,7 +20,7 @@ pkgname=('php'
          'php-tidy'
          'php-xsl')
 pkgver=8.3.8
-pkgrel=2
+pkgrel=3
 arch=('x86_64')
 license=('PHP')
 url='https://github.com/php/php-src'
@@ -29,7 +29,7 @@ makedepends=('apache' 'aspell' 'enchant' 'gd' 'gmp' 'icu' 'libsodium' 'libxslt' 
              'oniguruma')
 checkdepends=('procps-ng')
 source=("https://php.net/distributions/${pkgbase}-${pkgver}.tar.xz"{,.asc}
-        'apache.patch' 'apache.conf' 'php-fpm.patch' 'php-fpm.tmpfiles' 'php.ini.patch' 'php-cachy.patch' '0005-Enable-hugepages.patch'
+        'apache.patch' 'apache.conf' 'php-fpm.patch' 'disable-deepbind.patch' 'php-fpm.tmpfiles' 'php.ini.patch' 'php-cachy.patch' '0005-Enable-hugepages.patch'
 		'https://raw.githubusercontent.com/SergiX44/php-benchmark-script/master/bench.php')
 sha256sums=('aea358b56186f943c2bbd350c9005b9359133d47e954cfc561385319ae5bb8d7'
             'SKIP'
@@ -45,6 +45,8 @@ validpgpkeys=('1198C0117593497A5EC5C199286AF1F9897469DC'
               '39B641343D8C104B2B146DC3F9C39DC0B9698544'
               'E60913E4DF209907D8E30D96659A97C9CF2A795A')
 _interpreter=${pkgver%.*}
+options=('!lto')
+
 
 prepare() {
 	cd "${srcdir}/${pkgbase}-${pkgver}"
@@ -53,6 +55,7 @@ prepare() {
 	patch -p0 -i "${srcdir}/php-fpm.patch"
 	patch -p0 -i "${srcdir}/php.ini.patch"
 	patch -p0 -i "${srcdir}/php-cachy.patch"
+	patch -p0 -i "${srcdir}/disable-deepbind.patch"
 	patch -Np1 -i "${srcdir}/0005-Enable-hugepages.patch"
 	autoconf
 
