@@ -20,7 +20,7 @@ pkgname=('php'
          'php-tidy'
          'php-xsl')
 pkgver=8.3.13
-pkgrel=2
+pkgrel=3
 arch=('x86_64')
 license=('PHP-3.01')
 url='https://www.php.net/'
@@ -29,13 +29,14 @@ makedepends=('apache' 'aspell' 'enchant' 'gd' 'gmp' 'icu' 'libsodium' 'libxslt' 
              'oniguruma')
 checkdepends=('procps-ng')
 source=("https://php.net/distributions/${pkgbase}-${pkgver}.tar.xz"{,.asc}
-        'apache.patch' 'apache.conf' 'php-fpm.patch' 'php-fpm.tmpfiles' 'php.ini.patch' 'php-cachy.patch' '0005-Enable-hugepages.patch'
+        'apache.patch' 'apache.conf' 'php-fpm.patch' 'disable-deepbind.patch' 'php-fpm.tmpfiles' 'php.ini.patch' 'php-cachy.patch' '0005-Enable-hugepages.patch'
         'https://raw.githubusercontent.com/SergiX44/php-benchmark-script/master/bench.php')
 sha256sums=('89adb978cca209124fe53fd6327bc4966ca21213a7fa2e9504f854e340873018'
             'SKIP'
             '702b163c66c65af92dcad8d79f41bda84bcd5d863235fcf1497c33a86db9e4ca'
             '4a2add00d93fa991ccdf6356090264c1059c79935642afff6e8d4a2107fa037e'
             '78b8074461cdfc5d4e0ba428a8387f308d60720c8ad35c6176801e5088f02090'
+            'a57e4f2e7b12f745472ab7ca242e4f2f310d32a2bcaf304a4e98020c335e2ec2'
             '640dba0d960bfeaae9ad38d2826d3f6b5d6c175a4d3e16664eefff29141faad5'
             '73d7641022985a0b8aa1817c16935956ffde118cf61c4c349ed445d51d91af1b'
             '40de67e43a972159c54d948ef1bf4e94e2d0e96da1f21efc9002ba71f39b80ae'
@@ -56,6 +57,7 @@ prepare() {
 	patch -p0 -i "${srcdir}/php-fpm.patch"
 	patch -p0 -i "${srcdir}/php.ini.patch"
 	patch -p0 -i "${srcdir}/php-cachy.patch"
+	patch -Np1 -i "${srcdir}/disable-deepbind.patch"
 	patch -Np1 -i "${srcdir}/0005-Enable-hugepages.patch"
 	autoconf
 
