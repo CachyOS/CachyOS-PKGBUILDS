@@ -24,7 +24,7 @@ depends=(
   'libngtcp2'
   'libuv'
   'openssl'
-  'zlib'
+  'zlib-ng'
 ) # 'http-parser' 'v8')
 makedepends=(
   'git'
@@ -48,8 +48,9 @@ build() {
   # /usr/lib/libnode.so uses malloc_usable_size, which is incompatible with fortification level 3
   export CFLAGS="${CFLAGS/_FORTIFY_SOURCE=3/_FORTIFY_SOURCE=2}"
   export CXXFLAGS="${CXXFLAGS/_FORTIFY_SOURCE=3/_FORTIFY_SOURCE=2}"
-  export CFLAGS+=" -fno-semantic-interposition"
-  export CXXFLAGS+=" -fno-semantic-interposition"
+  # Do not error on PGO mismatch
+  export CFLAGS+=" -fno-semantic-interposition -Wno-error=coverage-mismatch"
+  export CXXFLAGS+=" -fno-semantic-interposition -Wno-error=coverage-mismatch"
   ./configure \
     --prefix=/usr \
     --without-npm \
