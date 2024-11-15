@@ -1,0 +1,19 @@
+# Maintainer: Peter Jung <admin@ptr1337.dev>
+
+pkgname=autofdo-bin
+_pkgname=create_llvm_prof
+pkgver=0.30.1
+pkgrel=1
+pkgdesc="Automatic Feedback-Directed Optimizer (Precompiled binary from Google)"
+arch=('x86_64')
+url="https://github.com/google/autofdo"
+license=('Apache-2.0')
+depends=('glibc')
+source=("https://github.com/google/autofdo/releases/download/v${pkgver}/${_pkgname}-x86_64-v${pkgver}.zip")
+sha256sums=('8e104e6b4881eac659636dae17a6668af5d023a1d8dfe02d7f5a4df828838fb0')
+
+package() {
+    cd "${srcdir}"
+    install -Dm755 create_llvm_prof "${pkgdir}/usr/bin/create_llvm_prof"
+    ln -s "${pkgdir}/usr/bin/create_llvm_prof" "${pkgdir}/usr/bin/autofdo"
+}
