@@ -94,6 +94,11 @@ check() {
 }
 
 package() {
+  # Do not error on PGO mismatch
+  # Even on packaging steps it needs the export :(
+  export CFLAGS+=" -fno-semantic-interposition -Wno-error=coverage-mismatch"
+  export CXXFLAGS+=" -fno-semantic-interposition -Wno-error=coverage-mismatch"
+
   cd node
   make DESTDIR="$pkgdir" install
   install -Dm644 LICENSE -t "$pkgdir"/usr/share/licenses/nodejs/
