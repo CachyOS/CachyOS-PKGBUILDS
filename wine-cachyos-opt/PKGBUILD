@@ -37,7 +37,7 @@ depends=(
   libxi            lib32-libxi
   gettext          lib32-gettext
   freetype2        lib32-freetype2
-  llvm-libs        lib32-llvm-libs
+  gcc-libs         lib32-gcc-libs
   libpcap          lib32-libpcap
   desktop-file-utils
 )
@@ -46,10 +46,9 @@ depends+=(
   wayland          lib32-wayland
 )
 
-makedepends=(autoconf bison perl flex clang lld
+makedepends=(autoconf bison perl flex mingw-w64-gcc
   git
   python
-  llvm                  lib32-llvm
   giflib                lib32-giflib
   gnutls                lib32-gnutls
   libxinerama           lib32-libxinerama
@@ -122,32 +121,35 @@ prepare() {
 }
 
 build() {
-  export CC="clang"
-  export CXX="clang++"
+  # Doesn't compile without remove these flags as of 4.10
+  export CFLAGS="$CFLAGS -ffat-lto-objects"
 
   local -a split=($CFLAGS)
   local -A flags
   for opt in "${split[@]}"; do flags["${opt%%=*}"]="${opt##*=}"; done
   local march="${flags["-march"]:-nocona}"
-  local mtune="${flags["-mtune"]:-core-avx2}"
+  local mtune="generic" #"${flags["-mtune"]:-core-avx2}"
 
   # From Proton
   OPTIMIZE_FLAGS="-O3 -march=$march -mtune=$mtune -mfpmath=sse -pipe -fno-semantic-interposition"
   SANITY_FLAGS="-fwrapv -fno-strict-aliasing"
   WARNING_FLAGS="-Wno-incompatible-pointer-types"
-  COMMON_FLAGS="$OPTIMIZE_FLAGS $SANITY_FLAGS $WARNING_FLAGS"
+  COMMON_FLAGS="$OPTIMIZE_FLAGS $SANITY_FLAGS $WARNING_FLAGS -s"
 
-  export LDFLAGS="-Wl,-O1,--sort-common,--as-needed"
-  export CROSSLDFLAGS="-Wl,/FILEALIGN:4096,/OPT:REF,/OPT:ICF"
+  COMMON_LDFLAGS="-Wl,-O1,--sort-common,--as-needed"
+  LTO_FLAGS="-fuse-linker-plugin -fdevirtualize-at-ltrans -flto-partition=one -flto -Wl,-flto"
+
+  export LDFLAGS="$COMMON_LDFLAGS $LTO_FLAGS"
+  export CROSSLDFLAGS="$COMMON_LDFLAGS -Wl,--file-alignment,4096"
 
   cd "$srcdir"
 
   msg2 "Building Wine-64..."
 
-  export CFLAGS="$COMMON_FLAGS -mcmodel=small"
-  export CXXFLAGS="$COMMON_FLAGS -mcmodel=small -std=c++17"
-  export CROSSCFLAGS="$CFLAGS"
-  export CROSSCXXFLAGS="$CXXFLAGS"
+  export CFLAGS="$COMMON_FLAGS -mcmodel=small $LTO_FLAGS"
+  export CXXFLAGS="$COMMON_FLAGS -mcmodel=small -std=c++17 $LTO_FLAGS"
+  export CROSSCFLAGS="$COMMON_FLAGS -mcmodel=small"
+  export CROSSCXXFLAGS="$COMMON_FLAGS -mcmodel=small -std=c++17"
   export PKG_CONFIG_PATH="/usr/lib/pkgconfig:/usr/share/pkgconfig"
   cd "$srcdir/${pkgname//-opt}-64-build"
   ../${pkgname//-opt}/configure \
@@ -156,7 +158,7 @@ build() {
     --with-x \
     --with-wayland \
     --with-gstreamer \
-    --with-mingw=clang \
+    --with-mingw \
     --with-alsa \
     --without-oss \
     --disable-winemenubuilder \
@@ -169,10 +171,10 @@ build() {
   msg2 "Building Wine-32..."
 
   # Disable AVX instead of using 02, for 32bit
-  export CFLAGS="$COMMON_FLAGS -mstackrealign"
-  export CXXFLAGS="$COMMON_FLAGS -mstackrealign -std=c++17"
-  export CROSSCFLAGS="$CFLAGS"
-  export CROSSCXXFLAGS="$CXXFLAGS"
+  export CFLAGS="$COMMON_FLAGS -mstackrealign -mno-avx $LTO_FLAGS"
+  export CXXFLAGS="$COMMON_FLAGS -mstackrealign -mno-avx -std=c++17 $LTO_FLAGS"
+  export CROSSCFLAGS="$COMMON_FLAGS -mstackrealign -mno-avx"
+  export CROSSCXXFLAGS="$COMMON_FLAGS -mstackrealign -mno-avx -std=c++17"
   export PKG_CONFIG_PATH="/usr/lib32/pkgconfig:/usr/share/pkgconfig"
   cd "$srcdir/${pkgname//-opt}-32-build"
   ../${pkgname//-opt}/configure \
@@ -180,7 +182,7 @@ build() {
     --with-x \
     --with-wayland \
     --with-gstreamer \
-    --with-mingw=clang \
+    --with-mingw \
     --with-alsa \
     --without-oss \
     --disable-winemenubuilder \
@@ -207,8 +209,8 @@ package() {
     dlldir="$pkgdir/opt/${pkgname//-opt}/lib/wine" install
 
 
-  llvm-strip --strip-unneeded "$pkgdir"/opt/"${pkgname//-opt}"/lib32/wine/i386-windows/*.{dll,exe}
-  llvm-strip --strip-unneeded "$pkgdir"/opt/"${pkgname//-opt}"/lib/wine/x86_64-windows/*.{dll,exe}
+  i686-w64-mingw32-strip --strip-unneeded "$pkgdir"/opt/"${pkgname//-opt}"/lib32/wine/i386-windows/*.{dll,exe}
+  x86_64-w64-mingw32-strip --strip-unneeded "$pkgdir"/opt/"${pkgname//-opt}"/lib/wine/x86_64-windows/*.{dll,exe}
 
   find "$pkgdir"/opt/"${pkgname//-opt}"/lib{,32}/wine -iname "*.a" -delete
   find "$pkgdir"/opt/"${pkgname//-opt}"/lib{,32}/wine -iname "*.def" -delete
