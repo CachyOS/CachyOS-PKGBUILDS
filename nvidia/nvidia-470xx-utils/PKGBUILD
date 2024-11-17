@@ -29,6 +29,7 @@ source=(
     "0002-Fix-conftest-to-use-a-short-wchar_t.patch"
     "0003-Fix-conftest-to-use-nv_drm_gem_vmap-which-has-the-se.patch"
     "clang.patch"
+    "nvidia-470xx-Enable-modeset-by-default.patch"
 )
 
 sha512sums=(
@@ -44,6 +45,7 @@ sha512sums=(
     'dbdd609247740079446faf38482c7c14c03fbd71f816812d26c803b2619de7b7d7f034048fc8f662c5b864dd43b8e75aa7c09a837b31dd08655e6622f00ee1e3'
     'e1371e2ed622d642b0242a2be34438fae97fa33ef42afc1e7897177c10dc8831f20b9a8b37d25d9dc079743df03b10221decfb23577650233af8981a4ffb813c'
     '90f67069aa2e5dc0397d8848e615c0fd292210c7b05f7f390e564e09301844bb7cbd88cf4361628898c59305eaec12fc49c0fe907d00b8dfb497e3035fb8d5b6'
+    'd5f1b73a08d8515ee0e3f0476d7348fa1eca4dbdb3a50f12ed85f0d5d73ba2a0c667a79f8928568f3035e8b681d0b6c86d92d7d208e739a20aec3819e1062125'
 )
 
 create_links() {
@@ -64,6 +66,9 @@ prepare() {
 
     # Fix clang build
     patch -p1 -i "${srcdir}/clang.patch"
+
+    # Enable nvidia-drm.modeset=1 by default
+    patch -p1 -i "${srcdir}/nvidia-470xx-Enable-modeset-by-default.patch"
 
     cd kernel
     
