@@ -1,0 +1,49 @@
+# Maintainer: Github: TheWyn
+# Maintainer: Maxim Devaev <mdevaev@gmail.com>
+
+pkgname=qtcurve
+pkgver=20240916
+pkgrel=1
+pkgdesc="A configurable set of widget styles for KDE and Gtk (Qt6 fork)"
+arch=(x86_64)
+url="https://invent.kde.org/system/qtcurve"
+license=(GPL)
+groups=(qtcurve)
+depends=(
+	qt6-base
+	qt6-svg
+	libxcb
+	gtk2
+	libx11
+	gcc-libs
+	frameworkintegration
+)
+makedepends=(
+	git
+	cmake
+	extra-cmake-modules
+	kio
+	kconfig
+)
+conflicts=(
+	qtcurve-gtk2
+	qtcurve-kde
+	qtcurve-qt5
+	qtcurve-utils
+)
+source=("git+$url.git")
+md5sums=(SKIP)
+
+build() {
+	cd "$srcdir/$pkgname"
+	rm -rf build
+	mkdir build
+	cd build
+	cmake .. -DCMAKE_INSTALL_PREFIX=/usr -DENABLE_QT5=OFF -DENABLE_QT6=ON
+	make
+}
+
+package() {
+	cd "$srcdir/$pkgname/build"
+	make DESTDIR="$pkgdir/" install
+}
