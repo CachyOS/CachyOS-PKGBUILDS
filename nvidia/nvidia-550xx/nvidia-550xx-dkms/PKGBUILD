@@ -8,7 +8,7 @@
 pkgbase=nvidia-550xx-dkms
 pkgname=('nvidia-550xx-utils' 'opencl-550xx-nvidia' 'nvidia-550xx-dkms')
 pkgver=550.127.05
-pkgrel=1
+pkgrel=2
 arch=('x86_64')
 url="http://www.nvidia.com/"
 license=('custom')
@@ -69,6 +69,7 @@ package_opencl-550xx-nvidia() {
     depends=('zlib')
     optdepends=('opencl-headers: headers necessary for OpenCL development')
     provides=('opencl-driver')
+    conflicts=('opencl-nvidia')
     cd "${_pkg}"
 
     # OpenCL
@@ -102,7 +103,7 @@ package_nvidia-550xx-utils() {
                 'xorg-server: Xorg support'
                 'xorg-server-devel: nvidia-xconfig'
                 'opencl-nvidia: OpenCL support')
-    conflicts=('nvidia-libgl')
+    conflicts=('nvidia-libgl' 'nvidia-utils')
     provides=('vulkan-driver' 'opengl-driver' 'nvidia-libgl' "nvidia-utils=${pkgver}")
     replaces=('nvidia-libgl')
     install="nvidia-utils.install"
