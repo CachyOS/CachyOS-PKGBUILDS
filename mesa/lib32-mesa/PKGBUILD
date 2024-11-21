@@ -20,8 +20,8 @@ pkgname=(
   lib32-vulkan-swrast
   lib32-vulkan-virtio
 )
-pkgver=24.2.7
-pkgrel=2
+pkgver=24.3.0
+pkgrel=1
 epoch=1
 pkgdesc="Open-source OpenGL drivers - 32-bit"
 url="https://www.mesa3d.org/"
@@ -122,7 +122,7 @@ for _crate in "${!_crates[@]}"; do
   )
 done
 
-sha256sums=('a0ce37228679647268a83b3652d859dcf23d6f6430d751489d4464f6de6459fd'
+sha256sums=('97813fe65028ef21b4d4e54164563059e8408d8fee3489a2323468d198bf2efc'
             'SKIP'
             '22581baa9db479709b7f1592ebb6c034b7e62bca265b5afc2fbe48f9e5521feb'
             '01172dbf3916960aaddd5023993c43f5f759d5dce56725104b5902f8d901dbd5'
@@ -142,7 +142,7 @@ sha256sums=('a0ce37228679647268a83b3652d859dcf23d6f6430d751489d4464f6de6459fd'
             '3c93a82e8d145725dcbaf44e5ea887c8a869efdcc28706df2d08c69e17077183'
             '692fcb63b64b1758029e0a96ee63e049ce8c5948587f2f7208df04625e5f6b56'
             '901fa70d88b9d6c98022e23b4136f9f3e54e4662c3bc1bd1d84a42a9a0f0c1e9')
-b2sums=('eb1b0285e14e77c3140275b322ff084fca74a1048e6df38f4b14cb03ed7fc436897f7b33d107d1e262d9d4944229fb1e85d02e731c645ead5a7b269dec9334b7'
+b2sums=('43977028609e1be35849e5b72d5cdfbe2052ce959ec43dd649fbf2f3d0f262fbbc3f5194a56a33463eb0b0de8f7f32e4fd2b0dc06cc2f83b27d01bca611f26ec'
         'SKIP'
         '7883601fa9e03ecdd808d77c39f8e62c4911c88cc4e12818578c60edead74f8223628133225ba555a3cef13f439e3c05df99cba0a5b344f23e4fe5162c97279f'
         '83439bf1339b615dbb13d786b93ab364a8b7f326fc3cec83455d2b8e767162cdfdfbe960a5bbc66065a85881713fbe7bf01d665bebad7068f3f530e4668a61ce'
@@ -168,13 +168,6 @@ b2sums=('eb1b0285e14e77c3140275b322ff084fca74a1048e6df38f4b14cb03ed7fc436897f7b3
 prepare() {
   cd mesa-$pkgver
 
-  msg2 "RADV: Improve RT performance"
-  patch -Np1 < ../31443.patch
-  msg2 "RADV: Fix DEQP crash (#11953)"
-  patch -Np1 < ../31505.patch
-  msg2 "RADV: Fix massive performance issue with FSR2"
-  patch -Np1 < ../31891.patch
-
   # Include package release in version string so Chromium invalidates
   # its GPU cache; otherwise it can cause pages to render incorrectly.
   # https://bugs.launchpad.net/ubuntu/+source/chromium-browser/+bug/2020604
@@ -189,7 +182,6 @@ build() {
     -D gallium-drivers=r300,r600,radeonsi,nouveau,virgl,svga,llvmpipe,softpipe,iris,crocus,i915,zink
     -D gallium-extra-hud=true
     -D gallium-nine=true
-    -D gallium-omx=disabled
     -D gallium-opencl=icd
     -D gallium-rusticl=true
     -D gles1=disabled
