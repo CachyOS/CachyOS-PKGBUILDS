@@ -1,0 +1,113 @@
+From 7bc3e12a172645e595ea87eda78b5d62c19235c4 Mon Sep 17 00:00:00 2001
+From: Eric Naim <dnaim@cachyos.org>
+Date: Thu, 21 Nov 2024 11:20:06 +0800
+Subject: [PATCH] Makefile: Remove native march and use O3 flag
+
+Signed-off-by: Eric Naim <dnaim@cachyos.org>
+---
+ sample_tuner/Makefile  | 10 +++++-----
+ src/Makefile           | 12 ++++++------
+ test/strategy/Makefile |  2 +-
+ 3 files changed, 12 insertions(+), 12 deletions(-)
+
+diff --git a/sample_tuner/Makefile b/sample_tuner/Makefile
+index 2003543..5a8d824 100644
+--- a/sample_tuner/Makefile
++++ b/sample_tuner/Makefile
+@@ -37,7 +37,7 @@ installprefix = $(DESTDIR)/$(prefix)
+ 
+ INSTALLPATH = $(installprefix)
+ 
+-CFLAGS = -fPIC -Wall -Wextra -march=native -g -I../include -std=c99
++CFLAGS = -fPIC -Wall -Wextra -O3 -g -I../include -std=c99
+ 
+ CFLAGS += -DBPFTUNE_VERSION='"$(BPFTUNE_VERSION)"' $(INCLUDES)
+ 
+@@ -69,7 +69,7 @@ BPF_SKELS = $(patsubst %,%.skel.h,$(TUNERS))
+ .PHONY: clean
+ 
+ all: $(TUNER_LIBS)
+-	
++
+ clean:
+ 	$(Q)$(RM) *.o *.d *.so*
+ 	$(Q)$(RM) *.skel*.h
+@@ -88,12 +88,12 @@ $(TUNER_LIBS): $(BPF_SKELS) $(TUNER_OBJS)
+ 	$(QUIET_GEN)$(BPFTOOL) gen skeleton $< > $@
+ 
+ $(BPF_OBJS): $(patsubst %.o,%.c,$(BPF_OBJS)) ../include/bpftune/bpftune.bpf.h
+-	$(CLANG) -g -D__TARGET_ARCH_$(SRCARCH) -O2 -target bpf		\
++	$(CLANG) -g -D__TARGET_ARCH_$(SRCARCH) -O3 -target bpf		\
+ 		$(INCLUDES) -c $(patsubst %.o,%.c,$(@)) -o $(@);
+-	$(CLANG) -g -D__TARGET_ARCH_$(SRCARCH) -DBPFTUNE_LEGACY -O2 -target bpf \
++	$(CLANG) -g -D__TARGET_ARCH_$(SRCARCH) -DBPFTUNE_LEGACY -O3 -target bpf \
+ 		$(INCLUDES) -c $(patsubst %.o,%.c,$(@)) \
+ 		-o $(patsubst %.o,%.legacy.o,$(@));
+-	$(CLANG) -g -D__TARGET_ARCH_$(SRCARCH) -DBPFTUNE_NOBTF -DBPFTUNE_LEGACY -O2 -target bpf \
++	$(CLANG) -g -D__TARGET_ARCH_$(SRCARCH) -DBPFTUNE_NOBTF -DBPFTUNE_LEGACY -O3 -target bpf \
+ 		$(INCLUDES) -c $(patsubst %.o,%.c,$(@)) \
+ 		-o $(patsubst %.o,%.nobtf.o,$(@));
+ 
+diff --git a/src/Makefile b/src/Makefile
+index 7add159..c33faa0 100644
+--- a/src/Makefile
++++ b/src/Makefile
+@@ -56,7 +56,7 @@ endif
+ VERSION = 0.1.3
+ VERSION_SCRIPT  := libbpftune.map
+ 
+-CFLAGS = -fPIC -Wall -Wextra -g -I../include -std=c99
++CFLAGS = -fPIC -Wall -Wextra -O3 -g -I../include -std=c99
+ 
+ CFLAGS += -DBPFTUNE_VERSION='"$(BPFTUNE_VERSION)"' \
+ 	  -DBPFTUNER_PREFIX_DIR='"$(prefix)"' \
+@@ -75,7 +75,7 @@ VMLINUX_BTF_PATH := $(or $(VMLINUX_BTF),$(firstword			       \
+ 
+ OPATH :=
+ ifeq ($(SANITIZE),1)
+-CFLAGS += -fsanitize=address 
++CFLAGS += -fsanitize=address
+ OPATH := .sanitize/
+ endif
+ 
+@@ -174,20 +174,20 @@ $(OPATH)bpftune.o: $(OPATH)libbpftune.so
+ # check if GCC_BPF flag is set, otherwise use CLANG
+ ifeq ($(GCC_BPF),)
+ $(BPF_OBJS): $(patsubst %.o,%.c,$(BPF_OBJS)) ../include/bpftune/bpftune.bpf.h
+-	$(CLANG) $(BPF_CFLAGS) -D__TARGET_ARCH_$(SRCARCH) -O2 -target bpf \
++	$(CLANG) $(BPF_CFLAGS) -D__TARGET_ARCH_$(SRCARCH) -O3 -target bpf \
+ 		$(INCLUDES) -c $(patsubst %.o,%.c,$(@)) -o $(@)
+ 
+ $(LEGACY_BPF_OBJS): $(patsubst %.legacy.o,%.c,$(LEGACY_BPF_OBJS)) ../include/bpftune/bpftune.bpf.h
+-	$(CLANG) $(BPF_CFLAGS) -D__TARGET_ARCH_$(SRCARCH) -DBPFTUNE_LEGACY -O2 -target bpf \
++	$(CLANG) $(BPF_CFLAGS) -D__TARGET_ARCH_$(SRCARCH) -DBPFTUNE_LEGACY -O3 -target bpf \
+ 		$(INCLUDES) -c $(patsubst %.legacy.o,%.c,$(@)) \
+ 		-o $(@)
+ 
+ $(NOBTF_BPF_OBJS): $(patsubst %.nobtf.o,%.c,$(NOBTF_BPF_OBJS)) ../include/bpftune/bpftune.bpf.h
+-	$(CLANG) $(BPF_CFLAGS) -D__TARGET_ARCH_$(SRCARCH) -DBPFTUNE_NOBTF -O2 -target bpf \
++	$(CLANG) $(BPF_CFLAGS) -D__TARGET_ARCH_$(SRCARCH) -DBPFTUNE_NOBTF -O3 -target bpf \
+ 		$(INCLUDES) -c $(patsubst %.nobtf.o,%.c,$(@)) \
+ 		-o $(@)
+ else
+-GCC_BPF_FLAGS := -g -O2 \
++GCC_BPF_FLAGS := -g -O3 \
+ 	$(BPF_CFLAGS) -D__TARGET_ARCH_$(SRCARCH) \
+ 	-gbtf -mcpu=v3 -Wno-error=attributes \
+ 	-Wno-error=address-of-packed-member \
+diff --git a/test/strategy/Makefile b/test/strategy/Makefile
+index f4783bb..95c91f6 100644
+--- a/test/strategy/Makefile
++++ b/test/strategy/Makefile
+@@ -39,7 +39,7 @@ installprefix = $(DESTDIR)/$(prefix)
+ 
+ INSTALLPATH = $(installprefix)
+ 
+-CFLAGS = -fPIC -Wall -Wextra -march=native -g -I../include -std=c99
++CFLAGS = -fPIC -Wall -Wextra -O3 -g -I../include -std=c99
+ 
+ CFLAGS += -DBPFTUNE_VERSION='"$(BPFTUNE_VERSION)"' $(INCLUDES)
+ 
+-- 
+2.47.0
+
