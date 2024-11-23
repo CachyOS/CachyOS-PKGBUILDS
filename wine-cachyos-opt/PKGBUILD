@@ -6,7 +6,7 @@
 # Contributor: Giovanni Scafora <giovanni@archlinux.org>
 
 pkgname=wine-cachyos-opt
-_srctag=9.0-20241115
+_srctag=9.0-20241123
 pkgver=${_srctag//-/.}
 pkgrel=1
 epoch=2
@@ -37,7 +37,7 @@ depends=(
   libxi            lib32-libxi
   gettext          lib32-gettext
   freetype2        lib32-freetype2
-  gcc-libs         lib32-gcc-libs
+  llvm-libs        lib32-llvm-libs
   libpcap          lib32-libpcap
   desktop-file-utils
 )
@@ -46,9 +46,10 @@ depends+=(
   wayland          lib32-wayland
 )
 
-makedepends=(autoconf bison perl flex mingw-w64-gcc
+makedepends=(autoconf bison perl flex clang lld
   git
   python
+  llvm                  lib32-llvm
   giflib                lib32-giflib
   gnutls                lib32-gnutls
   libxinerama           lib32-libxinerama
@@ -121,33 +122,43 @@ prepare() {
 }
 
 build() {
-  # Doesn't compile without remove these flags as of 4.10
-  export CFLAGS="$CFLAGS -ffat-lto-objects"
+  export CC="clang"
+  export CXX="clang++"
 
   local -a split=($CFLAGS)
   local -A flags
   for opt in "${split[@]}"; do flags["${opt%%=*}"]="${opt##*=}"; done
   local march="${flags["-march"]:-nocona}"
-  local mtune="generic" #"${flags["-mtune"]:-core-avx2}"
+  local mtune="${flags["-mtune"]:-core-avx2}"
 
   # From Proton
   OPTIMIZE_FLAGS="-O3 -march=$march -mtune=$mtune -mfpmath=sse -pipe -fno-semantic-interposition"
   SANITY_FLAGS="-fwrapv -fno-strict-aliasing"
   WARNING_FLAGS="-Wno-incompatible-pointer-types"
-  COMMON_FLAGS="$OPTIMIZE_FLAGS $SANITY_FLAGS $WARNING_FLAGS -s"
+  #STRIP_FLAGS="-s"
+  COMMON_FLAGS="$OPTIMIZE_FLAGS $SANITY_FLAGS $WARNING_FLAGS $STRIP_FLAGS"
 
   COMMON_LDFLAGS="-Wl,-O1,--sort-common,--as-needed"
-  LTO_FLAGS="-fuse-linker-plugin -fdevirtualize-at-ltrans -flto-partition=one -flto -Wl,-flto"
+  LTO_CFLAGS="-flto=thin -D__LLD_LTO__"
+  LTO_LDFLAGS="-flto=thin -fuse-ld=lld"
 
-  export LDFLAGS="$COMMON_LDFLAGS $LTO_FLAGS"
-  export CROSSLDFLAGS="$COMMON_LDFLAGS -Wl,--file-alignment,4096"
+  # Per component CFLAGS and LDFlAGS (requires makedep patch)
+  export preloader_CFLAGS=" -fno-lto -Wl,--no-relax"
+  export wine64_preloader_LDFLAGS=" -fno-lto -Wl,--no-relax"
+  export wine_preloader_LDFLAGS=" -fno-lto -Wl,--no-relax"
+
+  # Disable assertions
+  #export CPPFLAGS="-U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=0 -DNDEBUG -D_NDEBUG"
+
+  export LDFLAGS="$COMMON_LDFLAGS $LTO_LDFLAGS"
+  export CROSSLDFLAGS="-Wl,/FILEALIGN:4096,/OPT:REF,/OPT:ICF"
 
   cd "$srcdir"
 
   msg2 "Building Wine-64..."
 
-  export CFLAGS="$COMMON_FLAGS -mcmodel=small $LTO_FLAGS"
-  export CXXFLAGS="$COMMON_FLAGS -mcmodel=small -std=c++17 $LTO_FLAGS"
+  export CFLAGS="$COMMON_FLAGS -mcmodel=small $LTO_CFLAGS"
+  export CXXFLAGS="$COMMON_FLAGS -mcmodel=small -std=c++17 $LTO_CFLAGS"
   export CROSSCFLAGS="$COMMON_FLAGS -mcmodel=small"
   export CROSSCXXFLAGS="$COMMON_FLAGS -mcmodel=small -std=c++17"
   export PKG_CONFIG_PATH="/usr/lib/pkgconfig:/usr/share/pkgconfig"
@@ -158,7 +169,7 @@ build() {
     --with-x \
     --with-wayland \
     --with-gstreamer \
-    --with-mingw \
+    --with-mingw=clang \
     --with-alsa \
     --without-oss \
     --disable-winemenubuilder \
@@ -171,10 +182,10 @@ build() {
   msg2 "Building Wine-32..."
 
   # Disable AVX instead of using 02, for 32bit
-  export CFLAGS="$COMMON_FLAGS -mstackrealign -mno-avx $LTO_FLAGS"
-  export CXXFLAGS="$COMMON_FLAGS -mstackrealign -mno-avx -std=c++17 $LTO_FLAGS"
-  export CROSSCFLAGS="$COMMON_FLAGS -mstackrealign -mno-avx"
-  export CROSSCXXFLAGS="$COMMON_FLAGS -mstackrealign -mno-avx -std=c++17"
+  export CFLAGS="$COMMON_FLAGS -mstackrealign $LTO_CFLAGS"
+  export CXXFLAGS="$COMMON_FLAGS -mstackrealign -std=c++17 $LTO_CFLAGS"
+  export CROSSCFLAGS="$COMMON_FLAGS -mstackrealign"
+  export CROSSCXXFLAGS="$COMMON_FLAGS -mstackrealign -std=c++17"
   export PKG_CONFIG_PATH="/usr/lib32/pkgconfig:/usr/share/pkgconfig"
   cd "$srcdir/${pkgname//-opt}-32-build"
   ../${pkgname//-opt}/configure \
@@ -182,7 +193,7 @@ build() {
     --with-x \
     --with-wayland \
     --with-gstreamer \
-    --with-mingw \
+    --with-mingw=clang \
     --with-alsa \
     --without-oss \
     --disable-winemenubuilder \
@@ -200,23 +211,23 @@ package() {
 
   make prefix="$pkgdir/opt/${pkgname//-opt}" \
     libdir="$pkgdir/opt/${pkgname//-opt}/lib32" \
-    dlldir="$pkgdir/opt/${pkgname//-opt}/lib32/wine" install
+    dlldir="$pkgdir/opt/${pkgname//-opt}/lib32/wine" install-lib
 
   msg2 "Packaging Wine-64..."
   cd "$srcdir/${pkgname//-opt}-64-build"
   make prefix="$pkgdir/opt/${pkgname//-opt}" \
     libdir="$pkgdir/opt/${pkgname//-opt}/lib" \
-    dlldir="$pkgdir/opt/${pkgname//-opt}/lib/wine" install
+    dlldir="$pkgdir/opt/${pkgname//-opt}/lib/wine" install-lib
 
 
-  i686-w64-mingw32-strip --strip-unneeded "$pkgdir"/opt/"${pkgname//-opt}"/lib32/wine/i386-windows/*.{dll,exe}
-  x86_64-w64-mingw32-strip --strip-unneeded "$pkgdir"/opt/"${pkgname//-opt}"/lib/wine/x86_64-windows/*.{dll,exe}
+  llvm-strip --strip-unneeded "$pkgdir"/opt/"${pkgname//-opt}"/lib32/wine/i386-windows/*.{dll,exe}
+  llvm-strip --strip-unneeded "$pkgdir"/opt/"${pkgname//-opt}"/lib/wine/x86_64-windows/*.{dll,exe}
 
   find "$pkgdir"/opt/"${pkgname//-opt}"/lib{,32}/wine -iname "*.a" -delete
   find "$pkgdir"/opt/"${pkgname//-opt}"/lib{,32}/wine -iname "*.def" -delete
 }
 
 # vim:set ts=8 sts=2 sw=2 et:
-b2sums=('a60f80f5ebc8ac7e855b18f6f4614d3b080bee06eaaedda4a3ff83d485197d79f0fe0a1847992b0e44b13eafdf991e2fccf719c065f32298e1e60f261dbb722d'
+b2sums=('464e34f57778e2fda38fe0b6717732ee06717bf8d87d4890f85d5ddd6feeda6ac73c944585fcfedcda1169303ae586b080e8fe27eac459f1ef441ea6fae29988'
         '45db34fb35a679dc191b4119603eba37b8008326bd4f7d6bd422fbbb2a74b675bdbc9f0cc6995ed0c564cf088b7ecd9fbe2d06d42ff8a4464828f3c4f188075b'
         'e9de76a32493c601ab32bde28a2c8f8aded12978057159dd9bf35eefbf82f2389a4d5e30170218956101331cf3e7452ae82ad0db6aad623651b0cc2174a61588')
