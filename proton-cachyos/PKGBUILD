@@ -2,7 +2,7 @@
 # Maintainer: loathingkernel <loathingkernel _a_ gmail _d_ com>
 
 pkgname=proton-cachyos
-_srctag=9.0-20241115
+_srctag=9.0-20241123
 _commit=
 pkgver=${_srctag//-/.}
 _geckover=2.47.4
@@ -250,7 +250,7 @@ package() {
         $(find "$_monodir" -iname "*x86_64.dll" -or -iname "*x86_64.exe")
 }
 
-sha256sums=('bd473b585d6668c3a2602d6788484c5bda07ca19c90835fc37191085cfe6cac0'
+sha256sums=('831d717e8744e0a28a9583b21cbd3b484c1ed5a18d41e9baca180d8f3ba284a0'
             '2cfc8d5c948602e21eff8a78613e1826f2d033df9672cace87fed56e8310afb6'
             'fd88fc7e537d058d7a8abf0c1ebc90c574892a466de86706a26d254710a82814'
             'c23deb9e3217a574f242b78d74cb94c4948a37d1f2715941b803a02e535854a6'
