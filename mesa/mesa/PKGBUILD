@@ -21,7 +21,7 @@ pkgname=(
   vulkan-virtio
   mesa-docs
 )
-pkgver=24.2.7
+pkgver=24.3.0
 pkgrel=2
 epoch=1
 pkgdesc="Open-source OpenGL drivers"
@@ -36,6 +36,7 @@ makedepends=(
   libdrm
   libelf
   libglvnd
+  libpng
   libva
   libvdpau
   libx11
@@ -81,9 +82,6 @@ makedepends=(
   # d3d12 deps
   directx-headers
 
-  # gallium-omx deps
-  libomxil-bellagio
-
   # html-docs
   python-sphinx
   python-sphinx-hawkmoth
@@ -97,9 +95,6 @@ options=(
 )
 source=(
   "https://mesa.freedesktop.org/archive/mesa-$pkgver.tar.xz"{,.sig}
-  "https://gitlab.freedesktop.org/mesa/mesa/-/merge_requests/31443.patch"
-  "https://gitlab.freedesktop.org/mesa/mesa/-/merge_requests/31505.patch"
-  "https://gitlab.freedesktop.org/mesa/mesa/-/merge_requests/31891.patch"
 )
 validpgpkeys=(
   946D09B5E4C9845E63075FF1D961C596A7203456 # Andres Gomez <tanty@igalia.com>
@@ -136,31 +131,8 @@ for _crate in "${!_crates[@]}"; do
   )
 done
 
-sha256sums=('a0ce37228679647268a83b3652d859dcf23d6f6430d751489d4464f6de6459fd'
-            'SKIP'
-            '22581baa9db479709b7f1592ebb6c034b7e62bca265b5afc2fbe48f9e5521feb'
-            '01172dbf3916960aaddd5023993c43f5f759d5dce56725104b5902f8d901dbd5'
-            '91726198267482d255fef507a38a2265e3e304d8139df5f664dd82d940b20e14'
-            'ed646292ffc8188ef8ea4d1e0e0150fb15a5c2e12ad9b8fc191ae7a8a7f3c4b9'
-            'a941429fea7e08bedec25e4f6785b6ffaacc6b755da98df5ef3e7dcf4a124c4f'
-            '168fb715dda47215e360912c096649d23d58bf392ac62f73919e831745e40f26'
-            '7dfda62a12f55daeae5015f81b0baea145391cb4520f86c248fc615d72640d12'
-            '5e719e8df665df0d1c8fbfd238015744736151d4445ec0836b8e628aae103b77'
-            '2a548d2beca6773b1c244554d36fcf8548a8a58e74156968211567250e48e49a'
-            '3354b9ac3fae1ff6755cb6db53683adb661634f67557942dea4facebec0fee4b'
-            '5267fca4496028628a95160fc423a33e8b2e6af8a5302579e322e4b520293cae'
-            '6c20b6793b5c2fa6553b250154b78d6d0db37e72700ae35fad9387a46f487c97'
-            'de3145af08024dea9fa9914f381a17b8fc6034dfb00f3a84013f7ff43f29ed4c'
-            'cd53dff83f26735fdc1ca837098ccf133605d794cdae66acfc2bfac3ec809d95'
-            '5443807d6dff69373d433ab9ef5378ad8df50ca6298caf15de6e52e24aaf54d5'
-            '3c93a82e8d145725dcbaf44e5ea887c8a869efdcc28706df2d08c69e17077183'
-            '692fcb63b64b1758029e0a96ee63e049ce8c5948587f2f7208df04625e5f6b56'
-            '901fa70d88b9d6c98022e23b4136f9f3e54e4662c3bc1bd1d84a42a9a0f0c1e9')
-b2sums=('eb1b0285e14e77c3140275b322ff084fca74a1048e6df38f4b14cb03ed7fc436897f7b33d107d1e262d9d4944229fb1e85d02e731c645ead5a7b269dec9334b7'
+b2sums=('43977028609e1be35849e5b72d5cdfbe2052ce959ec43dd649fbf2f3d0f262fbbc3f5194a56a33463eb0b0de8f7f32e4fd2b0dc06cc2f83b27d01bca611f26ec'
         'SKIP'
-        '7883601fa9e03ecdd808d77c39f8e62c4911c88cc4e12818578c60edead74f8223628133225ba555a3cef13f439e3c05df99cba0a5b344f23e4fe5162c97279f'
-        '83439bf1339b615dbb13d786b93ab364a8b7f326fc3cec83455d2b8e767162cdfdfbe960a5bbc66065a85881713fbe7bf01d665bebad7068f3f530e4668a61ce'
-        'fc6418d4bc839f2e4c9144300ac208fbcd637f571c82748cd2f6c4fd19618e2bab3f422c41c0dd540b1057b85fd28b4164c049b9db7e6a37db9d32635b62d18f'
         'a6d47c903be6094423d89b8ec3ca899d0a84df6dbd6e76632bb6c9b9f40ad9c216f8fa400310753d392f85072756b43ac3892e0a2c4d55f87ab6463002554823'
         '9c34f1ab14ad5ae124882513e0f14b1d731d06a43203bdc37fa3b202dd3ce93dbe8ebb554d01bab475689fe6ffd3ec0cbc0d5365c9b984cb83fb34ea3e9e732e'
         'fac5cf6339dc3c0a40b100035a5c874cc7b2efeafeb31c51488d25156e392dc9db86a497e76eead351d2126f69d060422faa9c55d73407a0de9f5be18d234123'
@@ -178,16 +150,26 @@ b2sums=('eb1b0285e14e77c3140275b322ff084fca74a1048e6df38f4b14cb03ed7fc436897f7b3
         '8bc6f68ed286bea617a2cfaf3949bb699d3a0466faeca735314a51596ce950e4ee57eda88154bd562c1728cfaff4cdb5bc1ba701b9d47a9c50d4c4f011bee975')
 
 # https://docs.mesa3d.org/relnotes.html
+sha256sums=('97813fe65028ef21b4d4e54164563059e8408d8fee3489a2323468d198bf2efc'
+            'SKIP'
+            'ed646292ffc8188ef8ea4d1e0e0150fb15a5c2e12ad9b8fc191ae7a8a7f3c4b9'
+            'a941429fea7e08bedec25e4f6785b6ffaacc6b755da98df5ef3e7dcf4a124c4f'
+            '168fb715dda47215e360912c096649d23d58bf392ac62f73919e831745e40f26'
+            '7dfda62a12f55daeae5015f81b0baea145391cb4520f86c248fc615d72640d12'
+            '5e719e8df665df0d1c8fbfd238015744736151d4445ec0836b8e628aae103b77'
+            '2a548d2beca6773b1c244554d36fcf8548a8a58e74156968211567250e48e49a'
+            '3354b9ac3fae1ff6755cb6db53683adb661634f67557942dea4facebec0fee4b'
+            '5267fca4496028628a95160fc423a33e8b2e6af8a5302579e322e4b520293cae'
+            '6c20b6793b5c2fa6553b250154b78d6d0db37e72700ae35fad9387a46f487c97'
+            'de3145af08024dea9fa9914f381a17b8fc6034dfb00f3a84013f7ff43f29ed4c'
+            'cd53dff83f26735fdc1ca837098ccf133605d794cdae66acfc2bfac3ec809d95'
+            '5443807d6dff69373d433ab9ef5378ad8df50ca6298caf15de6e52e24aaf54d5'
+            '3c93a82e8d145725dcbaf44e5ea887c8a869efdcc28706df2d08c69e17077183'
+            '692fcb63b64b1758029e0a96ee63e049ce8c5948587f2f7208df04625e5f6b56'
+            '901fa70d88b9d6c98022e23b4136f9f3e54e4662c3bc1bd1d84a42a9a0f0c1e9')
 
 prepare() {
   cd mesa-$pkgver
-
-  msg2 "RADV: Improve RT performance"
-  patch -Np1 < ../31443.patch
-  msg2 "RADV: Fix DEQP crash (#11953)"
-  patch -Np1 < ../31505.patch
-  msg2 "RADV: Fix massive performance issue with FSR2"
-  patch -Np1 < ../31891.patch
 
   # Include package release in version string so Chromium invalidates
   # its GPU cache; otherwise it can cause pages to render incorrectly.
@@ -202,7 +184,6 @@ build() {
     -D gallium-drivers=r300,r600,radeonsi,nouveau,virgl,svga,llvmpipe,softpipe,iris,crocus,i915,zink,d3d12
     -D gallium-extra-hud=true
     -D gallium-nine=true
-    -D gallium-omx=bellagio
     -D gallium-opencl=icd
     -D gallium-rusticl=true
     -D gles1=disabled
@@ -217,7 +198,7 @@ build() {
     -D valgrind=enabled
     -D video-codecs=all
     -D vulkan-drivers=amd,intel,intel_hasvk,nouveau,swrast,virtio
-    -D vulkan-layers=device-select,intel-nullhw,overlay
+    -D vulkan-layers=device-select,intel-nullhw,overlay,screenshot
   )
 
   # Build only minimal debug info to reduce size
@@ -252,16 +233,14 @@ package_mesa() {
     libx11
     libxcb
     libxext
-    libxfixes
     libxshmfence
     libxxf86vm
     llvm-libs
     lm_sensors
+    spirv-tools
     wayland
     zlib
     zstd
-
-    libomxil-bellagio
   )
   optdepends=("opengl-man-pages: for the OpenGL API man pages")
   provides=(
@@ -301,7 +280,7 @@ package_mesa() {
     _pick vkintel $libdir/libvulkan_intel*.so
 
     _pick vklayer $libdir/libVkLayer_*.so
-    _pick vklayer usr/bin/mesa-overlay-control.py
+    _pick vklayer usr/bin/mesa-*-control.py
     _pick vklayer usr/share/vulkan/{ex,im}plicit_layer.d
 
     _pick vknvidia $icddir/nouveau_*.json
@@ -336,12 +315,10 @@ package_opencl-clover-mesa() {
     libdrm
     libelf
     llvm-libs
-    spirv-llvm-translator
-    spirv-tools
     zlib
     zstd
 
-    libclc
+    libclc #  For /usr/share/clc/
   )
   optdepends=("opencl-headers: headers necessary for OpenCL development")
   provides=(opencl-driver)
@@ -368,7 +345,7 @@ package_opencl-rusticl-mesa() {
     zlib
     zstd
 
-    libclc
+    libclc # For /usr/share/clc/
   )
   optdepends=("opencl-headers: headers necessary for OpenCL development")
   provides=(opencl-driver)
@@ -390,6 +367,7 @@ package_vulkan-intel() {
     libx11
     libxcb
     libxshmfence
+    spirv-tools
     systemd-libs
     vulkan-icd-loader
     wayland
@@ -411,6 +389,7 @@ package_vulkan-mesa-layers() {
     gcc-libs
     glibc
     libdrm
+    libpng
     libxcb
     wayland
 
@@ -434,6 +413,7 @@ package_vulkan-nouveau() {
     libx11
     libxcb
     libxshmfence
+    spirv-tools
     systemd-libs
     vulkan-icd-loader
     wayland
@@ -461,6 +441,7 @@ package_vulkan-radeon() {
     libxcb
     libxshmfence
     llvm-libs
+    spirv-tools
     systemd-libs
     vulkan-icd-loader
     wayland
@@ -487,6 +468,7 @@ package_vulkan-swrast() {
     libxcb
     libxshmfence
     llvm-libs
+    spirv-tools
     systemd-libs
     vulkan-icd-loader
     wayland
