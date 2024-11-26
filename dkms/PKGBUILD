@@ -4,7 +4,7 @@
 
 pkgname=dkms
 pkgver=3.1.2
-pkgrel=1
+pkgrel=2
 pkgdesc='Dynamic Kernel Modules System'
 arch=('any')
 url='https://github.com/dell/dkms'
@@ -42,20 +42,6 @@ sha256sums=('0664e4875ed60025098ba66d3781420ad4f6f2fc8cf709caa596051a6e861e27'
             '4f8dff7716e73a8bba885638f12e3cdc9e87daec1896f75e700b981527e43870'
             'c1b4a4e2e4e0e0e59ee0887403e79d60b209f3878dbbec6612573f13b90cce01')
 
-prepare() {
-  cd dkms
-
-  # apply patch from the source array (should be a pacman feature)
-  local filename
-  for filename in "${source[@]}"; do
-    if [[ "$filename" =~ \.patch$ ]]; then
-      msg2 "Applying patch ${filename##*/}"
-      patch -p1 -N -i "$srcdir/${filename##*/}"
-    fi
-  done
-
-}
-
 package() {
   # alpm hooks
   install -D -m 644 hook.install "$pkgdir/usr/share/libalpm/hooks/70-dkms-install.hook"
@@ -78,6 +64,9 @@ package() {
     LIBDIR=/../trash \
     MODDIR=/usr/lib/modules \
     install
+  # quick fix for broken kernel-install scripts
+  # see: https://gitlab.archlinux.org/archlinux/packaging/packages/dkms/-/issues/5
+  rm -r "$pkgdir/usr/lib"
 }
 
 # vim:set ts=2 sw=2 et:
