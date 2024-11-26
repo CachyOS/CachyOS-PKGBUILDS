@@ -1,0 +1,78 @@
+# Maintainer: Alexander F. Rødseth <xyproto@archlinux.org>
+# Contributor: Steven Allen <steven@stebalien.com>
+# Contributor: Matt Harrison <matt@harrison.us.com>
+# Contributor: Kainoa Kanter <kainoa@t1c.dev>
+
+pkgname=ollama-cuda
+pkgver=0.4.4
+pkgrel=1
+pkgdesc='Create, run and share large language models (LLMs) with CUDA'
+arch=(x86_64)
+url='https://github.com/ollama/ollama'
+license=(MIT)
+provides=(ollama)
+conflicts=(ollama)
+depends=(cuda)
+makedepends=(clblast cmake git go pigz)
+optdepends=('nvidia-utils: monitor GPU usage with nvidia-smi')
+source=(git+$url#tag=v$pkgver
+        fix-cuda-runner.patch
+        ollama-ld.conf
+        ollama.service
+        sysusers.conf
+        tmpfiles.d)
+b2sums=('c2ae1e84915a4846bd3e509a57dbe6e852cc20d2f6df34427d657981dc6d6d11223442ea881fac911ffcc734049b75ef837c52ed1526a6f59fed6bb8ff86abf3'
+        '22b966b4bead223d6d357a4aeb90dde2ad5bf3ae02d20639b724c1bd94256efbfd7c1365f87a800d17628b96afb74fdb5b55dffefd21c736c26e84938861ffcb'
+        '121a7854b5a7ffb60226aaf22eed1f56311ab7d0a5630579525211d5c096040edbcfd2608169a4b6d83e8b4e4855dbb22f8ebf3d52de78a34ea3d4631b7eff36'
+        '031e0809a7f564de87017401c83956d43ac29bd0e988b250585af728b952a27d139b3cad0ab1e43750e2cd3b617287d3b81efc4a70ddd61709127f68bd15eabd'
+        '3aabf135c4f18e1ad745ae8800db782b25b15305dfeaaa031b4501408ab7e7d01f66e8ebb5be59fc813cfbff6788d08d2e48dcf24ecc480a40ec9db8dbce9fec'
+        'e8f2b19e2474f30a4f984b45787950012668bf0acb5ad1ebb25cd9776925ab4a6aa927f8131ed53e35b1c71b32c504c700fe5b5145ecd25c7a8284373bb951ed')
+
+prepare() {
+  cd ollama
+
+  # fix build for CUDA runner, currenly ollama buildsystem for CUDA runner is broken
+  patch -Np1 -i ../fix-cuda-runner.patch
+}
+
+build() {
+  export CFLAGS+=" $(pkg-config --cflags cuda) -w" CXXFLAGS+=" $(pkg-config --cflags cuda) -w"
+  export LDFLAGS+=" -L/opt/cuda/targets/x86_64-linux/lib/stubs/ $(pkg-config --libs cuda)"
+  export CUDA_LIB_DIR=/opt/cuda/targets/x86_64-linux/lib
+  export CGO_CPPFLAGS="${CPPFLAGS}"
+  export CGO_CFLAGS="${CFLAGS}"
+  export CGO_CXXFLAGS="${CXXFLAGS}"
+  export CGO_LDFLAGS="${LDFLAGS}"
+  export GOPATH="${srcdir}"
+  export GOFLAGS="-buildmode=pie -mod=readonly -modcacherw '-ldflags=-linkmode=external -compressdwarf=false -X=github.com/ollama/ollama/version.Version=$pkgver -X=github.com/ollama/ollama/server.mode=release'"
+
+  export OLLAMA_SKIP_ROCM_GENERATE=on
+
+  cd ollama
+
+  go generate ./...
+  go build .
+}
+
+check() {
+  ollama/ollama --version > /dev/null
+  cd ollama
+  go test .
+}
+
+package() {
+  install -Dm755 ollama/ollama "$pkgdir/usr/bin/ollama"
+  mkdir -p "$pkgdir"/usr/lib/ollama
+  mkdir -p "$pkgdir"/usr/share
+  cp -r ollama/dist/linux-amd64/lib/ollama/{libggml_cuda_v12.so,runners} "$pkgdir"/usr/lib/ollama
+
+  install -Dm644 ollama.service "$pkgdir/usr/lib/systemd/system/ollama.service"
+  install -Dm644 sysusers.conf "$pkgdir/usr/lib/sysusers.d/ollama.conf"
+  install -Dm644 tmpfiles.d "$pkgdir/usr/lib/tmpfiles.d/ollama.conf"
+  install -Dm644 ollama-ld.conf "$pkgdir/etc/ld.so.conf.d/ollama.conf"
+
+  install -dm755 "$pkgdir/var/lib/ollama"
+  ln -s /var/lib/ollama "$pkgdir/usr/share/ollama"
+
+  install -Dm644 ollama/LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+}
