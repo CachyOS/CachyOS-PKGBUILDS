@@ -4,7 +4,7 @@
 # Contributor: Kainoa Kanter <kainoa@t1c.dev>
 
 pkgname=ollama-cuda
-pkgver=0.4.4
+pkgver=0.4.5
 pkgrel=1
 pkgdesc='Create, run and share large language models (LLMs) with CUDA'
 arch=(x86_64)
@@ -44,7 +44,8 @@ build() {
   export CGO_CXXFLAGS="${CXXFLAGS}"
   export CGO_LDFLAGS="${LDFLAGS}"
   export GOPATH="${srcdir}"
-  export GOFLAGS="-buildmode=pie -mod=readonly -modcacherw '-ldflags=-linkmode=external -compressdwarf=false -X=github.com/ollama/ollama/version.Version=$pkgver -X=github.com/ollama/ollama/server.mode=release'"
+  export GOFLAGS="-buildmode=pie -mod=readonly -modcacherw '-ldflags=-linkmode=external -compressdwarf=false -X=github.com/ollama/ollama/version.Version=$
+pkgver=0.4.5
 
   export OLLAMA_SKIP_ROCM_GENERATE=on
 
