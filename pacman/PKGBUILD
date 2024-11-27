@@ -9,13 +9,13 @@
 
 _staging=false
 pkgname=pacman
-pkgver=7.0.0.r17.ge5f1532
+pkgver=7.0.0.r6.gc685ae6
 _sqlitever=$(curl -s 'https://archlinux.org/packages/search/json/?name=sqlite' | grep -oP '"pkgver":\s*"\K[^"]+' | head -n 1 | awk -F. '{
     printf "%d%02d%02d", $1, $2, $3;
     if (NF == 4) { printf "%02d", $4 }
     else { printf "00" }
 }')
-pkgrel=1
+pkgrel=2
 pkgdesc="A library-based package manager with dependency support. CachyOS fork."
 arch=('x86_64' 'aarch64')
 url="https://www.archlinux.org/pacman/"
@@ -92,10 +92,10 @@ validpgpkeys=(
     #source+=(https://raw.githubusercontent.com/vnepogodin/my-patches/develop/pacman/0001-libalpm-parallel-signature-check.patch)
 #fi
 
-pkgver() {
-  cd "$pkgname"
-  git describe --abbrev=7 --tags --match 'v*' | sed 's/^v//;s/\([^-]*-g\)/r\1/;s/-/./g'
-}
+#pkgver() {
+#  cd "$pkgname"
+#  git describe --abbrev=7 --tags --match 'v*' | sed 's/^v//;s/\([^-]*-g\)/r\1/;s/-/./g'
+#}
 
 prepare() {
   cd "${pkgname}"
