@@ -7,7 +7,7 @@
 pkgbase=nvidia-utils
 pkgname=('nvidia-utils' 'opencl-nvidia' 'nvidia-dkms' 'nvidia-open-dkms')
 pkgver=565.57.01
-pkgrel=3
+pkgrel=4
 arch=('x86_64')
 url="http://www.nvidia.com/"
 license=('custom')
@@ -28,6 +28,8 @@ source=('nvidia-drm-outputclass.conf'
         0004-silence-event-assert-until-570.patch
         0005-nvkms-Sanitize-trim-ELD-product-name-strings.patch
         0006-nvidia-drm-Set-FOP_UNSIGNED_OFFSET-for-nv_drm_fops.f.patch
+        0007-6.13-Fix-for-modules-symlinking.patch
+        0008-crypto-Add-fix-for-6.13-Module-compilation.patch
         limit-vram-buffer)
 sha512sums=('de7116c09f282a27920a1382df84aa86f559e537664bb30689605177ce37dc5067748acf9afd66a3269a6e323461356592fdfc624c86523bf105ff8fe47d3770'
             '4b3ad73f5076ba90fe0b3a2e712ac9cde76f469cd8070280f960c3ce7dc502d1927f525ae18d008075c8f08ea432f7be0a6c3a7a6b49c361126dcf42f97ec499'
@@ -43,6 +45,8 @@ sha512sums=('de7116c09f282a27920a1382df84aa86f559e537664bb30689605177ce37dc50677
             '8aa049884011d6664be04fa9f70856f56342e0e4e931858a88b96b9f628157fad3105d67626e6c71aa4ed35cf46eaf5d9020d90de508dd69761a8b559bd7c25e'
             '73f9d230142d9501ccf3efd8d40ea3b08b69fdbbdbac583df638d25efe4d8c320af3bb809ee408872c9737e123541dc3dc4e59fbeedb199e091876ef31f2a0aa'
             'a6cea65587c10408fd4c1b94fd233795faa0c2aa26e6245704d13b03cbce5392f9d159ba9494817e103a1c10dd1be8c1bb9f0bbfb790a80455139dbb53671aaf'
+            '919a8d00c4743147b01dbaae8792aa5f449e101bad37cfcfa7e8c4a91d5e6a042f632749f63347310902e511b9d12093e916592c15fbc9592326c773cc10c23e'
+            'fd9cb798c61cca51c1b3ed0ae291e42352b743da05ebdd40e419d374e62bf353540f757de0c73bc523e03c0a5ee592bc64a63970cbaad00c8819df2cd355fcca'
             '7f578c4bc6ebf4694c0bd81f30aee3510910088f9eea2c49128c9b3039b4d2ce69453f1b2baf2e1639ad0c51452af744c4767fb4cc1706f072b7e09d7ac6c735')
 
 
@@ -121,6 +125,10 @@ DEST_MODULE_LOCATION[4]="/kernel/drivers/video"' dkms.conf
 
     # Fix for 6.12 Kernel
     patch -Np1 --no-backup-if-mismatch -i "$srcdir"/0006-nvidia-drm-Set-FOP_UNSIGNED_OFFSET-for-nv_drm_fops.f.patch
+
+    # fix for 6.13 Kernel
+    patch -Np1 --no-backup-if-mismatch -i "$srcdir"/0007-6.13-Fix-for-modules-symlinking.patch
+    patch -Np1 --no-backup-if-mismatch -i "$srcdir"/0008-crypto-Add-fix-for-6.13-Module-compilation.patch
 
     # Attempt to make this reproducible
     sed -i "s/^HOSTNAME.*/HOSTNAME = echo cachyos"/ utils.mk
