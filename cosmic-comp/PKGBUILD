@@ -4,8 +4,8 @@
 # Contributor: Mark Wagie <mark.wagie@proton.me>
 
 pkgname=cosmic-comp
-pkgver=1.0.0.alpha.3
-pkgrel=2
+pkgver=1.0.0.alpha.4
+pkgrel=1
 pkgdesc='Compositor for the COSMIC desktop environment'
 arch=(x86_64)
 url='https://github.com/pop-os/cosmic-comp'
@@ -29,9 +29,9 @@ makedepends=(
   git
   lld
 )
-_tag=90883c6ab12533da08a31da338881c38aa773634
+_tag=e3b41c5c554cc5aadf44183866ff4df7c2957d09
 source=(git+https://github.com/pop-os/cosmic-comp.git#tag=${_tag})
-b2sums=('c410ffb333bd7bb010f795e79b308698f8370e3ac65f411a59337bff4a10e93cfd5b7078b0b9afc1d9de998cf4a87d0afb941489fb57fb0c22bb4de93620ec62')
+b2sums=('d9bb58edae3581f39076cc79fa17294490e84c1907c4ba484877592c632a997354778398d31058a9f8e656d8c73e64e3613734dd275b2c771a774dbf8f064590')
 
 prepare() {
   cd cosmic-comp
@@ -41,10 +41,10 @@ prepare() {
   sed 's/lto = "fat"/lto = "thin"/' -i Cargo.toml
 }
 
-pkgver() {
-  cd cosmic-comp
-  git describe --tags | sed 's/^epoch-//; s/-/./g'
-}
+#pkgver() {
+#  cd cosmic-comp
+#  git describe --tags | sed 's/^epoch-//; s/-/./g'
+#}
 
 build() {
   cd cosmic-comp
