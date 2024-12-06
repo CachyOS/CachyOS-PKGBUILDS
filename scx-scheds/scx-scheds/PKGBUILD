@@ -4,8 +4,8 @@
 
 pkgname=scx-scheds
 _gitname=scx
-pkgver=1.0.6
-pkgrel=6
+pkgver=1.0.7
+pkgrel=1
 pkgdesc='sched_ext schedulers and tools'
 url='https://github.com/sched-ext/scx'
 arch=('x86_64' 'aarch64')
@@ -29,18 +29,13 @@ makedepends=(
 )
 options=(!lto)
 source=("git+https://github.com/sched-ext/scx?signed#tag=v$pkgver")
-sha256sums=('81ebebdef84d9e02fb56b766633545ecfa875c297381c4912448409592aa407a')
+sha256sums=('896434924faa43412c6e362978cf4c0a2e4437ec37fd3e5973ead39261e15e57')
 validpgpkeys=(
   697C63013E65270255EBC2608744DC1EB26B5A9A  # Tejun Heo <tj@kernel.org>
   F5504C7B7B8107B40EF9E97AA1148BB3207BCC33  # David Vernet
 )
 
 _backports=(
-191cc7fe8b76f568b017b9d62fe65a3763a1bbd3 # scx_loader: tune scx_bpfland default options
-678b10133dc6a7587e16e5068bc870a3f810a52a # scheds: introduce scx_flash
-8d5e8174f9efd28934865879fc215cd8dd051a5d # DROP THIS: scx_flash: allow to build with stable in CachyOS
-d5d4f463f9ba4675b000a1c6d535d9d708d3d050 # scx_loader: add scx_flash as supported scheduler
-944510d1fc10c31ffecc1e1099e2e1e4cbe1b899 # scx_loader: restart scheduler upon fail
 )
 
 _reverts=(
