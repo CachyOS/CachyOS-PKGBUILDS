@@ -2,7 +2,7 @@
 # Maintainer: loathingkernel <loathingkernel _a_ gmail _d_ com>
 
 pkgname=proton-cachyos
-_srctag=9.0-20241123
+_srctag=9.0-20241206
 _commit=
 pkgver=${_srctag//-/.}
 _geckover=2.47.4
@@ -32,8 +32,8 @@ depends=(
   sdl2             lib32-sdl2
   libsoup          lib32-libsoup
   libgudev         lib32-libgudev
-#  blas             lib32-blas
-#  lapack           lib32-lapack
+  blas             lib32-blas
+  lapack           lib32-lapack
   speex            lib32-speex
   desktop-file-utils
   python
@@ -97,6 +97,7 @@ source=(
     https://dl.winehq.org/wine/wine-gecko/${_geckover}/wine-gecko-${_geckover}-x86{,_64}.tar.xz
     https://github.com/madewokherd/wine-mono/releases/download/wine-mono-${_monover}/wine-mono-${_monover}-x86.tar.xz
     https://github.com/madewokherd/xalia/releases/download/xalia-${_xaliaver}/xalia-${_xaliaver}-net48-mono.zip
+    879f09d2ac799cca99b78de3442194ebbe29d24a.patch
 )
 noextract=(
     wine-gecko-${_geckover}-{x86,x86_64}.tar.xz
@@ -154,6 +155,10 @@ prepare() {
     git remote set-url origin https://github.com/CachyOS/proton-cachyos.git
     git submodule update --init --filter=tree:0 --recursive
 
+    pushd openfst
+        patch -Np1 -i "$srcdir"/879f09d2ac799cca99b78de3442194ebbe29d24a.patch
+    popd
+
     for rustlib in gst-plugins-rs; do
     pushd $rustlib
         export RUSTUP_TOOLCHAIN=stable
@@ -179,7 +184,7 @@ build() {
     local -A flags
     for opt in "${split[@]}"; do flags["${opt%%=*}"]="${opt##*=}"; done
     local march="${flags["-march"]:-nocona}"
-    local mtune="generic" #"${flags["-mtune"]:-core-avx2}"
+    local mtune="${flags["-mtune"]:-core-avx2}"
 
     CFLAGS="-O3 -march=$march -mtune=$mtune -pipe -fno-semantic-interposition"
     CXXFLAGS="-O3 -march=$march -mtune=$mtune -pipe -fno-semantic-interposition"
@@ -250,8 +255,9 @@ package() {
         $(find "$_monodir" -iname "*x86_64.dll" -or -iname "*x86_64.exe")
 }
 
-sha256sums=('831d717e8744e0a28a9583b21cbd3b484c1ed5a18d41e9baca180d8f3ba284a0'
+sha256sums=('35036f82413ae14f98537bb7469a34425a47814f13555919d564cf73d435ee3b'
             '2cfc8d5c948602e21eff8a78613e1826f2d033df9672cace87fed56e8310afb6'
             'fd88fc7e537d058d7a8abf0c1ebc90c574892a466de86706a26d254710a82814'
             'c23deb9e3217a574f242b78d74cb94c4948a37d1f2715941b803a02e535854a6'
-            'a5cfd3090ebf7fb694bce573ef87b300b86f61204987ecbd068a2fe5079b7e6e')
+            'a5cfd3090ebf7fb694bce573ef87b300b86f61204987ecbd068a2fe5079b7e6e'
+            '9331932ad8ffa920fb7812cfd57074657cdf1d226077559ade667b82648405cf')
