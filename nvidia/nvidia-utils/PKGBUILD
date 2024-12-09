@@ -29,6 +29,7 @@ source=('nvidia-drm-outputclass.conf'
         0005-nvkms-Sanitize-trim-ELD-product-name-strings.patch
         0007-6.13-Fix-for-modules-symlinking.patch
         0008-crypto-Add-fix-for-6.13-Module-compilation.patch
+        0009-nvidia-nv-Convert-symbol-namespace-to-string-literal.patch
         limit-vram-buffer)
 sha512sums=('de7116c09f282a27920a1382df84aa86f559e537664bb30689605177ce37dc5067748acf9afd66a3269a6e323461356592fdfc624c86523bf105ff8fe47d3770'
             '4b3ad73f5076ba90fe0b3a2e712ac9cde76f469cd8070280f960c3ce7dc502d1927f525ae18d008075c8f08ea432f7be0a6c3a7a6b49c361126dcf42f97ec499'
@@ -45,6 +46,7 @@ sha512sums=('de7116c09f282a27920a1382df84aa86f559e537664bb30689605177ce37dc50677
             '73f9d230142d9501ccf3efd8d40ea3b08b69fdbbdbac583df638d25efe4d8c320af3bb809ee408872c9737e123541dc3dc4e59fbeedb199e091876ef31f2a0aa'
             '919a8d00c4743147b01dbaae8792aa5f449e101bad37cfcfa7e8c4a91d5e6a042f632749f63347310902e511b9d12093e916592c15fbc9592326c773cc10c23e'
             'f6a173aa55f75f0bfd768329a6ed9086989b53bfcacd696a3ad7f13410e374fdb5b44f4da6988df1f338cbce8bdaa0f03dc4e5780906e97c6b240ae42ee4044b'
+            '1ce211831e5c859621b5a66beea241877781d4b6ca09d1775a0b0a6fe2b232aa741e3ebe87040b597d997ce6c81bd246a85c58b9a6e48dae11088c3e38787ecb'
             '7f578c4bc6ebf4694c0bd81f30aee3510910088f9eea2c49128c9b3039b4d2ce69453f1b2baf2e1639ad0c51452af744c4767fb4cc1706f072b7e09d7ac6c735')
 
 
@@ -122,6 +124,7 @@ DEST_MODULE_LOCATION[4]="/kernel/drivers/video"' dkms.conf
     # fix for 6.13 Kernel
     patch -Np1 --no-backup-if-mismatch -i "$srcdir"/0007-6.13-Fix-for-modules-symlinking.patch
     patch -Np1 --no-backup-if-mismatch -i "$srcdir"/0008-crypto-Add-fix-for-6.13-Module-compilation.patch
+    patch -Np1 --no-backup-if-mismatch -i "$srcdir"/0009-nvidia-nv-Convert-symbol-namespace-to-string-literal.patch
 
     # Attempt to make this reproducible
     sed -i "s/^HOSTNAME.*/HOSTNAME = echo cachyos"/ utils.mk
