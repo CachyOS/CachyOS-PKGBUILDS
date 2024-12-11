@@ -14,7 +14,7 @@ pkgname=(
   'x86_energy_perf_policy'
 )
 pkgver=6.12
-pkgrel=2
+pkgrel=3
 license=('GPL-2.0-only')
 arch=('x86_64')
 url='https://www.kernel.org'
@@ -92,6 +92,7 @@ build() {
     WERROR=0 \
     NO_SDT=1 \
     LIBPFM4=1 \
+    NO_LIBLLVM=1 \
     BUILD_BPF_SKEL=1 \
     PYTHON=python \
     PYTHON_CONFIG=python-config \
@@ -182,6 +183,7 @@ package_perf() {
     BUILD_BPF_SKEL=1 \
     PYTHON=python \
     LIBPFM4=1 \
+    NO_LIBLLVM=1 \
     PYTHON_CONFIG=python-config \
     DESTDIR="$pkgdir" \
     install install-python_ext
