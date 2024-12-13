@@ -1,28 +1,21 @@
 # Maintainer: Kirill Fries-Raevskiy <exocarnivore@gmail.com>
 _pkgbase="bpftune"
 pkgname="$_pkgbase-git"
-pkgver=r464.f2b5ba7
+pkgver=r545.870d466
 pkgrel=1
 pkgdesc="BPF/tracing tools for auto-tuning Linux"
 arch=("x86_64")
 url="https://github.com/oracle-samples/bpftune"
 license=('GPLv2 WITH Linux-syscall-note')
-#groups=()
 depends=("libbpf" "libnl" "libcap")
 makedepends=('git' 'bpf' 'clang' 'llvm' 'llvm-libs' 'python-docutils')
 provides=("$_pkgbase")
 conflicts=("$_pkgbase")
-#replaces=()
-#backup=()
 options=('strip')
-#install=
-source=('git+https://github.com/oracle-samples/bpftune'
-		'fix-makefile.patch')
-#noextract=()
+source=('git+https://github.com/oracle/bpftune'
+        'makefile-tweaks.patch')
 sha256sums=('SKIP'
-            'e565afc2bc7bda439b49a73c5bc9719662684ee06d3bababcc2a7496b4723882')
-
-CC=clang
+            '009a8a03d2b8fee5b06a4cb264d4c2966472e9a512af9a7cd91364cb0c2e11e8')
 
 pkgver() {
     cd "$_pkgbase"
@@ -31,9 +24,8 @@ pkgver() {
 
 prepare() {
     cd "$srcdir/$_pkgbase"
-    patch -Np1 < ../fix-makefile.patch
-    sed -i 's/\/lib64/\/lib/' include/bpftune/libbpftune.h
-    sed -i 's/\/lib64/\/lib/g' src/Makefile
+    msg2 "Remove native march and use O3 flag"
+    patch -Np1 < ../makefile-tweaks.patch
     sed -i 's/\/sbin/\/bin/g' src/Makefile
     sed -i 's/\/sbin/\/bin/g' src/bpftune.service
 
@@ -41,13 +33,11 @@ prepare() {
 
 build() {
     cd "$srcdir/$_pkgbase"
-    export CFLAGS="-march=x86-64 -mtune=generic"
-    export CXXLAGS="-march=x86-64 -mtune=generic"
-    make -j1 || true
-    make
+    export CC="clang"
+    make libdir=lib
 }
 
 package() {
     cd "$srcdir/$_pkgbase"
-    make DESTDIR="$pkgdir" install
+    make DESTDIR="$pkgdir" libdir=lib install
 }
