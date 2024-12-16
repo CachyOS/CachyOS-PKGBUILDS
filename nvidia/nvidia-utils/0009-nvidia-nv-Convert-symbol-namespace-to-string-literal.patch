@@ -1,27 +1,37 @@
-From ab4aab9a926d3a812c8f91db2fd547ddcc969f2e Mon Sep 17 00:00:00 2001
+From 959df9bbfa7483d4d6b2af763906e11717c104ed Mon Sep 17 00:00:00 2001
 From: Eric Naim <dnaim@cachyos.org>
 Date: Mon, 9 Dec 2024 19:45:50 +0800
 Subject: [PATCH] nvidia/nv: Convert symbol namespace to string literal
 
 Commit https://github.com/torvalds/linux/commit/cdd30ebb1b9f36159d66f088b61aee264e649d7a ("module: Convert symbol namespace to string literal")
-breaks importing symbol namespaces. This change *seems* to be backwards compatible with older kernels so there's
-no need to wrap it in an #ifdef.
+breaks importing symbol namespaces. Apply this change only for 6.13 and higher.
 
 Signed-off-by: Eric Naim <dnaim@cachyos.org>
 ---
- kernel-open/nvidia/nv.c | 8 ++++----
- 1 file changed, 4 insertions(+), 4 deletions(-)
+ kernel-open/nvidia/nv.c | 5 +++++
+ 1 file changed, 5 insertions(+)
 
 diff --git a/kernel-open/nvidia/nv.c b/kernel-open/nvidia/nv.c
-index 83705a05..da655651 100644
+index 83705a05..1e7de9ea 100644
 --- a/kernel-open/nvidia/nv.c
 +++ b/kernel-open/nvidia/nv.c
-@@ -127,7 +127,7 @@ MODULE_ALIAS_CHARDEV_MAJOR(NV_MAJOR_DEVICE_NUMBER);
+@@ -22,6 +22,7 @@
+  */
+ 
+ #include <linux/module.h>  // for MODULE_FIRMWARE
++#include <linux/version.h>
+ 
+ // must precede "nv.h" and "nv-firmware.h" includes
+ #define NV_FIRMWARE_FOR_NAME(name)  "nvidia/" NV_VERSION_STRING "/" name ".bin"
+@@ -127,7 +128,11 @@ MODULE_ALIAS_CHARDEV_MAJOR(NV_MAJOR_DEVICE_NUMBER);
   * DMA_BUF namespace is added by commit id 16b0314aa746
   * ("dma-buf: move dma-buf symbols into the DMA_BUF module namespace") in 5.16
   */
--MODULE_IMPORT_NS(DMA_BUF);
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 13, 0)
 +MODULE_IMPORT_NS("DMA_BUF");
++#else
+ MODULE_IMPORT_NS(DMA_BUF);
++#endif
  #endif  // defined(MODULE_IMPORT_NS)
  
  const NvBool nv_is_rm_firmware_supported_os = NV_TRUE;
