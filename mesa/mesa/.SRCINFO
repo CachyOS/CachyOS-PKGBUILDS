@@ -1,7 +1,7 @@
 pkgbase = mesa
 	pkgdesc = Open-source OpenGL drivers
 	pkgver = 24.3.1
-	pkgrel = 6
+	pkgrel = 7
 	epoch = 1
 	url = https://www.mesa3d.org/
 	arch = x86_64
@@ -62,6 +62,11 @@ pkgbase = mesa
 	source = 0004-radv-add-radv_disable_dcc_stores-and-enable-for-Indi.patch
 	source = 0005-radv-fix-disabling-DCC-for-stores-with-drirc.patch
 	source = 0006-radv-Add-radv_invariant_geom-true-for-Indiana-Jones.patch
+	source = 0007-wsi-wayland-Only-use-commit-timing-protocol-alongsid.patch
+	source = 0008-wsi-wayland-Don-t-fallback-to-broken-legacy-throttli.patch
+	source = 0009-wsi-wayland-Handle-FIFO-MAILBOX-transitions-correctl.patch
+	source = 0010-wsi-wayland-Remove-unused-present_mode-member.patch
+	source = 0011-wsi-wayland-Add-forward-progress-guarantee-for-prese.patch
 	source = ucd-trie-0.1.6.tar.gz::https://crates.io/api/v1/crates/ucd-trie/0.1.6/download
 	source = pest_meta-2.7.11.tar.gz::https://crates.io/api/v1/crates/pest_meta/2.7.11/download
 	source = indexmap-2.2.6.tar.gz::https://crates.io/api/v1/crates/indexmap/2.2.6/download
@@ -91,6 +96,11 @@ pkgbase = mesa
 	sha256sums = 26a94d0d5f04d10570cbcac4cd22a27815485c963ad799b68b5b964faea2dbf9
 	sha256sums = beb02ca314b2e9840a8573d8bf2bbde718372fd60a23ed9905a6b65305edfd1c
 	sha256sums = c92d1089f7b8285031027eacde67519aae33a2bdc0fc75c6702e82fbf0d4e65e
+	sha256sums = b0ff374ba78b16a774fcab5bd4313c0b69b069e4662ef0f1dd1a5284e3748767
+	sha256sums = 9d4899b354c68f949844effef9ce87204308b0809e2935f4eeb5af6c1fe6d512
+	sha256sums = 45f417426d5d1ccfed06d070a64cdb338a0411c5ed1cbeb504f3f02ca2a8ca8d
+	sha256sums = e1f8eab25edcc449cf154ab454f3c02f5177f4f981b706125116ff460a431ba1
+	sha256sums = 59b196c9103cb6fd1da909f557109b5945cb0c4dcf91c7a002e0a43d7acb7030
 	sha256sums = ed646292ffc8188ef8ea4d1e0e0150fb15a5c2e12ad9b8fc191ae7a8a7f3c4b9
 	sha256sums = a941429fea7e08bedec25e4f6785b6ffaacc6b755da98df5ef3e7dcf4a124c4f
 	sha256sums = 168fb715dda47215e360912c096649d23d58bf392ac62f73919e831745e40f26
@@ -114,6 +124,11 @@ pkgbase = mesa
 	b2sums = 7cd680e61e8cd3295829cff958f6c72005c7b717e6e8b329658279799ab36ef4aa4c8c84c07676e185b00dba7b408179bd94c602d65aece19a383a9210026c8c
 	b2sums = 943c6bfc24e6e973aaf2d887f0a11f3d4f344dd4ed68e51b7f39dc494ecfce7d1eca3a55783644948a85a812b865d876edc0f920a991a4ad4ff0c90abc67f076
 	b2sums = 05d098c77d7aefa85b7d512700f8bed7ede45932fdf41ad25827baf4dba26907d14e60fd4a588c08cffa09abbf184727bc7814478d257cf9d2102973b06d7b38
+	b2sums = 288a13f2fd328890992a81ea5481d9213288248a634ac2034f3e4ae1c21268508ad675be768f93c10bd7b6f3d8d74caf546489f75e0d3f31c926b89189b4d7ca
+	b2sums = 2e6bb10f7e98ef831399b12aa6598483c99dadaa15c5d461ecba07ce86c46cfa92ebd6df394d99b0635e3e861e7108a62b188d48b3ad19a1cfe0d5ee6efba87d
+	b2sums = 462c5e39626571a224bbd02d2c90d7b50908ebdb239dd327db64d4e34d09f84821780ad634a137aeca137d7a6dfa667637591438252865a861cf80c114a7f6a1
+	b2sums = 2e3debfb2e1c1c5d5886b221fe35f687ec23f6cf018df7de5502f5a7cc9bf97b201567da3818695a2eda2347df382669d43403919af0b3b1a9670955e10ad685
+	b2sums = 91e96b4b2f24a580046116f3fc1a6cfb595b44d227a78bcd70af389234c6ffba209debe2653a5a6e18679f0a15273cc37537c4ab2319c0d5117065e68839500c
 	b2sums = a6d47c903be6094423d89b8ec3ca899d0a84df6dbd6e76632bb6c9b9f40ad9c216f8fa400310753d392f85072756b43ac3892e0a2c4d55f87ab6463002554823
 	b2sums = 9c34f1ab14ad5ae124882513e0f14b1d731d06a43203bdc37fa3b202dd3ce93dbe8ebb554d01bab475689fe6ffd3ec0cbc0d5365c9b984cb83fb34ea3e9e732e
 	b2sums = fac5cf6339dc3c0a40b100035a5c874cc7b2efeafeb31c51488d25156e392dc9db86a497e76eead351d2126f69d060422faa9c55d73407a0de9f5be18d234123
@@ -149,9 +164,9 @@ pkgname = mesa
 	depends = zlib
 	depends = zstd
 	optdepends = opengl-man-pages: for the OpenGL API man pages
-	provides = libva-mesa-driver=1:24.3.1-6
-	provides = mesa-libgl=1:24.3.1-6
-	provides = mesa-vdpau=1:24.3.1-6
+	provides = libva-mesa-driver=1:24.3.1-7
+	provides = mesa-libgl=1:24.3.1-7
+	provides = mesa-vdpau=1:24.3.1-7
 	provides = libva-driver
 	provides = opengl-driver
 	provides = vdpau-driver

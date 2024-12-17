@@ -1,0 +1,33 @@
+From 3b30cba2e4476074d9dffabbc6c3620e162157e1 Mon Sep 17 00:00:00 2001
+From: Hans-Kristian Arntzen <post@arntzen-software.no>
+Date: Mon, 9 Dec 2024 12:21:34 +0100
+Subject: [PATCH 07/11] wsi/wayland: Only use commit timing protocol alongside
+ present time.
+
+Comming timing is meaningless when we cannot receive timing feedback.
+
+Signed-off-by: Hans-Kristian Arntzen <post@arntzen-software.no>
+Fixes: c26ab1aee1d ("vulkan/wsi/wayland: Pace frames with commit-timing-v1")
+Reviewed-by: Autumn Ashton <misyl@froggi.es>
+Reviewed-by: Derek Foreman <derek.foreman@collabora.com>
+Part-of: <https://gitlab.freedesktop.org/mesa/mesa/-/merge_requests/32556>
+---
+ src/vulkan/wsi/wsi_common_wayland.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/vulkan/wsi/wsi_common_wayland.c b/src/vulkan/wsi/wsi_common_wayland.c
+index 1e6e6f65a40..0022fcff8ed 100644
+--- a/src/vulkan/wsi/wsi_common_wayland.c
++++ b/src/vulkan/wsi/wsi_common_wayland.c
+@@ -3012,7 +3012,7 @@ wsi_wl_surface_create_swapchain(VkIcdSurfaceBase *icd_surface,
+       chain->fifo = wp_fifo_manager_v1_get_fifo(dpy->fifo_manager,
+                                                 chain->wsi_wl_surface->surface);
+    }
+-   if (dpy->commit_timing_manager) {
++   if (dpy->commit_timing_manager && chain->present_ids.wp_presentation) {
+       chain->commit_timer = wp_commit_timing_manager_v1_get_timer(dpy->commit_timing_manager,
+                                                                   chain->wsi_wl_surface->surface);
+    }
+-- 
+2.47.1
+

@@ -1,0 +1,31 @@
+From 89962c0df8fd14c75cab697b84ec024ad9e03464 Mon Sep 17 00:00:00 2001
+From: Hans-Kristian Arntzen <post@arntzen-software.no>
+Date: Mon, 9 Dec 2024 13:21:53 +0100
+Subject: [PATCH 10/11] wsi/wayland: Remove unused present_mode member.
+
+We use chain->base.present_mode instead.
+
+Signed-off-by: Hans-Kristian Arntzen <post@arntzen-software.no>
+Cc: mesa-stable
+Reviewed-by: Autumn Ashton <misyl@froggi.es>
+Reviewed-by: Derek Foreman <derek.foreman@collabora.com>
+Part-of: <https://gitlab.freedesktop.org/mesa/mesa/-/merge_requests/32556>
+---
+ src/vulkan/wsi/wsi_common_wayland.c | 1 -
+ 1 file changed, 1 deletion(-)
+
+diff --git a/src/vulkan/wsi/wsi_common_wayland.c b/src/vulkan/wsi/wsi_common_wayland.c
+index 7b613dbae58..e1257d4f340 100644
+--- a/src/vulkan/wsi/wsi_common_wayland.c
++++ b/src/vulkan/wsi/wsi_common_wayland.c
+@@ -204,7 +204,6 @@ struct wsi_wl_swapchain {
+    uint32_t num_drm_modifiers;
+    const uint64_t *drm_modifiers;
+ 
+-   VkPresentModeKHR present_mode;
+    bool legacy_fifo_ready;
+    bool next_present_force_wait_barrier;
+ 
+-- 
+2.47.1
+
