@@ -5,7 +5,7 @@
 pkgname=kwin
 pkgver=6.2.4
 _dirver=$(echo $pkgver | cut -d. -f1-3)
-pkgrel=3
+pkgrel=5
 pkgdesc='An easy to use, but flexible, composited Window Manager (CachyOS Version)'
 arch=(x86_64)
 url='https://kde.org/plasma-desktop/'
@@ -84,11 +84,13 @@ optdepends=('maliit-keyboard: virtual keyboard for kwin-wayland')
 groups=(plasma)
 source=(https://download.kde.org/stable/plasma/$_dirver/$pkgname-$pkgver.tar.xz{,.sig}
 		https://invent.kde.org/plasma/kwin/-/merge_requests/6178.patch # Required for handheld edition
+		6474.patch
 		)
 install=$pkgname.install
 sha256sums=('d4b78ebdc9432cb1e224621ac43cfb81b92dbcee034afe90bbeb5b22f218f321'
             'SKIP'
-            '2a512810f6b0b810a579f8a5c573c850c2e202507182eabb639c6a0ba77cdaf9')
+            '2a512810f6b0b810a579f8a5c573c850c2e202507182eabb639c6a0ba77cdaf9'
+            'e92b74ddf83c345cf2023af08e1b69d350bf84ec913085c9b5c05c7814181575')
 validpgpkeys=('E0A3EB202F8E57528E13E72FD7574483BB57B18D'  # Jonathan Esk-Riddell <jr@jriddell.org>
               '0AAC775BB6437A8D9AF7A3ACFE0784117FBCE11D'  # Bhushan Shah <bshah@kde.org>
               'D07BD8662C56CB291B316EB2F5675605C74E02CF'  # David Edmundson <davidedmundson@kde.org>
@@ -97,6 +99,8 @@ prepare() {
   cd $pkgname-$pkgver
   msg2 "Add an option to allow Xwayland apps use libei input emulation without prompting"
   patch -Np1 < ../6178.patch
+  # Implement fifo-v1 wayland protocol
+  patch -Np1 < ../6474.patch
 }
 
 build() {
