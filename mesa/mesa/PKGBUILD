@@ -94,9 +94,6 @@ options=(
 )
 source=(
   "https://mesa.freedesktop.org/archive/mesa-$pkgver.tar.xz"{,.sig}
-  0004-radv-add-radv_disable_dcc_stores-and-enable-for-Indi.patch
-  0005-radv-fix-disabling-DCC-for-stores-with-drirc.patch
-  0006-radv-Add-radv_invariant_geom-true-for-Indiana-Jones.patch
 )
 validpgpkeys=(
   946D09B5E4C9845E63075FF1D961C596A7203456 # Andres Gomez <tanty@igalia.com>
@@ -135,9 +132,6 @@ done
 
 sha256sums=('ad9f5f3a6d2169e4786254ee6eb5062f746d11b826739291205d360f1f3ff716'
             'SKIP'
-            '26a94d0d5f04d10570cbcac4cd22a27815485c963ad799b68b5b964faea2dbf9'
-            'beb02ca314b2e9840a8573d8bf2bbde718372fd60a23ed9905a6b65305edfd1c'
-            'c92d1089f7b8285031027eacde67519aae33a2bdc0fc75c6702e82fbf0d4e65e'
             'ed646292ffc8188ef8ea4d1e0e0150fb15a5c2e12ad9b8fc191ae7a8a7f3c4b9'
             'a941429fea7e08bedec25e4f6785b6ffaacc6b755da98df5ef3e7dcf4a124c4f'
             '168fb715dda47215e360912c096649d23d58bf392ac62f73919e831745e40f26'
@@ -155,9 +149,6 @@ sha256sums=('ad9f5f3a6d2169e4786254ee6eb5062f746d11b826739291205d360f1f3ff716'
             '901fa70d88b9d6c98022e23b4136f9f3e54e4662c3bc1bd1d84a42a9a0f0c1e9')
 b2sums=('d5973506983a23a95c360801a591e13945695e9a0c6f9f3bbb953865aa39ccfabaae624f4cd1edc8ecf479710856f5cc08e4f6374b107a06870906e934ecc5b8'
         'SKIP'
-        '7cd680e61e8cd3295829cff958f6c72005c7b717e6e8b329658279799ab36ef4aa4c8c84c07676e185b00dba7b408179bd94c602d65aece19a383a9210026c8c'
-        '943c6bfc24e6e973aaf2d887f0a11f3d4f344dd4ed68e51b7f39dc494ecfce7d1eca3a55783644948a85a812b865d876edc0f920a991a4ad4ff0c90abc67f076'
-        '05d098c77d7aefa85b7d512700f8bed7ede45932fdf41ad25827baf4dba26907d14e60fd4a588c08cffa09abbf184727bc7814478d257cf9d2102973b06d7b38'
         'a6d47c903be6094423d89b8ec3ca899d0a84df6dbd6e76632bb6c9b9f40ad9c216f8fa400310753d392f85072756b43ac3892e0a2c4d55f87ab6463002554823'
         '9c34f1ab14ad5ae124882513e0f14b1d731d06a43203bdc37fa3b202dd3ce93dbe8ebb554d01bab475689fe6ffd3ec0cbc0d5365c9b984cb83fb34ea3e9e732e'
         'fac5cf6339dc3c0a40b100035a5c874cc7b2efeafeb31c51488d25156e392dc9db86a497e76eead351d2126f69d060422faa9c55d73407a0de9f5be18d234123'
@@ -178,12 +169,6 @@ b2sums=('d5973506983a23a95c360801a591e13945695e9a0c6f9f3bbb953865aa39ccfabaae624
 
 prepare() {
   cd mesa-$pkgver
-
-  # Fix Indiana Jones issues
-  # https://gitlab.freedesktop.org/mesa/mesa/-/issues/12257
-  patch -Np1 -i ../0004-radv-add-radv_disable_dcc_stores-and-enable-for-Indi.patch
-  patch -Np1 -i ../0005-radv-fix-disabling-DCC-for-stores-with-drirc.patch
-  patch -Np1 -i ../0006-radv-Add-radv_invariant_geom-true-for-Indiana-Jones.patch
 
   # Include package release in version string so Chromium invalidates
   # its GPU cache; otherwise it can cause pages to render incorrectly.
