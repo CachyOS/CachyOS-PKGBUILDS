@@ -83,7 +83,7 @@ makedepends=(extra-cmake-modules
 optdepends=('maliit-keyboard: virtual keyboard for kwin-wayland')
 groups=(plasma)
 source=(https://download.kde.org/stable/plasma/$_dirver/$pkgname-$pkgver.tar.xz{,.sig}
-		https://invent.kde.org/plasma/kwin/-/merge_requests/6178.patch # Required for handheld edition
+		6178.patch # Required for handheld edition
 		6474.patch
 		)
 install=$pkgname.install
@@ -97,7 +97,7 @@ validpgpkeys=('E0A3EB202F8E57528E13E72FD7574483BB57B18D'  # Jonathan Esk-Riddell
               '1FA881591C26B276D7A5518EEAAF29B42A678C20') # Marco Martin <notmart@gmail.com>
 prepare() {
   cd $pkgname-$pkgver
-  msg2 "Add an option to allow Xwayland apps use libei input emulation without prompting"
+  # Add an option to allow Xwayland apps use libei input emulation without prompting
   patch -Np1 < ../6178.patch
   # Implement fifo-v1 wayland protocol
   patch -Np1 < ../6474.patch
