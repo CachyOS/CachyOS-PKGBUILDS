@@ -2,8 +2,8 @@
 
 _gitname=CachyOS-Settings
 pkgname=cachyos-settings
-pkgver=1.1.5
-pkgrel=2
+pkgver=1.1.6
+pkgrel=1
 epoch=1
 groups=(cachyos)
 arch=('any')
@@ -12,7 +12,7 @@ makedepends=('coreutils')
 pkgdesc='CachyOS - Settings'
 source=("git+https://github.com/CachyOS/$_gitname?signed#tag=$pkgver")
 install="$pkgname.install"
-sha256sums=('d404f9953af8015f7e459f70daf886313cc7dd1e6901b0e13f883c9a8834c7be')
+sha256sums=('d509afe910898de2c58d8a200859b366e2495cbb5d79c5d2f83d8a3bc4e2cae1')
 validpgpkeys=(
   E8B9AA39F054E30E8290D492C3C4820857F654FE  # Peter Jung <admin@ptr1337.dev>
 )
@@ -26,11 +26,6 @@ depends=(
 optdepends=('libluv: for topmem'
             'lua-luv: for topmem'
             'power-profiles-daemon: For game-performance')
-
-prepare() {
-  cd $_gitname
-  git cherry-pick -n cb8fba300066723e87c55cc2d1c3472891c9217d
-}
 
 package() {
   install -d "$pkgdir/etc"
