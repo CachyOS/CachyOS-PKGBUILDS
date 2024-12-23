@@ -7,9 +7,9 @@
 
 pkgname=obs-studio-browser
 pkgver=31.0.0
-pkgrel=3
+pkgrel=4
 pkgdesc="Free and open source software for video recording and live streaming. With everything except service integration"
-arch=("x86_64" "aarch64")
+arch=("x86_64")
 url="https://github.com/obsproject/obs-studio"
 license=('GPL-2.0-or-later')
 # To manage dependency rebuild easily, this will prevent you to rebuild OBS on non-updated system
@@ -17,7 +17,7 @@ _qtver=6.6.2
 _libajantv2ver=17.0.1
 _libdatachannelver=0.21
 _mbedtlsver=3.6.1
-_pythonver=3.12
+_pythonver=3.13
 depends=(
   "alsa-lib" # Deps of ALSA plugin and CEF
   "curl" # Deps of OBS Studio and rtmp-services plugin
@@ -117,7 +117,6 @@ source=(
   "001-opengl-avoid-allocate-0-byte.patch"
 )
 source_x86_64=("https://cdn-fastly.obsproject.com/downloads/cef_binary_6533_linux_x86_64.tar.xz")
-source_aarch64=("https://cdn-fastly.obsproject.com/downloads/cef_binary_6533_linux_aarch64.tar.xz")
 sha256sums=(
   "SKIP"
   "SKIP"
@@ -125,11 +124,7 @@ sha256sums=(
   "81680e20c3b517d051f738043079a58c8e8be516afaa7f4c5f9c5ec5f80bf026"
 )
 sha256sums_x86_64=("fab66dfc9cfd2e26fb87798f855aef30c2004edc8e19570d37af555644ae1655")
-sha256sums_aarch64=("ab09f04e534306d3f301ea997c03a6a9f7bd245042d50a434f17c1c98ac64b89")
-
-if [[ ${CARCH/%_v?/} == 'x86_64' ]]; then
-  optdepends+=("decklink: Blackmagic Design DeckLink support")
-fi
+optdepends+=("decklink: Blackmagic Design DeckLink support")
 
 prepare() {
   cd "$srcdir/obs-studio"
