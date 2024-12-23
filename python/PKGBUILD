@@ -17,7 +17,7 @@ arch=('x86_64')
 license=('PSF-2.0')
 url="https://www.python.org/"
 depends=('bzip2' 'expat' 'gdbm' 'libffi' 'libnsl' 'libxcrypt' 'openssl' 'zlib' 'tzdata' 'mpdecimal')
-makedepends=('tk' 'sqlite' 'bluez-libs' 'llvm' 'llvm-bolt' 'gdb' 'xorg-server-xvfb' 'ttf-font')
+makedepends=('tk' 'sqlite' 'bluez-libs' 'llvm' 'gdb' 'xorg-server-xvfb' 'ttf-font')
 source=("https://www.python.org/ftp/python/${pkgver%rc*}/Python-${pkgver}.tar.xz"{,.asc}
         EXTERNALLY-MANAGED)
 sha512sums=('056c9b5fc0a6b540f41513d045f43c1ed463d15e0f345cecec703ec9c2335e53b4beb19de9c74ab2b236b023f934d5fd9ae7727a808634eaa01cfe66018a9a35'
@@ -48,12 +48,13 @@ build() {
 
 
   # Disable bundled pip & setuptools
+  # BOLT is disabled due LLVM or upstream issue
+  # https://github.com/python/cpython/issues/124948
   ./configure --prefix=/usr \
               --enable-shared \
               --with-computed-gotos \
               --enable-optimizations \
               --with-lto \
-              --enable-bolt \
               --enable-ipv6 \
               --with-system-expat \
               --with-dbmliborder=gdbm:ndbm \
