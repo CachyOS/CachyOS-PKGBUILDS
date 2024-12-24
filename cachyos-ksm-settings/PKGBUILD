@@ -1,0 +1,41 @@
+# Maintainer: Vasiliy Stelmachenok <ventureo@cachyos.org>
+pkgname=cachyos-ksm-settings
+pkgver=1
+pkgrel=1
+pkgdesc="Package for easy configuration of KSM via systemd"
+arch=('any')
+depends=('systemd>=256')
+makedepends=('coreutils')
+source=(
+    10-systemd-ksm.conf
+    10-enable-ksm-by-default.conf
+    ksmctl
+    ksmstats
+)
+conflicts=('uksmd' 'cachyos-settings<=1:1.1.8')
+replaces=(uksmd)
+optdepends=(
+    "sddm: for systemd service override to work"
+    "gdm: for systemd service override to work"
+    "ly: for systemd service override to work"
+    "lightdm: for systemd service override to work"
+)
+
+sha256sums=(
+    'adab2cae71b5acb9057d87215edb8c9a079e2d16cf5a6484d1b3898503eaac75'
+    'a5a0f259d6d00228864176d6081372730ee77df9621836de4feeb9dc675390a3'
+    '04095208b65fe4d39f62ddd5d382462ed545191aacfddb1e05d6c9b25c1e87ee'
+    'd2d252577bd27fe6e2308f5503d08053dbff0c66fd2cfd8543c489769ac41fef'
+)
+
+package() {
+    install -Dm644 10-systemd-ksm.conf "${pkgdir}/usr/lib/systemd/system/gdm.service.d/10-ksm.conf"
+    install -Dm644 10-systemd-ksm.conf "${pkgdir}/usr/lib/systemd/system/sddm.service.d/10-ksm.conf"
+    install -Dm644 10-systemd-ksm.conf "${pkgdir}/usr/lib/systemd/system/lightdm.service.d/10-ksm.conf"
+    install -Dm644 10-systemd-ksm.conf "${pkgdir}/usr/lib/systemd/system/ly.service.d/10-ksm.conf"
+    install -Dm644 10-systemd-ksm.conf "${pkgdir}/usr/lib/systemd/system/user@.service.d/10-ksm.conf"
+    install -Dm644 10-systemd-ksm.conf "${pkgdir}/usr/lib/systemd/system/getty@.service.d/10-ksm.conf"
+    install -Dm644 10-enable-ksm-by-default.conf "${pkgdir}/usr/lib/tmpfiles.d/10-enable-ksm-by-default.conf"
+    install -Dm755 ksmctl "${pkgdir}/usr/bin/ksmctl"
+    install -Dm755 ksmstats "${pkgdir}/usr/bin/ksmstats"
+}
