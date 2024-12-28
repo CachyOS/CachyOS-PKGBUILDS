@@ -1,0 +1,31 @@
+# Maintainer: Peter Jung <ptr1337@cachyos.org>
+
+pkgname=adaptivemm
+pkgver=1.0.0
+pkgrel=1
+pkgdesc="A userspace daemon for proactive free memory management"
+arch=('x86_64')
+url="https://github.com/oracle/adaptivemm"
+license=(GPL-2.0-or-later)
+depends=(
+  glibc
+)
+makedepends=(
+  gcc
+  make
+)
+source=("git+https://github.com/oracle/adaptivemm#commit=8b7c84ec69cb5ea6cbb568a3bfc1d8cf108fe704")
+b2sums=('0c1573fc3d62e4b9351b4c888d73f8bad6890193a1945e2415d15b8b2c3fc3165fcc02722dc51b79dd1a7caaaa838f03721c5058515a71d506df1e3f0d7277ca')
+
+build() {
+  cd "$srcdir/$pkgname"
+  make
+}
+
+package() {
+  cd "$srcdir/$pkgname"
+  install -Dm755 adaptivemmd "$pkgdir/usr/bin/adaptivemmd"
+  install -Dm644 adaptivemmd.service "$pkgdir/usr/lib/systemd/system/adaptivemmd.service"
+  install -Dm644 adaptivemmd.cfg "$pkgdir/etc/adaptivemmd.cfg"
+  install -Dm644 adaptivemmd.8 "$pkgdir/usr/share/man/man8/adaptivemmd.8"
+}
