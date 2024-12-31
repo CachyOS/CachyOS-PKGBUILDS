@@ -1,4 +1,5 @@
 # Maintainer: Vladislav Nepogodin <nepogodin.vlad@gmail.com>
+# Contributor: SoulHarsh007 <admin@soulharsh007.dev>
 
 pkgname=cachyos-hyprland-settings
 pkgdesc='CachyOS Hyprland settings'
@@ -12,6 +13,7 @@ source=("$pkgname-$pkgver.tar.gz::$url/archive/$pkgver.tar.gz")
 sha512sums=('e95d0cdd66c95d446929490bd799e1fc41017e42e88ca82aeb336a852c09d446fa066085ab404c385b3b4299dc19b50dffcaca393bb227f9cf7b88a34834eda7')
 depends=(
   cachyos-fish-config
+  cachyos-alacritty-config
   ttf-fantasque-nerd
   ttf-font-awesome
   otf-font-awesome
@@ -52,6 +54,6 @@ provides=('cachyos-desktop-settings')
 conflicts=('cachyos-desktop-settings')
 
 package() {
-    install -d $pkgdir/etc
-    cp -rf $srcdir/$pkgname-$pkgver/etc $pkgdir
+  install -d $pkgdir/etc
+  cp -rf $srcdir/$pkgname-$pkgver/etc $pkgdir
 }
