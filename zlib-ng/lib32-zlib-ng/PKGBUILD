@@ -7,8 +7,8 @@ pkgname=(
   lib32-zlib-ng
   lib32-zlib-ng-compat
 )
-pkgver=2.2.2
-pkgrel=3
+pkgver=2.2.3
+pkgrel=1
 pkgdesc='zlib replacement with optimizations for next generation systems - 32-bit'
 url='https://github.com/zlib-ng/zlib-ng'
 arch=('x86_64')
@@ -21,13 +21,13 @@ makedepends=(
   ninja
   lib32-gcc-libs
 )
-source=("${url}/archive/refs/tags/$pkgver/zlib-ng-${pkgver}.tar.gz")
-sha256sums=('fcb41dd59a3f17002aeb1bb21f04696c9b721404890bb945c5ab39d2cb69654c')
-b2sums=('970260f44fcce467933bf0038afa0f6e18cc007012c7d9be0b259d407e981fa1a353ce4c7aae38e5158ba65c79c5b54777f1cc436654016c5a21d20630061890')
+source=(git+https://github.com/zlib-ng/zlib-ng#tag=${pkgver})
+sha256sums=('6867f8f1e57d3e8e4158292a839fa29967c58849aabeba2199e3d95b346d675f')
+b2sums=('5011d94bff127ffbd009fea15b4aea036e18fc241d37972856f68ed474a72bd0e7f75cff74e1a6c9e6c0132ca436ad7a7aa246dcc29747bd7dcedb5f8e35cbca')
 
 
 build() {
-  cd "zlib-ng-${pkgver}"
+  cd "zlib-ng"
 
 
   ## Build for 32-bit
@@ -60,7 +60,7 @@ build() {
 }
 
 check() {
-  cd "zlib-ng-${pkgver}"
+  cd "zlib-ng"
   msg2 "Checking zlib-ng"
   ctest --output-on-failure --test-dir build
   msg2 "Checking zlib-ng-compat"
@@ -71,8 +71,7 @@ package_lib32-zlib-ng() {
   provides=('libz-ng.so')
   depends=(zlib-ng=$pkgver)
 
-
-  cd "zlib-ng-${pkgver}"
+  cd "zlib-ng"
   DESTDIR="${pkgdir}" cmake --install build
   install -Dm 644 LICENSE.md -t "${pkgdir}/usr/share/licenses/${pkgname}"
   install -Dm 644 README.md -t "${pkgdir}/usr/share/doc/${pkgname}"
@@ -88,7 +87,7 @@ package_lib32-zlib-ng-compat() {
   replaces=('lib32-zlib')
   options=('staticlibs')
 
-  cd "zlib-ng-${pkgver}"
+  cd "zlib-ng"
   DESTDIR="${pkgdir}" cmake --install build-compat
   install -Dm 644 LICENSE.md -t "${pkgdir}/usr/share/licenses/${pkgname}"
   install -Dm 644 README.md -t "${pkgdir}/usr/share/doc/${pkgname}"
