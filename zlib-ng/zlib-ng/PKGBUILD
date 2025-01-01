@@ -38,8 +38,6 @@ build() {
   export CFLAGS+=" -fno-semantic-interposition"
   export CXXFLAGS+=" -fno-semantic-interposition"
 
-	# WITH_UNALIGNED - unaligned access invokes undefined behaviour,
-	#   see https://github.com/gentoo/gentoo/pull/17167 for more info.
   local _options=(
     -G Ninja
     -DCMAKE_BUILD_TYPE=None
@@ -47,7 +45,6 @@ build() {
     -DCMAKE_INSTALL_LIBDIR=lib
     -Wno-dev
     -DWITH_GTEST=OFF
-    -DWITH_UNALIGNED=OFF
   )
 
   msg2 "Building zlib-ng"
