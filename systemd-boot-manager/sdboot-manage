@@ -62,7 +62,8 @@ export LINUX_OPTIONS \
     PRESERVE_FOREIGN \
     NO_AUTOGEN \
     NO_AUTOUPDATE \
-    INITRD_PREFIX=initramfs
+    INITRD_PREFIX=initramfs \
+    INITRD_ENTRIES
 
 [ -f "${config}" ] && . "${config}"
 
@@ -99,6 +100,17 @@ setup_sdboot() {
     # generate entries, ensure an initial set of entries is generated
     [ "${DEFAULT_ENTRY}" != "oldest" ] && DEFAULT_ENTRY="latest"
     generate_entries
+}
+
+append_initrd_entries() {
+    local kernel_entry="$1"
+    local initrd="$2"
+
+    for entry in "${INITRD_ENTRIES[@]}"; do
+        echo "initrd $entry" >> "$kernel_entry"
+    done
+
+    echo "initrd ${initrd}" >> "$kernel_entry"
 }
 
 generate_entries() {
@@ -162,16 +174,17 @@ generate_entries() {
     if [ "${REMOVE_EXISTING,,}" = "yes" ]; then
         while read -r entry; do
             remove_entry "${entry}"
-        done < <(find "${ESP}/loader/entries" -type f -name "*.conf")
+        done < <(LC_ALL=C.UTF-8 find "${ESP}/loader/entries" -type f -name "*.conf")
     fi
 
     # create entries for each installed kernel
     while read -r kernel; do
         entry="${kernel//vmlinuz-/}"
+        entry_path="$(get_entry_root "$ESP")${entry}"
         initramfs="${kernel//vmlinuz/${INITRD_PREFIX}}"
 
         # first validate we don't already have an entry for this kernel
-        [[ "${OVERWRITE_EXISTING,,}" != "yes" && -f $(get_entry_root "$ESP")${entry}.conf ]] && continue
+        [[ "${OVERWRITE_EXISTING,,}" != "yes" && -f "${entry_path}.conf" ]] && continue
 
         # generate entry title (WIP)
         title="$(echo -e "$entry" | sed -e 's/-/ /g' -e 's/\b\(.\)/\u\1/g')"
@@ -181,21 +194,22 @@ generate_entries() {
         # get the kernel location so the initrd can be written to the same location as the kernel
         [[ $(dirname "$kernel") == "/" ]] && kernelpath="" || kernelpath="$(dirname "$kernel")"
 
-        cat <<EOF >"$(get_entry_root "$ESP")${entry}.conf"
+        cat <<EOF >"${entry_path}.conf"
 title ${title}
-linux ${kernel}
-initrd ${kernelpath}${initramfs}.img
 options ${sdoptions} ${LINUX_OPTIONS}
-EOF
-        if [ "${DISABLE_FALLBACK}" != "yes" ]; then
-            cat <<EOF >"$(get_entry_root "$ESP")${entry}-fallback.conf"
-title ${title} (Fallback)
 linux ${kernel}
-initrd ${kernelpath}${initramfs}-fallback.img
-options ${sdoptions} ${LINUX_FALLBACK_OPTIONS}
 EOF
+        append_initrd_entries "${entry_path}.conf" "${kernelpath}${initramfs}.img"
+
+        if [ "${DISABLE_FALLBACK}" != "yes" ]; then
+            cat <<EOF >"${entry_path}-fallback.conf"
+title ${title} (Fallback)
+options ${sdoptions} ${LINUX_FALLBACK_OPTIONS}
+linux ${kernel}
+EOF
+            append_initrd_entries "$entry_path-fallback.conf" "${kernelpath}${initramfs}-fallback.img"
         fi
-    done < <(find "${ESP}" -maxdepth 1 -type f -name "${KERNEL_PATTERN}" -printf "/%P\n")
+    done < <(LC_ALL=C.UTF-8 find "${ESP}" -maxdepth 1 -type f -name "${KERNEL_PATTERN}" -printf "/%P\n")
 
     if [ -z "$(ls -A "${ESP}/loader/entries")" ]; then
         die "Error: There are no boot loader entries after entry generation"
@@ -207,7 +221,7 @@ remove_orphan_entries() {
     [[ "${REMOVE_OBSOLETE,,}" != "yes" ]] && return
 
     # find and remove all the entries with unmatched kernels
-    for kernel in $(comm -13 <(find "${ESP}" -maxdepth 2 -type f -name "${KERNEL_PATTERN}" -printf "/%P\n" \
+    for kernel in $(comm -13 <(LC_ALL=C.UTF-8 find "${ESP}" -maxdepth 2 -type f -name "${KERNEL_PATTERN}" -printf "/%P\n" \
             | uniq | sort) <(cat "${ESP}"/loader/entries/* | grep -i "^linux" | awk '{print $2}' \
             | uniq | sort)); do
         while read -r entry; do
