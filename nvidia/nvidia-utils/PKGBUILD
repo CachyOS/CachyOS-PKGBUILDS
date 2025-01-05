@@ -31,8 +31,7 @@ source=('nvidia-drm-outputclass.conf'
         0007-nvidia-nv-Convert-symbol-namespace-to-string-literal.patch
         0008-Kbuild-Use-absolute-paths-for-symbolic-links.patch
         0009-FROM-AOSC-Use-linux-aperture.c-for-removing-conflict.patch
-        0010-FROM-AOSC-TTM-fbdev-emulation-for-Linux-6.13.patch
-        limit-vram-buffer)
+        0010-FROM-AOSC-TTM-fbdev-emulation-for-Linux-6.13.patch)
 sha512sums=('de7116c09f282a27920a1382df84aa86f559e537664bb30689605177ce37dc5067748acf9afd66a3269a6e323461356592fdfc624c86523bf105ff8fe47d3770'
             '1bcf2c6ee71686c0d32625e746ec8c0f7cf42fc63c76c3076ff2526b2661e8b9e9f76eaa2c4b213c7cc437a6f06006cc07672c4974d7f4515b2de2fd7c47a891'
             'f8f071f5a46c1a5ce5188e104b017808d752e61c0c20de1466feb5d693c0b55a5586314411e78cc2ab9c0e16e2c67afdd358da94c0c75df1f8233f54c280762c'
@@ -50,8 +49,7 @@ sha512sums=('de7116c09f282a27920a1382df84aa86f559e537664bb30689605177ce37dc50677
             '5e773822e6c2536efa279b069449ffd7cc486e9d3dc18432b729a10e2c56f8ec4429586094ee5ca835ea0eba76387d5f5e1cd1bba31ec7aea00358709abe6a95'
             '69cf2d7abe0be5f7312f3dbee0c1943d776980580da058311d6b775a8cbad373e8cd5717e238d19c52b34120f74b8cf2f55c22209892fc880fd46053d4b0ed9f'
             'a2b0126b9576b9d15503fb012dc95e32616fc18bfc4d3c2d57659cd9b184fc7dc7c148d7118f3c11a727ec37a94475ce612c0c1c3956a2d11c08a936dabdef84'
-            '3ee460f9b0a05803cfd3f3f32b022e468880ee882b924c324397bd881b97d79d6f29ebfd1b2bee646e7f186f1bd8fbedd3eca54bab45ab000ad63dab076f2dbf'
-            '7f578c4bc6ebf4694c0bd81f30aee3510910088f9eea2c49128c9b3039b4d2ce69453f1b2baf2e1639ad0c51452af744c4767fb4cc1706f072b7e09d7ac6c735')
+            '3ee460f9b0a05803cfd3f3f32b022e468880ee882b924c324397bd881b97d79d6f29ebfd1b2bee646e7f186f1bd8fbedd3eca54bab45ab000ad63dab076f2dbf')
 
 
 create_links() {
@@ -380,8 +378,6 @@ package_nvidia-utils() {
     # Enable PreserveVideoMemoryAllocations and TemporaryFilePath
     # Fixes Wayland Sleep, when restoring the session
     install -Dm644 "${srcdir}/nvidia-sleep.conf" "${pkgdir}/usr/lib/modprobe.d/nvidia-sleep.conf"
-    # Fix VRAM buffer on NVIDIA and kwin
-    install -Dm644 "${srcdir}/limit-vram-buffer" "${pkgdir}/etc/nvidia/nvidia-application-profiles-rc.d/limit-vram-buffer"
 
     create_links
 }
