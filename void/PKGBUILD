@@ -6,8 +6,7 @@
 #  https://aur.archlinux.org/cgit/aur.git/tree/PKGBUILD?h=vscodium-git
 #  https://aur.archlinux.org/cgit/aur.git/tree/PKGBUILD?h=code-git
 
-pkgname=void-git
-_pkgname=void
+pkgname=void
 _commit=85c2c80db071b183592d5463d33ac97c5e1c39eb # lets assume its latest release which is 1.94.0
 pkgver=1.94.0
 pkgrel=1
@@ -15,7 +14,6 @@ pkgdesc="Void is the open-source Cursor alternative."
 url="https://voideditor.com/"
 arch=('x86_64')
 license=("MIT")
-provides=('void')
 options=(!debug) # probably will be quite big
 # lsof: needed for terminal splitting, see https://github.com/Microsoft/vscode/issues/62991
 # xdg-utils: needed for opening web links with xdg-open
@@ -131,7 +129,7 @@ Name[ru]=Новое пустое окно
 Name[zh_CN]=新建空窗口
 Name[zh_TW]=開新空視窗
 Exec=@@EXEC@@ --new-window %F
-Icon=@@ICON@@' | tee "${srcdir}/${_pkgname}.desktop.in"
+Icon=@@ICON@@' | tee "${srcdir}/${pkgname}.desktop.in"
 
 echo '[Desktop Entry]
 Name=@@NAME_LONG@@ - URL Handler
@@ -144,7 +142,7 @@ NoDisplay=true
 StartupNotify=true
 Categories=Utility;TextEditor;Development;IDE;
 MimeType=x-scheme-handler/@@URLPROTOCOL@@;
-Keywords=vscode;' | tee "${srcdir}/${_pkgname}-url-handler.desktop.in"
+Keywords=vscode;' | tee "${srcdir}/${pkgname}-url-handler.desktop.in"
 
 echo '<?xml version="1.0" encoding="utf-8"?>
 <mime-info xmlns="http://www.freedesktop.org/standards/shared-mime-info">
@@ -152,11 +150,11 @@ echo '<?xml version="1.0" encoding="utf-8"?>
     <comment>@@NAME_LONG@@ Workspace</comment>
     <glob pattern="*.code-workspace"/>
   </mime-type>
-</mime-info>' | tee "${srcdir}/${_pkgname}-workspace.xml.in"
+</mime-info>' | tee "${srcdir}/${pkgname}-workspace.xml.in"
 
-_set_meta_info "${srcdir}/${_pkgname}.desktop.in" > "${srcdir}/${_pkgname}.desktop"
-_set_meta_info "${srcdir}/${_pkgname}-url-handler.desktop.in" > "${srcdir}/${_pkgname}-url-handler.desktop"
-_set_meta_info "${srcdir}/${_pkgname}-workspace.xml.in" > "${srcdir}/${_pkgname}-workspace.xml"
+_set_meta_info "${srcdir}/${pkgname}.desktop.in" > "${srcdir}/${pkgname}.desktop"
+_set_meta_info "${srcdir}/${pkgname}-url-handler.desktop.in" > "${srcdir}/${pkgname}-url-handler.desktop"
+_set_meta_info "${srcdir}/${pkgname}-workspace.xml.in" > "${srcdir}/${pkgname}-workspace.xml"
 
 # Generate launcher
 echo '#!/bin/bash
@@ -169,12 +167,12 @@ if [[ -f $XDG_CONFIG_HOME/void-flags.conf ]]; then
 fi
 
 # Launch
-exec /opt/void/bin/void "$@" $CODE_USER_FLAGS' | tee "${srcdir}/${_pkgname}/${_pkgname}"
+exec /opt/void/bin/void "$@" $CODE_USER_FLAGS' | tee "${srcdir}/${pkgname}/${pkgname}"
 
 }
 
 build() {
-    cd "${srcdir}/${_pkgname}"
+    cd "${srcdir}/${pkgname}"
 
     # Remove old build - do we need this?
     if [ -d "vscode" ]; then
@@ -208,35 +206,35 @@ package() {
     fi
 
     # Create directories
-  install -d "${pkgdir}/opt/${_pkgname}"
+  install -d "${pkgdir}/opt/${pkgname}"
   install -d "${pkgdir}/usr/bin"
   install -d "${pkgdir}/usr/share/applications"
   install -d "${pkgdir}/usr/share/icons"
-  install -d "${pkgdir}/usr/share/licenses/${_pkgname}"
+  install -d "${pkgdir}/usr/share/licenses/${pkgname}"
   install -d "${pkgdir}/usr/share/mime/packages"
 
     # Install license files
-  install -m644 "${srcdir}/$(_pkg)/resources/app/LICENSE.txt" "${pkgdir}/usr/share/licenses/${_pkgname}/LICENSE.txt"
-    install -m644 "${srcdir}/$(_pkg)/resources/app/ThirdPartyNotices.txt" "${pkgdir}/usr/share/licenses/${_pkgname}/ThirdPartyNotices.txt"
+  install -m644 "${srcdir}/$(_pkg)/resources/app/LICENSE.txt" "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE.txt"
+    install -m644 "${srcdir}/$(_pkg)/resources/app/ThirdPartyNotices.txt" "${pkgdir}/usr/share/licenses/${pkgname}/ThirdPartyNotices.txt"
 
     # Install appdata and desktop files
-  install -m644 "${srcdir}/$(_pkg)/resources/app/resources/linux/code.png" "${pkgdir}/usr/share/icons/${_pkgname}.png"
-  install -m644 "${srcdir}/${_pkgname}.desktop" "${pkgdir}/usr/share/applications/${_pkgname}.desktop"
-  install -m644 "${srcdir}/${_pkgname}-url-handler.desktop" "${pkgdir}/usr/share/applications/${_pkgname}-url-handler.desktop"
-  install -m644 "${srcdir}/${_pkgname}-workspace.xml" "${pkgdir}/usr/share/mime/packages/${_pkgname}-workspace.xml"
+  install -m644 "${srcdir}/$(_pkg)/resources/app/resources/linux/code.png" "${pkgdir}/usr/share/icons/${pkgname}.png"
+  install -m644 "${srcdir}/${pkgname}.desktop" "${pkgdir}/usr/share/applications/${pkgname}.desktop"
+  install -m644 "${srcdir}/${pkgname}-url-handler.desktop" "${pkgdir}/usr/share/applications/${pkgname}-url-handler.desktop"
+  install -m644 "${srcdir}/${pkgname}-workspace.xml" "${pkgdir}/usr/share/mime/packages/${pkgname}-workspace.xml"
 
     # Install bash and zsh completions
-  install -Dm 644 "${srcdir}/$(_pkg)/resources/completions/bash/${_pkgname}" "${pkgdir}/usr/share/bash-completion/completions/${_pkgname}"
-  install -Dm 644 "${srcdir}/$(_pkg)/resources/completions/zsh/_${_pkgname}" "${pkgdir}/usr/share/zsh/site-functions/_${_pkgname}"
+  install -Dm 644 "${srcdir}/$(_pkg)/resources/completions/bash/${pkgname}" "${pkgdir}/usr/share/bash-completion/completions/${pkgname}"
+  install -Dm 644 "${srcdir}/$(_pkg)/resources/completions/zsh/_${pkgname}" "${pkgdir}/usr/share/zsh/site-functions/_${pkgname}"
 
     # Install app files and binaries
-  cp -r "${srcdir}/$(_pkg)/"* "${pkgdir}/opt/${_pkgname}"
+  cp -r "${srcdir}/$(_pkg)/"* "${pkgdir}/opt/${pkgname}"
 
   # Install launcher
-  cp "${srcdir}/${_pkgname}/${_pkgname}" "${pkgdir}/usr/bin/${_pkgname}"
-    # ln -sf "${pkgdir}/opt/${_pkgname}/bin/code-oss" "${pkgdir}/usr/bin/${_pkgname}"
+  cp "${srcdir}/${pkgname}/${pkgname}" "${pkgdir}/usr/bin/${pkgname}"
+    # ln -sf "${pkgdir}/opt/${pkgname}/bin/code-oss" "${pkgdir}/usr/bin/${pkgname}"
 
     # Permissions for executable files
-    chmod +x "${pkgdir}/usr/bin/${_pkgname}"
-    chmod +x "${pkgdir}/opt/${_pkgname}/bin/${_pkgname}"
+    chmod +x "${pkgdir}/usr/bin/${pkgname}"
+    chmod +x "${pkgdir}/opt/${pkgname}/bin/${pkgname}"
 }
