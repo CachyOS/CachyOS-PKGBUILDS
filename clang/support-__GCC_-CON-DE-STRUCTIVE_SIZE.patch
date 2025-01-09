@@ -1,0 +1,584 @@
+From c962e55e28b057c6d7b699d8e6454cc4d8dcf382 Mon Sep 17 00:00:00 2001
+From: Aaron Ballman <aaron@aaronballman.com>
+Date: Fri, 26 Apr 2024 12:05:15 -0400
+Subject: [PATCH] [C++17] Support __GCC_[CON|DE]STRUCTIVE_SIZE (#89446)
+
+These macros are used by STL implementations to support implementation
+of std::hardware_destructive_interference_size and
+std::hardware_constructive_interference_size
+
+Fixes #60174
+
+---------
+
+Co-authored-by: Louis Dionne <ldionne.2@gmail.com>
+---
+ .../test/pp-trace/pp-trace-pragma-general.cpp |  6 +++
+ .../test/pp-trace/pp-trace-pragma-ms.cpp      |  8 ++-
+ .../test/pp-trace/pp-trace-pragma-opencl.cpp  |  6 +++
+ clang/docs/LanguageExtensions.rst             | 22 +++++++++
+ clang/docs/ReleaseNotes.rst                   | 12 +++++
+ clang/include/clang/Basic/TargetInfo.h        | 10 ++++
+ clang/lib/Basic/Targets/ARM.h                 |  4 ++
+ clang/lib/Basic/Targets/AVR.h                 |  4 ++
+ clang/lib/Basic/Targets/BPF.h                 |  4 ++
+ clang/lib/Basic/Targets/M68k.h                |  4 ++
+ clang/lib/Basic/Targets/Mips.h                |  4 ++
+ clang/lib/Basic/Targets/PPC.h                 |  8 +++
+ clang/lib/Basic/Targets/RISCV.h               |  4 ++
+ clang/lib/Basic/Targets/Sparc.h               |  4 ++
+ clang/lib/Basic/Targets/SystemZ.h             |  4 ++
+ clang/lib/Frontend/InitPreprocessor.cpp       | 10 ++++
+ clang/test/AST/ast-dump-macro-json.c          |  4 +-
+ .../relevant_lines/multifile.c                |  2 +-
+ .../update_consecutive_macro_address_space.c  | 13 ++---
+ .../Preprocessor/hardware_interference.cpp    | 17 +++++++
+ clang/test/Preprocessor/init-aarch64.c        | 12 +++--
+ clang/test/Preprocessor/init.c                | 49 +++++++++++--------
+ .../test/Preprocessor/predefined-win-macros.c |  6 ++-
+ 23 files changed, 180 insertions(+), 37 deletions(-)
+ create mode 100644 clang/test/Preprocessor/hardware_interference.cpp
+
+diff --git a/clang/tools/extra/test/pp-trace/pp-trace-pragma-general.cpp b/clang-tools-extra/test/pp-trace/pp-trace-pragma-general.cpp
+index f01ebd1ec67d..b16ec56e321b 100644
+--- a/clang/tools/extra/test/pp-trace/pp-trace-pragma-general.cpp
++++ b/clang/tools/extra/test/pp-trace/pp-trace-pragma-general.cpp
+@@ -21,6 +21,12 @@ void foo() {
+ 
+ // CHECK: ---
+ // CHECK-NEXT: - Callback: PragmaDirective
++// CHECK-NEXT:   Loc: "<built-in>:{{.+}}:1"
++// CHECK-NEXT:   Introducer: PIK_HashPragma
++// CHECK-NEXT: - Callback: PragmaDirective
++// CHECK-NEXT:   Loc: "<built-in>:{{.+}}:1"
++// CHECK-NEXT:   Introducer: PIK_HashPragma
++// CHECK-NEXT: - Callback: PragmaDirective
+ // CHECK-NEXT:   Loc: "{{.*}}{{[/\\]}}pp-trace-pragma-general.cpp:3:1"
+ // CHECK-NEXT:   Introducer: PIK_HashPragma
+ // CHECK-NEXT: - Callback: PragmaDiagnosticPush
+diff --git a/clang/tools/extra/test/pp-trace/pp-trace-pragma-ms.cpp b/clang-tools-extra/test/pp-trace/pp-trace-pragma-ms.cpp
+index 932b0eb93c90..f5bf9ac2b955 100644
+--- a/clang/tools/extra/test/pp-trace/pp-trace-pragma-ms.cpp
++++ b/clang/tools/extra/test/pp-trace/pp-trace-pragma-ms.cpp
+@@ -18,6 +18,12 @@
+ 
+ // CHECK: ---
+ // CHECK-NEXT: - Callback: PragmaDirective
++// CHECK-NEXT:   Loc: "<built-in>:{{.+}}:1"
++// CHECK-NEXT:   Introducer: PIK_HashPragma
++// CHECK-NEXT: - Callback: PragmaDirective
++// CHECK-NEXT:   Loc: "<built-in>:{{.+}}:1"
++// CHECK-NEXT:   Introducer: PIK_HashPragma
++// CHECK-NEXT: - Callback: PragmaDirective
+ // CHECK-NEXT:   Loc: "{{.*}}{{[/\\]}}pp-trace-pragma-ms.cpp:3:1"
+ // CHECK-NEXT:   Introducer: PIK_HashPragma
+ // CHECK-NEXT: - Callback: PragmaComment
+@@ -67,7 +73,7 @@
+ // CHECK-NEXT:   Introducer: PIK_HashPragma
+ // CHECK-NEXT: - Callback: PragmaMessage
+ // CHECK-NEXT:   Loc: "{{.*}}{{[/\\]}}pp-trace-pragma-ms.cpp:13:9"
+-// CHECK-NEXT:   Namespace: 
++// CHECK-NEXT:   Namespace:
+ // CHECK-NEXT:   Kind: PMK_Message
+ // CHECK-NEXT:   Str: message argument
+ // CHECK-NEXT: - Callback: PragmaDirective
+diff --git a/clang/tools/extra/test/pp-trace/pp-trace-pragma-opencl.cpp b/clang-tools-extra/test/pp-trace/pp-trace-pragma-opencl.cpp
+index 31f61027994f..ed33d37eb3d5 100644
+--- a/clang/tools/extra/test/pp-trace/pp-trace-pragma-opencl.cpp
++++ b/clang/tools/extra/test/pp-trace/pp-trace-pragma-opencl.cpp
+@@ -6,6 +6,12 @@
+ 
+ // CHECK: ---
+ // CHECK-NEXT: - Callback: PragmaDirective
++// CHECK-NEXT:   Loc: "<built-in>:{{.+}}:1"
++// CHECK-NEXT:   Introducer: PIK_HashPragma
++// CHECK-NEXT: - Callback: PragmaDirective
++// CHECK-NEXT:   Loc: "<built-in>:{{.+}}:1"
++// CHECK-NEXT:   Introducer: PIK_HashPragma
++// CHECK-NEXT: - Callback: PragmaDirective
+ // CHECK-NEXT:   Loc: "{{.*}}{{[/\\]}}pp-trace-pragma-opencl.cpp:3:1"
+ // CHECK-NEXT:   Introducer: PIK_HashPragma
+ // CHECK-NEXT: - Callback: PragmaOpenCLExtension
+diff --git a/clang/docs/LanguageExtensions.rst b/clang/docs/LanguageExtensions.rst
+index c1420079f751..e4deb5fc3a5b 100644
+--- a/clang/docs/LanguageExtensions.rst
++++ b/clang/docs/LanguageExtensions.rst
+@@ -5347,3 +5347,25 @@ but the expression has no runtime effects.
+ Type- and value-dependent expressions are not supported yet.
+ 
+ This facility is designed to aid with testing name lookup machinery.
++
++Predefined Macros
++=================
++
++`__GCC_DESTRUCTIVE_SIZE` and `__GCC_CONSTRUCTIVE_SIZE`
++------------------------------------------------------
++Specify the mimum offset between two objects to avoid false sharing and the
++maximum size of contiguous memory to promote true sharing, respectively. These
++macros are predefined in all C and C++ language modes, but can be redefined on
++the command line with ``-D`` to specify different values as needed or can be
++undefined on the command line with ``-U`` to disable support for the feature.
++
++**Note: the values the macros expand to are not guaranteed to be stable. They
++are are affected by architectures and CPU tuning flags, can change between
++releases of Clang and will not match the values defined by other compilers such
++as GCC.**
++
++Compiling different TUs depending on these flags (including use of
++``std::hardware_constructive_interference`` or
++``std::hardware_destructive_interference``)  with different compilers, macro
++definitions, or architecture flags will lead to ODR violations and should be
++avoided.
+\ No newline at end of file
+diff --git a/clang/docs/ReleaseNotes.rst b/clang/docs/ReleaseNotes.rst
+index e533ecfd5aeb..8ab85c379622 100644
+--- a/clang/docs/ReleaseNotes.rst
++++ b/clang/docs/ReleaseNotes.rst
+@@ -203,6 +203,18 @@ sections with improvements to Clang's support for those languages.
+ C++ Language Changes
+ --------------------
+ 
++C++17 Feature Support
++^^^^^^^^^^^^^^^^^^^^^
++- Clang now exposes ``__GCC_DESTRUCTIVE_SIZE`` and ``__GCC_CONSTRUCTIVE_SIZE``
++  predefined macros to support standard library implementations of
++  ``std::hardware_destructive_interference_size`` and
++  ``std::hardware_constructive_interference_size``, respectively. These macros
++  are predefined in all C and C++ language modes. The values the macros
++  expand to are not stable between releases of Clang and do not need to match
++  the values produced by GCC, so these macros should not be used from header
++  files because they may not be stable across multiple TUs (the values may vary
++  based on compiler version as well as CPU tuning). #GH60174
++
+ C++20 Feature Support
+ ^^^^^^^^^^^^^^^^^^^^^
+ - Implemented `P1907R1 <https://wg21.link/P1907R1>`_ which extends allowed non-type template argument
+diff --git a/clang/include/clang/Basic/TargetInfo.h b/clang/include/clang/Basic/TargetInfo.h
+index 3eb23ebdacf0..64f4726f3c6e 100644
+--- a/clang/include/clang/Basic/TargetInfo.h
++++ b/clang/include/clang/Basic/TargetInfo.h
+@@ -39,6 +39,7 @@
+ #include <cassert>
+ #include <optional>
+ #include <string>
++#include <utility>
+ #include <vector>
+ 
+ namespace llvm {
+@@ -1741,6 +1742,15 @@ public:
+   /// Whether to support HIP image/texture API's.
+   virtual bool hasHIPImageSupport() const { return true; }
+ 
++  /// The first value in the pair is the minimum offset between two objects to
++  /// avoid false sharing (destructive interference). The second value in the
++  /// pair is maximum size of contiguous memory to promote true sharing
++  /// (constructive interference). Neither of these values are considered part
++  /// of the ABI and can be changed by targets at any time.
++  virtual std::pair<unsigned, unsigned> hardwareInterferenceSizes() const {
++    return std::make_pair(64, 64);
++  }
++
+ protected:
+   /// Copy type and layout related info.
+   void copyAuxTarget(const TargetInfo *Aux);
+diff --git a/clang/lib/Basic/Targets/ARM.h b/clang/lib/Basic/Targets/ARM.h
+index 9802eb01abf3..ec5ad352b539 100644
+--- a/clang/lib/Basic/Targets/ARM.h
++++ b/clang/lib/Basic/Targets/ARM.h
+@@ -210,6 +210,10 @@ public:
+   bool hasBitIntType() const override { return true; }
+ 
+   const char *getBFloat16Mangling() const override { return "u6__bf16"; };
++
++  std::pair<unsigned, unsigned> hardwareInterferenceSizes() const override {
++    return std::make_pair(getTriple().isArch64Bit() ? 256 : 64, 64);
++  }
+ };
+ 
+ class LLVM_LIBRARY_VISIBILITY ARMleTargetInfo : public ARMTargetInfo {
+diff --git a/clang/lib/Basic/Targets/AVR.h b/clang/lib/Basic/Targets/AVR.h
+index 9376c46cd98c..feeb04f37eeb 100644
+--- a/clang/lib/Basic/Targets/AVR.h
++++ b/clang/lib/Basic/Targets/AVR.h
+@@ -175,6 +175,10 @@ public:
+   std::optional<std::string> handleAsmEscapedChar(char EscChar) const override;
+   StringRef getABI() const override { return ABI; }
+ 
++  std::pair<unsigned, unsigned> hardwareInterferenceSizes() const override {
++    return std::make_pair(32, 32);
++  }
++
+ protected:
+   std::string CPU;
+   StringRef ABI;
+diff --git a/clang/lib/Basic/Targets/BPF.h b/clang/lib/Basic/Targets/BPF.h
+index 489f29fc4fea..d19b37dd4df7 100644
+--- a/clang/lib/Basic/Targets/BPF.h
++++ b/clang/lib/Basic/Targets/BPF.h
+@@ -113,6 +113,10 @@ public:
+     StringRef CPUName(Name);
+     return isValidCPUName(CPUName);
+   }
++
++  std::pair<unsigned, unsigned> hardwareInterferenceSizes() const override {
++    return std::make_pair(32, 32);
++  }
+ };
+ } // namespace targets
+ } // namespace clang
+diff --git a/clang/lib/Basic/Targets/M68k.h b/clang/lib/Basic/Targets/M68k.h
+index a9c262e62fba..3bff5244fc65 100644
+--- a/clang/lib/Basic/Targets/M68k.h
++++ b/clang/lib/Basic/Targets/M68k.h
+@@ -55,6 +55,10 @@ public:
+   BuiltinVaListKind getBuiltinVaListKind() const override;
+   bool setCPU(const std::string &Name) override;
+   CallingConvCheckResult checkCallingConvention(CallingConv CC) const override;
++
++  std::pair<unsigned, unsigned> hardwareInterferenceSizes() const override {
++    return std::make_pair(32, 32);
++  }
+ };
+ 
+ } // namespace targets
+diff --git a/clang/lib/Basic/Targets/Mips.h b/clang/lib/Basic/Targets/Mips.h
+index 23d4e1b598fa..42eeb12cd7bb 100644
+--- a/clang/lib/Basic/Targets/Mips.h
++++ b/clang/lib/Basic/Targets/Mips.h
+@@ -421,6 +421,10 @@ public:
+ 
+   bool validateTarget(DiagnosticsEngine &Diags) const override;
+   bool hasBitIntType() const override { return true; }
++
++  std::pair<unsigned, unsigned> hardwareInterferenceSizes() const override {
++    return std::make_pair(32, 32);
++  }
+ };
+ } // namespace targets
+ } // namespace clang
+diff --git a/clang/lib/Basic/Targets/PPC.h b/clang/lib/Basic/Targets/PPC.h
+index 4d62673ba7fb..cffb39797519 100644
+--- a/clang/lib/Basic/Targets/PPC.h
++++ b/clang/lib/Basic/Targets/PPC.h
+@@ -406,6 +406,10 @@ public:
+     // This is the ELF definition
+     return TargetInfo::PowerABIBuiltinVaList;
+   }
++
++  std::pair<unsigned, unsigned> hardwareInterferenceSizes() const override {
++    return std::make_pair(32, 32);
++  }
+ };
+ 
+ // Note: ABI differences may eventually require us to have a separate
+@@ -486,6 +490,10 @@ public:
+       return CCCR_Warning;
+     }
+   }
++
++  std::pair<unsigned, unsigned> hardwareInterferenceSizes() const override {
++    return std::make_pair(128, 128);
++  }
+ };
+ 
+ class LLVM_LIBRARY_VISIBILITY AIXPPC32TargetInfo :
+diff --git a/clang/lib/Basic/Targets/RISCV.h b/clang/lib/Basic/Targets/RISCV.h
+index bfbdafb682c8..ab066ab2855a 100644
+--- a/clang/lib/Basic/Targets/RISCV.h
++++ b/clang/lib/Basic/Targets/RISCV.h
+@@ -120,6 +120,10 @@ public:
+   void fillValidTuneCPUList(SmallVectorImpl<StringRef> &Values) const override;
+   bool supportsTargetAttributeTune() const override { return true; }
+   ParsedTargetAttr parseTargetAttr(StringRef Str) const override;
++
++  std::pair<unsigned, unsigned> hardwareInterferenceSizes() const override {
++    return std::make_pair(32, 32);
++  }
+ };
+ class LLVM_LIBRARY_VISIBILITY RISCV32TargetInfo : public RISCVTargetInfo {
+ public:
+diff --git a/clang/lib/Basic/Targets/Sparc.h b/clang/lib/Basic/Targets/Sparc.h
+index 214fef88e1dc..3357bee33e1a 100644
+--- a/clang/lib/Basic/Targets/Sparc.h
++++ b/clang/lib/Basic/Targets/Sparc.h
+@@ -140,6 +140,10 @@ public:
+     CPU = getCPUKind(Name);
+     return CPU != CK_GENERIC;
+   }
++
++  std::pair<unsigned, unsigned> hardwareInterferenceSizes() const override {
++    return std::make_pair(32, 32);
++  }
+ };
+ 
+ // SPARC v8 is the 32-bit mode selected by Triple::sparc.
+diff --git a/clang/lib/Basic/Targets/SystemZ.h b/clang/lib/Basic/Targets/SystemZ.h
+index e4ec338880f2..e8ace3f71b72 100644
+--- a/clang/lib/Basic/Targets/SystemZ.h
++++ b/clang/lib/Basic/Targets/SystemZ.h
+@@ -212,6 +212,10 @@ public:
+   int getEHDataRegisterNumber(unsigned RegNo) const override {
+     return RegNo < 4 ? 6 + RegNo : -1;
+   }
++
++  std::pair<unsigned, unsigned> hardwareInterferenceSizes() const override {
++    return std::make_pair(256, 256);
++  }
+ };
+ } // namespace targets
+ } // namespace clang
+diff --git a/clang/lib/Frontend/InitPreprocessor.cpp b/clang/lib/Frontend/InitPreprocessor.cpp
+index 1b91c86f9139..4b6e40c29ab9 100644
+--- a/clang/lib/Frontend/InitPreprocessor.cpp
++++ b/clang/lib/Frontend/InitPreprocessor.cpp
+@@ -1200,6 +1200,16 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
+     Builder.defineMacro("__GCC_ATOMIC_TEST_AND_SET_TRUEVAL", "1");
+   }
+ 
++  // GCC defines these macros in both C and C++ modes despite them being needed
++  // mostly for STL implementations in C++.
++  auto [Destructive, Constructive] = TI.hardwareInterferenceSizes();
++  Builder.defineMacro("__GCC_DESTRUCTIVE_SIZE", Twine(Destructive));
++  Builder.defineMacro("__GCC_CONSTRUCTIVE_SIZE", Twine(Constructive));
++  // We need to use push_macro to allow users to redefine these macros from the
++  // command line with -D and not issue a -Wmacro-redefined warning.
++  Builder.append("#pragma push_macro(\"__GCC_DESTRUCTIVE_SIZE\")");
++  Builder.append("#pragma push_macro(\"__GCC_CONSTRUCTIVE_SIZE\")");
++
+   auto addLockFreeMacros = [&](const llvm::Twine &Prefix) {
+     // Used by libc++ and libstdc++ to implement ATOMIC_<foo>_LOCK_FREE.
+ #define DEFINE_LOCK_FREE_MACRO(TYPE, Type)                                     \
+diff --git a/clang/test/AST/ast-dump-macro-json.c b/clang/test/AST/ast-dump-macro-json.c
+index 96f4be6fec3d..fb9b4118b4f1 100644
+--- a/clang/test/AST/ast-dump-macro-json.c
++++ b/clang/test/AST/ast-dump-macro-json.c
+@@ -132,7 +132,7 @@ void BLAP(foo, __COUNTER__)(void);
+ // CHECK-NEXT:   "spellingLoc": {
+ // CHECK-NEXT:    "offset": {{[0-9]+}},
+ // CHECK-NEXT:    "file": "<scratch space>",
+-// CHECK-NEXT:    "line": 3,
++// CHECK-NEXT:    "line": 5,
+ // CHECK-NEXT:    "col": 1,
+ // CHECK-NEXT:    "tokLen": 4
+ // CHECK-NEXT:   },
+@@ -169,7 +169,7 @@ void BLAP(foo, __COUNTER__)(void);
+ // CHECK-NEXT:   "spellingLoc": {
+ // CHECK-NEXT:    "offset": {{[0-9]+}},
+ // CHECK-NEXT:    "file": "<scratch space>",
+-// CHECK-NEXT:    "line": 5,
++// CHECK-NEXT:    "line": 7,
+ // CHECK-NEXT:    "col": 1,
+ // CHECK-NEXT:    "tokLen": 4
+ // CHECK-NEXT:   },
+diff --git a/clang/test/Analysis/html_diagnostics/relevant_lines/multifile.c b/clang/test/Analysis/html_diagnostics/relevant_lines/multifile.c
+index 3abffd609b5b..1998c9383d9d 100644
+--- a/clang/test/Analysis/html_diagnostics/relevant_lines/multifile.c
++++ b/clang/test/Analysis/html_diagnostics/relevant_lines/multifile.c
+@@ -11,4 +11,4 @@ int f(int coin) {
+ // RUN: rm -rf %t.output
+ // RUN: %clang_analyze_cc1 -analyze -analyzer-checker=core -analyzer-output html -o %t.output %s
+ // RUN: cat %t.output/* | FileCheck %s --match-full-lines
+-// CHECK: var relevant_lines = {"1": {"3": 1, "4": 1, "5": 1, "6": 1}, "3": {"3": 1, "4": 1, "5": 1, "6": 1, "7": 1}};
++// CHECK: var relevant_lines = {"1": {"3": 1, "4": 1, "5": 1, "6": 1}, "4": {"3": 1, "4": 1, "5": 1, "6": 1, "7": 1}};
+diff --git a/clang/test/Lexer/update_consecutive_macro_address_space.c b/clang/test/Lexer/update_consecutive_macro_address_space.c
+index 80ef4557591c..6f74709556c0 100644
+--- a/clang/test/Lexer/update_consecutive_macro_address_space.c
++++ b/clang/test/Lexer/update_consecutive_macro_address_space.c
+@@ -1,14 +1,15 @@
+ // RUN: %clang -cc1 -print-stats %s 2>&1 | FileCheck %s
+-// CHECK: 6 local SLocEntries allocated
++// CHECK: 7 local SLocEntries allocated
+ //
+-// Verify that the macro arg expansion is split to two file ids, we have 6 file
+-// ids rather than 5:
++// Verify that the macro arg expansion is split to two file ids, we have 7 file
++// ids rather than 6:
+ //   0: invalid file id
+ //   1: main file
+ //   2: builtin file
+-//   3: macro expansion for X
+-//   4: macro arg expansions for 1
+-//   5: macro arg expansions for == 2
++//   3: scratch space for __GCC_[CON|DE]STRUCTIVE_SIZE macros
++//   4: macro expansion for X
++//   5: macro arg expansions for 1
++//   6: macro arg expansions for == 2
+ #define X(x) (int)(x);
+ void func() {
+   X(1
+diff --git a/clang/test/Preprocessor/hardware_interference.cpp b/clang/test/Preprocessor/hardware_interference.cpp
+new file mode 100644
+index 000000000000..f3727aadd32a
+--- /dev/null
++++ b/clang/test/Preprocessor/hardware_interference.cpp
+@@ -0,0 +1,17 @@
++// RUN: %clang_cc1 -E -dM -D__GCC_CONSTRUCTIVE_SIZE=1000 -D__GCC_DESTRUCTIVE_SIZE=1001 %s -verify -Weverything | FileCheck %s
++// RUN: %clang_cc1 -D__GCC_CONSTRUCTIVE_SIZE=1000 -D__GCC_DESTRUCTIVE_SIZE=1001 %s -verify -Weverything
++// RUN: %clang_cc1 -E -dM -U__GCC_CONSTRUCTIVE_SIZE -U__GCC_DESTRUCTIVE_SIZE %s -verify -Weverything | FileCheck --check-prefix DISABLED %s
++// expected-no-diagnostics
++
++// Validate that we can set a new value on the command line without issuing any
++// diagnostics and that we can disabled the macro on the command line without
++// issuing any diagnostics.
++
++// CHECK: #define __GCC_CONSTRUCTIVE_SIZE 1000
++// CHECK: #define __GCC_DESTRUCTIVE_SIZE 1001
++// DISABLED-NOT: __GCC_CONSTRUCTIVE_SIZE
++// DISABLED-NOT: __GCC_DESTRUCTIVE_SIZE
++
++int main() {
++  return 0;
++}
+diff --git a/clang/test/Preprocessor/init-aarch64.c b/clang/test/Preprocessor/init-aarch64.c
+index cf96870b27ac..f0845985c9ef 100644
+--- a/clang/test/Preprocessor/init-aarch64.c
++++ b/clang/test/Preprocessor/init-aarch64.c
+@@ -119,6 +119,8 @@
+ // AARCH64-NEXT: #define __FP_FAST_FMA 1
+ // AARCH64-NEXT: #define __FP_FAST_FMAF 1
+ // AARCH64-NEXT: #define __GCC_ASM_FLAG_OUTPUTS__ 1
++// AARCH64-NEXT: #define __GCC_CONSTRUCTIVE_SIZE {{.+}}
++// AARCH64-NEXT: #define __GCC_DESTRUCTIVE_SIZE {{.+}}
+ // AARCH64-NEXT: #define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_1 1
+ // AARCH64-NEXT: #define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_16 1
+ // AARCH64-NEXT: #define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_2 1
+@@ -220,11 +222,11 @@
+ // AARCH64-NEXT: #define __LONG_MAX__ 9223372036854775807L
+ // AARCH64-NEXT: #define __LONG_WIDTH__ 64
+ // AARCH64-NEXT: #define __LP64__ 1
+-// AARCH64-NEXT: #define __MEMORY_SCOPE_DEVICE 1 
+-// AARCH64-NEXT: #define __MEMORY_SCOPE_SINGLE 4 
+-// AARCH64-NEXT: #define __MEMORY_SCOPE_SYSTEM 0 
+-// AARCH64-NEXT: #define __MEMORY_SCOPE_WRKGRP 2 
+-// AARCH64-NEXT: #define __MEMORY_SCOPE_WVFRNT 3 
++// AARCH64-NEXT: #define __MEMORY_SCOPE_DEVICE 1
++// AARCH64-NEXT: #define __MEMORY_SCOPE_SINGLE 4
++// AARCH64-NEXT: #define __MEMORY_SCOPE_SYSTEM 0
++// AARCH64-NEXT: #define __MEMORY_SCOPE_WRKGRP 2
++// AARCH64-NEXT: #define __MEMORY_SCOPE_WVFRNT 3
+ // AARCH64-NEXT: #define __NO_INLINE__ 1
+ // AARCH64-NEXT: #define __NO_MATH_ERRNO__ 1
+ // AARCH64-NEXT: #define __OBJC_BOOL_IS_BOOL 0
+diff --git a/clang/test/Preprocessor/init.c b/clang/test/Preprocessor/init.c
+index c3dbd94b2f74..4f4f8a98deed 100644
+--- a/clang/test/Preprocessor/init.c
++++ b/clang/test/Preprocessor/init.c
+@@ -1,3 +1,10 @@
++// RUN: %clang_cc1 -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix INTERFERENCE %s
++//
++// We purposefully do not test the values produced, only that the macros are
++// predefined to some value.
++// INTERFERENCE:#define __GCC_CONSTRUCTIVE_SIZE {{.+}}
++// INTERFERENCE:#define __GCC_DESTRUCTIVE_SIZE {{.+}}
++
+ // RUN: %clang_cc1 -E -dM -x assembler-with-cpp < /dev/null | FileCheck -match-full-lines -check-prefix ASM %s
+ //
+ // ASM:#define __ASSEMBLER__ 1
+@@ -1633,6 +1640,8 @@
+ // WEBASSEMBLY-NEXT:#define __GCC_ATOMIC_SHORT_LOCK_FREE 2
+ // WEBASSEMBLY-NEXT:#define __GCC_ATOMIC_TEST_AND_SET_TRUEVAL 1
+ // WEBASSEMBLY-NEXT:#define __GCC_ATOMIC_WCHAR_T_LOCK_FREE 2
++// WEBASSEMBLY-NEXT:#define __GCC_CONSTRUCTIVE_SIZE {{.+}}
++// WEBASSEMBLY-NEXT:#define __GCC_DESTRUCTIVE_SIZE {{.+}}
+ // WEBASSEMBLY-NEXT:#define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_1 1
+ // WEBASSEMBLY-NEXT:#define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_2 1
+ // WEBASSEMBLY-NEXT:#define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_4 1
+@@ -1742,11 +1751,11 @@
+ // WEBASSEMBLY64-NEXT:#define __LONG_MAX__ 9223372036854775807L
+ // WEBASSEMBLY64-NEXT:#define __LONG_WIDTH__ 64
+ // WEBASSEMBLY64-NEXT:#define __LP64__ 1
+-// WEBASSEMBLY-NEXT:#define __MEMORY_SCOPE_DEVICE 1 
+-// WEBASSEMBLY-NEXT:#define __MEMORY_SCOPE_SINGLE 4 
+-// WEBASSEMBLY-NEXT:#define __MEMORY_SCOPE_SYSTEM 0 
+-// WEBASSEMBLY-NEXT:#define __MEMORY_SCOPE_WRKGRP 2 
+-// WEBASSEMBLY-NEXT:#define __MEMORY_SCOPE_WVFRNT 3 
++// WEBASSEMBLY-NEXT:#define __MEMORY_SCOPE_DEVICE 1
++// WEBASSEMBLY-NEXT:#define __MEMORY_SCOPE_SINGLE 4
++// WEBASSEMBLY-NEXT:#define __MEMORY_SCOPE_SYSTEM 0
++// WEBASSEMBLY-NEXT:#define __MEMORY_SCOPE_WRKGRP 2
++// WEBASSEMBLY-NEXT:#define __MEMORY_SCOPE_WVFRNT 3
+ // WEBASSEMBLY-NEXT:#define __NO_INLINE__ 1
+ // WEBASSEMBLY-NEXT:#define __NO_MATH_ERRNO__ 1
+ // WEBASSEMBLY-NEXT:#define __OBJC_BOOL_IS_BOOL 0
+@@ -2062,11 +2071,11 @@
+ // AVR:#define __LDBL_MIN__ 1.17549435e-38L
+ // AVR:#define __LONG_LONG_MAX__ 9223372036854775807LL
+ // AVR:#define __LONG_MAX__ 2147483647L
+-// AVR:#define __MEMORY_SCOPE_DEVICE 1 
+-// AVR:#define __MEMORY_SCOPE_SINGLE 4 
+-// AVR:#define __MEMORY_SCOPE_SYSTEM 0 
+-// AVR:#define __MEMORY_SCOPE_WRKGRP 2 
+-// AVR:#define __MEMORY_SCOPE_WVFRNT 3 
++// AVR:#define __MEMORY_SCOPE_DEVICE 1
++// AVR:#define __MEMORY_SCOPE_SINGLE 4
++// AVR:#define __MEMORY_SCOPE_SYSTEM 0
++// AVR:#define __MEMORY_SCOPE_WRKGRP 2
++// AVR:#define __MEMORY_SCOPE_WVFRNT 3
+ // AVR:#define __NO_INLINE__ 1
+ // AVR:#define __ORDER_BIG_ENDIAN__ 4321
+ // AVR:#define __ORDER_LITTLE_ENDIAN__ 1234
+@@ -2358,11 +2367,11 @@
+ // RISCV32: #define __LITTLE_ENDIAN__ 1
+ // RISCV32: #define __LONG_LONG_MAX__ 9223372036854775807LL
+ // RISCV32: #define __LONG_MAX__ 2147483647L
+-// RISCV32: #define __MEMORY_SCOPE_DEVICE 1 
+-// RISCV32: #define __MEMORY_SCOPE_SINGLE 4 
+-// RISCV32: #define __MEMORY_SCOPE_SYSTEM 0 
+-// RISCV32: #define __MEMORY_SCOPE_WRKGRP 2 
+-// RISCV32: #define __MEMORY_SCOPE_WVFRNT 3 
++// RISCV32: #define __MEMORY_SCOPE_DEVICE 1
++// RISCV32: #define __MEMORY_SCOPE_SINGLE 4
++// RISCV32: #define __MEMORY_SCOPE_SYSTEM 0
++// RISCV32: #define __MEMORY_SCOPE_WRKGRP 2
++// RISCV32: #define __MEMORY_SCOPE_WVFRNT 3
+ // RISCV32: #define __NO_INLINE__ 1
+ // RISCV32: #define __POINTER_WIDTH__ 32
+ // RISCV32: #define __PRAGMA_REDEFINE_EXTNAME 1
+@@ -2570,11 +2579,11 @@
+ // RISCV64: #define __LONG_LONG_MAX__ 9223372036854775807LL
+ // RISCV64: #define __LONG_MAX__ 9223372036854775807L
+ // RISCV64: #define __LP64__ 1
+-// RISCV64: #define __MEMORY_SCOPE_DEVICE 1 
+-// RISCV64: #define __MEMORY_SCOPE_SINGLE 4 
+-// RISCV64: #define __MEMORY_SCOPE_SYSTEM 0 
+-// RISCV64: #define __MEMORY_SCOPE_WRKGRP 2 
+-// RISCV64: #define __MEMORY_SCOPE_WVFRNT 3 
++// RISCV64: #define __MEMORY_SCOPE_DEVICE 1
++// RISCV64: #define __MEMORY_SCOPE_SINGLE 4
++// RISCV64: #define __MEMORY_SCOPE_SYSTEM 0
++// RISCV64: #define __MEMORY_SCOPE_WRKGRP 2
++// RISCV64: #define __MEMORY_SCOPE_WVFRNT 3
+ // RISCV64: #define __NO_INLINE__ 1
+ // RISCV64: #define __POINTER_WIDTH__ 64
+ // RISCV64: #define __PRAGMA_REDEFINE_EXTNAME 1
+diff --git a/clang/test/Preprocessor/predefined-win-macros.c b/clang/test/Preprocessor/predefined-win-macros.c
+index b830dc39d477..14e2f584bd09 100644
+--- a/clang/test/Preprocessor/predefined-win-macros.c
++++ b/clang/test/Preprocessor/predefined-win-macros.c
+@@ -3,7 +3,7 @@
+ // RUN: %clang_cc1 %s -x c++ -E -dM -triple x86_64-pc-win32 -fms-extensions -fms-compatibility \
+ // RUN:     -fms-compatibility-version=19.00 -std=c++14 -o - | FileCheck -match-full-lines %s --check-prefix=CHECK-MS64
+ // RUN: %clang_cc1 %s -x c++ -E -dM -triple x86_64-pc-win32 -fms-extensions -fms-compatibility \
+-// RUN:     -fms-compatibility-version=19.00 -std=c++14 -o - | grep GCC | count 5
++// RUN:     -fms-compatibility-version=19.00 -std=c++14 -o - | grep GCC | count 7
+ // CHECK-MS64: #define _INTEGRAL_MAX_BITS 64
+ // CHECK-MS64: #define _ISO_VOLATILE 1
+ // CHECK-MS64: #define _MSC_EXTENSIONS 1
+@@ -26,7 +26,7 @@
+ // RUN: %clang_cc1 %s -x c++ -E -dM -triple i686-pc-win32 -fms-extensions -fms-compatibility \
+ // RUN:     -fms-compatibility-version=19.00 -std=c++17 -o - | FileCheck -match-full-lines %s --check-prefix=CHECK-MS
+ // RUN: %clang_cc1 %s -x c++ -E -dM -triple i686-pc-win32 -fms-extensions -fms-compatibility \
+-// RUN:     -fms-compatibility-version=19.00 -std=c++17 -o - | grep GCC | count 5
++// RUN:     -fms-compatibility-version=19.00 -std=c++17 -o - | grep GCC | count 7
+ // CHECK-MS: #define _INTEGRAL_MAX_BITS 64
+ // CHECK-MS: #define _ISO_VOLATILE 1
+ // CHECK-MS: #define _MSC_EXTENSIONS 1
+@@ -39,6 +39,8 @@
+ // CHECK-MS-NOT: GNU
+ // CHECK-MS-NOT: GXX
+ // CHECK-MS: #define __GCC_ASM_FLAG_OUTPUTS__ 1
++// CHECK-MS: #define __GCC_CONSTRUCTIVE_SIZE {{.+}}
++// CHECK-MS: #define __GCC_DESTRUCTIVE_SIZE {{.+}}
+ // CHECK-MS: #define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_1 1
+ // CHECK-MS: #define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_2 1
+ // CHECK-MS: #define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_4 1
