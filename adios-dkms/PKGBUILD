@@ -1,0 +1,26 @@
+# Maintainer: Eric Naim <dnaim@cachyos.org>
+
+_pkgname=adios
+pkgname=adios-dkms
+pkgver=0.6.0
+pkgrel=1
+pkgdesc="ADIOS is a multi-queue I/O scheduler with learning-based adaptive latency control."
+arch=('x86_64')
+url="https://github.com/1Naim/adios"
+license=('GPL-2.0-only')
+depends=('dkms')
+source=("git+${url}#tag=${pkgver}"
+        "adios.conf")
+sha256sums=('016c6b358aed8f691aa9018e74fcee5081911d5ecb52e04014940f03aeb28ce1'
+            '3000dfe470d85e4b32dc78f083da866f24d6183c48d83b42b36da98e64701ade')
+
+package() {
+    cd ${_pkgname}
+
+    install -dm 755 "${pkgdir}/usr/src/"
+    cp -r "${srcdir}/${_pkgname}" "${pkgdir}/usr/src/adios-${pkgver}"
+
+    install -Dm644 "${srcdir}/adios.conf" "${pkgdir}/usr/lib/modules-load.d/adios.conf"
+    install -Dm644 LICENSE "${pkgdir}/usr/licenses/${pkgname}/LICENSE"
+}
+
