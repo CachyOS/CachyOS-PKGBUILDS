@@ -28,7 +28,7 @@ package() {
 	install -Dm644 dkms.conf ${pkgdir}/usr/src/${pkgname}-1.0.0/dkms.conf
 	cp -r {issue-warning.sh,legion-laptop-unused-snippets.c,legion-laptop.c,Makefile} ${pkgdir}/usr/src/$pkgname-1.0.0/
 
-	cd "${srcdir}/${_kgname}/deploy/"
+	cd "${srcdir}/${pkgname}/deploy/"
 	install -Dm644 LenovoLegionLinux.hook ${pkgdir}/etc/pacman.d/hooks/LenovoLegionLinux.hook
 	install -Dm775 LenovoLegionLinux ${pkgdir}/usr/bin/LenovoLegionLinux
 }
