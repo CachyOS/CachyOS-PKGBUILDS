@@ -3,7 +3,7 @@
 _pkgname=adios
 pkgname=adios-dkms
 pkgver=0.8.3
-pkgrel=1
+pkgrel=2
 pkgdesc="ADIOS is a multi-queue I/O scheduler with learning-based adaptive latency control."
 arch=('x86_64')
 url="https://github.com/1Naim/adios"
@@ -17,8 +17,8 @@ sha256sums=('a6509629c7bade54303bd08a409dd3a31a921bb000792ddb9694e26bd6ef7156'
 package() {
     cd ${_pkgname}
 
-    install -dm 755 "${pkgdir}/usr/src/"
-    cp -r "${srcdir}/${_pkgname}" "${pkgdir}/usr/src/adios-${pkgver}"
+    install -dm 755 "${pkgdir}/usr/src/adios-${pkgver}"
+    cp -r ${srcdir}/${_pkgname}/* "${pkgdir}/usr/src/adios-${pkgver}"
 
     install -Dm644 "${srcdir}/adios.conf" "${pkgdir}/usr/lib/modules-load.d/adios.conf"
     install -Dm644 LICENSE "${pkgdir}/usr/licenses/${pkgname}/LICENSE"
