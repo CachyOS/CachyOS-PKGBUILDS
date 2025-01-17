@@ -3,6 +3,7 @@
 # Maintainer: johnfanv2 <https://github.com/johnfanv2>
 
 pkgname=lenovolegionlinux-dkms
+_pkgname=lenovolegionlinux
 pkgver=0.0.19
 pkgrel=1
 pkgdesc="LenovoLegionLinux (LLL) DKMS module"
@@ -24,11 +25,11 @@ sha256sums=('60d8cc141ced3c5845fc0897cebbc23c9519171b5ade2b4b306e979e4070750a')
 install="lenovolegionlinux.install"
 
 package() {
-	cd "${srcdir}/${pkgname}/kernel_module/"
-	install -Dm644 dkms.conf ${pkgdir}/usr/src/${pkgname}-1.0.0/dkms.conf
-	cp -r {issue-warning.sh,legion-laptop-unused-snippets.c,legion-laptop.c,Makefile} ${pkgdir}/usr/src/$pkgname-1.0.0/
+	cd "${srcdir}/${_pkgname}/kernel_module/"
+	install -Dm644 dkms.conf ${pkgdir}/usr/src/${_pkgname}-1.0.0/dkms.conf
+	cp -r {issue-warning.sh,legion-laptop-unused-snippets.c,legion-laptop.c,Makefile} ${pkgdir}/usr/src/$_pkgname-1.0.0/
 
-	cd "${srcdir}/${pkgname}/deploy/"
+	cd "${srcdir}/${_pkgname}/deploy/"
 	install -Dm644 LenovoLegionLinux.hook ${pkgdir}/etc/pacman.d/hooks/LenovoLegionLinux.hook
 	install -Dm775 LenovoLegionLinux ${pkgdir}/usr/bin/LenovoLegionLinux
 }
