@@ -1,0 +1,66 @@
+From 318bff6811e7a7e0d3295ed85aa3ad01d475cc8c Mon Sep 17 00:00:00 2001
+From: Pranav Kant <prka@google.com>
+Date: Wed, 6 Mar 2024 16:40:23 -0800
+Subject: [PATCH] [clang][CUDA] Disable float128 diagnostics for device
+ compilation (#83918)
+
+---
+ clang/lib/Sema/SemaDeclAttr.cpp |  4 +++-
+ clang/lib/Sema/SemaType.cpp     |  2 +-
+ clang/test/SemaCUDA/float128.cu | 18 ++++++++++++++++++
+ 3 files changed, 22 insertions(+), 2 deletions(-)
+ create mode 100644 clang/test/SemaCUDA/float128.cu
+
+diff --git a/clang/lib/Sema/SemaDeclAttr.cpp b/clang/lib/Sema/SemaDeclAttr.cpp
+index 397b5db0dc0669..e6943efb345ce0 100644
+--- a/clang/lib/Sema/SemaDeclAttr.cpp
++++ b/clang/lib/Sema/SemaDeclAttr.cpp
+@@ -4877,7 +4877,9 @@ void Sema::AddModeAttr(Decl *D, const AttributeCommonInfo &CI,
+     NewElemTy = Context.getRealTypeForBitwidth(DestWidth, ExplicitType);
+ 
+   if (NewElemTy.isNull()) {
+-    Diag(AttrLoc, diag::err_machine_mode) << 1 /*Unsupported*/ << Name;
++    // Only emit diagnostic on host for 128-bit mode attribute
++    if (!(DestWidth == 128 && getLangOpts().CUDAIsDevice))
++      Diag(AttrLoc, diag::err_machine_mode) << 1 /*Unsupported*/ << Name;
+     return;
+   }
+ 
+diff --git a/clang/lib/Sema/SemaType.cpp b/clang/lib/Sema/SemaType.cpp
+index 1e43e36016a66f..3148299f6467af 100644
+--- a/clang/lib/Sema/SemaType.cpp
++++ b/clang/lib/Sema/SemaType.cpp
+@@ -1561,7 +1561,7 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
+     break;
+   case DeclSpec::TST_float128:
+     if (!S.Context.getTargetInfo().hasFloat128Type() &&
+-        !S.getLangOpts().SYCLIsDevice &&
++        !S.getLangOpts().SYCLIsDevice && !S.getLangOpts().CUDAIsDevice &&
+         !(S.getLangOpts().OpenMP && S.getLangOpts().OpenMPIsTargetDevice))
+       S.Diag(DS.getTypeSpecTypeLoc(), diag::err_type_unsupported)
+         << "__float128";
+diff --git a/clang/test/SemaCUDA/float128.cu b/clang/test/SemaCUDA/float128.cu
+new file mode 100644
+index 00000000000000..f8f20cb1588d76
+--- /dev/null
++++ b/clang/test/SemaCUDA/float128.cu
+@@ -0,0 +1,18 @@
++// CPU-side compilation on x86 (no errors expected).
++// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -aux-triple nvptx64 -x cuda -fsyntax-only -verify=cpu %s
++
++// GPU-side compilation on x86 (no errors expected)
++// RUN: %clang_cc1 -triple nvptx64 -aux-triple x86_64-unknown-linux-gnu -fcuda-is-device -x cuda -fsyntax-only -verify=gpu %s
++
++// cpu-no-diagnostics
++typedef _Complex float __cfloat128 __attribute__ ((__mode__ (__TC__)));
++typedef __float128 _Float128;
++
++// gpu-note@+1 {{'a' defined here}}
++__attribute__((device)) __float128 f(__float128 a, float b) {
++    // gpu-note@+1 {{'c' defined here}}
++  __float128 c = b + 1.0;
++  // gpu-error@+2 {{'a' requires 128 bit size '__float128' type support, but target 'nvptx64' does not support it}}
++  // gpu-error@+1 {{'c' requires 128 bit size '__float128' type support, but target 'nvptx64' does not support it}}
++  return a + c;
++}
+\ No newline at end of file
