@@ -6,7 +6,7 @@
 # Contributor: Giovanni Scafora <giovanni@archlinux.org>
 
 pkgname=wine-cachyos
-_srctag=9.0-20250106
+_srctag=9.0-20250117
 pkgver=${_srctag//-/.}
 pkgrel=1
 epoch=2
@@ -232,6 +232,6 @@ package() {
 }
 
 # vim:set ts=8 sts=2 sw=2 et:
-b2sums=('fa8acac6d7484130a7418f65ad0441e300eeccc33cfb39d68e3892b68ac24d5cd3b2898807fd5fab3156cb10b84b24f6586d5d7b558fc2b624fa9e2d3229a18f'
+b2sums=('4ab80fe3d0dad71a3bbd1bce121bf0e0a6bd493049997a8a99ddf8537950274ea0738aa40edd424725b4b0db05892f19f5db68fb7624b131fd06948fb8ed69d1'
         '45db34fb35a679dc191b4119603eba37b8008326bd4f7d6bd422fbbb2a74b675bdbc9f0cc6995ed0c564cf088b7ecd9fbe2d06d42ff8a4464828f3c4f188075b'
         'e9de76a32493c601ab32bde28a2c8f8aded12978057159dd9bf35eefbf82f2389a4d5e30170218956101331cf3e7452ae82ad0db6aad623651b0cc2174a61588')
