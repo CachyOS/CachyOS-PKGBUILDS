@@ -6,16 +6,17 @@ pkgname=(
   'bpf'
   'cpupower'
   'hyperv'
+  'intel-speed-select'
+  'kcpuid'
   'linux-tools-meta'
   'perf'
   'tmon'
   'turbostat'
   'usbip'
   'x86_energy_perf_policy'
-  'intel-speed-select'
 )
-pkgver=6.12
-pkgrel=10
+pkgver=6.13
+pkgrel=2
 license=('GPL-2.0-only')
 arch=('x86_64')
 url='https://www.kernel.org'
@@ -50,20 +51,18 @@ source=("git+https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git#
         'usbipd.service'
         'hv_kvp_daemon.service'
         'hv_vss_daemon.service'
-        'fix-buildid.patch'
 )
 validpgpkeys=(
   'ABAF11C65A2970B130ABE3C479BE3E4300411886'  # Linus Torvalds
   '647F28654894E3BD457199BE38DBBDC86092693E'  # Greg Kroah-Hartman
 )
-sha256sums=('267bab84f30e3ce4a88b6441aeee777b114fd58041b43cabfe50fdf0c0a97321'
+sha256sums=('27aaa9e0a5326c003444cbffcb0ab8a0b444b6e7546e15aa44bc8caa84d97046'
             '4fa509949d6863d001075fa3e8671eff2599c046d20c98bb4a70778595cd1c3f'
             'b692f4859ed3fd9831a058a450a84d8c409bf7e3e45aac1c2896a14bb83f3d7a'
             '42d2ec9f1d9cc255ee7945a27301478364ef482f5a6ddfc960189f03725ccec2'
             '2e187734d8aec58a3046d79883510d779aa93fb3ab20bd3132c1a607ebe5498f'
             'b1315cb77a35454e1af9172f821a52e2a0cb18561be05a340d21cf337b01ae61'
-            '2d5e2f8d40b6f19bf2e1dead57ca105d72098fb0b418c09ff2e0cb91089710af'
-            'b0271b2757bb2cb05a1fd5560a732959cf28db82bb114aadcf7341b71ce127ea')
+            '2d5e2f8d40b6f19bf2e1dead57ca105d72098fb0b418c09ff2e0cb91089710af')
 
 prepare() {
   cd linux
@@ -154,6 +153,11 @@ build() {
   pushd linux/tools/power/x86/intel-speed-select
   make
   popd
+
+  echo ':: kcpuid'
+  pushd linux/tools/arch/x86/kcpuid
+  make
+  popd
 }
 
 package_linux-tools-meta() {
@@ -164,12 +168,13 @@ package_linux-tools-meta() {
     'bpf'
     'cpupower'
     'hyperv'
+    'intel-speed-select'
+    'kcpuid'
     'perf'
     'tmon'
     'turbostat'
     'usbip'
     'x86_energy_perf_policy'
-    'intel-speed-select'
   )
   conflicts=(
     'acpidump'
@@ -309,6 +314,13 @@ package_intel-speed-select() {
 
   cd linux/tools/power/x86/intel-speed-select
   make install DESTDIR="$pkgdir"
+}
+
+package_kcpuid() {
+  pkgdesc='Kernel tool for various cpu debug outputs'
+  depends=('glibc')
+
+  make BINDIR=/usr/bin HWDATADIR="/usr/share/misc" DESTDIR="$pkgdir" -C linux/tools/arch/x86/kcpuid install
 }
 
 # vim:set ts=2 sw=2 et:
