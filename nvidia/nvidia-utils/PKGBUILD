@@ -105,6 +105,9 @@ DEST_MODULE_LOCATION[3]="/kernel/drivers/video"\
 BUILT_MODULE_NAME[4]="nvidia-peermem"\
 DEST_MODULE_LOCATION[4]="/kernel/drivers/video"' dkms.conf
 
+    # Allow building the module on PREEMPT_RT kernels
+    sed -i 's/NV_EXCLUDE_BUILD_MODULES/IGNORE_PREEMPT_RT_PRESENCE=1 NV_EXCLUDE_BUILD_MODULES/' dkms.conf
+
 }
 
 package_opencl-nvidia() {
