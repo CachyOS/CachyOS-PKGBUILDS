@@ -52,6 +52,7 @@ prepare() {
     # https://gitlab.archlinux.org/archlinux/packaging/packages/nvidia-utils/-/issues/14
     # https://github.com/rpmfusion/nvidia-kmod/blob/master/make_modeset_default.patch
     patch -Np1 < "$srcdir"/0001-Enable-atomic-kernel-modesetting-by-default.patch -d "${srcdir}/${_pkg}/kernel"
+    patch -Np1 < "$srcdir"/0001-Enable-atomic-kernel-modesetting-by-default.patch -d "${srcdir}/${_pkg}/kernel-open"
 
 #    echo "Applying nvidia-patch..."
 
@@ -59,41 +60,14 @@ prepare() {
 #    sed -i 's/\xe8\x35\x3e\xfe\xff\x85\xc0\x41\x89\xc4/\xe8\x35\x3e\xfe\xff\x29\xc0\x41\x89\xc4/g' "libnvidia-encode.so.${pkgver}"
 #    sed -i 's/\x85\xc0\x0f\x84\x9b\x00\x00\x00\x48/\x85\xc0\x90\x90\x90\x90\x90\x90\x48/g' "libnvidia-fbc.so.${pkgver}"
 
-
-    cd kernel
-
-    sed -i "s/__VERSION_STRING/${pkgver}/" dkms.conf
-    sed -i 's/__JOBS/`nproc`/' dkms.conf
-    sed -i 's/__DKMS_MODULES//' dkms.conf
-    sed -i '$iBUILT_MODULE_NAME[0]="nvidia"\
-DEST_MODULE_LOCATION[0]="/kernel/drivers/video"\
-BUILT_MODULE_NAME[1]="nvidia-uvm"\
-DEST_MODULE_LOCATION[1]="/kernel/drivers/video"\
-BUILT_MODULE_NAME[2]="nvidia-modeset"\
-DEST_MODULE_LOCATION[2]="/kernel/drivers/video"\
-BUILT_MODULE_NAME[3]="nvidia-drm"\
-DEST_MODULE_LOCATION[3]="/kernel/drivers/video"\
-BUILT_MODULE_NAME[4]="nvidia-peermem"\
-DEST_MODULE_LOCATION[4]="/kernel/drivers/video"' dkms.conf
-
-    # Gift for linux-rt guys
-    sed -i 's/NV_EXCLUDE_BUILD_MODULES/IGNORE_PREEMPT_RT_PRESENCE=1 NV_EXCLUDE_BUILD_MODULES/' dkms.conf
-
-    cd ..
-
-    # Enable modeset by default
-    # This avoids various issue, when Simplefb is used
-    # https://gitlab.archlinux.org/archlinux/packaging/packages/nvidia-utils/-/issues/14
-    # https://github.com/rpmfusion/nvidia-kmod/blob/master/make_modeset_default.patch
-    patch -Np1 < "$srcdir"/0001-Enable-atomic-kernel-modesetting-by-default.patch -d "${srcdir}/${_pkg}/kernel-open"
-
-    cd kernel-open
-
-    sed -i "s/__VERSION_STRING/${pkgver}/" dkms.conf
-    sed -i 's/__JOBS/`nproc`/' dkms.conf
-    sed -i 's/__EXCLUDE_MODULES//' dkms.conf
-    sed -i 's/__DKMS_MODULES//' dkms.conf
-    sed -i '$i\
+    shopt -s globstar
+    for conf in ./**/dkms.conf; do
+        sed -i "s/__VERSION_STRING/${pkgver}/" "$conf"
+        sed -i 's/__JOBS/`nproc`/' "$conf"
+        sed -i 's/__EXCLUDE_MODULES//' "$conf"
+        sed -i 's/__DKMS_MODULES//' "$conf"
+        sed -i 's/NV_EXCLUDE_BUILD_MODULES/IGNORE_PREEMPT_RT_PRESENCE=1 NV_EXCLUDE_BUILD_MODULES/' "$conf"
+        sed -i '$i\
 BUILT_MODULE_NAME[0]="nvidia"\
 DEST_MODULE_LOCATION[0]="/kernel/drivers/video"\
 BUILT_MODULE_NAME[1]="nvidia-uvm"\
@@ -103,11 +77,9 @@ DEST_MODULE_LOCATION[2]="/kernel/drivers/video"\
 BUILT_MODULE_NAME[3]="nvidia-drm"\
 DEST_MODULE_LOCATION[3]="/kernel/drivers/video"\
 BUILT_MODULE_NAME[4]="nvidia-peermem"\
-DEST_MODULE_LOCATION[4]="/kernel/drivers/video"' dkms.conf
-
-    # Allow building the module on PREEMPT_RT kernels
-    sed -i 's/NV_EXCLUDE_BUILD_MODULES/IGNORE_PREEMPT_RT_PRESENCE=1 NV_EXCLUDE_BUILD_MODULES/' dkms.conf
-
+DEST_MODULE_LOCATION[4]="/kernel/drivers/video"' "$conf"
+    done
+    shopt -u globstar
 }
 
 package_opencl-nvidia() {
