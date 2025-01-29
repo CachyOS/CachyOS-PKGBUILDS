@@ -6,7 +6,7 @@
 # Contributor: Giovanni Scafora <giovanni@archlinux.org>
 
 pkgname=wine-cachyos-opt
-_srctag=9.0-20250117
+_srctag=9.0-20250126
 pkgver=${_srctag//-/.}
 pkgrel=1
 epoch=2
@@ -16,6 +16,7 @@ _winever=$_pkgbasever
 #_winever=${_pkgbasever%.*}
 
 source=(wine-cachyos::git+https://github.com/CachyOS/wine-cachyos.git#tag=cachyos-${_srctag}-wine
+        wine-cachyos-remove-icu.patch
         30-win32-aliases.conf
         wine-binfmt.conf)
 source+=(
@@ -111,6 +112,7 @@ prepare() {
   mkdir ${pkgname//-opt}-{32,64}-build
 
   pushd ${pkgname//-opt}
+      patch -Np1 -i "$srcdir"/wine-cachyos-remove-icu.patch
       git config user.email "wine@cachyos.org"
       git config user.name "wine cachyos"
       git tag wine-9.0 --annotate -m "$pkgver" --force
@@ -209,7 +211,6 @@ build() {
 package() {
   msg2 "Packaging Wine-32..."
   cd "$srcdir/${pkgname//-opt}-32-build"
-
   make prefix="$pkgdir/opt/${pkgname//-opt}" \
     libdir="$pkgdir/opt/${pkgname//-opt}/lib32" \
     dlldir="$pkgdir/opt/${pkgname//-opt}/lib32/wine" install-lib
@@ -229,6 +230,7 @@ package() {
 }
 
 # vim:set ts=8 sts=2 sw=2 et:
-b2sums=('4ab80fe3d0dad71a3bbd1bce121bf0e0a6bd493049997a8a99ddf8537950274ea0738aa40edd424725b4b0db05892f19f5db68fb7624b131fd06948fb8ed69d1'
+b2sums=('4f31e44da7d13106fdde87edb99d914519789cc214705e355470931a11820868ea320b37e52bc7335525be7c6bcdca769d4b6a9d3acb9f648a35b766600b6f7c'
+        '6cf4a8f0a781f160f87b7621aaf63bc44e67ebecb05234096a98a99f9d1ee7c2b27f88f0a02c3b009761b23a37df5e8dd969c5c384a4828578d1ef9fb7f8e307'
         '45db34fb35a679dc191b4119603eba37b8008326bd4f7d6bd422fbbb2a74b675bdbc9f0cc6995ed0c564cf088b7ecd9fbe2d06d42ff8a4464828f3c4f188075b'
         'e9de76a32493c601ab32bde28a2c8f8aded12978057159dd9bf35eefbf82f2389a4d5e30170218956101331cf3e7452ae82ad0db6aad623651b0cc2174a61588')
