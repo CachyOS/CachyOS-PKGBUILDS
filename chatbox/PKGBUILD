@@ -1,0 +1,41 @@
+# Maintainer: SoulHarsh007 <harsh.peshwani@outlook.com>
+
+pkgname=chatbox
+pkgver=0.10.4
+pkgrel=1
+_pkgdir="${pkgname}-${pkgver}"
+pkgdesc='A desktop client for multiple cutting-edge AI models'
+arch=('x86_64')
+depends=(libxkbfile gnupg gtk3 libsecret nss gcc-libs libnotify libxss glibc)
+license=(GPL-3.0-or-later)
+url="https://chatboxai.app/en"
+makedepends=('nodejs-lts-iron' 'npm' 'bun' 'sed')
+source=("https://github.com/Bin-Huang/chatbox/archive/refs/tags/v${pkgver}.tar.gz" "chatbox.desktop")
+b2sums=('87c180c1635f81fbd568b95099eeaadb471f59722d9ad003152732b5204c4f52d117a51459949b5488ab05d62a4cc55a83b19696f1093469058cc8f9dd90b991'
+        'b6fa0e3a7d16711f4f47527f7c556275167ef4875f1062b87d6a216579e040b7557287c99d0f70b7141bc822c63957685f145252d82b5039ce4ed96f4bfbdf6f')
+
+build() {
+  cd "${srcdir}/${_pkgdir}"
+  sed -i 's/devEngines/engines/g' package.json
+  bun install --ignore-scripts
+  npm run package -- --linux dir --x64
+}
+
+package() {
+  cd "${srcdir}/${_pkgdir}"
+  install -d "${pkgdir}/opt/${pkgname}"
+  install -d "${pkgdir}/usr/share/licenses/${pkgname}"
+  install -d "${pkgdir}/usr/share/applications"
+  install -d "${pkgdir}/usr/share/icons/"
+  install -d "${pkgdir}/usr/share/icons/hicolor/512x512/apps"
+  install -d "${pkgdir}/usr/bin"
+
+  install -Dm644 LICENSE "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE"
+  install -Dm644 release/build/linux-unpacked/resources/assets/icon.png "${pkgdir}/usr/share/icons//${pkgname}.png"
+  install -Dm644 release/build/linux-unpacked/resources/assets/icon.png "${pkgdir}/usr/share/icons/hicolor/512x512/apps/${pkgname}.png"
+  install -Dm644 "${srcdir}/chatbox.desktop" "${pkgdir}/usr/share/applications/${pkgname}.desktop"
+  cp -r release/build/linux-unpacked/* "${pkgdir}/opt/${pkgname}/"
+  ln -sr "${pkgdir}/opt/${pkgname}/xyz.chatboxapp.ce" "${pkgdir}/usr/bin/chatbox"
+}
+
+# vim:set sw=2 sts=2 et:
