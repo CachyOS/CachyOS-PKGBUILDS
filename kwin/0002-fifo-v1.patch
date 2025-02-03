@@ -1,44 +1,478 @@
-From 9ebc542c715555d4669be3db288e15ad1b03217c Mon Sep 17 00:00:00 2001
-From: Xaver Hugl <xaver.hugl@gmail.com>
-Date: Fri, 20 Sep 2024 17:56:02 +0200
-Subject: [PATCH] wayland: implement wp-fifo-v1
+From 3cc4bca5814501e9704ebac585a103087cf1e81c Mon Sep 17 00:00:00 2001
+From: Eric Naim <dnaim@cachyos.org>
+Date: Mon, 3 Feb 2025 21:47:29 +0800
+Subject: [PATCH 2/2] fifo-v1
 
-This allows apps to get proper fifo behavior and queue up multiple frames for rendering
+Signed-off-by: Eric Naim <dnaim@cachyos.org>
 ---
- src/compositor_wayland.cpp        | 19 +++++++-
- src/core/renderlayerdelegate.cpp  |  4 ++
- src/core/renderlayerdelegate.h    |  5 +++
- src/core/renderloop.cpp           |  4 +-
- src/scene/cursorscene.cpp         | 10 +++++
- src/scene/cursorscene.h           |  1 +
- src/scene/item.cpp                |  7 +++
- src/scene/item.h                  |  1 +
- src/scene/scene.cpp               |  5 +++
- src/scene/scene.h                 |  2 +
- src/scene/surfaceitem_wayland.cpp | 34 ++++++++++++++
- src/scene/surfaceitem_wayland.h   |  6 +++
- src/scene/workspacescene.cpp      | 10 +++++
- src/scene/workspacescene.h        |  1 +
- src/wayland/CMakeLists.txt        |  9 ++++
- src/wayland/fifo_v1.cpp           | 75 +++++++++++++++++++++++++++++++
- src/wayland/fifo_v1.h             | 40 +++++++++++++++++
- src/wayland/surface.cpp           | 32 +++++++++++++
- src/wayland/surface.h             | 13 ++++++
- src/wayland/surface_p.h           |  6 +++
- src/wayland/transaction.cpp       | 30 +++++++++++++
- src/wayland/transaction.h         |  2 +
- src/wayland/transaction_p.h       | 12 +++++
- src/wayland_server.cpp            |  2 +
- src/wayland_server.h              |  2 +
- 25 files changed, 330 insertions(+), 2 deletions(-)
+ autotests/integration/CMakeLists.txt      |   3 +
+ autotests/integration/kwin_wayland_test.h |  20 ++
+ autotests/integration/test_fifo.cpp       | 259 ++++++++++++++++++++++
+ autotests/integration/test_helpers.cpp    |  44 ++++
+ src/compositor_wayland.cpp                |  19 +-
+ src/core/renderlayerdelegate.cpp          |   4 +
+ src/core/renderlayerdelegate.h            |   5 +
+ src/core/renderloop.cpp                   |   4 +-
+ src/scene/cursorscene.cpp                 |  10 +
+ src/scene/cursorscene.h                   |   1 +
+ src/scene/item.cpp                        |   7 +
+ src/scene/item.h                          |   1 +
+ src/scene/scene.cpp                       |   5 +
+ src/scene/scene.h                         |   2 +
+ src/scene/surfaceitem_wayland.cpp         |  34 +++
+ src/scene/surfaceitem_wayland.h           |   6 +
+ src/scene/workspacescene.cpp              |  10 +
+ src/scene/workspacescene.h                |   1 +
+ src/wayland/CMakeLists.txt                |  10 +-
+ src/wayland/fifo_v1.cpp                   |  75 +++++++
+ src/wayland/fifo_v1.h                     |  40 ++++
+ src/wayland/surface.cpp                   |  32 +++
+ src/wayland/surface.h                     |  13 ++
+ src/wayland/surface_p.h                   |   6 +
+ src/wayland/transaction.cpp               |  30 +++
+ src/wayland/transaction.h                 |   2 +
+ src/wayland/transaction_p.h               |  12 +
+ src/wayland_server.cpp                    |   2 +
+ src/wayland_server.h                      |   2 +
+ 29 files changed, 656 insertions(+), 3 deletions(-)
+ create mode 100644 autotests/integration/test_fifo.cpp
  create mode 100644 src/wayland/fifo_v1.cpp
  create mode 100644 src/wayland/fifo_v1.h
 
+diff --git a/autotests/integration/CMakeLists.txt b/autotests/integration/CMakeLists.txt
+index a719660..957840c 100644
+--- a/autotests/integration/CMakeLists.txt
++++ b/autotests/integration/CMakeLists.txt
+@@ -16,8 +16,10 @@ qt6_generate_wayland_protocol_client_sources(KWinIntegrationTestFramework
+     FILES
+         ${CMAKE_SOURCE_DIR}/src/wayland/protocols/wlr-layer-shell-unstable-v1.xml
+         ${CMAKE_SOURCE_DIR}/src/wayland/protocols/xx-color-management-v4.xml
++        ${WaylandProtocols_DATADIR}/stable/presentation-time/presentation-time.xml
+         ${WaylandProtocols_DATADIR}/stable/xdg-shell/xdg-shell.xml
+         ${WaylandProtocols_DATADIR}/staging/cursor-shape/cursor-shape-v1.xml
++        ${WaylandProtocols_DATADIR}/staging/fifo/fifo-v1.xml
+         ${WaylandProtocols_DATADIR}/staging/fractional-scale/fractional-scale-v1.xml
+         ${WaylandProtocols_DATADIR}/staging/security-context/security-context-v1.xml
+         ${WaylandProtocols_DATADIR}/staging/xdg-dialog/xdg-dialog-v1.xml
+@@ -144,6 +146,7 @@ integrationTest(NAME testStickyKeys SRCS sticky_keys_test.cpp)
+ integrationTest(NAME testWorkspace SRCS workspace_test.cpp)
+ integrationTest(NAME testMouseActions SRCS mouseactions_test.cpp LIBS)
+ integrationTest(NAME testColorManagement SRCS test_colormanagement.cpp)
++integrationTest(NAME testFifo SRCS test_fifo.cpp)
+ integrationTest(NAME testKeyboardInput SRCS keyboard_input_test.cpp)
+ 
+ if(KWIN_BUILD_X11)
+diff --git a/autotests/integration/kwin_wayland_test.h b/autotests/integration/kwin_wayland_test.h
+index 2f28c71..9d05c4b 100644
+--- a/autotests/integration/kwin_wayland_test.h
++++ b/autotests/integration/kwin_wayland_test.h
+@@ -22,12 +22,14 @@
+ 
+ #include "qwayland-cursor-shape-v1.h"
+ #include "qwayland-fake-input.h"
++#include "qwayland-fifo-v1.h"
+ #include "qwayland-fractional-scale-v1.h"
+ #include "qwayland-idle-inhibit-unstable-v1.h"
+ #include "qwayland-input-method-unstable-v1.h"
+ #include "qwayland-kde-output-device-v2.h"
+ #include "qwayland-kde-output-management-v2.h"
+ #include "qwayland-kde-screen-edge-v1.h"
++#include "qwayland-presentation-time.h"
+ #include "qwayland-security-context-v1.h"
+ #include "qwayland-text-input-unstable-v3.h"
+ #include "qwayland-wlr-layer-shell-unstable-v1.h"
+@@ -605,6 +607,8 @@ enum class AdditionalWaylandInterface {
+     SecurityContextManagerV1 = 1 << 20,
+     XdgDialogV1 = 1 << 21,
+     ColorManagement = 1 << 22,
++    FifoV1 = 1 << 23,
++    PresentationTime = 1 << 24,
+ };
+ Q_DECLARE_FLAGS(AdditionalWaylandInterfaces, AdditionalWaylandInterface)
+ 
+@@ -681,6 +685,20 @@ public:
+     ~XXColorManagerV4() override;
+ };
+ 
++class FifoManagerV1 : public QtWayland::wp_fifo_manager_v1
++{
++public:
++    explicit FifoManagerV1(::wl_registry *registry, uint32_t id, int version);
++    ~FifoManagerV1() override;
++};
++
++class PresentationTime : public QtWayland::wp_presentation
++{
++public:
++    explicit PresentationTime(::wl_registry *registry, uint32_t id, int version);
++    ~PresentationTime() override;
++};
++
+ void keyboardKeyPressed(quint32 key, quint32 time);
+ void keyboardKeyReleased(quint32 key, quint32 time);
+ void pointerAxisHorizontal(qreal delta,
+@@ -740,6 +758,8 @@ QList<WaylandOutputDeviceV2 *> waylandOutputDevicesV2();
+ FakeInput *waylandFakeInput();
+ SecurityContextManagerV1 *waylandSecurityContextManagerV1();
+ XXColorManagerV4 *colorManager();
++FifoManagerV1 *fifoManager();
++PresentationTime *presentationTime();
+ 
+ bool waitForWaylandSurface(Window *window);
+ 
+diff --git a/autotests/integration/test_fifo.cpp b/autotests/integration/test_fifo.cpp
+new file mode 100644
+index 0000000..7ce6397
+--- /dev/null
++++ b/autotests/integration/test_fifo.cpp
+@@ -0,0 +1,259 @@
++
++/*
++    SPDX-FileCopyrightText: 2024 Xaver Hugl <xaver.hugl@gmail.com>
++
++    SPDX-License-Identifier: GPL-2.0-or-later
++*/
++
++#include "kwin_wayland_test.h"
++
++#include "core/colorpipeline.h"
++#include "core/output.h"
++#include "core/outputbackend.h"
++#include "core/outputconfiguration.h"
++#include "outputconfigurationstore.h"
++#include "pointer_input.h"
++#include "tiles/tilemanager.h"
++#include "wayland/surface.h"
++#include "wayland_server.h"
++#include "window.h"
++#include "workspace.h"
++
++#include <KWayland/Client/connection_thread.h>
++#include <KWayland/Client/surface.h>
++#include <format>
++
++using namespace std::chrono_literals;
++
++namespace KWin
++{
++
++static const QString s_socketName = QStringLiteral("wayland_test_fifo-0");
++
++class FifoTest : public QObject
++{
++    Q_OBJECT
++
++private Q_SLOTS:
++    void initTestCase();
++    void init();
++    void cleanup();
++
++    void testFifo_data();
++    void testFifo();
++    void testFifoInitiallyHidden();
++};
++
++class FifoV1Surface : public QObject, public QtWayland::wp_fifo_v1
++{
++    Q_OBJECT
++public:
++    explicit FifoV1Surface(::wp_fifo_v1 *obj)
++        : QtWayland::wp_fifo_v1(obj)
++    {
++    }
++
++    ~FifoV1Surface() override
++    {
++        wp_fifo_v1_destroy(object());
++    }
++};
++
++class WpPresentationFeedback : public QObject, public QtWayland::wp_presentation_feedback
++{
++    Q_OBJECT
++public:
++    explicit WpPresentationFeedback(struct ::wp_presentation_feedback *obj)
++        : QtWayland::wp_presentation_feedback(obj)
++    {
++    }
++
++    ~WpPresentationFeedback() override
++    {
++        wp_presentation_feedback_destroy(object());
++    }
++
++Q_SIGNALS:
++    void presented(std::chrono::nanoseconds timestamp, std::chrono::nanoseconds refreshDuration);
++    void discarded();
++
++private:
++    void wp_presentation_feedback_presented(uint32_t tv_sec_hi, uint32_t tv_sec_lo, uint32_t tv_nsec, uint32_t refresh, uint32_t seq_hi, uint32_t seq_lo, uint32_t flags) override
++    {
++        const std::chrono::nanoseconds timestamp = std::chrono::seconds((uint64_t(tv_sec_hi) << 32) | tv_sec_lo) + std::chrono::nanoseconds(tv_nsec);
++        Q_EMIT presented(timestamp, std::chrono::nanoseconds(refresh));
++    }
++
++    void wp_presentation_feedback_discarded() override
++    {
++        Q_EMIT discarded();
++    }
++};
++
++void FifoTest::initTestCase()
++{
++    qRegisterMetaType<Window *>();
++
++    QVERIFY(waylandServer()->init(s_socketName));
++    kwinApp()->start();
++}
++
++void FifoTest::init()
++{
++    QVERIFY(Test::setupWaylandConnection(Test::AdditionalWaylandInterface::FifoV1 | Test::AdditionalWaylandInterface::PresentationTime));
++    Test::setupWaylandConnection();
++
++    workspace()->setActiveOutput(QPoint(640, 512));
++    input()->pointer()->warp(QPoint(640, 512));
++}
++
++void FifoTest::cleanup()
++{
++    Test::destroyWaylandConnection();
++}
++
++void FifoTest::testFifo_data()
++{
++    QTest::addColumn<uint32_t>("refreshRate");
++
++    QTest::addRow("60Hz") << 60'000u;
++    QTest::addRow("24Hz") << 24'000u;
++}
++
++void FifoTest::testFifo()
++{
++    QFETCH(uint32_t, refreshRate);
++    Test::setOutputConfig({
++        Test::OutputInfo{
++            .geometry = QRect(0, 0, 1280, 1024),
++            .modes = {
++                std::make_tuple(QSize(1280, 1024), refreshRate, OutputMode::Flag::Preferred),
++            },
++        },
++    });
++
++    std::unique_ptr<KWayland::Client::Surface> surface(Test::createSurface());
++    std::unique_ptr<Test::XdgToplevel> shellSurface(Test::createXdgToplevelSurface(surface.get()));
++    auto window = Test::renderAndWaitForShown(surface.get(), QSize(100, 50), Qt::blue);
++    QVERIFY(window);
++
++    auto fifo = std::make_unique<FifoV1Surface>(Test::fifoManager()->get_fifo(*surface));
++
++    std::array<std::unique_ptr<WpPresentationFeedback>, 3> frames;
++
++    // commit 3 frames in quick succession: without fifo, the first two should be discarded, and the last should be presented
++    for (size_t i = 0; i < frames.size(); i++) {
++        frames[i] = std::make_unique<WpPresentationFeedback>(Test::presentationTime()->feedback(*surface));
++        surface->damage(QRect(QPoint(), QSize(1, 1)));
++        surface->commit(KWayland::Client::Surface::CommitFlag::None);
++    }
++
++    {
++        QSignalSpy discarded1(frames[0].get(), &WpPresentationFeedback::discarded);
++        QSignalSpy discarded2(frames[1].get(), &WpPresentationFeedback::discarded);
++        QSignalSpy presented(frames[2].get(), &WpPresentationFeedback::presented);
++
++        QVERIFY(presented.wait(100));
++        QVERIFY(discarded1.count());
++        QVERIFY(discarded2.count());
++    }
++
++    // do it again; this time with fifo, all frames should be presented
++    fifo->set_barrier();
++    surface->commit(KWayland::Client::Surface::CommitFlag::None);
++    for (size_t i = 0; i < frames.size(); i++) {
++        frames[i] = std::make_unique<WpPresentationFeedback>(Test::presentationTime()->feedback(*surface));
++        fifo->set_barrier();
++        fifo->wait_barrier();
++        surface->commit(KWayland::Client::Surface::CommitFlag::None);
++    }
++
++    {
++        std::array<QSignalSpy, frames.size()> spies = {
++            QSignalSpy(frames[0].get(), &WpPresentationFeedback::presented),
++            QSignalSpy(frames[1].get(), &WpPresentationFeedback::presented),
++            QSignalSpy(frames[2].get(), &WpPresentationFeedback::presented),
++        };
++        for (size_t i = 0; i < frames.size(); i++) {
++            QVERIFY(spies[i].wait(100));
++            if (i > 0) {
++                // each frame should be presented in the refresh cycle after the last one
++                const auto thisTimestamp = spies[i].last().at(0).value<std::chrono::nanoseconds>();
++                const auto lastTimestamp = spies[i - 1].last().at(0).value<std::chrono::nanoseconds>();
++                const auto refreshDuration = spies[i].last().at(1).value<std::chrono::nanoseconds>();
++                QCOMPARE_GT(thisTimestamp, lastTimestamp + refreshDuration / 2);
++                QCOMPARE_LT(thisTimestamp, lastTimestamp + refreshDuration * 3 / 2);
++            }
++        }
++    }
++
++    // even if the window is hidden, forward progress must be guaranteed
++    window->setMinimized(true);
++    // fifo->set_barrier();
++    surface->commit(KWayland::Client::Surface::CommitFlag::None);
++    for (size_t i = 0; i < frames.size(); i++) {
++        frames[i] = std::make_unique<WpPresentationFeedback>(Test::presentationTime()->feedback(*surface));
++        fifo->set_barrier();
++        fifo->wait_barrier();
++        surface->commit(KWayland::Client::Surface::CommitFlag::None);
++    }
++
++    {
++        const std::chrono::nanoseconds targetRefreshDuration = std::chrono::nanoseconds(1'000'000'000'000 / std::min(30'000u, refreshRate));
++        std::array<QSignalSpy, frames.size()> spies = {
++            QSignalSpy(frames[0].get(), &WpPresentationFeedback::discarded),
++            QSignalSpy(frames[1].get(), &WpPresentationFeedback::discarded),
++            QSignalSpy(frames[2].get(), &WpPresentationFeedback::discarded),
++        };
++        for (size_t i = 0; i < frames.size() - 1; i++) {
++            const auto before = std::chrono::steady_clock::now();
++            QVERIFY(spies[i].wait(100));
++            const auto after = std::chrono::steady_clock::now();
++            QCOMPARE_GT(after, before + targetRefreshDuration * 2 / 3);
++            QCOMPARE_LT(after, before + targetRefreshDuration * 2);
++        }
++    }
++}
++
++void FifoTest::testFifoInitiallyHidden()
++{
++    // this test verifies that even when the window has never been presented once,
++    // we still ensure forward progress
++
++    std::unique_ptr<KWayland::Client::Surface> surface(Test::createSurface());
++    std::unique_ptr<Test::XdgToplevel> shellSurface(Test::createXdgToplevelSurface(surface.get()));
++    auto window = Test::renderAndWaitForShown(surface.get(), QSize(100, 50), Qt::blue);
++    QVERIFY(window);
++    window->setMinimized(true);
++
++    auto fifo = std::make_unique<FifoV1Surface>(Test::fifoManager()->get_fifo(*surface));
++
++    std::array<std::unique_ptr<WpPresentationFeedback>, 3> frames;
++
++    for (size_t i = 0; i < frames.size(); i++) {
++        frames[i] = std::make_unique<WpPresentationFeedback>(Test::presentationTime()->feedback(*surface));
++        fifo->set_barrier();
++        fifo->wait_barrier();
++        surface->commit(KWayland::Client::Surface::CommitFlag::None);
++    }
++
++    {
++        std::array<QSignalSpy, frames.size()> spies = {
++            QSignalSpy(frames[0].get(), &WpPresentationFeedback::discarded),
++            QSignalSpy(frames[1].get(), &WpPresentationFeedback::discarded),
++            QSignalSpy(frames[2].get(), &WpPresentationFeedback::discarded),
++        };
++        for (size_t i = 0; i < frames.size() - 1; i++) {
++            const auto before = std::chrono::steady_clock::now();
++            QVERIFY(spies[i].wait(100));
++            const auto after = std::chrono::steady_clock::now();
++            QCOMPARE_GT(after, before + std::chrono::milliseconds(30));
++            QCOMPARE_LT(after, before + std::chrono::milliseconds(100));
++        }
++    }
++}
++
++}
++
++WAYLANDTEST_MAIN(KWin::FifoTest)
++#include "test_fifo.moc"
+diff --git a/autotests/integration/test_helpers.cpp b/autotests/integration/test_helpers.cpp
+index 31e20fc..96f4067 100644
+--- a/autotests/integration/test_helpers.cpp
++++ b/autotests/integration/test_helpers.cpp
+@@ -320,6 +320,8 @@ static struct
+     SecurityContextManagerV1 *securityContextManagerV1 = nullptr;
+     XdgWmDialogV1 *xdgWmDialogV1;
+     std::unique_ptr<XXColorManagerV4> colorManager;
++    std::unique_ptr<FifoManagerV1> fifoManager;
++    std::unique_ptr<PresentationTime> presentationTime;
+ } s_waylandConnection;
+ 
+ MockInputMethod *inputMethod()
+@@ -546,6 +548,16 @@ bool setupWaylandConnection(AdditionalWaylandInterfaces flags)
+                 s_waylandConnection.colorManager = std::make_unique<XXColorManagerV4>(*registry, name, version);
+             }
+         }
++        if (flags & AdditionalWaylandInterface::FifoV1) {
++            if (interface == wp_fifo_manager_v1_interface.name) {
++                s_waylandConnection.fifoManager = std::make_unique<FifoManagerV1>(*registry, name, version);
++            }
++        }
++        if (flags & AdditionalWaylandInterface::PresentationTime) {
++            if (interface == wp_presentation_interface.name) {
++                s_waylandConnection.presentationTime = std::make_unique<PresentationTime>(*registry, name, version);
++            }
++        }
+     });
+ 
+     QSignalSpy allAnnounced(registry, &KWayland::Client::Registry::interfacesAnnounced);
+@@ -674,6 +686,8 @@ void destroyWaylandConnection()
+     delete s_waylandConnection.xdgWmDialogV1;
+     s_waylandConnection.xdgWmDialogV1 = nullptr;
+     s_waylandConnection.colorManager.reset();
++    s_waylandConnection.fifoManager.reset();
++    s_waylandConnection.presentationTime.reset();
+ 
+     delete s_waylandConnection.queue; // Must be destroyed last
+     s_waylandConnection.queue = nullptr;
+@@ -795,6 +809,16 @@ XXColorManagerV4 *colorManager()
+     return s_waylandConnection.colorManager.get();
+ }
+ 
++FifoManagerV1 *fifoManager()
++{
++    return s_waylandConnection.fifoManager.get();
++}
++
++PresentationTime *presentationTime()
++{
++    return s_waylandConnection.presentationTime.get();
++}
++
+ bool waitForWaylandSurface(Window *window)
+ {
+     if (window->surface()) {
+@@ -1766,6 +1790,26 @@ XXColorManagerV4::~XXColorManagerV4()
+     xx_color_manager_v4_destroy(object());
+ }
+ 
++FifoManagerV1::FifoManagerV1(::wl_registry *registry, uint32_t id, int version)
++    : QtWayland::wp_fifo_manager_v1(registry, id, version)
++{
++}
++
++FifoManagerV1::~FifoManagerV1()
++{
++    wp_fifo_manager_v1_destroy(object());
++}
++
++PresentationTime::PresentationTime(::wl_registry *registry, uint32_t id, int version)
++    : QtWayland::wp_presentation(registry, id, version)
++{
++}
++
++PresentationTime::~PresentationTime()
++{
++    wp_presentation_destroy(object());
++}
++
+ void keyboardKeyPressed(quint32 key, quint32 time)
+ {
+     auto virtualKeyboard = static_cast<WaylandTestApplication *>(kwinApp())->virtualKeyboard();
 diff --git a/src/compositor_wayland.cpp b/src/compositor_wayland.cpp
-index 52d1920..623be33 100644
+index 8f3b175..80dad83 100644
 --- a/src/compositor_wayland.cpp
 +++ b/src/compositor_wayland.cpp
-@@ -292,6 +292,18 @@ static bool checkForBlackBackground(SurfaceItem *background)
+@@ -304,6 +304,18 @@ static bool checkForBlackBackground(SurfaceItem *background)
      return nits.lengthSquared() <= (0.1 * 0.1);
  }
  
@@ -57,7 +491,7 @@ index 52d1920..623be33 100644
  void WaylandCompositor::composite(RenderLoop *renderLoop)
  {
      if (m_backend->checkGraphicsReset()) {
-@@ -311,9 +323,14 @@ void WaylandCompositor::composite(RenderLoop *renderLoop)
+@@ -323,7 +335,8 @@ void WaylandCompositor::composite(RenderLoop *renderLoop)
      superLayer->setOutputLayer(primaryLayer);
  
      renderLoop->prepareNewFrame();
@@ -65,6 +499,11 @@ index 52d1920..623be33 100644
 +    const auto refreshDuration = std::chrono::nanoseconds(1'000'000'000'000 / output->refreshRate());
 +    auto frame = std::make_shared<OutputFrame>(renderLoop, refreshDuration);
      bool directScanout = false;
+     std::optional<double> desiredArtificalHdrHeadroom;
+ 
+@@ -343,6 +356,10 @@ void WaylandCompositor::composite(RenderLoop *renderLoop)
+         frame->setBrightness(std::pow(std::clamp(std::pow(output->brightnessSetting() * output->dimming(), 1.0 / 2.2), current - maxChangePerFrame, current + maxChangePerFrame), 2.2));
+     }
  
 +    // TODO do something smarter about tearing presentation here
 +    // like, only do one preFifoPass once per refresh cycle?
@@ -74,7 +513,7 @@ index 52d1920..623be33 100644
          auto totalTimeQuery = std::make_unique<CpuRenderTimeQuery>();
          renderLoop->beginPaint();
 diff --git a/src/core/renderlayerdelegate.cpp b/src/core/renderlayerdelegate.cpp
-index b4638ce..e303cb5 100644
+index 340e3f0..5dd341a 100644
 --- a/src/core/renderlayerdelegate.cpp
 +++ b/src/core/renderlayerdelegate.cpp
 @@ -23,6 +23,10 @@ void RenderLayerDelegate::frame(OutputFrame *frame)
@@ -89,7 +528,7 @@ index b4638ce..e303cb5 100644
  {
      return QRegion();
 diff --git a/src/core/renderlayerdelegate.h b/src/core/renderlayerdelegate.h
-index 4cf3da8..3401c0b 100644
+index 42a9c9c..0e13b8a 100644
 --- a/src/core/renderlayerdelegate.h
 +++ b/src/core/renderlayerdelegate.h
 @@ -37,6 +37,11 @@ public:
@@ -153,10 +592,10 @@ index db01f41..00202cb 100644
      void postPaint() override;
      void paint(const RenderTarget &renderTarget, const QRegion &region) override;
 diff --git a/src/scene/item.cpp b/src/scene/item.cpp
-index a658605..f251aa9 100644
+index 8d7b989..87eba96 100644
 --- a/src/scene/item.cpp
 +++ b/src/scene/item.cpp
-@@ -408,6 +408,13 @@ void Item::scheduleFrame()
+@@ -466,6 +466,13 @@ void Item::scheduleSceneRepaintInternal(const QRegion &region)
      }
  }
  
@@ -171,10 +610,10 @@ index a658605..f251aa9 100644
  {
  }
 diff --git a/src/scene/item.h b/src/scene/item.h
-index 8eb10b7..cdad701 100644
+index 7187eac..c42781d 100644
 --- a/src/scene/item.h
 +++ b/src/scene/item.h
-@@ -130,6 +130,7 @@ public:
+@@ -133,6 +133,7 @@ public:
      void resetRepaints(SceneDelegate *delegate);
  
      WindowQuadList quads() const;
@@ -183,7 +622,7 @@ index 8eb10b7..cdad701 100644
      const ColorDescription &colorDescription() const;
      RenderingIntent renderingIntent() const;
 diff --git a/src/scene/scene.cpp b/src/scene/scene.cpp
-index 271b782..9efeeb9 100644
+index 7bdf18b..4e4000d 100644
 --- a/src/scene/scene.cpp
 +++ b/src/scene/scene.cpp
 @@ -29,6 +29,11 @@ QList<SurfaceItem *> SceneDelegate::scanoutCandidates(ssize_t maxCount) const
@@ -199,7 +638,7 @@ index 271b782..9efeeb9 100644
  {
      return m_scene->prePaint(this);
 diff --git a/src/scene/scene.h b/src/scene/scene.h
-index cc47296..e58fa08 100644
+index 6eaadc2..e29480e 100644
 --- a/src/scene/scene.h
 +++ b/src/scene/scene.h
 @@ -31,6 +31,7 @@ public:
@@ -210,7 +649,7 @@ index cc47296..e58fa08 100644
      QRegion prePaint() override;
      void postPaint() override;
      void paint(const RenderTarget &renderTarget, const QRegion &region) override;
-@@ -82,6 +83,7 @@ public:
+@@ -84,6 +85,7 @@ public:
      void removeDelegate(SceneDelegate *delegate);
  
      virtual QList<SurfaceItem *> scanoutCandidates(ssize_t maxCount) const;
@@ -323,10 +762,10 @@ index f769284..64689a0 100644
  
  class KWIN_EXPORT SurfacePixmapWayland final : public SurfacePixmap
 diff --git a/src/scene/workspacescene.cpp b/src/scene/workspacescene.cpp
-index 729212a..2cda0e9 100644
+index 9cbd551..41fb20a 100644
 --- a/src/scene/workspacescene.cpp
 +++ b/src/scene/workspacescene.cpp
-@@ -258,6 +258,16 @@ void WorkspaceScene::frame(SceneDelegate *delegate, OutputFrame *frame)
+@@ -288,6 +288,16 @@ void WorkspaceScene::frame(SceneDelegate *delegate, OutputFrame *frame)
      }
  }
  
@@ -344,7 +783,7 @@ index 729212a..2cda0e9 100644
  {
      createStackingOrder();
 diff --git a/src/scene/workspacescene.h b/src/scene/workspacescene.h
-index 43a1363..9f7a383 100644
+index 97f00e0..fc3f654 100644
 --- a/src/scene/workspacescene.h
 +++ b/src/scene/workspacescene.h
 @@ -50,6 +50,7 @@ public:
@@ -356,12 +795,18 @@ index 43a1363..9f7a383 100644
      void postPaint() override;
      void paint(const RenderTarget &renderTarget, const QRegion &region) override;
 diff --git a/src/wayland/CMakeLists.txt b/src/wayland/CMakeLists.txt
-index c25ae07..10f1f66 100644
+index e82ae89..5030256 100644
 --- a/src/wayland/CMakeLists.txt
 +++ b/src/wayland/CMakeLists.txt
-@@ -305,6 +305,11 @@ ecm_add_qtwayland_server_protocol_kde(WaylandProtocols_xml
-     PROTOCOL ${WaylandProtocols_DATADIR}/staging/alpha-modifier/alpha-modifier-v1.xml
-     BASENAME alpha-modifier-v1
+@@ -307,12 +307,16 @@ ecm_add_qtwayland_server_protocol_kde(WaylandProtocols_xml
+     PROTOCOL ${WaylandProtocols_DATADIR}/staging/xdg-system-bell/xdg-system-bell-v1.xml
+     BASENAME xdg-system-bell-v1
+ )
+-
+ ecm_add_qtwayland_server_protocol_kde(WaylandProtocols_xml
+     PRIVATE_CODE
+     PROTOCOL ${WaylandProtocols_DATADIR}/staging/xdg-toplevel-icon/xdg-toplevel-icon-v1.xml
+     BASENAME xdg-toplevel-icon-v1
  )
 +ecm_add_qtwayland_server_protocol_kde(WaylandProtocols_xml
 +    PRIVATE_CODE
@@ -371,15 +816,15 @@ index c25ae07..10f1f66 100644
  
  target_sources(kwin PRIVATE
      abstract_data_source.cpp
-@@ -330,6 +335,7 @@ target_sources(kwin PRIVATE
+@@ -338,6 +342,7 @@ target_sources(kwin PRIVATE
      drmclientbuffer.cpp
      drmlease_v1.cpp
      externalbrightness_v1.cpp
 +    fifo_v1.cpp
      filtered_display.cpp
+     fixes.cpp
      fractionalscale_v1.cpp
-     frog_colormanagement_v1.cpp
-@@ -414,6 +420,7 @@ install(FILES
+@@ -425,6 +430,7 @@ install(FILES
      dpms.h
      drmlease_v1.h
      externalbrightness_v1.h
@@ -387,7 +832,7 @@ index c25ae07..10f1f66 100644
      fractionalscale_v1.h
      frog_colormanagement_v1.h
      idle.h
-@@ -472,6 +479,7 @@ install(FILES
+@@ -485,6 +491,7 @@ install(FILES
  
      ${CMAKE_CURRENT_BINARY_DIR}/qwayland-server-alpha-modifier-v1.h
      ${CMAKE_CURRENT_BINARY_DIR}/qwayland-server-content-type-v1.h
@@ -395,7 +840,7 @@ index c25ae07..10f1f66 100644
      ${CMAKE_CURRENT_BINARY_DIR}/qwayland-server-frog-color-management-v1.h
      ${CMAKE_CURRENT_BINARY_DIR}/qwayland-server-kde-external-brightness-v1.h
      ${CMAKE_CURRENT_BINARY_DIR}/qwayland-server-linux-drm-syncobj-v1.h
-@@ -479,6 +487,7 @@ install(FILES
+@@ -492,6 +499,7 @@ install(FILES
      ${CMAKE_CURRENT_BINARY_DIR}/qwayland-server-xx-color-management-v4.h
      ${CMAKE_CURRENT_BINARY_DIR}/wayland-alpha-modifier-v1-server-protocol.h
      ${CMAKE_CURRENT_BINARY_DIR}/wayland-content-type-v1-server-protocol.h
@@ -760,30 +1205,30 @@ index 29a9921..d2b6432 100644
 +
  } // namespace KWin
 diff --git a/src/wayland_server.cpp b/src/wayland_server.cpp
-index e5a4225..cd15972 100644
+index cb9d4e6..dc9a2cf 100644
 --- a/src/wayland_server.cpp
 +++ b/src/wayland_server.cpp
-@@ -36,6 +36,7 @@
+@@ -37,6 +37,7 @@
  #include "wayland/drmclientbuffer.h"
  #include "wayland/drmlease_v1.h"
  #include "wayland/externalbrightness_v1.h"
 +#include "wayland/fifo_v1.h"
  #include "wayland/filtered_display.h"
+ #include "wayland/fixes.h"
  #include "wayland/fractionalscale_v1.h"
- #include "wayland/frog_colormanagement_v1.h"
-@@ -532,6 +533,7 @@ bool WaylandServer::init()
- 
-     m_externalBrightness = new ExternalBrightnessV1(m_display, m_display);
-     m_alphaModifierManager = new AlphaModifierManagerV1(m_display, m_display);
+@@ -510,6 +511,7 @@ bool WaylandServer::init()
+ #if HAVE_WL_FIXES
+     new FixesInterface(m_display, m_display);
+ #endif
 +    m_fifoManager = new FifoManagerV1(m_display, m_display);
      return true;
  }
  
 diff --git a/src/wayland_server.h b/src/wayland_server.h
-index 874b620..2c2f1c9 100644
+index 5ed7da4..798f3e2 100644
 --- a/src/wayland_server.h
 +++ b/src/wayland_server.h
-@@ -64,6 +64,7 @@ class XXColorManagerV4;
+@@ -65,6 +65,7 @@ class XXColorManagerV4;
  class LinuxDrmSyncObjV1Interface;
  class RenderBackend;
  class AlphaModifierManagerV1;
@@ -791,7 +1236,7 @@ index 874b620..2c2f1c9 100644
  
  class KWIN_EXPORT WaylandServer : public QObject
  {
-@@ -293,6 +294,7 @@ private:
+@@ -294,6 +295,7 @@ private:
      XdgDialogWmV1Interface *m_xdgDialogWm = nullptr;
      ExternalBrightnessV1 *m_externalBrightness = nullptr;
      AlphaModifierManagerV1 *m_alphaModifierManager = nullptr;
@@ -800,5 +1245,5 @@ index 874b620..2c2f1c9 100644
  };
  
 -- 
-2.47.1
+2.48.1
 

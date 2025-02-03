@@ -1,0 +1,758 @@
+From dd67eefb63959b0890e8cb69abe8cd35fd9c88b3 Mon Sep 17 00:00:00 2001
+From: Eric Naim <dnaim@cachyos.org>
+Date: Mon, 3 Feb 2025 21:46:47 +0800
+Subject: [PATCH] libei-no-prompt
+
+Signed-off-by: Eric Naim <dnaim@cachyos.org>
+---
+ src/kcms/xwayland/kwinxwaylandsettings.kcfg |  4 +
+ src/kcms/xwayland/ui/main.qml               | 55 ++++++++++++++
+ src/kwin.kcfg                               |  4 +
+ src/main_wayland.cpp                        |  2 +
+ src/main_wayland.h                          | 14 ++++
+ src/options.cpp                             | 22 ++++++
+ src/options.h                               | 22 ++++++
+ src/plugins/eis/CMakeLists.txt              |  3 +-
+ src/plugins/eis/eisbackend.cpp              | 35 ++++++++-
+ src/plugins/eis/eisbackend.h                |  6 +-
+ src/plugins/eis/eiscontext.cpp              | 55 +++++++++-----
+ src/plugins/eis/eiscontext.h                | 25 ++++--
+ src/plugins/eis/xwaylandeiscontext.cpp      | 84 +++++++++++++++++++++
+ src/plugins/eis/xwaylandeiscontext.h        | 23 ++++++
+ src/settings.kcfgc                          |  1 +
+ src/xwayland/xwaylandlauncher.cpp           | 21 +++++-
+ src/xwayland/xwaylandlauncher.h             |  7 ++
+ 17 files changed, 348 insertions(+), 35 deletions(-)
+ create mode 100644 src/plugins/eis/xwaylandeiscontext.cpp
+ create mode 100644 src/plugins/eis/xwaylandeiscontext.h
+
+diff --git a/src/kcms/xwayland/kwinxwaylandsettings.kcfg b/src/kcms/xwayland/kwinxwaylandsettings.kcfg
+index 93ecbbf..9301291 100644
+--- a/src/kcms/xwayland/kwinxwaylandsettings.kcfg
++++ b/src/kcms/xwayland/kwinxwaylandsettings.kcfg
+@@ -17,5 +17,9 @@
+         <entry name="xwaylandEavesdropsMouse" key="XwaylandEavesdropsMouse" type="Bool">
+             <default>false</default>
+         </entry>
++        <entry name="XwaylandEisNoPrompt" type="Bool">
++            <default>false</default>
++        </entry>
++        <entry name="XwaylandEisNoPromptApps" type="StringList" />
+     </group>
+ </kcfg>
+diff --git a/src/kcms/xwayland/ui/main.qml b/src/kcms/xwayland/ui/main.qml
+index 8b5acce..49f5e26 100644
+--- a/src/kcms/xwayland/ui/main.qml
++++ b/src/kcms/xwayland/ui/main.qml
+@@ -40,6 +40,7 @@ KCM.SimpleKCM {
+         }
+ 
+         Kirigami.FormLayout {
++            id: eavesdropLayout
+             Layout.leftMargin: Kirigami.Units.gridUnit
+             Layout.rightMargin: Kirigami.Units.gridUnit
+ 
+@@ -114,5 +115,59 @@ KCM.SimpleKCM {
+             text: i18n("Note that using this setting will reduce system security to that of the X11 session by permitting malicious software to steal passwords and spy on the text that you type. Make sure you understand and accept this risk.")
+             visible: always.checked
+         }
++
++        Kirigami.Separator {
++            Layout.fillWidth: true
++            Layout.leftMargin: Kirigami.Units.gridUnit
++            Layout.rightMargin: Kirigami.Units.gridUnit
++        }
++
++        QQC2.CheckBox {
++            Layout.leftMargin: Kirigami.Units.gridUnit
++            Layout.rightMargin: Kirigami.Units.gridUnit
++            text: i18nc("@option:check", "Allow controlling the pointer and keyboard without asking for permission")
++            checked: kcm.settings.xwaylandEisNoPrompt
++            onToggled: kcm.settings.xwaylandEisNoPrompt = checked
++        }
++        QQC2.Button {
++            Layout.leftMargin: Kirigami.Units.gridUnit
++            Layout.rightMargin: Kirigami.Units.gridUnit
++            text: i18nc("@action:button", "Configure applications…")
++            enabled: !kcm.settings.xwaylandEisNoPrompt && kcm.settings.xwaylandEisNoPromptApps.length > 0
++            onClicked: {
++                kcm.push(appsPage)
++            }
++            KCM.ScrollViewKCM {
++                id: appsPage
++                visible: false
++                title: i18n("Applications allowed to control the pointer and keyboard")
++                view: ListView {
++                    model: kcm.settings.xwaylandEisNoPromptApps
++                    delegate: QQC2.ItemDelegate {
++                        id: delegate
++                        width: ListView.view.width
++                        text: modelData
++                        icon.name: modelData
++                        contentItem: RowLayout {
++                            spacing: Kirigami.Theme.smallSpacing
++                            Kirigami.IconTitleSubtitle {
++                                Layout.fillWidth: true
++                                icon: icon.fromControlsIcon(delegate.icon)
++                                title: delegate.text
++                                selected: delegate.highlighted || delegate.down
++                                font: delegate.font
++                            }
++                            QQC2.ToolButton {
++                                icon.name: "list-remove-symbolic"
++                                QQC2.ToolTip {
++                                    text: i18nc("@info:tooltip %1 is the name of the app/binary", "Do not allow %1 to control the pointer and keyboard without asking", modelData)
++                                }
++                                onClicked: kcm.settings.xwaylandEisNoPromptApps = kcm.settings.xwaylandEisNoPromptApps.filter(app => app != modelData)
++                            }
++                        }
++                    }
++                }
++            }
++        }
+     }
+ }
+diff --git a/src/kwin.kcfg b/src/kwin.kcfg
+index bba731c..0816194 100644
+--- a/src/kwin.kcfg
++++ b/src/kwin.kcfg
+@@ -352,5 +352,9 @@
+         <entry name="XwaylandEavesdropsMouse" type="Bool">
+             <default>false</default>
+         </entry>
++        <entry name="XwaylandEisNoPrompt" type="Bool">
++            <default>false</default>
++        </entry>
++        <entry name="XwaylandEisNoPromptApps" type="StringList" />
+     </group>
+ </kcfg>
+diff --git a/src/main_wayland.cpp b/src/main_wayland.cpp
+index 26d51b4..f961760 100644
+--- a/src/main_wayland.cpp
++++ b/src/main_wayland.cpp
+@@ -162,6 +162,8 @@ void ApplicationWayland::performStartup()
+         m_xwayland->xwaylandLauncher()->setListenFDs(m_xwaylandListenFds);
+         m_xwayland->xwaylandLauncher()->setDisplayName(m_xwaylandDisplay);
+         m_xwayland->xwaylandLauncher()->setXauthority(m_xwaylandXauthority);
++        m_xwayland->xwaylandLauncher()->addEnvironmentVariables(m_xwaylandExtraEnvironment);
++        m_xwayland->xwaylandLauncher()->passFileDescriptors(std::move(m_xwaylandFds));
+         m_xwayland->init();
+         connect(m_xwayland.get(), &Xwl::Xwayland::started, this, &ApplicationWayland::applyXwaylandScale);
+     }
+diff --git a/src/main_wayland.h b/src/main_wayland.h
+index 5f5408a..b7ea152 100644
+--- a/src/main_wayland.h
++++ b/src/main_wayland.h
+@@ -11,6 +11,10 @@
+ #include <KConfigWatcher>
+ #include <QTimer>
+ 
++#include "utils/filedescriptor.h"
++
++#include <vector>
++
+ namespace KWin
+ {
+ namespace Xwl
+@@ -42,6 +46,14 @@ public:
+     {
+         m_xwaylandXauthority = xauthority;
+     }
++    void addExtraXWaylandEnvrionmentVariable(const QString &variable, const QString &value)
++    {
++        m_xwaylandExtraEnvironment.insert(variable, value);
++    }
++    void passFdToXwayland(FileDescriptor &&fd)
++    {
++        m_xwaylandFds.push_back(std::move(fd));
++    }
+     XwaylandInterface *xwayland() const override;
+ #endif
+     void setApplicationsToStart(const QStringList &applications)
+@@ -74,6 +86,8 @@ private:
+     QList<int> m_xwaylandListenFds;
+     QString m_xwaylandDisplay;
+     QString m_xwaylandXauthority;
++    QMap<QString, QString> m_xwaylandExtraEnvironment;
++    std::vector<FileDescriptor> m_xwaylandFds;
+ #endif
+     KConfigWatcher::Ptr m_settingsWatcher;
+ };
+diff --git a/src/options.cpp b/src/options.cpp
+index 16771dc..0b5a986 100644
+--- a/src/options.cpp
++++ b/src/options.cpp
+@@ -56,6 +56,8 @@ Options::Options(QObject *parent)
+     , m_xwaylandMaxCrashCount(Options::defaultXwaylandMaxCrashCount())
+     , m_xwaylandEavesdrops(Options::defaultXwaylandEavesdrops())
+     , m_xwaylandEavesdropsMouse(Options::defaultXwaylandEavesdropsMouse())
++    , m_xwaylandEisNoPrompt(Options::defaultXwaylandEisNoPrompt())
++    , m_xwaylandEisNoPromptApps(Options::defaultXwaylandEisNotPromptApps())
+     , m_compositingMode(Options::defaultCompositingMode())
+     , m_useCompositing(Options::defaultUseCompositing())
+     , m_hiddenPreviews(Options::defaultHiddenPreviews())
+@@ -166,6 +168,24 @@ void Options::setXwaylandEavesdropsMouse(bool eavesdropsMouse)
+     Q_EMIT xwaylandEavesdropsChanged();
+ }
+ 
++void Options::setXWaylandEisNoPrompt(bool doNotPrompt)
++{
++    if (m_xwaylandEisNoPrompt == doNotPrompt) {
++        return;
++    }
++    m_xwaylandEisNoPrompt = doNotPrompt;
++    Q_EMIT xwaylandEisNoPromptChanged();
++}
++
++void Options::setXWaylandEisNoPromptApps(const QStringList &apps)
++{
++    if (m_xwaylandEisNoPromptApps == apps) {
++        return;
++    }
++    m_xwaylandEisNoPromptApps = apps;
++    Q_EMIT xwaylandEisNoPromptAppsChanged();
++}
++
+ void Options::setClickRaise(bool clickRaise)
+ {
+     if (m_autoRaise) {
+@@ -847,6 +867,8 @@ void Options::syncFromKcfgc()
+     setXwaylandMaxCrashCount(m_settings->xwaylandMaxCrashCount());
+     setXwaylandEavesdrops(XwaylandEavesdropsMode(m_settings->xwaylandEavesdrops()));
+     setXwaylandEavesdropsMouse(m_settings->xwaylandEavesdropsMouse());
++    setXWaylandEisNoPrompt(m_settings->xwaylandEisNoPrompt());
++    setXWaylandEisNoPromptApps(m_settings->xwaylandEisNoPromptApps());
+     setPlacement(m_settings->placement());
+     setAutoRaise(m_settings->autoRaise());
+     setAutoRaiseInterval(m_settings->autoRaiseInterval());
+diff --git a/src/options.h b/src/options.h
+index f7f63e2..dfa65a2 100644
+--- a/src/options.h
++++ b/src/options.h
+@@ -271,6 +271,14 @@ public:
+     {
+         return m_xwaylandEavesdropsMouse;
+     }
++    bool xwaylandEisNoPrompt() const
++    {
++        return m_xwaylandEisNoPrompt;
++    }
++    QStringList xwaylandEisNoPromptApps() const
++    {
++        return m_xwaylandEisNoPromptApps;
++    }
+ 
+     /**
+      * Whether clicking on a window raises it in FocusFollowsMouse
+@@ -711,6 +719,8 @@ public:
+     void setXwaylandMaxCrashCount(int maxCrashCount);
+     void setXwaylandEavesdrops(XwaylandEavesdropsMode mode);
+     void setXwaylandEavesdropsMouse(bool eavesdropsMouse);
++    void setXWaylandEisNoPrompt(bool doNotPrompt);
++    void setXWaylandEisNoPromptApps(const QStringList &apps);
+     void setNextFocusPrefersMouse(bool nextFocusPrefersMouse);
+     void setClickRaise(bool clickRaise);
+     void setAutoRaise(bool autoRaise);
+@@ -895,6 +905,14 @@ public:
+     {
+         return false;
+     }
++    static bool defaultXwaylandEisNoPrompt()
++    {
++        return false;
++    }
++    static QStringList defaultXwaylandEisNotPromptApps()
++    {
++        return QStringList();
++    }
+     static ActivationDesktopPolicy defaultActivationDesktopPolicy()
+     {
+         return ActivationDesktopPolicy::SwitchToOtherDesktop;
+@@ -914,6 +932,8 @@ Q_SIGNALS:
+     void xwaylandMaxCrashCountChanged();
+     void xwaylandEavesdropsChanged();
+     void xwaylandEavesdropsMouseChanged();
++    void xwaylandEisNoPromptChanged();
++    void xwaylandEisNoPromptAppsChanged();
+     void nextFocusPrefersMouseChanged();
+     void clickRaiseChanged();
+     void autoRaiseChanged();
+@@ -1001,6 +1021,8 @@ private:
+     int m_xwaylandMaxCrashCount;
+     XwaylandEavesdropsMode m_xwaylandEavesdrops;
+     bool m_xwaylandEavesdropsMouse;
++    bool m_xwaylandEisNoPrompt;
++    QStringList m_xwaylandEisNoPromptApps;
+ 
+     CompositingType m_compositingMode;
+     bool m_useCompositing;
+diff --git a/src/plugins/eis/CMakeLists.txt b/src/plugins/eis/CMakeLists.txt
+index 61ac515..ef4cf03 100644
+--- a/src/plugins/eis/CMakeLists.txt
++++ b/src/plugins/eis/CMakeLists.txt
+@@ -26,6 +26,7 @@ target_sources(eis PRIVATE
+     eisinputcapture.cpp
+     eisinputcapturemanager.cpp
+     eisinputcapturefilter.cpp
++    xwaylandeiscontext.cpp
+ )
+ 
+-target_link_libraries(eis PRIVATE kwin KF6::I18n KF6::GlobalAccel Libeis::Libeis XKB::XKB)
++target_link_libraries(eis PRIVATE kwin KF6::I18n KF6::ConfigGui KF6::GlobalAccel Libeis::Libeis XKB::XKB)
+diff --git a/src/plugins/eis/eisbackend.cpp b/src/plugins/eis/eisbackend.cpp
+index 43eca32..46fcfd3 100644
+--- a/src/plugins/eis/eisbackend.cpp
++++ b/src/plugins/eis/eisbackend.cpp
+@@ -9,12 +9,13 @@
+ #include "eiscontext.h"
+ #include "eisdevice.h"
+ #include "libeis_logging.h"
++#include "xwaylandeiscontext.h"
+ 
+ #include "core/output.h"
+ #include "input.h"
+ #include "keyboard_input.h"
+ #include "keyboard_layout.h"
+-#include "main.h"
++#include "main_wayland.h"
+ #include "workspace.h"
+ #include "xkb.h"
+ 
+@@ -26,19 +27,45 @@
+ 
+ #include <libeis.h>
+ 
++#include <fcntl.h>
++#include <unistd.h>
++
+ #include <ranges>
+ 
+ namespace KWin
+ {
+ 
++#define typeName(T)                                       \
++    [] {                                                  \
++        static_assert(                                    \
++            requires { typename T; }, "T is not a type"); \
++        return #T;                                        \
++        }()
++
+ EisBackend::EisBackend(QObject *parent)
+     : KWin::InputBackend(parent)
+     , m_serviceWatcher(new QDBusServiceWatcher(this))
+ {
++#if HAVE_XWAYLAND_ENABLE_EI_PORTAL
++    if (kwinApp()->operationMode() == Application::OperationModeWayland) {
++        // Unfortunately there is no way to pass a connected socket fd to libei like WAYLAND_SOCKET
++        // in libwayland so we are resorting to this hack
++        // https://gitlab.freedesktop.org/libinput/libei/-/issues/63
++        m_xWaylandContext = std::make_unique<XWaylandEisContext>(this);
++        FileDescriptor fd(open(m_xWaylandContext->socketName.constData(), O_PATH | O_CLOEXEC));
++        unlink(m_xWaylandContext->socketName.constData());
++        if (QByteArray(kwinApp()->metaObject()->className()) == typeName(KWin::ApplicationWayland)) {
++            auto appWayland = static_cast<ApplicationWayland *>(kwinApp());
++            appWayland->addExtraXWaylandEnvrionmentVariable(QStringLiteral("LIBEI_SOCKET"), QStringLiteral("/proc/self/fd/%1").arg(fd.get()));
++            appWayland->passFdToXwayland(std::move(fd));
++        }
++    }
++#endif
++
+     m_serviceWatcher->setConnection(QDBusConnection::sessionBus());
+     m_serviceWatcher->setWatchMode(QDBusServiceWatcher::WatchForUnregistration);
+     connect(m_serviceWatcher, &QDBusServiceWatcher::serviceUnregistered, this, [this](const QString &service) {
+-        std::erase_if(m_contexts, [&service](const std::unique_ptr<EisContext> &context) {
++        std::erase_if(m_contexts, [&service](const std::unique_ptr<DbusEisContext> &context) {
+             return context->dbusService == service;
+         });
+         m_serviceWatcher->removeWatchedService(service);
+@@ -92,14 +119,14 @@ QDBusUnixFileDescriptor EisBackend::connectToEIS(const int &capabilities, int &c
+     const QString dbusService = message().service();
+     static int s_cookie = 0;
+     cookie = ++s_cookie;
+-    m_contexts.push_back(std::make_unique<EisContext>(this, eisCapabilities, cookie, dbusService));
++    m_contexts.push_back(std::make_unique<DbusEisContext>(this, eisCapabilities, cookie, dbusService));
+     m_serviceWatcher->addWatchedService(dbusService);
+     return QDBusUnixFileDescriptor(m_contexts.back()->addClient());
+ }
+ 
+ void EisBackend::disconnect(int cookie)
+ {
+-    auto it = std::ranges::find(m_contexts, cookie, [](const std::unique_ptr<EisContext> &context) {
++    auto it = std::ranges::find(m_contexts, cookie, [](const std::unique_ptr<DbusEisContext> &context) {
+         return context->cookie;
+     });
+     if (it != std::ranges::end(m_contexts)) {
+diff --git a/src/plugins/eis/eisbackend.h b/src/plugins/eis/eisbackend.h
+index a34d403..f04282e 100644
+--- a/src/plugins/eis/eisbackend.h
++++ b/src/plugins/eis/eisbackend.h
+@@ -24,7 +24,8 @@ class QDBusServiceWatcher;
+ 
+ namespace KWin
+ {
+-class EisContext;
++class DbusEisContext;
++class XWaylandEisContext;
+ 
+ class EisBackend : public KWin::InputBackend, public QDBusContext
+ {
+@@ -46,7 +47,8 @@ public:
+ private:
+     QDBusServiceWatcher *m_serviceWatcher;
+     RamFile m_keymapFile;
+-    std::vector<std::unique_ptr<EisContext>> m_contexts;
++    std::unique_ptr<XWaylandEisContext> m_xWaylandContext;
++    std::vector<std::unique_ptr<DbusEisContext>> m_contexts;
+ };
+ 
+ }
+diff --git a/src/plugins/eis/eiscontext.cpp b/src/plugins/eis/eiscontext.cpp
+index 015e041..a05c94e 100644
+--- a/src/plugins/eis/eiscontext.cpp
++++ b/src/plugins/eis/eiscontext.cpp
+@@ -52,15 +52,30 @@ public:
+     std::unique_ptr<EisDevice> keyboard;
+ };
+ 
+-EisContext::EisContext(KWin::EisBackend *backend, QFlags<eis_device_capability> allowedCapabilities, int cookie, const QString &dbusService)
+-    : cookie(cookie)
++DbusEisContext::DbusEisContext(KWin::EisBackend *backend, QFlags<eis_device_capability> allowedCapabilities, int cookie, const QString &dbusService)
++    : EisContext(backend, allowedCapabilities)
++    , cookie(cookie)
+     , dbusService(dbusService)
++{
++    eis_setup_backend_fd(m_eisContext);
++}
++
++int DbusEisContext::addClient()
++{
++    return eis_backend_fd_add_client(m_eisContext);
++}
++
++void DbusEisContext::connectionRequested(eis_client *client)
++{
++    connectToClient(client);
++}
++
++EisContext::EisContext(KWin::EisBackend *backend, QFlags<eis_device_capability> allowedCapabilities)
++    : m_eisContext(eis_new(this))
+     , m_backend(backend)
+-    , m_eisContext(eis_new(this))
+     , m_allowedCapabilities(allowedCapabilities)
+     , m_socketNotifier(eis_get_fd(m_eisContext), QSocketNotifier::Read)
+ {
+-    eis_setup_backend_fd(m_eisContext);
+     eis_log_set_priority(m_eisContext, EIS_LOG_PRIORITY_DEBUG);
+     eis_log_set_handler(m_eisContext, eis_log_handler);
+     QObject::connect(&m_socketNotifier, &QSocketNotifier::activated, [this] {
+@@ -101,9 +116,23 @@ void EisContext::updateKeymap()
+     }
+ }
+ 
+-int EisContext::addClient()
++void EisContext::connectToClient(eis_client *client)
+ {
+-    return eis_backend_fd_add_client(m_eisContext);
++    eis_client_connect(client);
++
++    const char *clientName = eis_client_get_name(client);
++
++    auto seat = eis_client_new_seat(client, QByteArrayLiteral(" seat").prepend(clientName));
++    constexpr std::array allCapabilities{EIS_DEVICE_CAP_POINTER, EIS_DEVICE_CAP_POINTER_ABSOLUTE, EIS_DEVICE_CAP_KEYBOARD, EIS_DEVICE_CAP_TOUCH, EIS_DEVICE_CAP_SCROLL, EIS_DEVICE_CAP_BUTTON};
++    for (auto capability : allCapabilities) {
++        if (m_allowedCapabilities & capability) {
++            eis_seat_configure_capability(seat, capability);
++        }
++    }
++    eis_seat_add(seat);
++
++    m_clients.emplace_back(std::make_unique<EisClient>(client, seat));
++    qCDebug(KWIN_EIS) << "New eis client" << clientName;
+ }
+ 
+ static std::chrono::microseconds currentTime()
+@@ -129,19 +158,7 @@ void EisContext::handleEvents()
+                 eis_client_disconnect(client);
+                 break;
+             }
+-            eis_client_connect(client);
+-
+-            auto seat = eis_client_new_seat(client, QByteArrayLiteral(" seat").prepend(clientName));
+-            constexpr std::array allCapabilities{EIS_DEVICE_CAP_POINTER, EIS_DEVICE_CAP_POINTER_ABSOLUTE, EIS_DEVICE_CAP_KEYBOARD, EIS_DEVICE_CAP_TOUCH, EIS_DEVICE_CAP_SCROLL, EIS_DEVICE_CAP_BUTTON};
+-            for (auto capability : allCapabilities) {
+-                if (m_allowedCapabilities & capability) {
+-                    eis_seat_configure_capability(seat, capability);
+-                }
+-            }
+-
+-            eis_seat_add(seat);
+-            m_clients.emplace_back(std::make_unique<EisClient>(client, seat));
+-            qCDebug(KWIN_EIS) << "New eis client" << clientName;
++            connectionRequested(client);
+             break;
+         }
+         case EIS_EVENT_CLIENT_DISCONNECT: {
+diff --git a/src/plugins/eis/eiscontext.h b/src/plugins/eis/eiscontext.h
+index fd8f676..c14b17f 100644
+--- a/src/plugins/eis/eiscontext.h
++++ b/src/plugins/eis/eiscontext.h
+@@ -24,24 +24,37 @@ struct EisClient;
+ class EisContext
+ {
+ public:
+-    EisContext(EisBackend *backend, QFlags<eis_device_capability> allowedCapabilities, int cookie, const QString &dbusService);
+-    ~EisContext();
++    EisContext(EisBackend *backend, QFlags<eis_device_capability> allowedCapabilities);
++    virtual ~EisContext();
+ 
+-    int addClient();
+     void updateScreens();
+     void updateKeymap();
+ 
+-    const int cookie;
+-    const QString dbusService;
++protected:
++    eis *m_eisContext;
++    void connectToClient(eis_client *client);
++    virtual void connectionRequested(eis_client *client) = 0;
+ 
+ private:
+     void handleEvents();
+ 
+     EisBackend *m_backend;
+-    eis *m_eisContext;
+     QFlags<eis_device_capability> m_allowedCapabilities;
+     QSocketNotifier m_socketNotifier;
+     std::vector<std::unique_ptr<EisClient>> m_clients;
+ };
+ 
++class DbusEisContext : public EisContext
++{
++public:
++    DbusEisContext(EisBackend *backend, QFlags<eis_device_capability> allowedCapabilities, int cookie, const QString &dbusService);
++
++    int addClient();
++
++    const int cookie;
++    const QString dbusService;
++
++private:
++    void connectionRequested(eis_client *client) override;
++};
+ }
+diff --git a/src/plugins/eis/xwaylandeiscontext.cpp b/src/plugins/eis/xwaylandeiscontext.cpp
+new file mode 100644
+index 0000000..55c93a0
+--- /dev/null
++++ b/src/plugins/eis/xwaylandeiscontext.cpp
+@@ -0,0 +1,84 @@
++/*
++    SPDX-FileCopyrightText: 2024 David Redondo <kde@david-redono.de>
++
++    SPDX-License-Identifier: GPL-2.0-only OR GPL-3.0-only OR LicenseRef-KDE-Accepted-GPL
++*/
++
++#include "xwaylandeiscontext.h"
++
++#include "options.h"
++
++#include <KLocalizedString>
++
++#include <QCheckBox>
++#include <QDialog>
++#include <QDialogButtonBox>
++#include <QLabel>
++#include <QPushButton>
++#include <QStyle>
++#include <QVBoxLayout>
++
++#include <unistd.h>
++
++namespace KWin
++{
++
++XWaylandEisContext::XWaylandEisContext(EisBackend *backend)
++    : EisContext(backend, {EIS_DEVICE_CAP_POINTER | EIS_DEVICE_CAP_POINTER_ABSOLUTE | EIS_DEVICE_CAP_KEYBOARD | EIS_DEVICE_CAP_TOUCH | EIS_DEVICE_CAP_SCROLL | EIS_DEVICE_CAP_BUTTON})
++    , socketName(qgetenv("XDG_RUNTIME_DIR") + QByteArrayLiteral("/kwin-xwayland-eis-socket.") + QByteArray::number(getpid()))
++{
++    eis_setup_backend_socket(m_eisContext, socketName.constData());
++}
++
++void XWaylandEisContext::connectionRequested(eis_client *client)
++{
++    const QString clientName = QString::fromUtf8(eis_client_get_name(client));
++    if (options->xwaylandEisNoPrompt() || options->xwaylandEisNoPromptApps().contains(clientName)) {
++        connectToClient(client);
++        return;
++    }
++
++    auto dialog = new QDialog;
++    dialog->setAttribute(Qt::WA_DeleteOnClose);
++    dialog->setWindowTitle(i18nc("@title:window", "Remote control requested"));
++    dialog->setWindowIcon(QIcon::fromTheme(QStringLiteral("krfb")));
++    auto mainLayout = new QVBoxLayout(dialog);
++    auto iconTextLayout = new QHBoxLayout();
++    mainLayout->addLayout(iconTextLayout);
++    const int iconSize = dialog->style()->pixelMetric(QStyle::PM_MessageBoxIconSize);
++    auto icon = new QLabel(dialog);
++    icon->setPixmap(QIcon::fromTheme(QStringLiteral("krfb")).pixmap(iconSize));
++    iconTextLayout->addWidget(icon);
++    iconTextLayout->addWidget(new QLabel(i18nc("%1 is the app/binary", "%1 wants to control the pointer and keyboard", eis_client_get_name(client)), dialog));
++    auto allowAppCheckbox = new QCheckBox(i18nc("@option:check %1 is the app/binary", "Always allow for %1", clientName), dialog);
++    mainLayout->addWidget(allowAppCheckbox);
++    auto alwaysAllowCheckbox = new QCheckBox(i18nc("@option:check", "Always allow for legacy applications"), dialog);
++    mainLayout->addWidget(alwaysAllowCheckbox);
++    auto buttonBox = new QDialogButtonBox(dialog);
++    mainLayout->addWidget(buttonBox);
++    auto allowButton = buttonBox->addButton(i18nc("@action:button", "Allow"), QDialogButtonBox::AcceptRole);
++    allowButton->setIcon(QIcon::fromTheme(QStringLiteral("dialog-ok")));
++    buttonBox->addButton(QDialogButtonBox::Cancel);
++    dialog->show();
++    QObject::connect(buttonBox, &QDialogButtonBox::accepted, dialog, &QDialog::accept);
++    QObject::connect(buttonBox, &QDialogButtonBox::rejected, dialog, &QDialog::reject);
++    QObject::connect(dialog, &QDialog::finished, [client, clientName, alwaysAllowCheckbox, allowAppCheckbox, this](int result) {
++        if (result == QDialog::Accepted) {
++            connectToClient(client);
++            auto xwaylandGroup = kwinApp()->config()->group(QStringLiteral("Xwayland"));
++            if (alwaysAllowCheckbox->isChecked()) {
++                xwaylandGroup.writeEntry(QStringLiteral("XwaylandEisNoPrompt"), true, KConfig::Notify);
++            }
++            if (allowAppCheckbox->isChecked()) {
++                auto allowedApps = options->xwaylandEisNoPromptApps() << clientName;
++                xwaylandGroup.writeEntry(QStringLiteral("XwaylandEisNoPromptApps"), allowedApps, KConfig::Notify);
++            }
++            kwinApp()->config()->sync();
++        } else {
++            eis_client_disconnect(client);
++        }
++    });
++    dialog->show();
++}
++
++}
+diff --git a/src/plugins/eis/xwaylandeiscontext.h b/src/plugins/eis/xwaylandeiscontext.h
+new file mode 100644
+index 0000000..44eea5b
+--- /dev/null
++++ b/src/plugins/eis/xwaylandeiscontext.h
+@@ -0,0 +1,23 @@
++/*
++    SPDX-FileCopyrightText: 2024 David Redondo <kde@david-redono.de>
++
++    SPDX-License-Identifier: GPL-2.0-only OR GPL-3.0-only OR LicenseRef-KDE-Accepted-GPL
++*/
++
++#pragma once
++
++#include <eiscontext.h>
++
++namespace KWin
++{
++class XWaylandEisContext : public EisContext
++{
++public:
++    XWaylandEisContext(EisBackend *backend);
++
++    const QByteArray socketName;
++
++private:
++    void connectionRequested(eis_client *client) override;
++};
++}
+diff --git a/src/settings.kcfgc b/src/settings.kcfgc
+index 8ed482e..2a73387 100644
+--- a/src/settings.kcfgc
++++ b/src/settings.kcfgc
+@@ -4,3 +4,4 @@ ClassName=Settings
+ # options.h is needed for FocusPolicy and PlacementPolicy
+ IncludeFiles=\"options.h\"
+ UseEnumTypes=true
++Mutators=true
+diff --git a/src/xwayland/xwaylandlauncher.cpp b/src/xwayland/xwaylandlauncher.cpp
+index ab27713..5216ca6 100644
+--- a/src/xwayland/xwaylandlauncher.cpp
++++ b/src/xwayland/xwaylandlauncher.cpp
+@@ -37,6 +37,7 @@
+ #include <cerrno>
+ #include <cstring>
+ #include <fcntl.h>
++#include <ranges>
+ #include <sys/socket.h>
+ #include <unistd.h>
+ 
+@@ -72,6 +73,19 @@ void XwaylandLauncher::setXauthority(const QString &xauthority)
+     m_xAuthority = xauthority;
+ }
+ 
++void XwaylandLauncher::addEnvironmentVariables(const QMap<QString, QString> &extraEnvironment)
++{
++    m_extraEnvironment.insert(extraEnvironment);
++}
++
++void XwaylandLauncher::passFileDescriptors(std::vector<FileDescriptor> &&fds)
++{
++    m_fdsToPreserve.reserve(m_fdsToPreserve.size() + fds.size());
++    for (auto & fd : fds) {
++        m_fdsToPreserve.emplace_back(std::move(fd));
++    }
++}
++
+ void XwaylandLauncher::enable()
+ {
+     if (m_enabled) {
+@@ -163,9 +177,6 @@ bool XwaylandLauncher::start()
+     fdsToPass << wmfd->fds[1].get();
+ 
+     arguments << QStringLiteral("-rootless");
+-#if HAVE_XWAYLAND_ENABLE_EI_PORTAL
+-    arguments << QStringLiteral("-enable-ei-portal");
+-#endif
+ 
+     QProcessEnvironment env = QProcessEnvironment::systemEnvironment();
+ 
+@@ -192,6 +203,10 @@ bool XwaylandLauncher::start()
+                 m_xwaylandProcess->failChildProcessModifier("failed to unset O_CLOEXEC", errno);
+                 break;
+             }
++        for (const auto &fd : m_fdsToPreserve) {
++            int flags = fcntl(fd.get(), F_GETFD);
++            fcntl(fd.get(), F_SETFD, flags & ~FD_CLOEXEC);
++        }
+         }
+     });
+     connect(m_xwaylandProcess, &QProcess::errorOccurred, this, &XwaylandLauncher::handleXwaylandError);
+diff --git a/src/xwayland/xwaylandlauncher.h b/src/xwayland/xwaylandlauncher.h
+index 7e54d65..df5d3be 100644
+--- a/src/xwayland/xwaylandlauncher.h
++++ b/src/xwayland/xwaylandlauncher.h
+@@ -13,6 +13,7 @@
+ #include "utils/filedescriptor.h"
+ 
+ #include <QList>
++#include <QMap>
+ #include <QObject>
+ #include <QProcess>
+ #include <QSocketNotifier>
+@@ -58,6 +59,10 @@ public:
+      */
+     void setXauthority(const QString &xauthority);
+ 
++    void addEnvironmentVariables(const QMap<QString, QString> &extraEnvironment);
++
++    void passFileDescriptors(std::vector<FileDescriptor> &&fds);
++
+     void enable();
+     void disable();
+     bool start();
+@@ -103,6 +108,8 @@ private:
+     QList<int> m_listenFds;
+     QString m_displayName;
+     QString m_xAuthority;
++    QMap<QString, QString> m_extraEnvironment;
++    std::vector<FileDescriptor> m_fdsToPreserve;
+ 
+     bool m_enabled = false;
+     int m_crashCount = 0;
+-- 
+2.48.1
+
