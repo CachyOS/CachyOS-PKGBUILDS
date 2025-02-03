@@ -7,7 +7,7 @@
 pkgbase=nvidia-utils
 pkgname=('nvidia-utils' 'opencl-nvidia' 'nvidia-dkms' 'nvidia-open-dkms')
 pkgver=570.86.16
-pkgrel=2
+pkgrel=3
 arch=('x86_64')
 url="http://www.nvidia.com/"
 license=('custom')
@@ -23,7 +23,8 @@ source=('nvidia-drm-outputclass.conf'
         "https://us.download.nvidia.com/XFree86/Linux-x86_64/${pkgver}/${_pkg}.run"
         "$pkgname-$pkgver.tar.gz::https://github.com/NVIDIA/open-gpu-kernel-modules/archive/refs/tags/${pkgver}.tar.gz"
         0001-Enable-atomic-kernel-modesetting-by-default.patch
-        0003-Add-IBT-support.patch)
+        0002-Add-IBT-support.patch
+        0003-drm-Remove-driver-data-from-struct-drm_driver.patch)
 
 sha512sums=('de7116c09f282a27920a1382df84aa86f559e537664bb30689605177ce37dc5067748acf9afd66a3269a6e323461356592fdfc624c86523bf105ff8fe47d3770'
             '1bcf2c6ee71686c0d32625e746ec8c0f7cf42fc63c76c3076ff2526b2661e8b9e9f76eaa2c4b213c7cc437a6f06006cc07672c4974d7f4515b2de2fd7c47a891'
@@ -34,7 +35,8 @@ sha512sums=('de7116c09f282a27920a1382df84aa86f559e537664bb30689605177ce37dc50677
             '415adf4609f093e8703dd6f2c03bc5cbd84270c694e67bb0ee72897ac18dddb0d8aaf8baaf47e8624a79c54a1f794126a3ddb10fae91784f05f1f32ba063b985'
             'c2e637497828f9441cdc4a94037c79da001e040cdaad5efd6001e34ee872eda1245e8fb6310f79fc9f4bfe363c61d1becec124a9a171731b2ccdfcc43a735abb'
             '0bb89b9037f0baa9aae1ff8e70c9c93896f03fd0cc380eea4b0dc094a6991c3ad6738c9fbbaa42d8b5a544f77dc91c0e6401b1501c5970c576d5efbc0de8dd34'
-            '42f621179d4fd9bf608f0d84b9019f5a5fdf5d92d68d22ce9b9a9add1cad1c90dcb3764db68e0b9bc7e902bb6b955c59563ea6d4f39f2e39a340387e4d5deb82')
+            '5674c85e733296f0492e0d91d206e14e5779779b5cbbef9c91756d661ba1708d8d557ec888bd89a36388de5cbc84f1fb8d22d48b4f0ba0ddf1239205ddd8b2c7'
+            '7326d0f8b54a7fe83e06b3141ade287d122cff806386b9cd6148cdc1fe465b360a0c2c36f953763103f0f44127d7fb4e576989630a3c02017be68c3c305595ca')
 
 
 create_links() {
@@ -56,7 +58,11 @@ prepare() {
     # This avoids various issue, when Simplefb is used
     # https://gitlab.archlinux.org/archlinux/packaging/packages/nvidia-utils/-/issues/14
     # https://github.com/rpmfusion/nvidia-kmod/blob/master/make_modeset_default.patch
-    patch -Np1 < "$srcdir"/0001-Enable-atomic-kernel-modesetting-by-default.patch -d "${srcdir}/${_pkg}/kernel"
+    patch -Np1 -i  "$srcdir"/0001-Enable-atomic-kernel-modesetting-by-default.patch -d "${srcdir}/${_pkg}/kernel"
+
+    # Remove driver date from drm struct
+    # https://github.com/torvalds/linux/commit/cb2e1c2136f71618142557ceca3a8802e87a44cd
+    patch -Np2 -i "$srcdir"/0003-drm-Remove-driver-data-from-struct-drm_driver.patch -d "${srcdir}/${_pkg}/kernel"
 
 #    echo "Applying nvidia-patch..."
 
@@ -90,10 +96,14 @@ DEST_MODULE_LOCATION[4]="/kernel/drivers/video"' dkms.conf
     # This avoids various issue, when Simplefb is used
     # https://gitlab.archlinux.org/archlinux/packaging/packages/nvidia-utils/-/issues/14
     # https://github.com/rpmfusion/nvidia-kmod/blob/master/make_modeset_default.patch
-    patch -Np1 < "$srcdir"/0001-Enable-atomic-kernel-modesetting-by-default.patch -d "${srcdir}/open-gpu-kernel-modules-${pkgver}/kernel-open"
+    patch -Np1 -i "$srcdir"/0001-Enable-atomic-kernel-modesetting-by-default.patch -d "${srcdir}/open-gpu-kernel-modules-${pkgver}/kernel-open"
 
     # Fix for https://bugs.archlinux.org/task/74886
-    patch -Np1 --no-backup-if-mismatch -i "$srcdir"/0003-Add-IBT-support.patch
+    patch -Np1 -i "$srcdir"/0002-Add-IBT-support.patch
+
+    # Remove driver date from drm struct
+    # https://github.com/torvalds/linux/commit/cb2e1c2136f71618142557ceca3a8802e87a44cd
+    patch -Np1 -i "$srcdir"/0003-drm-Remove-driver-data-from-struct-drm_driver.patch
 
     # Attempt to make this reproducible
     sed -i "s/^HOSTNAME.*/HOSTNAME = echo cachyos"/ utils.mk
