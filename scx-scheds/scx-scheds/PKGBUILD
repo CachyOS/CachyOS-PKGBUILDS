@@ -37,7 +37,6 @@ validpgpkeys=(
 
 _backports=(
 809ce6c34652b68687487a60a135d7abb493dc7b
-59ad67152035319ecaa73e3c4e57ac0ab20a499a
 )
 
 _reverts=(
@@ -70,7 +69,12 @@ prepare() {
 
 build() {
   cd $_gitname
-  arch-meson . build -D openrc=disabled -D libbpf_a=disabled -D bpftool=disabled -D cargo_home="$srcdir"/scx
+  arch-meson . build -D openrc=disabled \
+    -D libbpf_a=disabled \
+    -D bpftool=disabled \
+    -D b_lto=true \
+    -D b_lto_mode=thin \
+    -D cargo_home="$srcdir"/scx
   meson compile -C build
 }
 
