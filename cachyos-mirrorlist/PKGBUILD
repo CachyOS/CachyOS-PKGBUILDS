@@ -1,16 +1,28 @@
+# Maintainer: Peter Jung ptr1337 <admin@ptr1337.dev>
+# Maintainer: Vladislav Nepogodin (vnepogodin) <vnepogodin@cachyos.org>
 
-pkgname=cachyos-mirrorlist
+pkgbase=cachyos-mirrorlist
+pkgname=('cachyos-mirrorlist' 'cachyos-v3-mirrorlist' 'cachyos-v4-mirrorlist')
 pkgver=21
 pkgrel=1
-pkgdesc="cachyos mirrorlist"
+pkgdesc="CachyOS repository mirrorlist"
 arch=('any')
 license=(GPL-3.0-or-later)
 groups=(cachyos)
-options=(!strip !emptydirs)
 backup=("etc/pacman.d/$pkgname")  # to keep possibly ranked mirrorlist
 source=(cachyos-mirrorlist)
-sha512sums=('21b9afa21979eee07c0ec7803e6b4be6a94af54df311f5c04622492ef3c538cbad26bb91ca8d00c020715ad540d98e0f1a786dc0d32b93efab12119c19d3a44c')
-package() {
- #install -d "$pkgdir/etc/pacman.d"
- install -Dm644 "$srcdir/$pkgname" "$pkgdir/etc/pacman.d/$pkgname"
+sha512sums=('b4a3b8058c3174d74910014bab855e0540ae0c4c02d817dc691f39b221c832c66af96f21e9e471caaa95e355d0ff004f435414f28cfac61cbcd15927772521b8')
+
+package_cachyos-mirrorlist() {
+ install -Dm644 "$srcdir/$pkgbase" "$pkgdir/etc/pacman.d/$pkgname"
+}
+
+package_cachyos-v3-mirrorlist() {
+ install -Dm644 "$srcdir/$pkgbase" "$pkgdir/etc/pacman.d/$pkgname"
+ sed -i 's|/$arch/|/$arch_v3/|g' "$pkgdir/etc/pacman.d/$pkgname"
+}
+
+package_cachyos-v4-mirrorlist() {
+ install -Dm644 "$srcdir/$pkgbase" "$pkgdir/etc/pacman.d/$pkgname"
+ sed -i 's|/$arch/|/$arch_v4/|g' "$pkgdir/etc/pacman.d/$pkgname"
 }
