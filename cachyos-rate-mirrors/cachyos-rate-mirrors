@@ -161,4 +161,4 @@ sed -i 's|/$arch/|/$arch_v4/|g' "${MIRRORS_DEFAULT_DIR}/cachyos-v4-mirrorlist"
 # This fixes a case where the third party package wrapper Aura ( https://github.com/fosskers/aura ) tries to parse
 # /etc/pacman.conf and can't read the "include"ded mirror files. By default, Aura intentionally runs without root
 # permissions for most non-modify operations.
-chmod go+r ${MIRRORS_DEFAULT_DIR}/*mirrorlist*
+chmod go+r "${MIRRORS_DEFAULT_DIR}"/*mirrorlist*
