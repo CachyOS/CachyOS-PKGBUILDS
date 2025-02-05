@@ -9,20 +9,22 @@ pkgdesc="CachyOS repository mirrorlist"
 arch=('any')
 license=(GPL-3.0-or-later)
 groups=(cachyos)
-backup=("etc/pacman.d/$pkgname")  # to keep possibly ranked mirrorlist
 source=(cachyos-mirrorlist)
 sha512sums=('b4a3b8058c3174d74910014bab855e0540ae0c4c02d817dc691f39b221c832c66af96f21e9e471caaa95e355d0ff004f435414f28cfac61cbcd15927772521b8')
 
 package_cachyos-mirrorlist() {
+ backup=("etc/pacman.d/$pkgname")  # to keep possibly ranked mirrorlist
  install -Dm644 "$srcdir/$pkgbase" "$pkgdir/etc/pacman.d/$pkgname"
 }
 
 package_cachyos-v3-mirrorlist() {
+ backup=("etc/pacman.d/$pkgname")  # to keep possibly ranked mirrorlist
  install -Dm644 "$srcdir/$pkgbase" "$pkgdir/etc/pacman.d/$pkgname"
  sed -i 's|/$arch/|/$arch_v3/|g' "$pkgdir/etc/pacman.d/$pkgname"
 }
 
 package_cachyos-v4-mirrorlist() {
+ backup=("etc/pacman.d/$pkgname")  # to keep possibly ranked mirrorlist
  install -Dm644 "$srcdir/$pkgbase" "$pkgdir/etc/pacman.d/$pkgname"
  sed -i 's|/$arch/|/$arch_v4/|g' "$pkgdir/etc/pacman.d/$pkgname"
 }
