@@ -14,8 +14,8 @@ _optimize_v3=${_optimize_v3-}
 _optimize_v4=${_optimize_v4-}
 
 pkgname=(gcc gcc-libs lib32-gcc-libs gcc-ada gcc-d gcc-fortran gcc-go gcc-m2 gcc-objc gcc-rust lto-dump libgccjit)
-pkgver=14.2.1+r730+gc061ad5a36ba
-_commit=c061ad5a36ba0c07d3d9d82a85aebb887def759d
+pkgver=14.2.1+r753+g1cd744a6828f
+_commit=1cd744a6828f6ab9179906d16434ea40b6404737
 pkgrel=2
 pkgdesc='The GNU Compiler Collection'
 arch=(x86_64)
@@ -51,13 +51,13 @@ validpgpkeys=(F3691687D867B81B51CE07D9BBE43771487328A9  # bpiotrowski@archlinux.
               86CFFCA918CF3AF47147588051E8B148A9999C34  # foutrelis@archlinux.org
               13975A70E63C361C73AE69EF6EEB81F8981C74C7  # richard.guenther@gmail.com
               D3A93CAD751C2AF4F8C7AD516C35B99309B5FA62) # Jakub Jelinek <jakub@redhat.com>
-sha256sums=('b85f812c76b339a69a17e6e4ad04b03d2c6ed6bc4c632ac1d30d87cd9b382d8b'
+sha256sums=('33378643f1c72686181f9d3fcd09caf9b06815324467f5dc9b9a3ea41cfba4b4'
             'de48736f6e4153f03d0a5d38ceb6c6fdb7f054e8f47ddd6af0a3dbf14f27b931'
             '2513c6d9984dd0a2058557bf00f06d8d5181734e41dcfe07be7ed86f2959622a'
             '1773f5137f08ac1f48f0f7297e324d5d868d55201c03068670ee4602babdef2f')
 #pkgver() {
 #  cd gcc
-#  echo "$(cat gcc/BASE-VER)+$(git describe --tags | sed 's/[^-]*-[^-]*-//;s/[^-]*-/r&/;s/-/+/g;s/_/./')"
+#  echo "$(cat gcc/BASE-VER)+$(git describe --abbrev=12 --tags | sed 's/[^-]*-[^-]*-//;s/[^-]*-/r&/;s/-/+/g;s/_/./')"
 #}
 
 prepare() {
