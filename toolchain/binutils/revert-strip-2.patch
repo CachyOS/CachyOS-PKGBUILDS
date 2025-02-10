@@ -1,0 +1,31 @@
+From 2c0c13933a6d08ae87c2852b3421ede090499f09 Mon Sep 17 00:00:00 2001
+From: Jan Beulich <jbeulich@suse.com>
+Date: Thu, 19 Dec 2024 10:39:38 +0100
+Subject: [PATCH] bfd/ELF: refine PR binutils/31872 fix
+
+The fix for PR binutils/31872 (commit b20ab53f81db) neglected the case
+of targets with only RELA support, where nevertheless object files using
+REL exist. In particular objcopy will create such objects for x86-64
+when converting from an i?86 ELF object (this by itself probably isn't
+quite right, but we ought to cope with what our own tools are doing).
+
+Restore the fallback to the RELA lookup, just without re-introducing the
+blind NULL de-ref that was there before.
+---
+ bfd/elfcode.h | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/bfd/elfcode.h b/bfd/elfcode.h
+index baf38fef5a51..72af344845e0 100644
+--- a/bfd/elfcode.h
++++ b/bfd/elfcode.h
+@@ -1615,7 +1615,8 @@ elf_slurp_reloc_table_from_section (bfd *abfd,
+       relent->addend = rela.r_addend;
+ 
+       res = false;
+-      if (entsize == sizeof (Elf_External_Rela)
++      if ((entsize == sizeof (Elf_External_Rela)
++	   || ebd->elf_info_to_howto_rel == NULL)
+ 	  && ebd->elf_info_to_howto != NULL)
+ 	res = ebd->elf_info_to_howto (abfd, relent, &rela);
+       else if (ebd->elf_info_to_howto_rel != NULL)

@@ -27,9 +27,13 @@ provides=(
 backup=('etc/gprofng.rc')
 options=(staticlibs !distcc !ccache)
 source=(git+https://sourceware.org/git/binutils-gdb.git#commit=${_commit}
-        gold-warn-unsupported.patch)
+        gold-warn-unsupported.patch
+        revert-strip.patch
+        revert-strip-2.patch)
 sha256sums=('8dd44ba88dd86a4dfb4de3fd3a83f1b3f797c97e7513225e8b92d8796ac25741'
-            '2d430b66f84a19c154725ec535280c493be1d34f1a90f95208dce02fecd0e4e4')
+            '2d430b66f84a19c154725ec535280c493be1d34f1a90f95208dce02fecd0e4e4'
+            'c783401be72ebfc954efe5c3e5f151ec2c6083757562cd43b3af10638008defa'
+            'b91a57731c699b415f477a3a4f0ec0fdab68e6caee6f8e57e8b4d0877dc1580d')
 validpgpkeys=(3A24BC1E8FB409FA9F14371813FCEF89DD9E3C4F)
 
 #pkgver() {
@@ -55,6 +59,7 @@ prepare() {
   # AutoFDO packaging is currently broken, since strip is failing
   # Rever the commit and wait till upstream fixes this
   # We are not running in the mentioned objtool amdgpu issue, therefore it should be pretty safe to revert it
+  patch -Rp1 -i "${srcdir}"/revert-strip-2.patch
   patch -Rp1 -i "${srcdir}"/revert-strip.patch
 }
 
