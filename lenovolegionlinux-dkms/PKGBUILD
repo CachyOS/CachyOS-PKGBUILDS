@@ -5,7 +5,7 @@
 pkgname=lenovolegionlinux-dkms
 _pkgname=lenovolegionlinux
 pkgver=0.0.19
-pkgrel=2
+pkgrel=3
 pkgdesc="LenovoLegionLinux (LLL) DKMS module"
 arch=("x86_64")
 url="https://github.com/johnfanv2/LenovoLegionLinux"
@@ -20,9 +20,14 @@ depends=(
   dkms
   lenovolegionlinux
 )
-source=(lenovolegionlinux::git+https://github.com/johnfanv2/LenovoLegionLinux.git#tag=v${pkgver})
+source=("${_pkgname}::git+https://github.com/johnfanv2/LenovoLegionLinux.git#tag=v${pkgver}")
 sha256sums=('60d8cc141ced3c5845fc0897cebbc23c9519171b5ade2b4b306e979e4070750a')
 install="lenovolegionlinux.install"
+
+prepare() {
+  cd ${_pkgname}
+  git cherry-pick -n 52bf5d7efc92b78458f99ba9125b873f0a32ca86
+}
 
 package() {
 	cd "${srcdir}/${_pkgname}/kernel_module/"
