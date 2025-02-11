@@ -84,12 +84,14 @@ optdepends=('maliit-keyboard: virtual keyboard for kwin-wayland')
 groups=(plasma)
 source=(https://download.kde.org/stable/plasma/$_dirver/$pkgname-$pkgver.tar.xz{,.sig}
         0001-libei-no-prompt.patch
-        0002-fifo-v1.patch)
+        0002-fifo-v1.patch
+        0003-tearing-and-hdr.patch)
 install=$pkgname.install
 sha256sums=('1ad978fc52b21bfdd218843554a015b24689e0c04904d1cb00e2e4afca4f4af4'
             'SKIP'
             'ba18bae95e98cb8b0686ca2e92fcc129a88d86da7df78809ef09bfc354bcd669'
-            'cbf72cba75be892bdc8c840055c1366bdb937e2ae3e962c3c9762ada2a43fdd1')
+            'cbf72cba75be892bdc8c840055c1366bdb937e2ae3e962c3c9762ada2a43fdd1'
+            'fefd2ea0dd1c64ccdde82a187b71544f10307eb0fe34dec41a1869e229137a5a')
 validpgpkeys=('E0A3EB202F8E57528E13E72FD7574483BB57B18D'  # Jonathan Esk-Riddell <jr@jriddell.org>
               '0AAC775BB6437A8D9AF7A3ACFE0784117FBCE11D'  # Bhushan Shah <bshah@kde.org>
               'D07BD8662C56CB291B316EB2F5675605C74E02CF'  # David Edmundson <davidedmundson@kde.org>
@@ -103,6 +105,9 @@ prepare() {
   # Implement fifo-v1 wayland protocol
   # https://invent.kde.org/plasma/kwin/-/merge_requests/6474
   patch -Np1 < ../0002-fifo-v1.patch
+  # Support tearing and HDR
+  # https://invent.kde.org/plasma/kwin/-/merge_requests/7097
+  patch -Np1 < ../0003-tearing-and-hdr.patch
 }
 
 build() {
