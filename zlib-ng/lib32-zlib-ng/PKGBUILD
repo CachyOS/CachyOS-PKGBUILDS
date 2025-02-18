@@ -7,7 +7,7 @@ pkgname=(
   lib32-zlib-ng
   lib32-zlib-ng-compat
 )
-pkgver=2.2.3
+pkgver=2.2.4
 pkgrel=1
 pkgdesc='zlib replacement with optimizations for next generation systems - 32-bit'
 url='https://github.com/zlib-ng/zlib-ng'
@@ -22,8 +22,8 @@ makedepends=(
   lib32-gcc-libs
 )
 source=(git+https://github.com/zlib-ng/zlib-ng#tag=${pkgver})
-sha256sums=('6867f8f1e57d3e8e4158292a839fa29967c58849aabeba2199e3d95b346d675f')
-b2sums=('5011d94bff127ffbd009fea15b4aea036e18fc241d37972856f68ed474a72bd0e7f75cff74e1a6c9e6c0132ca436ad7a7aa246dcc29747bd7dcedb5f8e35cbca')
+sha256sums=('6cd6ba3b99790fda03df7b41d7f99ec010ca1b72abb62d03d2fcf5b015a74c9a')
+b2sums=('51a58a4e5960fe111b2f58ed64aa3bf0b645e50cfb11a06ac53e320d7cc492e1707f607efe6fb8c6b1805fbd22f68a7ceb53e53863deebe9cf81e1270edb98a7')
 
 
 build() {
@@ -50,7 +50,7 @@ build() {
   msg2 "Building zlib-ng"
   cmake -B build \
     "${_options[@]}"
-  cmake --build build
+  cmake --build build -v
 
   msg2 "Building zlib-ng-compat"
   cmake -B build-compat \
