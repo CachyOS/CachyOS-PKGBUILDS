@@ -3,7 +3,7 @@
 
 pkgname=power-profiles-daemon
 pkgver=0.23
-pkgrel=2
+pkgrel=3
 pkgdesc='Makes power profiles handling available over D-Bus'
 url='https://gitlab.freedesktop.org/upower/power-profiles-daemon'
 license=(GPL-3.0-only)
@@ -15,8 +15,11 @@ depends=(gcc-libs
          polkit
          upower)
 optdepends=('python-gobject: for powerprofilesctl')
-makedepends=(git
+makedepends=(bash-completion
+             git
              glib2-devel
+             python-argparse-manpage
+             python-shtab
              meson)
 checkdepends=(python-dbusmock
               python-isort
@@ -25,15 +28,14 @@ checkdepends=(python-dbusmock
 source=(git+https://gitlab.freedesktop.org/upower/$pkgname#tag=$pkgver)
 sha256sums=('ffa0951d6c008239539c2a51150ad454b283c4b4b0e1910920b6afed3d143a3f')
 
-#prepare() {
-#  cd $pkgname
-#}
-
 build() {
   meson $pkgname build \
     --prefix /usr \
     --libexec lib \
-    --sysconfdir /usr/share
+    --sysconfdir /usr/share \
+    -Dzshcomp=/usr/share/zsh/site-functions \
+    -Dbashcomp=enabled \
+    -Dmanpage=enabled
   meson compile -C build
 }
 
