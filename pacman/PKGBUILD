@@ -15,7 +15,7 @@ _sqlitever=$(curl -s 'https://archlinux.org/packages/search/json/?name=sqlite' |
     if (NF == 4) { printf "%02d", $4 }
     else { printf "00" }
 }')
-pkgrel=2
+pkgrel=3
 pkgdesc="A library-based package manager with dependency support. CachyOS fork."
 arch=('x86_64' 'aarch64')
 url="https://www.archlinux.org/pacman/"
@@ -62,7 +62,7 @@ backup=(etc/pacman.conf
 #options=('!lto') -- should we put no lto here??
 #validpgpkeys=('6645B0A8C7005E78DB1D7864F99FFE0FEAE999BD'  # Allan McRae <allan@archlinux.org>
 #              'B8151B117037781095514CA7BBDFFC92306B1121') # Andrew Gregory (pacman) <andrew@archlinux.org>
-_commit="e5f15325597208d4405a44508e383aafb30444c4"
+_commit="ae01d942d9a18e240b4dddf002775e77ac944abd"
 source=("git+https://github.com/CachyOS/pacman.git#commit=${_commit}?signed"
         pacman.conf
         makepkg.conf
@@ -74,13 +74,13 @@ source=("git+https://github.com/CachyOS/pacman.git#commit=${_commit}?signed"
         78cd453.patch # PrettyProgressBar
         )
 source_aarch64=(fix-alpm-crate-for-aarch64.patch)
-sha256sums=('c268836017a36f72b4d1968e953cbeaaeac48adff7fbbceae70467e586b7db1f'
+sha256sums=('09225592995cce84e93f7e9707b61bce8dc51eff124cc0f3d87657acd99f7ab3'
             '7ba46605de8dcb1ffa2a580e386c471a370955f0e62530ddfaf29168551047e1'
             'ce794bf0d8a9b1cb2637188516ce39e3559b2b027c47e94ea388991d33461d89'
             'c8760d7ebb6c9817d508c691c67084be251cd9c8811ee1ccf92c1278bad74c1c'
             'b31dc7a2789d7fb99a56cc5a9d915c3d57e01233bf258731392afe44b1bf8e40'
             'bdd8fb13c1cd8606f41347bc1897e261031ac80b33c772d310f417064332f646'
-            '2d7b032b6fdfe8c442aa809f850687a81d06381deecd7be3312601d28612e640'
+            '4404d93cbce818b1b98ca7259d0ba9b45db76f2fdd9373e56f2d29b519f4d43b'
             '11e0078c5ac7cdafa625957a9da982989efe19719e4973cd77f28dc5780dccd9'
             '843ad07d4a996ad165f20544c5df5b6deec4496ec30daa38b874bf3fa28afa54')
 sha256sums_aarch64=('98af0b680561b4430c0290d461d28a03b7178cce6b62880c7d0803473bfa543c')
@@ -142,15 +142,13 @@ build() {
   cd "sqlite-src-${_sqlitever}"
   ./configure --prefix="${srcdir}/${pkgname}"/tmp_sqlite  \
         --disable-shared \
-        --enable-fts3 \
-        --enable-fts4 \
-        --enable-fts5 \
-        --enable-rtree \
+        --fts4 \
+        --fts5 \
+        --rtree \
         --disable-tcl \
-        --with-pic \
-        --enable-fast-install
+        --disable-readline
 
-  sed -i -e 's/ -shared / -Wl,-O1,--as-needed\0/g' libtool
+  sed -i -e 's/$(LDFLAGS.libsqlite3)/ -Wl,-O1,--as-needed \0/g' main.mk
   make
   make install
 
