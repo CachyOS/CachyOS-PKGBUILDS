@@ -5,7 +5,7 @@
 pkgname=kwin
 pkgver=6.3.1
 _dirver=$(echo $pkgver | cut -d. -f1-3)
-pkgrel=2
+pkgrel=3
 pkgdesc='An easy to use, but flexible, composited Window Manager (CachyOS Version)'
 arch=(x86_64)
 url='https://kde.org/plasma-desktop/'
@@ -85,13 +85,15 @@ groups=(plasma)
 source=(https://download.kde.org/stable/plasma/$_dirver/$pkgname-$pkgver.tar.xz{,.sig}
         https://invent.kde.org/plasma/kwin/-/commit/1d2fdf30.patch
         0001-libei-no-prompt.patch
-        0002-fifo-v1.patch)
+        0002-fifo-v1.patch
+        vrr.patch::https://invent.kde.org/plasma/kwin/-/commit/2d9cb31fe8756d9f6f6f38e49849fa77570e4350.patch)
 install=$pkgname.install
 sha256sums=('9a50ba0eaa6209783bdefbb668e57d0cbdfa71ce8ebfbd17fe446db6d773f242'
             'SKIP'
             'd0c18b7dcd31702e1e884a025df3cabcfe7927328a9bb7e22c9bab7881631374'
             '7df5390ee0df257d2ec2d96b8ef6d99b62704da8512246b8520c58e07612430a'
-            'cbf72cba75be892bdc8c840055c1366bdb937e2ae3e962c3c9762ada2a43fdd1')
+            'cbf72cba75be892bdc8c840055c1366bdb937e2ae3e962c3c9762ada2a43fdd1'
+            'b7463d74c0b097e372a485e77381cef4f29065b22d80833560d40ae58c3b6120')
 validpgpkeys=('E0A3EB202F8E57528E13E72FD7574483BB57B18D'  # Jonathan Esk-Riddell <jr@jriddell.org>
               '0AAC775BB6437A8D9AF7A3ACFE0784117FBCE11D'  # Bhushan Shah <bshah@kde.org>
               'D07BD8662C56CB291B316EB2F5675605C74E02CF'  # David Edmundson <davidedmundson@kde.org>
@@ -106,6 +108,8 @@ prepare() {
   # Implement fifo-v1 wayland protocol
   # https://invent.kde.org/plasma/kwin/-/merge_requests/6474
   patch -Np1 < ../0002-fifo-v1.patch
+  # Patch for VRR fixed in 6.3.2
+  patch -Np1 < ../vrr.patch
 }
 
 build() {
