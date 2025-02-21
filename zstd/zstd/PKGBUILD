@@ -5,7 +5,7 @@
 
 pkgname=zstd
 pkgver=1.5.7
-pkgrel=2
+pkgrel=3
 pkgdesc='Zstandard - Fast real-time compression algorithm'
 url='https://facebook.github.io/zstd/'
 arch=(x86_64)
@@ -35,6 +35,9 @@ prepare() {
   # avoid error on tests without static libs, we use LD_LIBRARY_PATH
   sed '/build static library to build tests/d' -i build/cmake/CMakeLists.txt
   sed 's/libzstd_static/libzstd_shared/g' -i build/cmake/tests/CMakeLists.txt
+
+  # Fix manpages
+  git cherry-pick -n 6af3842118ea5325480b403213b2a9fbed3d3d74
 }
 
 build() {
