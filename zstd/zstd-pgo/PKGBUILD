@@ -5,19 +5,32 @@
 # PGO Version: Laio O. Seman <laio@ieee.org>
 
 pkgname=zstd
-pkgver=1.5.6
+pkgver=1.5.7
 pkgrel=2
 pkgdesc='Zstandard - Fast real-time compression algorithm'
-url='https://github.com/facebook/zstd'
+url='https://facebook.github.io/zstd/'
 arch=(x86_64)
-license=(BSD GPL2)
-depends=(glibc gcc-libs zlib xz lz4)
-makedepends=(cmake gtest ninja)
+license=(
+  BSD-3-Clause
+  GPL-2.0-only
+)
+depends=(
+  glibc
+  gcc-libs
+  zlib
+  xz
+  lz4
+)
+makedepends=(
+  cmake
+  gtest
+  ninja
+)
 provides=(libzstd.so)
 source=(https://github.com/facebook/zstd/releases/download/v${pkgver}/zstd-${pkgver}.tar.zst{,.sig})
-sha256sums=('4aa8dd1c1115c0fd6b6b66c35c7f6ce7bd58cc1dfd3e4f175b45b39e84b14352'
+sha256sums=('5b331d961d6989dc21bb03397fc7a2a4d86bc65a14adc5ffbbce050354e30fd2'
             'SKIP')
-b2sums=('88430a6a5db47462f93f2458cd3cc4823913de2d2d979cad56b06b48367a4ee51f59c795944c16d06abfdd19758b69f0b6e504ed833d02ff76e4cda519d220e4'
+b2sums=('20df0493d9d960b8fc98f7cac7630f84dae6226bd906364ab9c9ce7dfb2be44a303fd077e4264979f3ee92efd59072d63c4bb4ae7b65c52f6ce0153513088837'
         'SKIP')
 validpgpkeys=(4EF4AC63455FC9F4545D9B7DEF8FE99528B52FFD)
 options=('debug')
@@ -68,7 +81,7 @@ build() {
   build/programs/zstd -b
   build/programs/zstd -b7i2
   build/programs/zstd -b5
-  
+
   # clean files
   cmake --build build --target clean
 
