@@ -74,6 +74,9 @@ build() {
   build-pgo/programs/zstd -b
   build-pgo/programs/zstd -b7i2
 
+  # Add more coverage to the profile
+  ctest --test-dir build-pgo || true
+
   # Cleanup
   rm -rf build-pgo
   unset LD_LIBRARY_PATH
