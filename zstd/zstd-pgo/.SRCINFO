@@ -1,7 +1,7 @@
-pkgbase = zstd
+pkgbase = zstd-pgo
 	pkgdesc = Zstandard - Fast real-time compression algorithm
 	pkgver = 1.5.7
-	pkgrel = 3
+	pkgrel = 1
 	url = https://facebook.github.io/zstd/
 	arch = x86_64
 	license = BSD-3-Clause
@@ -15,8 +15,10 @@ pkgbase = zstd
 	depends = xz
 	depends = lz4
 	provides = libzstd.so
+	provides = zstd
+	conflicts = zstd
 	source = git+https://github.com/facebook/zstd?signed#tag=v1.5.7
 	validpgpkeys = 4EF4AC63455FC9F4545D9B7DEF8FE99528B52FFD
 	sha256sums = e43521ef6e50b3c0f42612f6147c2f74c1c3af18e1c2d56fb91b8ddcb590c699
 
-pkgname = zstd
+pkgname = zstd-pgo
