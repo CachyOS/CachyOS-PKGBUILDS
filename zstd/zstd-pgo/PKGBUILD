@@ -30,38 +30,31 @@ provides=(libzstd.so)
 source=("git+https://github.com/facebook/zstd?signed#tag=v${pkgver}")
 sha256sums=('e43521ef6e50b3c0f42612f6147c2f74c1c3af18e1c2d56fb91b8ddcb590c699')
 validpgpkeys=(4EF4AC63455FC9F4545D9B7DEF8FE99528B52FFD)
-options=('debug')
+
 prepare() {
-  cd ${pkgname}-${pkgver}
+  cd zstd
   # avoid error on tests without static libs, we use LD_LIBRARY_PATH
   sed '/build static library to build tests/d' -i build/cmake/CMakeLists.txt
   sed 's/libzstd_static/libzstd_shared/g' -i build/cmake/tests/CMakeLists.txt
 
   # Fix manpages
   git cherry-pick -n 6af3842118ea5325480b403213b2a9fbed3d3d74
-
-  # PGO Patch
-  echo '
-	# Apply PGO-specific flags
-	if(PGO_GENERATE)
-      set_target_properties(zstd PROPERTIES COMPILE_FLAGS "-fprofile-generate")
-      message(STATUS "PGO GENERATE")
-	    target_link_libraries(zstd gcov)
-	endif()
-
-	if(PGO_USE)
-      set_target_properties(zstd PROPERTIES COMPILE_FLAGS "-fprofile-use -Werror=missing-profile -Wno-error=coverage-mismatch")
-	endif()
-  ' >> build/cmake/programs/CMakeLists.txt
 }
 
 build() {
-  cd ${pkgname}-${pkgver}
+  cd zstd
   export CFLAGS+=' -ffat-lto-objects'
   export CXXFLAGS+=' -ffat-lto-objects'
 
+  export ORIG_CFLAGS="${CFLAGS}"
+  export ORIG_CXXFLAGS="${CXXFLAGS}"
+
+  # Generate PGO profile
+  export CFLAGS+=' -fprofile-generate -fprofile-dir=.'
+  export CXXFLAGS+=' -fprofile-generate -fprofile-dir=.'
+
   # First build pass: Generate profile
-  cmake -S build/cmake -B build -G Ninja \
+  cmake -S build/cmake -B build-pgo -G Ninja \
     -DCMAKE_BUILD_TYPE=None \
       -DCMAKE_INSTALL_PREFIX=/usr \
       -DZSTD_ZLIB_SUPPORT=ON \
@@ -70,23 +63,27 @@ build() {
       -DZSTD_BUILD_CONTRIB=ON \
       -DZSTD_BUILD_STATIC=OFF \
       -DZSTD_BUILD_TESTS=ON \
-      -DZSTD_PROGRAMS_LINK_SHARED=ON \
-      -DPGO_GENERATE=ON \
-      -DPGO_USE=OFF
-  cmake --build build
+      -DZSTD_PROGRAMS_LINK_SHARED=ON
+  cmake --build build-pgo
 
-  build/programs/zstd -b19i1
-  build/programs/zstd -b16i1
-  build/programs/zstd -b9i2
-  build/programs/zstd -b
-  build/programs/zstd -b7i2
-  build/programs/zstd -b5
+  export LD_LIBRARY_PATH="$PWD/build-pgo/lib"
 
-  # clean files
-  cmake --build build --target clean
+  build-pgo/programs/zstd -b19i1
+  build-pgo/programs/zstd -b16i1
+  build-pgo/programs/zstd -b9i2
+  build-pgo/programs/zstd -b
+  build-pgo/programs/zstd -b7i2
+
+  # Cleanup
+  rm -rf build-pgo
+  unset LD_LIBRARY_PATH
+
+  # Use PGO profile
+  export CFLAGS="${ORIG_CFLAGS} -fprofile-use -fprofile-dir=. -Wno-error=missing-profile -Wno-error=coverage-mismatch"
+  export CXXFLAGS="${ORIG_CXXFLAGS} -fprofile-use -fprofile-dir=. -Wno-error=missing-profile -Wno-error=coverage-mismatch"
 
   # Second build pass: Use profile
-  cmake -S build/cmake -B build -G Ninja \
+  cmake -S build/cmake -B build-use -G Ninja \
     -DCMAKE_BUILD_TYPE=None \
     -DCMAKE_INSTALL_PREFIX=/usr \
     -DZSTD_ZLIB_SUPPORT=ON \
@@ -95,23 +92,20 @@ build() {
     -DZSTD_BUILD_CONTRIB=ON \
     -DZSTD_BUILD_STATIC=OFF \
     -DZSTD_BUILD_TESTS=ON \
-    -DZSTD_PROGRAMS_LINK_SHARED=ON \
-    -DPGO_GENERATE=OFF \
-    -DPGO_USE=ON
-
-  cmake --build build
+    -DZSTD_PROGRAMS_LINK_SHARED=ON
+  cmake --build build-use
 }
 
 
 check() {
-  cd ${pkgname}-${pkgver}
-  LD_LIBRARY_PATH="$(pwd)/build/lib" \
-    ctest -VV --test-dir build
+  cd zstd
+  LD_LIBRARY_PATH="$PWD/build-use/lib" \
+    ctest -VV --test-dir build-use
 }
 
 package() {
-  cd ${pkgname}-${pkgver}
-  DESTDIR="${pkgdir}" cmake --install build
+  cd zstd
+  DESTDIR="${pkgdir}" cmake --install build-use
   install -Dm 644 LICENSE -t "${pkgdir}/usr/share/licenses/${pkgname}"
 }
 
