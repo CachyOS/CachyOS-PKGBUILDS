@@ -1,14 +1,14 @@
 # Maintainer: Vladislav Nepogodin <nepogodin.vlad@gmail.com>
 
 pkgname=cachyos-kernel-manager-git
-pkgver=1.5.2.r16.gb6611be
+pkgver=1.14.0.r5.gf3eeaf6
 pkgrel=1
 epoch=1
 pkgdesc="Simple kernel manager"
-arch=(aarch64 x86_64 x86_64_v3)
+arch=(aarch64 x86_64)
 url="https://github.com/cachyos/kernel-manager"
 license=(GPL-3.0-or-later)
-depends=('qt6-base' 'polkit' 'chwd')
+depends=('qt6-base' 'polkit' 'chwd' 'scx-scheds')
 makedepends=('cmake' 'ninja' 'git' 'python' 'polkit-qt6' 'qt6-tools' 'cargo' 'lld' 'clang' 'llvm')
 source=("${pkgname}::git+$url.git"
         fix-installed-db.patch)
@@ -26,18 +26,14 @@ pkgver() {
 prepare() {
   cd "${srcdir}/${pkgname}"
 
+  # patch cmake to not check for existence of installeddb api
   patch -Np1 -i ../fix-installed-db.patch
 }
 
 build() {
   cd "${srcdir}/${pkgname}"
 
-  CFLAGS=${CFLAGS/-Wp,-D_GLIBCXX_ASSERTIONS}
-  CXXFLAGS=${CXXFLAGS/-Wp,-D_GLIBCXX_ASSERTIONS}
-
-  _cpuCount=$(grep -c -w ^processor /proc/cpuinfo)
-
-  # Compile with clang
+  # we are building with llvm stack here, due to rust
   export AR=llvm-ar
   export CC=clang
   export CXX=clang++
@@ -51,13 +47,13 @@ build() {
         -DCMAKE_BUILD_TYPE=Release \
         -DCMAKE_INSTALL_PREFIX=/usr \
         -DCMAKE_INSTALL_LIBDIR=lib
-  cmake --build build --parallel $_cpuCount
+  cmake --build build
 }
 
 package() {
   cd "${srcdir}/${pkgname}"
 
-  # Compile with clang
+  # we are building with llvm stack here, due to rust
   export AR=llvm-ar
   export CC=clang
   export CXX=clang++
@@ -67,8 +63,6 @@ package() {
   export RUSTFLAGS="-Cembed-bitcode -C opt-level=3 -Ccodegen-units=1 -Clinker=clang -C link-arg=-flto -Clink-arg=-fuse-ld=/usr/bin/ld.lld"
 
   DESTDIR="${pkgdir}" cmake --build build --target install
-
-  install -Dm644 LICENSE "${pkgdir}/usr/share/licenses/${pkgname/-git}/LICENSE"
 }
 
 # vim:set sw=2 sts=2 et:
