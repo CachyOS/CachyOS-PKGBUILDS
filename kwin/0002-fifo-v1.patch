@@ -1,7 +1,7 @@
-From 3cc4bca5814501e9704ebac585a103087cf1e81c Mon Sep 17 00:00:00 2001
+From 2621daec73317be6f19ab9ec8be51b509cab554b Mon Sep 17 00:00:00 2001
 From: Eric Naim <dnaim@cachyos.org>
 Date: Mon, 3 Feb 2025 21:47:29 +0800
-Subject: [PATCH 2/2] fifo-v1
+Subject: [PATCH] fifo-v1
 
 Signed-off-by: Eric Naim <dnaim@cachyos.org>
 ---
@@ -40,13 +40,13 @@ Signed-off-by: Eric Naim <dnaim@cachyos.org>
  create mode 100644 src/wayland/fifo_v1.h
 
 diff --git a/autotests/integration/CMakeLists.txt b/autotests/integration/CMakeLists.txt
-index a719660..957840c 100644
+index 872ba038bb..8dbb7350fa 100644
 --- a/autotests/integration/CMakeLists.txt
 +++ b/autotests/integration/CMakeLists.txt
 @@ -16,8 +16,10 @@ qt6_generate_wayland_protocol_client_sources(KWinIntegrationTestFramework
      FILES
          ${CMAKE_SOURCE_DIR}/src/wayland/protocols/wlr-layer-shell-unstable-v1.xml
-         ${CMAKE_SOURCE_DIR}/src/wayland/protocols/xx-color-management-v4.xml
+         ${PROJECT_SOURCE_DIR}/src/wayland/protocols/color-management-v1.xml
 +        ${WaylandProtocols_DATADIR}/stable/presentation-time/presentation-time.xml
          ${WaylandProtocols_DATADIR}/stable/xdg-shell/xdg-shell.xml
          ${WaylandProtocols_DATADIR}/staging/cursor-shape/cursor-shape-v1.xml
@@ -63,11 +63,11 @@ index a719660..957840c 100644
  
  if(KWIN_BUILD_X11)
 diff --git a/autotests/integration/kwin_wayland_test.h b/autotests/integration/kwin_wayland_test.h
-index 2f28c71..9d05c4b 100644
+index 646a95d691..e53d3ddb21 100644
 --- a/autotests/integration/kwin_wayland_test.h
 +++ b/autotests/integration/kwin_wayland_test.h
-@@ -22,12 +22,14 @@
- 
+@@ -23,12 +23,14 @@
+ #include "qwayland-color-management-v1.h"
  #include "qwayland-cursor-shape-v1.h"
  #include "qwayland-fake-input.h"
 +#include "qwayland-fifo-v1.h"
@@ -91,7 +91,7 @@ index 2f28c71..9d05c4b 100644
  Q_DECLARE_FLAGS(AdditionalWaylandInterfaces, AdditionalWaylandInterface)
  
 @@ -681,6 +685,20 @@ public:
-     ~XXColorManagerV4() override;
+     ~ColorManagerV1() override;
  };
  
 +class FifoManagerV1 : public QtWayland::wp_fifo_manager_v1
@@ -114,7 +114,7 @@ index 2f28c71..9d05c4b 100644
 @@ -740,6 +758,8 @@ QList<WaylandOutputDeviceV2 *> waylandOutputDevicesV2();
  FakeInput *waylandFakeInput();
  SecurityContextManagerV1 *waylandSecurityContextManagerV1();
- XXColorManagerV4 *colorManager();
+ ColorManagerV1 *colorManager();
 +FifoManagerV1 *fifoManager();
 +PresentationTime *presentationTime();
  
@@ -122,7 +122,7 @@ index 2f28c71..9d05c4b 100644
  
 diff --git a/autotests/integration/test_fifo.cpp b/autotests/integration/test_fifo.cpp
 new file mode 100644
-index 0000000..7ce6397
+index 0000000000..7ce6397b32
 --- /dev/null
 +++ b/autotests/integration/test_fifo.cpp
 @@ -0,0 +1,259 @@
@@ -386,20 +386,20 @@ index 0000000..7ce6397
 +WAYLANDTEST_MAIN(KWin::FifoTest)
 +#include "test_fifo.moc"
 diff --git a/autotests/integration/test_helpers.cpp b/autotests/integration/test_helpers.cpp
-index 31e20fc..96f4067 100644
+index 21eaeee420..3b3bccc6b3 100644
 --- a/autotests/integration/test_helpers.cpp
 +++ b/autotests/integration/test_helpers.cpp
 @@ -320,6 +320,8 @@ static struct
      SecurityContextManagerV1 *securityContextManagerV1 = nullptr;
      XdgWmDialogV1 *xdgWmDialogV1;
-     std::unique_ptr<XXColorManagerV4> colorManager;
+     std::unique_ptr<ColorManagerV1> colorManager;
 +    std::unique_ptr<FifoManagerV1> fifoManager;
 +    std::unique_ptr<PresentationTime> presentationTime;
  } s_waylandConnection;
  
  MockInputMethod *inputMethod()
 @@ -546,6 +548,16 @@ bool setupWaylandConnection(AdditionalWaylandInterfaces flags)
-                 s_waylandConnection.colorManager = std::make_unique<XXColorManagerV4>(*registry, name, version);
+                 s_waylandConnection.colorManager = std::make_unique<ColorManagerV1>(*registry, name, version);
              }
          }
 +        if (flags & AdditionalWaylandInterface::FifoV1) {
@@ -424,7 +424,7 @@ index 31e20fc..96f4067 100644
  
      delete s_waylandConnection.queue; // Must be destroyed last
      s_waylandConnection.queue = nullptr;
-@@ -795,6 +809,16 @@ XXColorManagerV4 *colorManager()
+@@ -795,6 +809,16 @@ ColorManagerV1 *colorManager()
      return s_waylandConnection.colorManager.get();
  }
  
@@ -441,8 +441,8 @@ index 31e20fc..96f4067 100644
  bool waitForWaylandSurface(Window *window)
  {
      if (window->surface()) {
-@@ -1766,6 +1790,26 @@ XXColorManagerV4::~XXColorManagerV4()
-     xx_color_manager_v4_destroy(object());
+@@ -1766,6 +1790,26 @@ ColorManagerV1::~ColorManagerV1()
+     wp_color_manager_v1_destroy(object());
  }
  
 +FifoManagerV1::FifoManagerV1(::wl_registry *registry, uint32_t id, int version)
@@ -469,10 +469,10 @@ index 31e20fc..96f4067 100644
  {
      auto virtualKeyboard = static_cast<WaylandTestApplication *>(kwinApp())->virtualKeyboard();
 diff --git a/src/compositor_wayland.cpp b/src/compositor_wayland.cpp
-index 8f3b175..80dad83 100644
+index 87c728af3b..5ae74f5649 100644
 --- a/src/compositor_wayland.cpp
 +++ b/src/compositor_wayland.cpp
-@@ -304,6 +304,18 @@ static bool checkForBlackBackground(SurfaceItem *background)
+@@ -316,6 +316,18 @@ static bool checkForBlackBackground(SurfaceItem *background)
      return nits.lengthSquared() <= (0.1 * 0.1);
  }
  
@@ -491,7 +491,7 @@ index 8f3b175..80dad83 100644
  void WaylandCompositor::composite(RenderLoop *renderLoop)
  {
      if (m_backend->checkGraphicsReset()) {
-@@ -323,7 +335,8 @@ void WaylandCompositor::composite(RenderLoop *renderLoop)
+@@ -335,7 +347,8 @@ void WaylandCompositor::composite(RenderLoop *renderLoop)
      superLayer->setOutputLayer(primaryLayer);
  
      renderLoop->prepareNewFrame();
@@ -501,7 +501,7 @@ index 8f3b175..80dad83 100644
      bool directScanout = false;
      std::optional<double> desiredArtificalHdrHeadroom;
  
-@@ -343,6 +356,10 @@ void WaylandCompositor::composite(RenderLoop *renderLoop)
+@@ -355,6 +368,10 @@ void WaylandCompositor::composite(RenderLoop *renderLoop)
          frame->setBrightness(std::pow(std::clamp(std::pow(output->brightnessSetting() * output->dimming(), 1.0 / 2.2), current - maxChangePerFrame, current + maxChangePerFrame), 2.2));
      }
  
@@ -513,7 +513,7 @@ index 8f3b175..80dad83 100644
          auto totalTimeQuery = std::make_unique<CpuRenderTimeQuery>();
          renderLoop->beginPaint();
 diff --git a/src/core/renderlayerdelegate.cpp b/src/core/renderlayerdelegate.cpp
-index 340e3f0..5dd341a 100644
+index 340e3f09ff..5dd341a6e3 100644
 --- a/src/core/renderlayerdelegate.cpp
 +++ b/src/core/renderlayerdelegate.cpp
 @@ -23,6 +23,10 @@ void RenderLayerDelegate::frame(OutputFrame *frame)
@@ -528,7 +528,7 @@ index 340e3f0..5dd341a 100644
  {
      return QRegion();
 diff --git a/src/core/renderlayerdelegate.h b/src/core/renderlayerdelegate.h
-index 42a9c9c..0e13b8a 100644
+index 42a9c9cf9d..0e13b8ab07 100644
 --- a/src/core/renderlayerdelegate.h
 +++ b/src/core/renderlayerdelegate.h
 @@ -37,6 +37,11 @@ public:
@@ -544,10 +544,10 @@ index 42a9c9c..0e13b8a 100644
       * This function is called by the compositor before starting painting. Reimplement
       * this function to do frame initialization.
 diff --git a/src/core/renderloop.cpp b/src/core/renderloop.cpp
-index d89574d..1c7c03b 100644
+index 077d846405..be7db21038 100644
 --- a/src/core/renderloop.cpp
 +++ b/src/core/renderloop.cpp
-@@ -185,7 +185,9 @@ void RenderLoopPrivate::dispatch()
+@@ -190,7 +190,9 @@ void RenderLoopPrivate::dispatch()
  {
      // On X11, we want to ignore repaints that are scheduled by windows right before
      // the Compositor starts repainting.
@@ -559,7 +559,7 @@ index d89574d..1c7c03b 100644
      Q_EMIT q->frameRequested(q);
  
 diff --git a/src/scene/cursorscene.cpp b/src/scene/cursorscene.cpp
-index 7c9c271..0c2acaa 100644
+index 7c9c271ce4..0c2acaac0d 100644
 --- a/src/scene/cursorscene.cpp
 +++ b/src/scene/cursorscene.cpp
 @@ -44,6 +44,16 @@ static void resetRepaintsHelper(Item *item, SceneDelegate *delegate)
@@ -580,7 +580,7 @@ index 7c9c271..0c2acaa 100644
  {
      resetRepaintsHelper(m_rootItem.get(), delegate);
 diff --git a/src/scene/cursorscene.h b/src/scene/cursorscene.h
-index db01f41..00202cb 100644
+index db01f41099..00202cb62a 100644
 --- a/src/scene/cursorscene.h
 +++ b/src/scene/cursorscene.h
 @@ -23,6 +23,7 @@ public:
@@ -592,7 +592,7 @@ index db01f41..00202cb 100644
      void postPaint() override;
      void paint(const RenderTarget &renderTarget, const QRegion &region) override;
 diff --git a/src/scene/item.cpp b/src/scene/item.cpp
-index 8d7b989..87eba96 100644
+index 8d7b9897ba..87eba9666f 100644
 --- a/src/scene/item.cpp
 +++ b/src/scene/item.cpp
 @@ -466,6 +466,13 @@ void Item::scheduleSceneRepaintInternal(const QRegion &region)
@@ -610,7 +610,7 @@ index 8d7b989..87eba96 100644
  {
  }
 diff --git a/src/scene/item.h b/src/scene/item.h
-index 7187eac..c42781d 100644
+index 7187eac683..c42781de7a 100644
 --- a/src/scene/item.h
 +++ b/src/scene/item.h
 @@ -133,6 +133,7 @@ public:
@@ -622,7 +622,7 @@ index 7187eac..c42781d 100644
      const ColorDescription &colorDescription() const;
      RenderingIntent renderingIntent() const;
 diff --git a/src/scene/scene.cpp b/src/scene/scene.cpp
-index 7bdf18b..4e4000d 100644
+index 7bdf18b6b3..4e4000d882 100644
 --- a/src/scene/scene.cpp
 +++ b/src/scene/scene.cpp
 @@ -29,6 +29,11 @@ QList<SurfaceItem *> SceneDelegate::scanoutCandidates(ssize_t maxCount) const
@@ -638,7 +638,7 @@ index 7bdf18b..4e4000d 100644
  {
      return m_scene->prePaint(this);
 diff --git a/src/scene/scene.h b/src/scene/scene.h
-index 6eaadc2..e29480e 100644
+index 6eaadc2551..e29480e1a2 100644
 --- a/src/scene/scene.h
 +++ b/src/scene/scene.h
 @@ -31,6 +31,7 @@ public:
@@ -658,7 +658,7 @@ index 6eaadc2..e29480e 100644
      virtual void postPaint() = 0;
      virtual void paint(const RenderTarget &renderTarget, const QRegion &region) = 0;
 diff --git a/src/scene/surfaceitem_wayland.cpp b/src/scene/surfaceitem_wayland.cpp
-index 4a30756..d7fcacc 100644
+index 4a307565c0..d7fcacc303 100644
 --- a/src/scene/surfaceitem_wayland.cpp
 +++ b/src/scene/surfaceitem_wayland.cpp
 @@ -48,6 +48,7 @@ SurfaceItemWayland::SurfaceItemWayland(SurfaceInterface *surface, Item *parent)
@@ -724,7 +724,7 @@ index 4a30756..d7fcacc 100644
      : SurfacePixmap(Compositor::self()->backend()->createSurfaceTextureWayland(this), parent)
      , m_item(item)
 diff --git a/src/scene/surfaceitem_wayland.h b/src/scene/surfaceitem_wayland.h
-index f769284..64689a0 100644
+index f769284172..64689a02e1 100644
 --- a/src/scene/surfaceitem_wayland.h
 +++ b/src/scene/surfaceitem_wayland.h
 @@ -8,6 +8,7 @@
@@ -762,7 +762,7 @@ index f769284..64689a0 100644
  
  class KWIN_EXPORT SurfacePixmapWayland final : public SurfacePixmap
 diff --git a/src/scene/workspacescene.cpp b/src/scene/workspacescene.cpp
-index 9cbd551..41fb20a 100644
+index 9cbd551308..41fb20acea 100644
 --- a/src/scene/workspacescene.cpp
 +++ b/src/scene/workspacescene.cpp
 @@ -288,6 +288,16 @@ void WorkspaceScene::frame(SceneDelegate *delegate, OutputFrame *frame)
@@ -783,7 +783,7 @@ index 9cbd551..41fb20a 100644
  {
      createStackingOrder();
 diff --git a/src/scene/workspacescene.h b/src/scene/workspacescene.h
-index 97f00e0..fc3f654 100644
+index 97f00e05f5..fc3f6542cb 100644
 --- a/src/scene/workspacescene.h
 +++ b/src/scene/workspacescene.h
 @@ -50,6 +50,7 @@ public:
@@ -795,7 +795,7 @@ index 97f00e0..fc3f654 100644
      void postPaint() override;
      void paint(const RenderTarget &renderTarget, const QRegion &region) override;
 diff --git a/src/wayland/CMakeLists.txt b/src/wayland/CMakeLists.txt
-index e82ae89..5030256 100644
+index b4123a5007..5d0683269f 100644
 --- a/src/wayland/CMakeLists.txt
 +++ b/src/wayland/CMakeLists.txt
 @@ -307,12 +307,16 @@ ecm_add_qtwayland_server_protocol_kde(WaylandProtocols_xml
@@ -816,7 +816,7 @@ index e82ae89..5030256 100644
  
  target_sources(kwin PRIVATE
      abstract_data_source.cpp
-@@ -338,6 +342,7 @@ target_sources(kwin PRIVATE
+@@ -339,6 +343,7 @@ target_sources(kwin PRIVATE
      drmclientbuffer.cpp
      drmlease_v1.cpp
      externalbrightness_v1.cpp
@@ -824,7 +824,7 @@ index e82ae89..5030256 100644
      filtered_display.cpp
      fixes.cpp
      fractionalscale_v1.cpp
-@@ -425,6 +430,7 @@ install(FILES
+@@ -426,6 +431,7 @@ install(FILES
      dpms.h
      drmlease_v1.h
      externalbrightness_v1.h
@@ -832,17 +832,17 @@ index e82ae89..5030256 100644
      fractionalscale_v1.h
      frog_colormanagement_v1.h
      idle.h
-@@ -485,6 +491,7 @@ install(FILES
- 
+@@ -486,6 +492,7 @@ install(FILES
      ${CMAKE_CURRENT_BINARY_DIR}/qwayland-server-alpha-modifier-v1.h
+     ${CMAKE_CURRENT_BINARY_DIR}/qwayland-server-color-management-v1.h
      ${CMAKE_CURRENT_BINARY_DIR}/qwayland-server-content-type-v1.h
 +    ${CMAKE_CURRENT_BINARY_DIR}/qwayland-server-fifo-v1.h
      ${CMAKE_CURRENT_BINARY_DIR}/qwayland-server-frog-color-management-v1.h
      ${CMAKE_CURRENT_BINARY_DIR}/qwayland-server-kde-external-brightness-v1.h
      ${CMAKE_CURRENT_BINARY_DIR}/qwayland-server-linux-drm-syncobj-v1.h
-@@ -492,6 +499,7 @@ install(FILES
-     ${CMAKE_CURRENT_BINARY_DIR}/qwayland-server-xx-color-management-v4.h
+@@ -493,6 +500,7 @@ install(FILES
      ${CMAKE_CURRENT_BINARY_DIR}/wayland-alpha-modifier-v1-server-protocol.h
+     ${CMAKE_CURRENT_BINARY_DIR}/wayland-color-management-v1-server-protocol.h
      ${CMAKE_CURRENT_BINARY_DIR}/wayland-content-type-v1-server-protocol.h
 +    ${CMAKE_CURRENT_BINARY_DIR}/wayland-fifo-v1-server-protocol.h
      ${CMAKE_CURRENT_BINARY_DIR}/wayland-frog-color-management-v1-server-protocol.h
@@ -850,7 +850,7 @@ index e82ae89..5030256 100644
      ${CMAKE_CURRENT_BINARY_DIR}/wayland-linux-drm-syncobj-v1-server-protocol.h
 diff --git a/src/wayland/fifo_v1.cpp b/src/wayland/fifo_v1.cpp
 new file mode 100644
-index 0000000..a0e2908
+index 0000000000..a0e2908dec
 --- /dev/null
 +++ b/src/wayland/fifo_v1.cpp
 @@ -0,0 +1,75 @@
@@ -931,7 +931,7 @@ index 0000000..a0e2908
 +}
 diff --git a/src/wayland/fifo_v1.h b/src/wayland/fifo_v1.h
 new file mode 100644
-index 0000000..b962d17
+index 0000000000..b962d17bef
 --- /dev/null
 +++ b/src/wayland/fifo_v1.h
 @@ -0,0 +1,40 @@
@@ -976,17 +976,17 @@ index 0000000..b962d17
 +
 +}
 diff --git a/src/wayland/surface.cpp b/src/wayland/surface.cpp
-index 601aab3..542e9e5 100644
+index 8e3d3252a9..75263b808e 100644
 --- a/src/wayland/surface.cpp
 +++ b/src/wayland/surface.cpp
-@@ -24,6 +24,7 @@
+@@ -25,6 +25,7 @@
  #include "subcompositor.h"
  #include "surface_p.h"
  #include "transaction.h"
 +#include "transaction_p.h"
  #include "utils/resource.h"
- #include "xx_colormanagement_v4.h"
  
+ #include <wayland-server.h>
 @@ -429,6 +430,13 @@ SurfaceInterface::SurfaceInterface(CompositorInterface *compositor, wl_resource
  
  SurfaceInterface::~SurfaceInterface()
@@ -1054,7 +1054,7 @@ index 601aab3..542e9e5 100644
  
  #include "moc_surface.cpp"
 diff --git a/src/wayland/surface.h b/src/wayland/surface.h
-index 021f91c..9a2986c 100644
+index 021f91cac6..9a2986c0ea 100644
 --- a/src/wayland/surface.h
 +++ b/src/wayland/surface.h
 @@ -364,6 +364,13 @@ public:
@@ -1085,11 +1085,11 @@ index 021f91c..9a2986c 100644
      std::unique_ptr<SurfaceInterfacePrivate> d;
      friend class SurfaceInterfacePrivate;
 diff --git a/src/wayland/surface_p.h b/src/wayland/surface_p.h
-index f93c050..c3b0453 100644
+index 243f05529b..d43b7e89e7 100644
 --- a/src/wayland/surface_p.h
 +++ b/src/wayland/surface_p.h
-@@ -31,6 +31,8 @@ class XXColorSurfaceV4;
- class XXColorFeedbackSurfaceV4;
+@@ -31,6 +31,8 @@ class ColorSurfaceV1;
+ class ColorFeedbackSurfaceV1;
  class LinuxDrmSyncObjSurfaceV1;
  class AlphaModifierSurfaceV1;
 +class FifoV1Surface;
@@ -1115,7 +1115,7 @@ index f93c050..c3b0453 100644
      QList<OutputInterface *> outputs;
      QPointer<OutputInterface> primaryOutput;
 @@ -185,6 +190,7 @@ public:
-     QList<XXColorFeedbackSurfaceV4 *> xxColorFeedbacks;
+     QList<ColorFeedbackSurfaceV1 *> colorFeedbackSurfaces;
      LinuxDrmSyncObjSurfaceV1 *syncObjV1 = nullptr;
      AlphaModifierSurfaceV1 *alphaModifier = nullptr;
 +    FifoV1Surface *fifoSurface = nullptr;
@@ -1123,7 +1123,7 @@ index f93c050..c3b0453 100644
      struct
      {
 diff --git a/src/wayland/transaction.cpp b/src/wayland/transaction.cpp
-index fcd19d4..61eb7d2 100644
+index fd53284cff..027ad67b25 100644
 --- a/src/wayland/transaction.cpp
 +++ b/src/wayland/transaction.cpp
 @@ -96,6 +96,28 @@ void TransactionEventFdLocker::unlock()
@@ -1155,7 +1155,7 @@ index fcd19d4..61eb7d2 100644
  Transaction::Transaction()
  {
  }
-@@ -300,6 +322,14 @@ void Transaction::commit()
+@@ -304,6 +326,14 @@ void Transaction::commit()
      }
  }
  
@@ -1171,7 +1171,7 @@ index fcd19d4..61eb7d2 100644
  
  #include "moc_transaction.cpp"
 diff --git a/src/wayland/transaction.h b/src/wayland/transaction.h
-index d138dc8..da3cf7b 100644
+index d138dc8422..da3cf7b5db 100644
 --- a/src/wayland/transaction.h
 +++ b/src/wayland/transaction.h
 @@ -110,6 +110,8 @@ public:
@@ -1184,7 +1184,7 @@ index d138dc8..da3cf7b 100644
      void apply();
      bool tryApply();
 diff --git a/src/wayland/transaction_p.h b/src/wayland/transaction_p.h
-index 29a9921..d2b6432 100644
+index 29a9921e81..d2b64323e1 100644
 --- a/src/wayland/transaction_p.h
 +++ b/src/wayland/transaction_p.h
 @@ -48,4 +48,16 @@ private:
@@ -1205,10 +1205,10 @@ index 29a9921..d2b6432 100644
 +
  } // namespace KWin
 diff --git a/src/wayland_server.cpp b/src/wayland_server.cpp
-index cb9d4e6..dc9a2cf 100644
+index 1278713b8d..8b5fd2f79a 100644
 --- a/src/wayland_server.cpp
 +++ b/src/wayland_server.cpp
-@@ -37,6 +37,7 @@
+@@ -38,6 +38,7 @@
  #include "wayland/drmclientbuffer.h"
  #include "wayland/drmlease_v1.h"
  #include "wayland/externalbrightness_v1.h"
@@ -1225,10 +1225,10 @@ index cb9d4e6..dc9a2cf 100644
  }
  
 diff --git a/src/wayland_server.h b/src/wayland_server.h
-index 5ed7da4..798f3e2 100644
+index c0dc30a2fc..762af34505 100644
 --- a/src/wayland_server.h
 +++ b/src/wayland_server.h
-@@ -65,6 +65,7 @@ class XXColorManagerV4;
+@@ -65,6 +65,7 @@ class ColorManagerV1;
  class LinuxDrmSyncObjV1Interface;
  class RenderBackend;
  class AlphaModifierManagerV1;
