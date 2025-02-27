@@ -6,8 +6,8 @@
 
 pkgbase=nvidia-utils
 pkgname=('nvidia-utils' 'opencl-nvidia' 'nvidia-dkms' 'nvidia-open-dkms')
-pkgver=570.86.16
-pkgrel=3
+pkgver=570.124.04
+pkgrel=2
 arch=('x86_64')
 url="http://www.nvidia.com/"
 license=('custom')
@@ -23,8 +23,7 @@ source=('nvidia-drm-outputclass.conf'
         "https://us.download.nvidia.com/XFree86/Linux-x86_64/${pkgver}/${_pkg}.run"
         "$pkgname-$pkgver.tar.gz::https://github.com/NVIDIA/open-gpu-kernel-modules/archive/refs/tags/${pkgver}.tar.gz"
         0001-Enable-atomic-kernel-modesetting-by-default.patch
-        0002-Add-IBT-support.patch
-        0003-drm-Remove-driver-data-from-struct-drm_driver.patch)
+        0002-Add-IBT-support.patch)
 
 sha512sums=('de7116c09f282a27920a1382df84aa86f559e537664bb30689605177ce37dc5067748acf9afd66a3269a6e323461356592fdfc624c86523bf105ff8fe47d3770'
             '1bcf2c6ee71686c0d32625e746ec8c0f7cf42fc63c76c3076ff2526b2661e8b9e9f76eaa2c4b213c7cc437a6f06006cc07672c4974d7f4515b2de2fd7c47a891'
@@ -32,11 +31,10 @@ sha512sums=('de7116c09f282a27920a1382df84aa86f559e537664bb30689605177ce37dc50677
             'a0183adce78e40853edf7e6b73867e7a8ea5dabac8e8164e42781f64d5232fbe869f850ab0697c3718ebced5cde760d0e807c05da50a982071dfe1157c31d6b8'
             '55def6319f6abb1a4ccd28a89cd60f1933d155c10ba775b8dfa60a2dc5696b4b472c14b252dc0891f956e70264be87c3d5d4271e929a4fc4b1a68a6902814cee'
             '0958b99c0e5181db1b5fe542a87b4fdc91a9dbaed1193d173f4a0e67c31bf0b0e012abcece33e9c547446b9614a894546197e42edc6c7f3c5d2e7318ac5221ae'
-            '415adf4609f093e8703dd6f2c03bc5cbd84270c694e67bb0ee72897ac18dddb0d8aaf8baaf47e8624a79c54a1f794126a3ddb10fae91784f05f1f32ba063b985'
-            'c2e637497828f9441cdc4a94037c79da001e040cdaad5efd6001e34ee872eda1245e8fb6310f79fc9f4bfe363c61d1becec124a9a171731b2ccdfcc43a735abb'
+            '35fb1938a08586d902eb290aee04c5c6b570cc647354e49880e3c8715654ac1ab8c8cbe08e5b3c542fd9b2c36f7683454221b11625754980a6138a58c6363b40'
+            '7a1b66770b62b784650bb62b9f4543ab873b95b5c42bf5e688eb7a5a6133322b143f61bb34cbd7fd112030069f0f3058946e31c38f883d3e1c8bb31033eb464b'
             '0bb89b9037f0baa9aae1ff8e70c9c93896f03fd0cc380eea4b0dc094a6991c3ad6738c9fbbaa42d8b5a544f77dc91c0e6401b1501c5970c576d5efbc0de8dd34'
-            '5674c85e733296f0492e0d91d206e14e5779779b5cbbef9c91756d661ba1708d8d557ec888bd89a36388de5cbc84f1fb8d22d48b4f0ba0ddf1239205ddd8b2c7'
-            '7326d0f8b54a7fe83e06b3141ade287d122cff806386b9cd6148cdc1fe465b360a0c2c36f953763103f0f44127d7fb4e576989630a3c02017be68c3c305595ca')
+            '5674c85e733296f0492e0d91d206e14e5779779b5cbbef9c91756d661ba1708d8d557ec888bd89a36388de5cbc84f1fb8d22d48b4f0ba0ddf1239205ddd8b2c7')
 
 
 create_links() {
@@ -59,10 +57,6 @@ prepare() {
     # https://gitlab.archlinux.org/archlinux/packaging/packages/nvidia-utils/-/issues/14
     # https://github.com/rpmfusion/nvidia-kmod/blob/master/make_modeset_default.patch
     patch -Np1 -i  "$srcdir"/0001-Enable-atomic-kernel-modesetting-by-default.patch -d "${srcdir}/${_pkg}/kernel"
-
-    # Remove driver date from drm struct
-    # https://github.com/torvalds/linux/commit/cb2e1c2136f71618142557ceca3a8802e87a44cd
-    patch -Np2 -i "$srcdir"/0003-drm-Remove-driver-data-from-struct-drm_driver.patch -d "${srcdir}/${_pkg}/kernel"
 
 #    echo "Applying nvidia-patch..."
 
@@ -100,10 +94,6 @@ DEST_MODULE_LOCATION[4]="/kernel/drivers/video"' dkms.conf
 
     # Fix for https://bugs.archlinux.org/task/74886
     patch -Np1 -i "$srcdir"/0002-Add-IBT-support.patch
-
-    # Remove driver date from drm struct
-    # https://github.com/torvalds/linux/commit/cb2e1c2136f71618142557ceca3a8802e87a44cd
-    patch -Np1 -i "$srcdir"/0003-drm-Remove-driver-data-from-struct-drm_driver.patch
 
     # Attempt to make this reproducible
     sed -i "s/^HOSTNAME.*/HOSTNAME = echo cachyos"/ utils.mk
