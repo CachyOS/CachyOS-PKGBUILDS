@@ -68,56 +68,40 @@ prepare() {
 #    sed -i 's/\xe8\x35\x3e\xfe\xff\x85\xc0\x41\x89\xc4/\xe8\x35\x3e\xfe\xff\x29\xc0\x41\x89\xc4/g' "libnvidia-encode.so.${pkgver}"
 #    sed -i 's/\x85\xc0\x0f\x84\x9b\x00\x00\x00\x48/\x85\xc0\x90\x90\x90\x90\x90\x90\x48/g' "libnvidia-fbc.so.${pkgver}"
 
+    # Attempt to make builds reproducible
+    sed -i "s/^HOSTNAME.*/HOSTNAME = echo cachyos/" "${srcdir}/${_pkg_open}/utils.mk"
+    sed -i "s/^WHOAMI.*/WHOAMI = echo cachyos-builder/" "${srcdir}/${_pkg_open}/utils.mk"
+    sed -i "s/^DATE.*/DATE = date -r version.mk/" "${srcdir}/${_pkg_open}/utils.mk"
 
-    cd kernel
-
-    sed -i "s/__VERSION_STRING/${pkgver}/" dkms.conf
-    sed -i 's/__JOBS/`nproc`/' dkms.conf
-    sed -i 's/__DKMS_MODULES//' dkms.conf
-    sed -i '$iBUILT_MODULE_NAME[0]="nvidia"\
-DEST_MODULE_LOCATION[0]="/kernel/drivers/video"\
-BUILT_MODULE_NAME[1]="nvidia-uvm"\
-DEST_MODULE_LOCATION[1]="/kernel/drivers/video"\
-BUILT_MODULE_NAME[2]="nvidia-modeset"\
-DEST_MODULE_LOCATION[2]="/kernel/drivers/video"\
-BUILT_MODULE_NAME[3]="nvidia-drm"\
-DEST_MODULE_LOCATION[3]="/kernel/drivers/video"\
-BUILT_MODULE_NAME[4]="nvidia-peermem"\
-DEST_MODULE_LOCATION[4]="/kernel/drivers/video"' dkms.conf
-
-    # Gift for linux-rt guys
-    sed -i 's/NV_EXCLUDE_BUILD_MODULES/IGNORE_PREEMPT_RT_PRESENCE=1 NV_EXCLUDE_BUILD_MODULES/' dkms.conf
-
-    cd "${srcdir}/${_pkg_open}"
-
-    # Attempt to make this reproducible
-    sed -i "s/^HOSTNAME.*/HOSTNAME = echo cachyos"/ utils.mk
-    sed -i "s/^WHOAMI.*/WHOAMI = echo cachyos-builder"/ utils.mk
-    sed -i "s/^DATE.*/DATE = date -r version.mk"/ utils.mk
-
-    sed -i "s/__VERSION_STRING/${pkgver}/" kernel-open/dkms.conf
-    sed -i 's/__JOBS/`nproc`/' kernel-open/dkms.conf
-    sed -i 's/__EXCLUDE_MODULES//' kernel-open/dkms.conf
-    sed -i 's/__DKMS_MODULES//' kernel-open/dkms.conf
-    sed -i '$i\
+    shopt -s globstar
+    for conf in "${srcdir}"/**/dkms.conf; do
+        sed -i "s/__VERSION_STRING/${pkgver}/" "$conf"
+        sed -i 's/__JOBS/`nproc`/' "$conf"
+        sed -i 's/__EXCLUDE_MODULES//' "$conf"
+        sed -i 's/__DKMS_MODULES//' "$conf"
+        sed -i 's/NV_EXCLUDE_BUILD_MODULES/IGNORE_PREEMPT_RT_PRESENCE=1 NV_EXCLUDE_BUILD_MODULES/' "$conf"
+        sed -i '$i\
 BUILT_MODULE_NAME[0]="nvidia"\
-BUILT_MODULE_LOCATION[0]="kernel-open"\
 DEST_MODULE_LOCATION[0]="/kernel/drivers/video"\
 BUILT_MODULE_NAME[1]="nvidia-uvm"\
-BUILT_MODULE_LOCATION[1]="kernel-open"\
 DEST_MODULE_LOCATION[1]="/kernel/drivers/video"\
 BUILT_MODULE_NAME[2]="nvidia-modeset"\
-BUILT_MODULE_LOCATION[2]="kernel-open"\
 DEST_MODULE_LOCATION[2]="/kernel/drivers/video"\
 BUILT_MODULE_NAME[3]="nvidia-drm"\
-BUILT_MODULE_LOCATION[3]="kernel-open"\
 DEST_MODULE_LOCATION[3]="/kernel/drivers/video"\
 BUILT_MODULE_NAME[4]="nvidia-peermem"\
-BUILT_MODULE_LOCATION[4]="kernel-open"\
-DEST_MODULE_LOCATION[4]="/kernel/drivers/video"' kernel-open/dkms.conf
+DEST_MODULE_LOCATION[4]="/kernel/drivers/video"' "$conf"
+    done
+    shopt -u globstar
 
-    # Gift for linux-rt guys
-    sed -i 's/NV_EXCLUDE_BUILD_MODULES/IGNORE_PREEMPT_RT_PRESENCE=1 NV_EXCLUDE_BUILD_MODULES/' kernel-open/dkms.conf
+    # Additional parameters for open kernel modules
+    cat <<EOF >>"${srcdir}/${_pkg_open}/kernel-open/dkms.conf"
+BUILT_MODULE_LOCATION[0]="kernel-open"
+BUILT_MODULE_LOCATION[1]="kernel-open"
+BUILT_MODULE_LOCATION[2]="kernel-open"
+BUILT_MODULE_LOCATION[3]="kernel-open"
+BUILT_MODULE_LOCATION[4]="kernel-open"
+EOF
 }
 
 package_opencl-nvidia() {
