@@ -7,13 +7,14 @@
 pkgbase=nvidia-utils
 pkgname=('nvidia-utils' 'opencl-nvidia' 'nvidia-dkms' 'nvidia-open-dkms')
 pkgver=570.124.04
-pkgrel=2
+pkgrel=3
 arch=('x86_64')
 url="http://www.nvidia.com/"
 license=('custom')
 options=('!strip')
 makedepends=('patchelf')
 _pkg="NVIDIA-Linux-x86_64-${pkgver}"
+_pkg_open="NVIDIA-kernel-module-source-${pkgver}"
 source=('nvidia-drm-outputclass.conf'
         'nvidia-utils.sysusers'
         'nvidia.rules'
@@ -21,20 +22,19 @@ source=('nvidia-drm-outputclass.conf'
         'systemd-suspend-override.conf'
         'nvidia-sleep.conf'
         "https://us.download.nvidia.com/XFree86/Linux-x86_64/${pkgver}/${_pkg}.run"
-        "$pkgname-$pkgver.tar.gz::https://github.com/NVIDIA/open-gpu-kernel-modules/archive/refs/tags/${pkgver}.tar.gz"
-        0001-Enable-atomic-kernel-modesetting-by-default.patch
-        0002-Add-IBT-support.patch)
-
-sha512sums=('de7116c09f282a27920a1382df84aa86f559e537664bb30689605177ce37dc5067748acf9afd66a3269a6e323461356592fdfc624c86523bf105ff8fe47d3770'
-            '1bcf2c6ee71686c0d32625e746ec8c0f7cf42fc63c76c3076ff2526b2661e8b9e9f76eaa2c4b213c7cc437a6f06006cc07672c4974d7f4515b2de2fd7c47a891'
-            'f8f071f5a46c1a5ce5188e104b017808d752e61c0c20de1466feb5d693c0b55a5586314411e78cc2ab9c0e16e2c67afdd358da94c0c75df1f8233f54c280762c'
-            'a0183adce78e40853edf7e6b73867e7a8ea5dabac8e8164e42781f64d5232fbe869f850ab0697c3718ebced5cde760d0e807c05da50a982071dfe1157c31d6b8'
-            '55def6319f6abb1a4ccd28a89cd60f1933d155c10ba775b8dfa60a2dc5696b4b472c14b252dc0891f956e70264be87c3d5d4271e929a4fc4b1a68a6902814cee'
-            '0958b99c0e5181db1b5fe542a87b4fdc91a9dbaed1193d173f4a0e67c31bf0b0e012abcece33e9c547446b9614a894546197e42edc6c7f3c5d2e7318ac5221ae'
-            '35fb1938a08586d902eb290aee04c5c6b570cc647354e49880e3c8715654ac1ab8c8cbe08e5b3c542fd9b2c36f7683454221b11625754980a6138a58c6363b40'
-            '7a1b66770b62b784650bb62b9f4543ab873b95b5c42bf5e688eb7a5a6133322b143f61bb34cbd7fd112030069f0f3058946e31c38f883d3e1c8bb31033eb464b'
-            '0bb89b9037f0baa9aae1ff8e70c9c93896f03fd0cc380eea4b0dc094a6991c3ad6738c9fbbaa42d8b5a544f77dc91c0e6401b1501c5970c576d5efbc0de8dd34'
-            '5674c85e733296f0492e0d91d206e14e5779779b5cbbef9c91756d661ba1708d8d557ec888bd89a36388de5cbc84f1fb8d22d48b4f0ba0ddf1239205ddd8b2c7')
+        "https://download.nvidia.com/XFree86/NVIDIA-kernel-module-source/${_pkg_open}.tar.xz"
+        '0001-Enable-atomic-kernel-modesetting-by-default.patch'
+        '0002-Add-IBT-support.patch')
+sha256sums=('be99ff3def641bb900c2486cce96530394c5dc60548fc4642f19d3a4c784134d'
+            'f77a5247a3ba63e9fad3a3b2822d0fcfa51e0f79b5a90bd79bf08ea34b64ab07'
+            '0e54249a7754b668b436f0f7aa7e95fff68edbb12a93dbee4660e09a8c695f84'
+            'c5aa7b8abe69e72bfdc6b9ee8afbfd350bcc557e894558f2e6e4087fa9aa0dd8'
+            '1d053c5078387021338cfc3a732bed61be1a20a549775573788e9134775c8149'
+            '12d31a5425aba66be9e9129012cde82755ad4d5b7ce9933df8fc398c4fa8d631'
+            '1b786a4b7122d7c4216c58ae4007688a4f778c196c148d919163815ee10d53c4'
+            '50d24ad5e631983577dcfa0518602cd6ad9a5828d928481d85dcf3d17878f713'
+            '84ec3947f8ff355d7fb26ab1cd0bf38c23b1e9c6eccf9fa7b51b74f2e66cdfa7'
+            'ad579d5220ed37035cf6ae6f68782abe01dbb1efd87e131df657d03e3917699e')
 
 
 create_links() {
@@ -57,6 +57,10 @@ prepare() {
     # https://gitlab.archlinux.org/archlinux/packaging/packages/nvidia-utils/-/issues/14
     # https://github.com/rpmfusion/nvidia-kmod/blob/master/make_modeset_default.patch
     patch -Np1 -i  "$srcdir"/0001-Enable-atomic-kernel-modesetting-by-default.patch -d "${srcdir}/${_pkg}/kernel"
+    patch -Np1 -i  "$srcdir"/0001-Enable-atomic-kernel-modesetting-by-default.patch -d "${srcdir}/${_pkg_open}/kernel-open"
+
+    # Fix for https://bugs.archlinux.org/task/74886
+    patch -Np1 -i "$srcdir"/0002-Add-IBT-support.patch -d "${srcdir}/${_pkg_open}/"
 
 #    echo "Applying nvidia-patch..."
 
@@ -84,16 +88,7 @@ DEST_MODULE_LOCATION[4]="/kernel/drivers/video"' dkms.conf
     # Gift for linux-rt guys
     sed -i 's/NV_EXCLUDE_BUILD_MODULES/IGNORE_PREEMPT_RT_PRESENCE=1 NV_EXCLUDE_BUILD_MODULES/' dkms.conf
 
-    cd "$srcdir"/open-gpu-kernel-modules-${pkgver}
-
-    # Enable modeset and fbdev as default
-    # This avoids various issue, when Simplefb is used
-    # https://gitlab.archlinux.org/archlinux/packaging/packages/nvidia-utils/-/issues/14
-    # https://github.com/rpmfusion/nvidia-kmod/blob/master/make_modeset_default.patch
-    patch -Np1 -i "$srcdir"/0001-Enable-atomic-kernel-modesetting-by-default.patch -d "${srcdir}/open-gpu-kernel-modules-${pkgver}/kernel-open"
-
-    # Fix for https://bugs.archlinux.org/task/74886
-    patch -Np1 -i "$srcdir"/0002-Add-IBT-support.patch
+    cd "${srcdir}/${_pkg_open}"
 
     # Attempt to make this reproducible
     sed -i "s/^HOSTNAME.*/HOSTNAME = echo cachyos"/ utils.mk
@@ -123,9 +118,6 @@ DEST_MODULE_LOCATION[4]="/kernel/drivers/video"' kernel-open/dkms.conf
 
     # Gift for linux-rt guys
     sed -i 's/NV_EXCLUDE_BUILD_MODULES/IGNORE_PREEMPT_RT_PRESENCE=1 NV_EXCLUDE_BUILD_MODULES/' kernel-open/dkms.conf
-
-    # Clean version for later copying for DKMS
-    cp -r ../open-gpu-kernel-modules-${pkgver} "$srcdir"/open-gpu-kernel-modules-dkms
 }
 
 package_opencl-nvidia() {
@@ -343,8 +335,8 @@ package_nvidia-open-dkms() {
 
   install -dm 755 "${pkgdir}"/usr/src
   # cp -dr --no-preserve='ownership' kernel-open "${pkgdir}/usr/src/nvidia-$pkgver"
-  cp -dr --no-preserve='ownership' open-gpu-kernel-modules-dkms "${pkgdir}/usr/src/nvidia-$pkgver"
+  cp -dr --no-preserve='ownership' "${srcdir}/${_pkg_open}" "${pkgdir}/usr/src/nvidia-$pkgver"
   mv "${pkgdir}/usr/src/nvidia-$pkgver/kernel-open/dkms.conf" "${pkgdir}/usr/src/nvidia-$pkgver/dkms.conf"
 
-  install -Dm644 open-gpu-kernel-modules-${pkgver}/COPYING "$pkgdir"/usr/share/licenses/${pkgname}/LICENSE
+  install -Dm644 "${srcdir}/${_pkg_open}/COPYING" "$pkgdir"/usr/share/licenses/${pkgname}/LICENSE
 }
