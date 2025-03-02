@@ -6,7 +6,7 @@
 # Contributor: Giovanni Scafora <giovanni@archlinux.org>
 
 pkgname=wine-cachyos-opt
-_srctag=9.0-20250211
+_srctag=9.0-20250227
 pkgver=${_srctag//-/.}
 _geckover=2.47.4
 _monover=9.3.1
@@ -20,7 +20,6 @@ _winever=$_pkgbasever
 source=(wine-cachyos::git+https://github.com/CachyOS/wine-cachyos.git#tag=cachyos-${_srctag}-wine
         https://dl.winehq.org/wine/wine-gecko/${_geckover}/wine-gecko-${_geckover}-x86{,_64}.tar.xz
         https://github.com/madewokherd/wine-mono/releases/download/wine-mono-${_monover}/wine-mono-${_monover}-x86.tar.xz
-        wine-binutils-2.44.patch
         30-win32-aliases.conf
         wine-binfmt.conf)
 source+=(
@@ -116,7 +115,6 @@ prepare() {
   mkdir ${pkgname//-opt}-{32,64}-build
 
   pushd ${pkgname//-opt}
-      patch -Np1 -i "$srcdir"/wine-binutils-2.44.patch
       git config user.email "wine@cachyos.org"
       git config user.name "wine cachyos"
       git tag wine-9.0 --annotate -m "$pkgver" --force
@@ -244,10 +242,9 @@ package() {
 }
 
 # vim:set ts=8 sts=2 sw=2 et:
-b2sums=('edb5694daf092957cb868b344cdbe8d6c99c75094c87e81a3e546c75d69b00545b2978e1502fb56f27ecd0ccb62c516b77945f59ac488acee24a1520bf56d624'
+b2sums=('2e1964a8617fcc17eec87df716d3f204cebb086ec0faa8a80c517e942b99377c252656c5620db83563a6f39065bc1baea23128e346e24bed41a5fc36b2be72e3'
         '2a73c12585b502ae11188482cbc9fb1f45f95bfe4383a7615011104b132f4845f9813d01fb40277e1934fab5f1b35ab40b4f4a66a9967463dd1d666a666904e9'
         '62856a88266b4757602c0646e024f832974a93f03b9df253fd4895d4f11a41b435840ad8f7003ec85a0d8087dec15f2e096dbfb4b01ebe4d365521e48fd0c5c0'
         '5f4c2a07355a3d394086467f1b0c45698cd83731a4137b59975abdeda2d564f44922a67b1bec111e4209c4fe74247486076e95dffc84d88b5b7a02774efd070b'
-        '7f4198295bc1e850b07f1a483a79b25afacaad6d5634de30371eabc9dc89d7baa969dfa8db5888c49bdd3d90d34ba63a8745ece42a457fd9681d0bae15762f40'
         '45db34fb35a679dc191b4119603eba37b8008326bd4f7d6bd422fbbb2a74b675bdbc9f0cc6995ed0c564cf088b7ecd9fbe2d06d42ff8a4464828f3c4f188075b'
         'e9de76a32493c601ab32bde28a2c8f8aded12978057159dd9bf35eefbf82f2389a4d5e30170218956101331cf3e7452ae82ad0db6aad623651b0cc2174a61588')

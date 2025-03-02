@@ -2,7 +2,7 @@
 # Maintainer: loathingkernel <loathingkernel _a_ gmail _d_ com>
 
 pkgname=proton-cachyos
-_srctag=9.0-20250211
+_srctag=9.0-20250227
 _commit=
 pkgver=${_srctag//-/.}
 _geckover=2.47.4
@@ -97,7 +97,6 @@ source=(
     https://dl.winehq.org/wine/wine-gecko/${_geckover}/wine-gecko-${_geckover}-x86{,_64}.tar.xz
     https://github.com/madewokherd/wine-mono/releases/download/wine-mono-${_monover}/wine-mono-${_monover}-x86.tar.xz
     https://github.com/madewokherd/xalia/releases/download/xalia-${_xaliaver}/xalia-${_xaliaver}-net48-mono.zip
-    wine-binutils-2.44.patch
 )
 noextract=(
     wine-gecko-${_geckover}-{x86,x86_64}.tar.xz
@@ -156,10 +155,6 @@ prepare() {
     git submodule update --init --filter=tree:0 --recursive
 
     ./patches/apply.sh
-
-    pushd wine
-        patch -Np1 -i "$srcdir"/wine-binutils-2.44.patch
-    popd
 
     for rustlib in gst-plugins-rs; do
     pushd $rustlib
@@ -252,9 +247,8 @@ package() {
         $(find "$_monodir" -iname "*x86_64.dll" -or -iname "*x86_64.exe")
 }
 
-sha256sums=('0cc8c5448b15632cbbd00f427a21e7ef0ee00320ee2365bbb548ded07dd32966'
+sha256sums=('69396d29bc2ef2c3cd1d5ad3a27b0c2ff5678380f62cdcae29ff8e0f4a1dff14'
             '2cfc8d5c948602e21eff8a78613e1826f2d033df9672cace87fed56e8310afb6'
             'fd88fc7e537d058d7a8abf0c1ebc90c574892a466de86706a26d254710a82814'
             '32eff652b96390f04fb52ee695fc3a6d197b1bb616ed2df7e25119fe5700c950'
-            '7e061783acf005c8dc90bd47fea1af9fc941f80c459477752fc32fbc2924ec65'
-            '4a2e2613586f7a5b56ee431d37d21e03b4439ed4b4ce9cce6109215ecc2e0553')
+            '7e061783acf005c8dc90bd47fea1af9fc941f80c459477752fc32fbc2924ec65')
