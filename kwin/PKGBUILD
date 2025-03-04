@@ -5,7 +5,7 @@
 pkgname=kwin
 pkgver=6.3.2.1
 _dirver=$(echo $pkgver | cut -d. -f1-3)
-pkgrel=3
+pkgrel=4
 pkgdesc='An easy to use, but flexible, composited Window Manager (CachyOS Version)'
 arch=(x86_64)
 url='https://kde.org/plasma-desktop/'
@@ -83,14 +83,12 @@ makedepends=(extra-cmake-modules
 optdepends=('maliit-keyboard: virtual keyboard for kwin-wayland')
 groups=(plasma)
 source=(https://download.kde.org/stable/plasma/$_dirver/$pkgname-$pkgver.tar.xz{,.sig}
-        https://invent.kde.org/plasma/kwin/-/commit/1d2fdf30.patch
         0001-libei-no-prompt.patch
         0002-fifo-v1.patch
         0003-multi-mon-fix.patch)
 install=$pkgname.install
 sha256sums=('e6123eda2b1fd9f65b36061fdacf96234068d1e24fa7a3352288f4d51b2fc4c2'
             'SKIP'
-            'd0c18b7dcd31702e1e884a025df3cabcfe7927328a9bb7e22c9bab7881631374'
             '7df5390ee0df257d2ec2d96b8ef6d99b62704da8512246b8520c58e07612430a'
             'f69509e68f8675b3a5bf86b484036c9fcdf0cf97e0c8d18b52116e13a5f91bd1'
             '5e67c060c89ed5914776382f4c7e169e9a969379dae696d92108c0072a5c80e2')
@@ -100,7 +98,6 @@ validpgpkeys=('E0A3EB202F8E57528E13E72FD7574483BB57B18D'  # Jonathan Esk-Riddell
               '1FA881591C26B276D7A5518EEAAF29B42A678C20') # Marco Martin <notmart@gmail.com>
 
 prepare() {
-  patch -d $pkgname-$pkgver -Rp1 < 1d2fdf30.patch # Temporarily revert QGenericUnixServices rename until Qt 6.9 beta 3 release
   cd $pkgname-$pkgver
   # Add an option to allow Xwayland apps use libei input emulation without prompting
   # https://invent.kde.org/plasma/kwin/-/merge_requests/6178
