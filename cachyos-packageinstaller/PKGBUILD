@@ -1,17 +1,17 @@
 # Maintainer: Vladislav Nepogodin <nepogodin.vlad@gmail.com>
 
 pkgname=cachyos-packageinstaller
-pkgver=1.3.4
+pkgver=1.4.0
 pkgrel=1
 pkgdesc="Simple Software Application Package Installer for CachyOS which helps setting up & installing applications"
 arch=(aarch64 x86_64)
 url="https://github.com/cachyos/packageinstaller"
 license=(GPL-3.0-or-later)
 depends=('qt6-base' 'polkit' 'curl')
-makedepends=('cmake' 'ninja' 'git' 'polkit-qt6' 'qt6-tools' 'clang' 'llvm')
+makedepends=('cmake' 'ninja' 'git' 'polkit-qt6' 'qt6-tools' 'cargo' 'lld' 'clang' 'llvm')
 groups=('cachyos')
 source=("packageinstaller-$pkgver.tar.gz::$url/archive/v$pkgver.tar.gz")
-sha256sums=('f28e77f2f2c593f1cf060623370c783f6452a4c10e283217c819871980ac54b0')
+sha256sums=('a9cd3287002199aa7f0428b93c6a4de0ecd305c6c257243dbf9122aacf52dea6')
 provides=('cachyos-packageinstaller')
 conflicts=('cachyos-packageinstaller')
 options=(strip)
@@ -26,6 +26,8 @@ build() {
   export NM=llvm-nm
   export RANLIB=llvm-ranlib
 
+  export RUSTFLAGS="-Cembed-bitcode -C opt-level=3 -Ccodegen-units=1 -Clinker=clang -C link-arg=-flto -Clink-arg=-fuse-ld=/usr/bin/ld.lld"
+
   cmake -S . -Bbuild \
         -GNinja \
         -DCMAKE_BUILD_TYPE=Release \
@@ -36,6 +38,16 @@ build() {
 
 package() {
   cd ${srcdir}/packageinstaller-${pkgver}
+
+  # we are building with llvm stack here, due to rust
+  export AR=llvm-ar
+  export CC=clang
+  export CXX=clang++
+  export NM=llvm-nm
+  export RANLIB=llvm-ranlib
+
+  export RUSTFLAGS="-Cembed-bitcode -C opt-level=3 -Ccodegen-units=1 -Clinker=clang -C link-arg=-flto -Clink-arg=-fuse-ld=/usr/bin/ld.lld"
+
   DESTDIR="${pkgdir}" cmake --build build --target install
 }
 
