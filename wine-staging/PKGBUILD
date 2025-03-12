@@ -71,9 +71,6 @@ makedepends=(autoconf bison perl flex mingw-w64-gcc
   v4l-utils             #lib32-v4l-utils
   vulkan-icd-loader     #lib32-vulkan-icd-loader
 )
-makedepends+=(
-  ntsync-header
-)
 optdepends=(
   alsa-lib              #lib32-alsa-lib
   alsa-plugins          #lib32-alsa-plugins
@@ -108,8 +105,8 @@ install=wine.install
 
 prepare() {
   # Get rid of old build dirs
-  rm -rf $pkgname-{32,64}-build
-  mkdir $pkgname-{32,64}-build
+  rm -rf $pkgname-64-build
+  mkdir $pkgname-64-build
 
   cd wine
   # apply wine-staging patchset
@@ -145,7 +142,6 @@ build() {
     --with-x \
     --with-wayland \
     --with-gstreamer \
-    --with-mingw \
     --with-xattr \
     --enable-archs=x86_64,i386
 
