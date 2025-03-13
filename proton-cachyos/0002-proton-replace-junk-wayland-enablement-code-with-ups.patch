@@ -1,0 +1,69 @@
+From 7cac6569939177706584bb0376b687bf3c812a27 Mon Sep 17 00:00:00 2001
+From: Stelios Tsampas <loathingkernel@gmail.com>
+Date: Thu, 13 Mar 2025 11:26:30 +0200
+Subject: [PATCH] proton: replace junk wayland enablement code with upstream
+ wine patch
+
+---
+ proton | 22 ++++++++--------------
+ 1 file changed, 8 insertions(+), 14 deletions(-)
+
+diff --git a/proton b/proton
+index 145423db..3ef081d9 100755
+--- a/proton
++++ b/proton
+@@ -848,6 +848,9 @@ class CompatData:
+                     machine_guid = "\"" + str(uuid.uuid4()) + "\""
+                 get_replace_reg_value(self.prefix_dir + "system.reg", "Software\\\\Microsoft\\\\Cryptography", "MachineGuid", machine_guid)
+ 
++            # Fix broken prefixes by replacing any faulty values in registry
++            get_replace_reg_value(self.prefix_dir + "user.reg", "Software\\\\Wine\\\\Drivers", "Graphics", "\"x11,wayland\"")
++
+             self.migrate_user_paths()
+ 
+             if not file_exists(self.prefix_dir + "/dosdevices/c:", follow_symlinks=False):
+@@ -1502,6 +1505,7 @@ class Session:
+             self.check_environment("PROTON_USE_WINED3D11", "wined3d")
+         self.check_environment("PROTON_NO_WM_DECORATION", "nowmdecoration")
+         self.check_environment("PROTON_PREFER_SDL", "prefersdl")
++        self.check_environment("PROTON_ENABLE_WAYLAND", "enablewayland")
+         self.check_environment("PROTON_DXVK_D3D8", "dxvkd3d8")
+         self.check_environment("PROTON_NO_D3D11", "nod3d11")
+         self.check_environment("PROTON_NO_D3D10", "nod3d10")
+@@ -1532,6 +1536,10 @@ class Session:
+         else:
+             self.env["WINEESYNC"] = "1"
+ 
++        if "enablewayland" in self.compat_config:
++            if self.env.get("WAYLAND_DISPLAY", False):
++                self.env.pop("DISPLAY", "")
++
+         if "nowmdecoration" in self.compat_config:
+             self.env["WINE_NO_WM_DECORATION"] = "1"
+ 
+@@ -1780,22 +1788,8 @@ if __name__ == "__main__":
+     elif sys.argv[1] == "waitforexitandrun":
+         #wait for wineserver to shut down
+         g_session.run_proc([g_proton.wineserver_bin, "-w"])
+-        display_drv = "x11"
+-        if os.environ.get("PROTON_ENABLE_WAYLAND", None) == "1" and os.environ.get("WAYLAND_DISPLAY", False):
+-            display_drv = "x11,wayland"
+-            if os.environ.get("DISPLAY", False):
+-                del os.environ["DISPLAY"]
+-        g_session.run_proc(
+-            [g_proton.wine_bin, "reg.exe", "add", "HKCU\\Software\\Wine\\Drivers", "/v", "Graphics", "/d", f"{display_drv}", "/f"]
+-        )
+-        g_session.run_proc([g_proton.wineserver_bin, "-w"])
+         #then run
+         rc = g_session.run()
+-        g_session.run_proc([g_proton.wineserver_bin, "-w"])
+-        g_session.run_proc(
+-            [g_proton.wine_bin, "reg.exe", "add", "HKCU\\Software\\Wine\\Drivers", "/v", "Graphics", "/d", "x11", "/f"]
+-        )
+-        g_session.run_proc([g_proton.wineserver_bin, "-w"])
+     elif sys.argv[1] == "runinprefix":
+         rc = g_session.run_proc([g_proton.wine_bin] + sys.argv[2:])
+     elif sys.argv[1] == "destroyprefix":
+-- 
+2.48.1
+

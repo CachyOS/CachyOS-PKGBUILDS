@@ -1,0 +1,25 @@
+From 71929ca642b94833a33b43ca47fded3797569e8f Mon Sep 17 00:00:00 2001
+From: Stelios Tsampas <loathingkernel@gmail.com>
+Date: Thu, 13 Mar 2025 17:08:19 +0200
+Subject: [PATCH] build: disable wine display drivers when building
+
+---
+ make/rules-common.mk | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/make/rules-common.mk b/make/rules-common.mk
+index ae8be603..e6c6c123 100644
+--- a/make/rules-common.mk
++++ b/make/rules-common.mk
+@@ -117,7 +117,7 @@ $(2)_LIBFLAGS$(3) = $$(foreach d,$$($(2)_DEPS$(3)),-L$$($$(d)_LIBDIR$(3))) \
+ $(2)_ENV$(3) = \
+     WINEDEBUG="-all" \
+     WINEPREFIX="$$(OBJ)/pfx-wine$(3)" \
+-    WINEDLLOVERRIDES="winemenubuilder=d;" \
++    WINEDLLOVERRIDES="winex11.drv,winewayland.drv=d;winemenubuilder=d;" \
+     CARGO_TARGET_$$(call toupper,$$(CARGO_TARGET_$(3)))_LINKER="$$(TARGET_$(4)$(3))-gcc" \
+     CARGO_TARGET_$$(call toupper,$$(CARGO_TARGET_$(3)))_RUSTFLAGS="$$(RUSTFLAGS)" \
+     CCACHE_BASEDIR="$$(CCACHE_BASEDIR)" \
+-- 
+2.48.1
+

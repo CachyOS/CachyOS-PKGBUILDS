@@ -1,0 +1,26 @@
+From 63c0cfb04f0b8b298ff1a5d7125e84a6c2fcd6cd Mon Sep 17 00:00:00 2001
+From: Stelios Tsampas <loathingkernel@gmail.com>
+Date: Thu, 13 Mar 2025 20:58:48 +0200
+Subject: [PATCH] Revert "HACK: winegstreamer: Set GST_GL_WINDOW environment
+ variable."
+
+This reverts commit 37818f7a547f7090ef684f8202438374fc31a165.
+---
+ dlls/winegstreamer/unixlib.c | 1 -
+ 1 file changed, 1 deletion(-)
+
+diff --git a/dlls/winegstreamer/unixlib.c b/dlls/winegstreamer/unixlib.c
+index 1cb1a9f3502..5c2a14ee2f9 100644
+--- a/dlls/winegstreamer/unixlib.c
++++ b/dlls/winegstreamer/unixlib.c
+@@ -298,7 +298,6 @@ NTSTATUS wg_init_gstreamer(void *arg)
+     if (params->err_on)
+         setenv("GST_DEBUG", "WINE:1,protonmediaconverter:1,1", FALSE);
+     setenv("GST_DEBUG_NO_COLOR", "1", FALSE);
+-    setenv("GST_GL_WINDOW", "x11", 1);
+ 
+     /* GStreamer installs a temporary SEGV handler when it loads plugins
+      * to initialize its registry calling exit(-1) when any fault is caught.
+-- 
+2.48.1
+
