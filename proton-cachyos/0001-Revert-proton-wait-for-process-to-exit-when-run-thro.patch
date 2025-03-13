@@ -1,0 +1,32 @@
+From cc236226227ab62b3934577ae416ea6d90ebe65d Mon Sep 17 00:00:00 2001
+From: Stelios Tsampas <loathingkernel@gmail.com>
+Date: Thu, 13 Mar 2025 11:28:08 +0200
+Subject: [PATCH] Revert "proton: wait for process to exit when run through
+ umu"
+
+This reverts commit 901be857541a310f0e1dfbe981466c61b1f242ba.
+
+The `/wait` flag causes games from Epic that use `EOSBootstrapper.exe`
+as their executable to fail to launch. These games do launch properly
+if `EOSBootstrapper.exe` is substituted with their real executable,
+but there is no reason to complicate things.
+---
+ proton | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/proton b/proton
+index 94cf6403..2737f18f 100755
+--- a/proton
++++ b/proton
+@@ -1750,7 +1750,7 @@ class Session:
+             log(sys.argv[2])
+             if len(sys.argv) >=  3 and sys.argv[2].startswith('/'):
+                 log("Executable a unix path, launching with /unix option.")
+-                argv = [g_proton.wine64_bin, "c:\\windows\\system32\\start.exe", "/wait", "/unix"]
++                argv = [g_proton.wine64_bin, "c:\\windows\\system32\\start.exe", "/unix"]
+             else:
+                 log("Executable is inside wine prefix, launching normally.")
+                 argv = [g_proton.wine64_bin]
+-- 
+2.48.1
+

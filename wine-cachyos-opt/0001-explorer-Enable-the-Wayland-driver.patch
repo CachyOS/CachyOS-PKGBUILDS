@@ -1,0 +1,26 @@
+From b86401466f4b3ce2462ae7a91a121514f1a696d1 Mon Sep 17 00:00:00 2001
+From: Etaash Mathamsetty <etaash.mathamsetty@gmail.com>
+Date: Sun, 5 May 2024 13:44:55 -0400
+Subject: [PATCH] explorer: Enable the Wayland driver.
+
+(cherry picked from commit ea3c73b12d0dbd88444be29bdf83f17e42f4986a)
+---
+ programs/explorer/desktop.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/programs/explorer/desktop.c b/programs/explorer/desktop.c
+index fe50586184f..98c59949396 100644
+--- a/programs/explorer/desktop.c
++++ b/programs/explorer/desktop.c
+@@ -38,7 +38,7 @@ WINE_DEFAULT_DEBUG_CHANNEL(explorer);
+ #define DESKTOP_CLASS_ATOM ((LPCWSTR)MAKEINTATOM(32769))
+ #define DESKTOP_ALL_ACCESS 0x01ff
+ 
+-static const WCHAR default_driver[] = {'m','a','c',',','x','1','1',0};
++static const WCHAR default_driver[] = L"mac,x11,wayland";
+ 
+ static BOOL using_root = TRUE;
+ 
+-- 
+2.48.1
+
