@@ -15,7 +15,7 @@ pkgbase=glibc
 pkgname=(glibc lib32-glibc glibc-locales)
 pkgver=2.41+r9+ga900dbaf70f0
 _commit=a900dbaf70f0a957f56b52caa69173592ad7596e
-pkgrel=2
+pkgrel=3
 arch=(x86_64)
 url='https://www.gnu.org/software/libc'
 license=(GPL-2.0-or-later LGPL-2.1-or-later)
@@ -51,7 +51,10 @@ prepare() {
   if [ -n "$_optimize_v3" ] || [ -n "$_optimize_v4" ]; then
     patch -Np1 < ../clearlinux.patch
   fi
-
+  # Add sinh with FMA
+  git cherry-pick -n dded0d20f67ba1925ccbcb9cf28f0c75febe0dbe
+  # Add atanh with FMA
+  git cherry-pick -n c7c4a5906f326f1290b1c2413a83c530564ec4b8
 }
 
 build() {
