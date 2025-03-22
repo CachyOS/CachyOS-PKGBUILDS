@@ -1,18 +1,30 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 post_install() {
-	/usr/bin/systemctl enable --now snapper-cleanup.timer
-	#/usr/bin/systemctl enable snapper-timeline.timer
+    /usr/bin/systemctl enable --now snapper-cleanup.timer
+    #/usr/bin/systemctl enable snapper-timeline.timer
 
-	echo "Creating snapper config for root subvolume"
-	/usr/bin/snapper -c root create-config --template cachyos-root /
+    echo "Creating snapper config for root subvolume"
 
+    # Workaround if command is run inside chroot
+    if [ "$(stat -c %d:%i /)" != "$(stat -c %d:%i /proc/1/root/.)" ]; then
+        /usr/bin/snapper --no-dbus -c root create-config --template cachyos-root /
+    else
+        /usr/bin/snapper -c root create-config --template cachyos-root /
+    fi
 }
 
 pre_remove() {
-	echo "Deleting snapper configs"
-	/usr/bin/snapper -c root delete-config
-	echo "Disabling related snapper services"
-	/usr/bin/systemctl disable --now snapper-cleanup.timer
-	#/usr/bin/systemctl disable snapper-timeline.timer
+    echo "Deleting snapper configs"
+
+    # Workaround if command is run inside chroot
+    if [ "$(stat -c %d:%i /)" != "$(stat -c %d:%i /proc/1/root/.)" ]; then
+        /usr/bin/snapper --no-dbus -c root delete-config
+    else
+        /usr/bin/snapper -c root delete-config
+    fi
+
+    echo "Disabling related snapper services"
+    /usr/bin/systemctl disable --now snapper-cleanup.timer
+    #/usr/bin/systemctl disable snapper-timeline.timer
 }
