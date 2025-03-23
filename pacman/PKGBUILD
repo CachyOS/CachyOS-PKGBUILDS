@@ -63,7 +63,9 @@ backup=(etc/pacman.conf
 #validpgpkeys=('6645B0A8C7005E78DB1D7864F99FFE0FEAE999BD'  # Allan McRae <allan@archlinux.org>
 #              'B8151B117037781095514CA7BBDFFC92306B1121') # Andrew Gregory (pacman) <andrew@archlinux.org>
 _commit="ae01d942d9a18e240b4dddf002775e77ac944abd"
+_libmakepkg_commit="864c03622cad24aff790e13334b3e2e577e840f8"
 source=("git+https://github.com/CachyOS/pacman.git#commit=${_commit}?signed"
+        "git+https://gitlab.archlinux.org/pacman/libmakepkg-dropins.git#commit=${_libmakepkg_commit}?signed"
         pacman.conf
         makepkg.conf
         alpm.sysusers
@@ -75,6 +77,7 @@ source=("git+https://github.com/CachyOS/pacman.git#commit=${_commit}?signed"
         )
 source_aarch64=(fix-alpm-crate-for-aarch64.patch)
 sha256sums=('09225592995cce84e93f7e9707b61bce8dc51eff124cc0f3d87657acd99f7ab3'
+            'bbc1db2ccfe967252a6c018e171debeef6ffe4526e6eea007186f176d80022a4'
             '7ba46605de8dcb1ffa2a580e386c471a370955f0e62530ddfaf29168551047e1'
             'ce794bf0d8a9b1cb2637188516ce39e3559b2b027c47e94ea388991d33461d89'
             'c8760d7ebb6c9817d508c691c67084be251cd9c8811ee1ccf92c1278bad74c1c'
@@ -224,4 +227,10 @@ package() {
   for unit in dirmngr gpg-agent gpg-agent-{browser,extra,ssh} keyboxd; do
     ln -s "../${unit}@.socket" "$wantsdir/${unit}@etc-pacman.d-gnupg.socket"
   done
+
+  # makepkg dropins
+  cd "$srcdir/libmakepkg-dropins"
+  cp -r autodep/* "$pkgdir/usr/share/makepkg/autodep/"
+  cp -r reproducible/* "$pkgdir/usr/share/makepkg/reproducible/"
+  cp -r tidy/* "$pkgdir/usr/share/makepkg/tidy/"
 }
