@@ -2,7 +2,7 @@
 # Maintainer: johnfanv2 <https://github.com/johnfanv2>
 
 pkgname=lenovolegionlinux
-pkgver=0.0.19
+pkgver=0.0.20
 pkgrel=1
 pkgdesc="LenovoLegionLinux (LLL) brings additional drivers and tools for Lenovo Legion series laptops to Linux. PLEASE READ THE REPO BEFORE INSTALL THIS PACKAGE!!!"
 arch=("x86_64")
@@ -29,7 +29,7 @@ optdepends=(
 )
 
 source=(lenovolegionlinux::git+https://github.com/johnfanv2/LenovoLegionLinux.git#tag=v${pkgver})
-sha256sums=('60d8cc141ced3c5845fc0897cebbc23c9519171b5ade2b4b306e979e4070750a')
+sha256sums=('08bae6daef717a9b289bd1fffbef2e1ba52bb8588a7c0db015ad87a6e58f8aa7')
 install="lenovolegionlinux.install"
 
 prepare() {
@@ -53,9 +53,9 @@ package() {
 # Systemd service
   cd "${srcdir}/${pkgname}/extra"
   install -Dm664 service/*.service "${pkgdir}/etc/systemd/system"
-  install -Dm664 service/*.timer "${pkgdir}/etc/systemd/system" 
-  
+  install -Dm664 service/*.timer "${pkgdir}/etc/systemd/system"
+
 # legiond daemon
   install -Dm775 service/legiond/legiond "${pkgdir}/usr/bin"
-  install -Dm775 service/legiond/legiond-ctl "${pkgdir}/usr/bin"	
+  install -Dm775 service/legiond/legiond-ctl "${pkgdir}/usr/bin"
 }
