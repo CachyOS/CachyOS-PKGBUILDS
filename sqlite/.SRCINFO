@@ -1,6 +1,6 @@
 pkgbase = sqlite
 	pkgdesc = A C library that implements an SQL database engine
-	pkgver = 3.49.0
+	pkgver = 3.49.1
 	pkgrel = 2
 	url = https://www.sqlite.org/
 	arch = x86_64
@@ -13,25 +13,27 @@ pkgbase = sqlite
 	makedepends = llvm-libs
 	makedepends = lld
 	options = !lto
-	source = https://www.sqlite.org/2025/sqlite-src-3490000.zip
-	source = https://www.sqlite.org/2025/sqlite-doc-3490000.zip
+	source = https://www.sqlite.org/2025/sqlite-src-3490100.zip
+	source = https://www.sqlite.org/2025/sqlite-doc-3490100.zip
 	source = sqlite-lemon-system-template.patch
 	source = license.txt
 	source = git+https://github.com/ClickHouse/ClickBench.git
 	source = https://datasets.clickhouse.com/hits_compatible/hits.csv.gz
-	sha256sums = bec0262d5b165b133d6f3bdb4339c0610f4ac3d50dee53e8ad148ece54a129d0
-	sha256sums = 1c785395005f55c31c9d3f0a6f45be101fb38de7d7aa6a133dc0ab24fc748557
+	source = remove-header-in-command.patch
+	sha256sums = 4404d93cbce818b1b98ca7259d0ba9b45db76f2fdd9373e56f2d29b519f4d43b
+	sha256sums = 4581e3340d9d0d8ce03f10fb8ab1cea03cf49fed8198478c1abf5d383521f037
 	sha256sums = 55746d93b0df4b349c4aa4f09535746dac3530f9fd6de241c9f38e2c92e8ee97
 	sha256sums = 4e57d9ac979f1c9872e69799c2597eeef4c6ce7224f3ede0bf9dc8d217b1e65d
 	sha256sums = SKIP
 	sha256sums = 189c37a5f2020d20ef9ebc0b9d4cf2204fe78658bbab235f0313d41447410ddd
+	sha256sums = 9f1c2889a51e1b858fb6acc857504a2299a30fcc4917f8788af18d0e65a6746a
 
 pkgname = sqlite
 	pkgdesc = A C library that implements an SQL database engine
 	depends = readline
 	depends = zlib
 	depends = glibc
-	provides = sqlite3=3.49.0
+	provides = sqlite3=3.49.1
 	provides = libsqlite3.so
 	replaces = sqlite3
 
@@ -40,7 +42,7 @@ pkgname = sqlite-tcl
 	depends = sqlite
 	depends = tcl
 	depends = glibc
-	provides = sqlite3-tcl=3.49.0
+	provides = sqlite3-tcl=3.49.1
 	replaces = sqlite3-tcl
 
 pkgname = sqlite-analyzer
@@ -55,5 +57,5 @@ pkgname = lemon
 
 pkgname = sqlite-doc
 	pkgdesc = most of the static HTML files that comprise this website, including all of the SQL Syntax and the C/C++ interface specs and other miscellaneous documentation
-	provides = sqlite3-doc=3.49.0
+	provides = sqlite3-doc=3.49.1
 	replaces = sqlite3-doc
