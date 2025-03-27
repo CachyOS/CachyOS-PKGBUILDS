@@ -4,10 +4,10 @@
 
 pkgbase="sqlite"
 pkgname=('sqlite' 'sqlite-tcl' 'sqlite-analyzer' 'lemon' 'sqlite-doc')
-_srcver=3490000
+_srcver=3490100
 _docver=${_srcver}
 #_docver=3440000
-pkgver=3.49.0
+pkgver=3.49.1
 pkgrel=2
 pkgdesc="A C library that implements an SQL database engine"
 arch=('x86_64')
@@ -217,7 +217,7 @@ package_lemon() {
   # ELF file ('usr/bin/lemon') lacks FULL RELRO, check LDFLAGS. - no fix found so far
   install -Dm755 lemon ${pkgdir}/usr/bin/lemon
   install -Dm644 lempar.c ${pkgdir}/usr/share/lemon/lempar.c
-  
+
   mkdir -p "${pkgdir}"/usr/share/doc/${pkgname}
   cp ../sqlite-doc-${_docver}/lemon.html  "${pkgdir}"/usr/share/doc/${pkgname}/
   # license
@@ -237,6 +237,6 @@ package_sqlite-doc() {
 
   # license
   install -D -m644 "${srcdir}"/license.txt "${pkgdir}"/usr/share/licenses/${pkgname}/license.txt
-  
+
   rm "${pkgdir}"/usr/share/doc/${pkgbase}/lemon.html
 }
