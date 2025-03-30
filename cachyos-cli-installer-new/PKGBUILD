@@ -27,7 +27,8 @@ build() {
         -DCMAKE_INSTALL_PREFIX=/usr \
         -DCMAKE_INSTALL_LIBDIR=lib \
         -DENABLE_DEVENV=OFF \
-        -DCOS_BUILD_STATIC=ON
+        -DCOS_BUILD_STATIC=ON \
+        -DCMAKE_POLICY_VERSION_MINIMUM=3.5
   cmake --build build --parallel $_cpuCount
 }
 
