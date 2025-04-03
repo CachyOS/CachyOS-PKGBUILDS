@@ -1,7 +1,7 @@
 pkgbase = lib32-mesa
 	pkgdesc = Open-source OpenGL drivers - 32-bit
-	pkgver = 25.0.2
-	pkgrel = 3
+	pkgver = 25.0.3
+	pkgrel = 2
 	epoch = 1
 	url = https://www.mesa3d.org/
 	arch = x86_64
@@ -51,9 +51,9 @@ pkgbase = lib32-mesa
 	makedepends = wayland-protocols
 	makedepends = xorgproto
 	options = !lto
-	source = https://mesa.freedesktop.org/archive/mesa-25.0.2.tar.xz
-	source = https://mesa.freedesktop.org/archive/mesa-25.0.2.tar.xz.sig
-	source = 0001-docs-Fix-build-with-Sphinx-8.2.patch
+	source = https://mesa.freedesktop.org/archive/mesa-25.0.3.tar.xz
+	source = https://mesa.freedesktop.org/archive/mesa-25.0.3.tar.xz.sig
+	source = 0001-docs-Fix-HTML-build-with-Sphinx-8.2.patch
 	source = 0002-gfxstream-Use-proper-log-format-for-32-bit-Vulkan.patch
 	source = ucd-trie-0.1.6.tar.gz::https://crates.io/api/v1/crates/ucd-trie/0.1.6/download
 	source = pest_meta-2.7.11.tar.gz::https://crates.io/api/v1/crates/pest_meta/2.7.11/download
@@ -76,10 +76,10 @@ pkgbase = lib32-mesa
 	validpgpkeys = 57551DE15B968F6341C248F68D8E31AFC32428A6
 	validpgpkeys = A5CC9FEC93F2F837CB044912336909B6B25FADFA
 	validpgpkeys = E3E8F480C52ADD73B278EE78E1ECBE07D7D70895
-	sha256sums = adf904d083b308df95898600ffed435f4b5c600d95fb6ec6d4c45638627fdc97
+	sha256sums = 5ff426ed6ce0588fd96d18975bdff451ae2ab2fe98b5d1528842ee71ec66711b
 	sha256sums = SKIP
-	sha256sums = a8fa6befb380e613a288f605c290400eb0f92642b9fe7c534d6a40e315dc1e5b
-	sha256sums = f5506968e2479b9367cc7f67dcbd4dc660a7e144345ef78a21fe79e55385fc68
+	sha256sums = bbbff2bce7e72a8fa2fc3b071eda3cf366e6665026811c0065620a01c37b7808
+	sha256sums = 8c25f8362d84b1116a9d68f733a13b7c8b5b2b366b986e64c675039b494ebe48
 	sha256sums = ed646292ffc8188ef8ea4d1e0e0150fb15a5c2e12ad9b8fc191ae7a8a7f3c4b9
 	sha256sums = a941429fea7e08bedec25e4f6785b6ffaacc6b755da98df5ef3e7dcf4a124c4f
 	sha256sums = 168fb715dda47215e360912c096649d23d58bf392ac62f73919e831745e40f26
@@ -95,10 +95,10 @@ pkgbase = lib32-mesa
 	sha256sums = 3c93a82e8d145725dcbaf44e5ea887c8a869efdcc28706df2d08c69e17077183
 	sha256sums = 692fcb63b64b1758029e0a96ee63e049ce8c5948587f2f7208df04625e5f6b56
 	sha256sums = 901fa70d88b9d6c98022e23b4136f9f3e54e4662c3bc1bd1d84a42a9a0f0c1e9
-	b2sums = 6e387806e880d518a68b3a8d4cb25071e9d50732aee06cc8b88f717c569c2764d658d40a8710ff362820a30133d5fde6b82ea7fb552fd0f690bcdf276a6f5e67
+	b2sums = 8b32119756c422b780b466ed4ba60660d2c91f8f460b617f7417e5f3ae2a5cd44a95abedbcdfb8e2f38d99fb2e4f1610586e846fe13b9db979f5156dcc268614
 	b2sums = SKIP
-	b2sums = 1782fae4e7a323564b791f5762e1bc1084d9124ebe471b4cc7a9ac65795c3ea41ef075d36a6281689d7398b8d14311723ccec759d246fbdfd246d1b757c036f2
-	b2sums = 6c77eef11b959627f447da3a27a3034067de8ea8a04c399e0d51001c078c669f223b893fdfd3f37d1c6e68fffca4d972c41f7e997115d1d4cc1f92f91df228d0
+	b2sums = 792bc316e7dc96940727677b849d6be23f37bdc6361b5e1740c869ede7f0ced129050058ea83836f17574510c62cc256e598483758f8096b3282dbc03f3c6f70
+	b2sums = 5c0ad05e268cbe523ff64469c3242deac3601ce4f3cc8cb837a12fa98d876d0b5956958d1dd5917ff8401a83dda225ca1a46c1b9888cdfb0b7b827abe0f6828a
 	b2sums = a6d47c903be6094423d89b8ec3ca899d0a84df6dbd6e76632bb6c9b9f40ad9c216f8fa400310753d392f85072756b43ac3892e0a2c4d55f87ab6463002554823
 	b2sums = 9c34f1ab14ad5ae124882513e0f14b1d731d06a43203bdc37fa3b202dd3ce93dbe8ebb554d01bab475689fe6ffd3ec0cbc0d5365c9b984cb83fb34ea3e9e732e
 	b2sums = fac5cf6339dc3c0a40b100035a5c874cc7b2efeafeb31c51488d25156e392dc9db86a497e76eead351d2126f69d060422faa9c55d73407a0de9f5be18d234123
@@ -135,9 +135,9 @@ pkgname = lib32-mesa
 	depends = lib32-zstd
 	depends = mesa
 	optdepends = opengl-man-pages: for the OpenGL API man pages
-	provides = lib32-libva-mesa-driver=1:25.0.2-3
-	provides = lib32-mesa-libgl=1:25.0.2-3
-	provides = lib32-mesa-vdpau=1:25.0.2-3
+	provides = lib32-libva-mesa-driver=1:25.0.3-2
+	provides = lib32-mesa-libgl=1:25.0.3-2
+	provides = lib32-mesa-vdpau=1:25.0.3-2
 	provides = lib32-libva-driver
 	provides = lib32-opengl-driver
 	provides = lib32-vdpau-driver
