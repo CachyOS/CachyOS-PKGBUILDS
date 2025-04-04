@@ -2,13 +2,13 @@
 # Maintainer: loathingkernel <loathingkernel _a_ gmail _d_ com>
 
 pkgname=proton-cachyos
-_srctag=9.0-20250307
+_srctag=9.0-20250402
 _commit=
 pkgver=${_srctag//-/.}
 _geckover=2.47.4
 _monover=9.3.1
-_xaliaver=0.4.5
-pkgrel=4
+_xaliaver=0.4.6
+pkgrel=1
 epoch=1
 
 source=(
@@ -16,12 +16,8 @@ source=(
     https://dl.winehq.org/wine/wine-gecko/${_geckover}/wine-gecko-${_geckover}-x86{,_64}.tar.xz
     https://github.com/madewokherd/wine-mono/releases/download/wine-mono-${_monover}/wine-mono-${_monover}-x86.tar.xz
     https://github.com/madewokherd/xalia/releases/download/xalia-${_xaliaver}/xalia-${_xaliaver}-net48-mono.zip
-    0001-proton-fix-logic-error-that-caused-proton-to-hang-on.patch
-    0002-proton-replace-junk-wayland-enablement-code-with-ups.patch
-    0001-Revert-proton-wait-for-process-to-exit-when-run-thro.patch
-    0001-build-disable-wine-display-drivers-when-building.patch
-    0001-explorer-Enable-the-Wayland-driver.patch
-    0001-Revert-HACK-winegstreamer-Set-GST_GL_WINDOW-environm.patch
+    0001-build-add-policy-version-minimum-for-CMake.patch
+    0001-build-sanitize-environment-by-disabling-esync-fsync-.patch
 )
 noextract=(
     wine-gecko-${_geckover}-{x86,x86_64}.tar.xz
@@ -57,6 +53,7 @@ depends=(
   sdl2            lib32-sdl2
   speex           lib32-speex
   steam-native-runtime
+  unzip
 )
 depends+=(
   wayland         lib32-wayland
@@ -89,12 +86,12 @@ makedepends=(autoconf bison perl flex mingw-w64-gcc
   nasm
   opencl-headers
   opencl-icd-loader     lib32-opencl-icd-loader
+  perl-json
   rsync
   rust                  lib32-rust-libs
   python
   python-pefile
   sdl2                  lib32-sdl2
-  unzip
   v4l-utils             lib32-v4l-utils
   vulkan-headers
   vulkan-icd-loader     lib32-vulkan-icd-loader
@@ -175,15 +172,8 @@ prepare() {
     git submodule update --init --filter=tree:0 --recursive
 
     ./patches/apply.sh
-    patch -Np1 -i "$srcdir"/0001-proton-fix-logic-error-that-caused-proton-to-hang-on.patch
-    patch -Np1 -i "$srcdir"/0002-proton-replace-junk-wayland-enablement-code-with-ups.patch
-    patch -Np1 -i "$srcdir"/0001-Revert-proton-wait-for-process-to-exit-when-run-thro.patch
-    patch -Np1 -i "$srcdir"/0001-build-disable-wine-display-drivers-when-building.patch
-
-    pushd wine
-        patch -Np1 -i "$srcdir"/0001-explorer-Enable-the-Wayland-driver.patch
-        patch -Np1 -i "$srcdir"/0001-Revert-HACK-winegstreamer-Set-GST_GL_WINDOW-environm.patch
-    popd
+    patch -Np1 -i "$srcdir"/0001-build-add-policy-version-minimum-for-CMake.patch
+    patch -Np1 -i "$srcdir"/0001-build-sanitize-environment-by-disabling-esync-fsync-.patch
 
     for rustlib in gst-plugins-rs; do
     pushd $rustlib
@@ -198,13 +188,6 @@ prepare() {
 
 build() {
     export PATH="$(pwd)/wrappers:$PATH"
-
-    cd build
-    ROOTLESS_CONTAINER="" \
-    ../proton-cachyos/configure.sh \
-        --container-engine="none" \
-        --proton-sdk-image="" \
-        --build-name="${pkgname}"
 
     local -a split=($CFLAGS)
     local -A flags
@@ -222,9 +205,13 @@ build() {
 
     export RUSTUP_TOOLCHAIN=stable
     export CARGO_HOME="${SRCDEST}"/proton-cargo
-    export WINEESYNC=0
-    export WINEFSYNC=0
-    export WINEDLLOVERRIDES="winex11.drv,winewayland.drv,winemenubuild=d;"
+
+    cd build
+    ROOTLESS_CONTAINER="" \
+    ../proton-cachyos/configure.sh \
+        --container-engine="none" \
+        --proton-sdk-image="" \
+        --build-name="${pkgname}"
 
     SUBJOBS=$([[ "$MAKEFLAGS" =~ -j\ *([1-9][0-9]*) ]] && echo "${BASH_REMATCH[1]}" || echo "$(nproc)") \
         make -j1 dist
@@ -276,14 +263,10 @@ package() {
         $(find "$_monodir" -iname "*x86_64.dll" -or -iname "*x86_64.exe")
 }
 
-b2sums=('18c40da4d5405b9d11ad0391e30b5395a83962e1aca5c2b4ed669de9453ae2119e3a120d6cadbed6ca2f408fc2e73429bad7d28ecb4564d77638d9308394b415'
+b2sums=('c124fd78ddb05b6b575310428af144219e4d751cfb5dc1592c35a398e05cd4253d3d24456b086c22b821346ca6fcc98cbb77998d393ee528b6ea504883461ef2'
         '2a73c12585b502ae11188482cbc9fb1f45f95bfe4383a7615011104b132f4845f9813d01fb40277e1934fab5f1b35ab40b4f4a66a9967463dd1d666a666904e9'
         '62856a88266b4757602c0646e024f832974a93f03b9df253fd4895d4f11a41b435840ad8f7003ec85a0d8087dec15f2e096dbfb4b01ebe4d365521e48fd0c5c0'
         '5f4c2a07355a3d394086467f1b0c45698cd83731a4137b59975abdeda2d564f44922a67b1bec111e4209c4fe74247486076e95dffc84d88b5b7a02774efd070b'
-        '5c3985080995a62c1c765244d430cea86cca82d187874a95d89b3fd9303c89a6944613ae5de7d31354053e5c91d2fc39842e57ee7866a87c529e9becc458ec49'
-        '783cd2a1dd7ca96b431d084924a4a77579ab70731da1ad0cf32491158ee85ec78e43429b6334dd1976a511910e64fb28792e38166735e2b8a5fdebc5614c0cce'
-        '65c69c53a54794aa67e3c469710d8271114f250646fa580dbb3398b669b70b1bfe8ca33ecb5219e97a17449e4c10c19f61b39db453646ad52e822b162657c180'
-        '270c6fe54f3f988b7a5477bf2affb9364d3900eb50f58aea5c688f32c1a66b6c957c6f7578582c78afaa8ef74b92aa980ad1fcc67be6687c45d52ce6b2eaa69b'
-        '375bdb818649b5e8f5e35362419869710d74f371e76f70a972b6127104930ca05c0d9660bc423d722bdc3425594b25f78d0c2d7e475b554243e44dc0f9edc9a7'
-        'cf36bf091c607b8d08d89462bc5a4f10bd0293258ca4ebd15ecbb433df33e8bb787018a164dfaf52e20c64fb5e8a150343e789b566b40c1205f69652d27ee60d'
-        '094007808c97c97008b4be4d2e3c24afe636d4af189e22e3e4fbc86e06ef280d580d696940d9356f03c7813c9238e7ef70ee512b9c7df2a6dcaa29bc1f6c2ff3')
+        '4d30eea9306392790677a4e19f7e416a387aaf10c4a7681aa8fcd94faf07be81a984b28ba1437428d7c215c5ecdbba70993091547068fbdc224e809c3f7abd85'
+        '6c187c69844eb076e29fb2ccd0daa12ad24a91cbe0cf78d77343c238c5cc6e9a86dadb6b723f668ab0cd18e2822cabd0d55afbfb3ab7ab111d4aa8f7df57a12d'
+        '753dd4f3b6017969f301db05ab574364dbae1958743b7d8475bf65e27671c1443225215c967f1815aa105b7b640013e4e28caf10b5b7d4a71bfb537c334c50c4')
