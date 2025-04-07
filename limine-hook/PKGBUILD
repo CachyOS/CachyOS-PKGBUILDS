@@ -1,0 +1,29 @@
+# Maintainer: Vasiliy Stelmachenok <ventureo@cachyos.org>
+pkgname="limine-hook"
+pkgver=20250407
+pkgrel=1
+pkgdesc='Pacman hooks to update kernel entries in limine'
+license=(GPL-3.0-or-later)
+arch=('any')
+url="https://github.com/CachyOS/CachyOS-PKGBUILDS"
+depends=('limine-entry-tool')
+source=(
+    "limine-kernel-hook"
+    "10-limine-add-kernel.hook"
+    "10-limine-remove-kernel.hook"
+)
+sha256sums=(
+    'b6bf6d2608d5cfd30da6d0305b429c3bbe641f27940cebc1f5acd19c01ea2eb0'
+    'c551d174a3dc9576bceb70d037fdc50238cff6fc514b9d7f4ff62ae45245f04b'
+    '4125d03a16061816031537deabd02041c0320cbb103b3e31f42fe0616ee7e63e'
+)
+
+pkgver() {
+    date +%Y%m%d
+}
+
+package() {
+    install -Dm755 limine-kernel-hook "$pkgdir/usr/share/libalpm/scripts/limine-kernel-hook"
+    install -Dm644 10-limine-add-kernel.hook -t "$pkgdir/usr/share/libalpm/hooks/"
+    install -Dm644 10-limine-remove-kernel.hook -t "$pkgdir/usr/share/libalpm/hooks/"
+}
