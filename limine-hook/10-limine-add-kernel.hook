@@ -1,0 +1,10 @@
+[Trigger]
+Operation = Install
+Operation = Upgrade
+Type = Path
+Target = usr/lib/modules/*/vmlinuz
+
+[Action]
+Description = Updating limine entries for new kernels...
+When = PostTransaction
+Exec = /usr/share/libalpm/scripts/limine-kernel-hook update
