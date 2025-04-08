@@ -1,0 +1,269 @@
+From 750fcb7f1347941c4b85d3c03a983ba11ce72286 Mon Sep 17 00:00:00 2001
+From: Laio Oriel Seman <laioseman@gmail.com>
+Date: Sat, 19 Oct 2024 08:58:12 -0300
+Subject: [PATCH 1/2] perf2bolt
+
+--
+ Makefile.pre.in | 21 +++++++----------
+ configure       | 62 ++++++++++++++++++++++++-------------------------
+ configure.ac    | 12 +++++-----
+ 3 files changed, 45 insertions(+), 50 deletions(-)
+
+diff --git a/Makefile.pre.in b/Makefile.pre.in
+index fb6f22d5739..13207cac8b5 100644
+-- a/Makefile.pre.in
+++ b/Makefile.pre.in
+@@ -805,11 +805,9 @@ BOLT_APPLY_FLAGS := @BOLT_APPLY_FLAGS@
+ .PHONY: clean-bolt
+ clean-bolt:
+ 	# Profile data.
+-	rm -f *.fdata
++	rm -f perf.data
+ 	# Pristine binaries before BOLT optimization.
+ 	rm -f *.prebolt
+-	# BOLT instrumented binaries.
+-	rm -f *.bolt_inst
+ 
+ profile-bolt-stamp: $(BUILDPYTHON)
+ 	# Ensure a pristine, pre-BOLT copy of the binary and no profile data from last run.
+@@ -822,29 +820,26 @@ profile-bolt-stamp: $(BUILDPYTHON)
+ 	  cp "$${bin}" "$${prebolt}"; \
+ 	  rm -f $${bin}.bolt.*.fdata $${bin}.fdata; \
+ 	done
+-	# Instrument each binary.
+-	for bin in $(BOLT_BINARIES); do \
+-	  @LLVM_BOLT@ "$${bin}" -instrument -instrumentation-file-append-pid -instrumentation-file=$(abspath $${bin}.bolt) -o $${bin}.bolt_inst $(BOLT_INSTRUMENT_FLAGS); \
+-	  mv "$${bin}.bolt_inst" "$${bin}"; \
+-	done
+ 	# Run instrumented binaries to collect data.
+-	$(RUNSHARED) ./$(BUILDPYTHON) $(PROFILE_TASK)
++	$(RUNSHARED) perf record -e cycles:u -j any,u -o perf.data -- ./$(BUILDPYTHON) $(PROFILE_TASK) || true
+ 	# Merge all the data files together.
+ 	for bin in $(BOLT_BINARIES); do \
+-	  @MERGE_FDATA@ $${bin}.*.fdata > "$${bin}.fdata"; \
+-	  rm -f $${bin}.*.fdata; \
++	  @PERF2BOLT@ $${bin} -p perf.data -o "$${bin}.fdata" -ignore-build-id; \
+ 	done
++	rm -f perf.data;
+ 	# Run bolt against the merged data to produce an optimized binary.
+-	for bin in $(BOLT_BINARIES); do \
++	for bin in $(INSTSONAME); do \
+ 	  @LLVM_BOLT@ "$${bin}.prebolt" -o "$${bin}.bolt" -data="$${bin}.fdata" $(BOLT_APPLY_FLAGS); \
+ 	  mv "$${bin}.bolt" "$${bin}"; \
+ 	done
++	rm -f *.fdata
++	rm -f *.prebolt
+ 	touch $@
+ 
+ .PHONY: bolt-opt
+ bolt-opt:
+ 	$(MAKE) @PREBOLT_RULE@
+-	$(MAKE) profile-bolt-stamp
++	$(MAKE) profile-bolt-stamp || true
+ 
+ # Compile and run with gcov
+ .PHONY: coverage
+diff --git a/configure b/configure
+index b11f41d5379..76b70c9fe30 100755
+-- a/configure
+++ b/configure
+@@ -914,7 +914,7 @@ OPT
+ BOLT_APPLY_FLAGS
+ BOLT_INSTRUMENT_FLAGS
+ BOLT_BINARIES
+-MERGE_FDATA
++PERF2BOLT
+ LLVM_BOLT
+ PREBOLT_RULE
+ LLVM_PROF_FOUND
+@@ -9197,17 +9197,17 @@ printf "%s\n" "\"Found llvm-bolt\"" >&6; }
+ 
+ 
+   if test -n "$ac_tool_prefix"; then
+-  # Extract the first word of "${ac_tool_prefix}merge-fdata", so it can be a program name with args.
+-set dummy ${ac_tool_prefix}merge-fdata; ac_word=$2
++  # Extract the first word of "${ac_tool_prefix}perf2bolt", so it can be a program name with args.
++set dummy ${ac_tool_prefix}perf2bolt; ac_word=$2
+ { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
+ printf %s "checking for $ac_word... " >&6; }
+-if test ${ac_cv_path_MERGE_FDATA+y}
++if test ${ac_cv_path_PERF2BOLT+y}
+ then :
+   printf %s "(cached) " >&6
+ else $as_nop
+-  case $MERGE_FDATA in
++  case $PERF2BOLT in
+   [\\/]* | ?:[\\/]*)
+-  ac_cv_path_MERGE_FDATA="$MERGE_FDATA" # Let the user override the test with a path.
++  ac_cv_path_PERF2BOLT="$PERF2BOLT" # Let the user override the test with a path.
+   ;;
+   *)
+   as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+@@ -9221,7 +9221,7 @@ do
+   esac
+     for ac_exec_ext in '' $ac_executable_extensions; do
+   if as_fn_executable_p "$as_dir$ac_word$ac_exec_ext"; then
+-    ac_cv_path_MERGE_FDATA="$as_dir$ac_word$ac_exec_ext"
++    ac_cv_path_PERF2BOLT="$as_dir$ac_word$ac_exec_ext"
+     printf "%s\n" "$as_me:${as_lineno-$LINENO}: found $as_dir$ac_word$ac_exec_ext" >&5
+     break 2
+   fi
+@@ -9232,10 +9232,10 @@ IFS=$as_save_IFS
+   ;;
+ esac
+ fi
+-MERGE_FDATA=$ac_cv_path_MERGE_FDATA
+-if test -n "$MERGE_FDATA"; then
+-  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $MERGE_FDATA" >&5
+-printf "%s\n" "$MERGE_FDATA" >&6; }
++PERF2BOLT=$ac_cv_path_PERF2BOLT
++if test -n "$PERF2BOLT"; then
++  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $PERF2BOLT" >&5
++printf "%s\n" "$PERF2BOLT" >&6; }
+ else
+   { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no" >&5
+ printf "%s\n" "no" >&6; }
+@@ -9243,19 +9243,19 @@ fi
+ 
+ 
+ fi
+-if test -z "$ac_cv_path_MERGE_FDATA"; then
+-  ac_pt_MERGE_FDATA=$MERGE_FDATA
+-  # Extract the first word of "merge-fdata", so it can be a program name with args.
+-set dummy merge-fdata; ac_word=$2
++if test -z "$ac_cv_path_PERF2BOLT"; then
++  ac_pt_PERF2BOLT=$PERF2BOLT
++  # Extract the first word of "perf2bolt", so it can be a program name with args.
++set dummy perf2bolt; ac_word=$2
+ { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
+ printf %s "checking for $ac_word... " >&6; }
+-if test ${ac_cv_path_ac_pt_MERGE_FDATA+y}
++if test ${ac_cv_path_ac_pt_PERF2BOLT+y}
+ then :
+   printf %s "(cached) " >&6
+ else $as_nop
+-  case $ac_pt_MERGE_FDATA in
++  case $ac_pt_PERF2BOLT in
+   [\\/]* | ?:[\\/]*)
+-  ac_cv_path_ac_pt_MERGE_FDATA="$ac_pt_MERGE_FDATA" # Let the user override the test with a path.
++  ac_cv_path_ac_pt_PERF2BOLT="$ac_pt_PERF2BOLT" # Let the user override the test with a path.
+   ;;
+   *)
+   as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+@@ -9269,7 +9269,7 @@ do
+   esac
+     for ac_exec_ext in '' $ac_executable_extensions; do
+   if as_fn_executable_p "$as_dir$ac_word$ac_exec_ext"; then
+-    ac_cv_path_ac_pt_MERGE_FDATA="$as_dir$ac_word$ac_exec_ext"
++    ac_cv_path_ac_pt_PERF2BOLT="$as_dir$ac_word$ac_exec_ext"
+     printf "%s\n" "$as_me:${as_lineno-$LINENO}: found $as_dir$ac_word$ac_exec_ext" >&5
+     break 2
+   fi
+@@ -9280,17 +9280,17 @@ IFS=$as_save_IFS
+   ;;
+ esac
+ fi
+-ac_pt_MERGE_FDATA=$ac_cv_path_ac_pt_MERGE_FDATA
+-if test -n "$ac_pt_MERGE_FDATA"; then
+-  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_pt_MERGE_FDATA" >&5
+-printf "%s\n" "$ac_pt_MERGE_FDATA" >&6; }
++ac_pt_PERF2BOLT=$ac_cv_path_ac_pt_PERF2BOLT
++if test -n "$ac_pt_PERF2BOLT"; then
++  { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_pt_PERF2BOLT" >&5
++printf "%s\n" "$ac_pt_PERF2BOLT" >&6; }
+ else
+   { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: no" >&5
+ printf "%s\n" "no" >&6; }
+ fi
+ 
+-  if test "x$ac_pt_MERGE_FDATA" = x; then
+-    MERGE_FDATA="''"
++  if test "x$ac_pt_PERF2BOLT" = x; then
++    PERF2BOLT="''"
+   else
+     case $cross_compiling:$ac_tool_warned in
+ yes:)
+@@ -9298,18 +9298,18 @@ yes:)
+ printf "%s\n" "$as_me: WARNING: using cross tools not prefixed with host triplet" >&2;}
+ ac_tool_warned=yes ;;
+ esac
+-    MERGE_FDATA=$ac_pt_MERGE_FDATA
++    PERF2BOLT=$ac_pt_PERF2BOLT
+   fi
+ else
+-  MERGE_FDATA="$ac_cv_path_MERGE_FDATA"
++  PERF2BOLT="$ac_cv_path_PERF2BOLT"
+ fi
+ 
+-  if test -n "${MERGE_FDATA}" -a -x "${MERGE_FDATA}"
++  if test -n "${PERF2BOLT}" -a -x "${PERF2BOLT}"
+   then
+-    { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: \"Found merge-fdata\"" >&5
+-printf "%s\n" "\"Found merge-fdata\"" >&6; }
++    { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: \"Found perf2bolt\"" >&5
++printf "%s\n" "\"Found perf2bolt\"" >&6; }
+   else
+-    as_fn_error $? "merge-fdata is required for a --enable-bolt build but could not be found." "$LINENO" 5
++    as_fn_error $? "perf2bolt is required for a --enable-bolt build but could not be found." "$LINENO" 5
+   fi
+ fi
+ 
+diff --git a/configure.ac b/configure.ac
+index d5bc739c34c..73ca4299120 100644
+-- a/configure.ac
+++ b/configure.ac
+@@ -2194,13 +2194,13 @@ if test "$Py_BOLT" = 'true' ; then
+     AC_MSG_ERROR([llvm-bolt is required for a --enable-bolt build but could not be found.])
+   fi
+ 
+-  AC_SUBST([MERGE_FDATA])
+-  AC_PATH_TOOL([MERGE_FDATA], [merge-fdata], [''], [${llvm_path}])
+-  if test -n "${MERGE_FDATA}" -a -x "${MERGE_FDATA}"
++  AC_SUBST([PERF2BOLT])
++  AC_PATH_TOOL([PERF2BOLT], [perf2bolt], [''], [${llvm_path}])
++  if test -n "${PERF2BOLT}" -a -x "${PERF2BOLT}"
+   then
+-    AC_MSG_RESULT(["Found merge-fdata"])
++    AC_MSG_RESULT(["Found perf2bolt"])
+   else
+-    AC_MSG_ERROR([merge-fdata is required for a --enable-bolt build but could not be found.])
++    AC_MSG_ERROR([perf2bolt is required for a --enable-bolt build but could not be found.])
+   fi
+ fi
+ 
+@@ -2234,7 +2234,7 @@ then
+     [m4_normalize("
+      -update-debug-sections
+      -reorder-blocks=ext-tsp
+-     -reorder-functions=hfsort+
++     -reorder-functions=cdsort
+      -split-functions
+      -icf=1
+      -inline-all
+- 
+2.47.1
+
+From e3902dbc1e0e5c278dcaed57c2ffa05c67308ed1 Mon Sep 17 00:00:00 2001
+From: Laio Oriel Seman <laioseman@gmail.com>
+Date: Fri, 27 Dec 2024 10:53:45 -0300
+Subject: [PATCH 2/2] Update configure
+
+--
+ configure | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/configure b/configure
+index 76b70c9fe30..ea892a770cd 100755
+-- a/configure
+++ b/configure
+@@ -9337,7 +9337,7 @@ printf "%s\n" "$BOLT_INSTRUMENT_FLAGS" >&6; }
+ printf %s "checking BOLT_APPLY_FLAGS... " >&6; }
+ if test -z "${BOLT_APPLY_FLAGS}"
+ then
+-  BOLT_APPLY_FLAGS=" -update-debug-sections -reorder-blocks=ext-tsp -reorder-functions=hfsort+ -split-functions -icf=1 -inline-all -split-eh -reorder-functions-use-hot-size -peepholes=none -jump-tables=aggressive -inline-ap -indirect-call-promotion=all -dyno-stats -use-gnu-stack -frame-opt=hot "
++  BOLT_APPLY_FLAGS=" -update-debug-sections -reorder-blocks=ext-tsp -reorder-functions=cdsort -split-functions -icf=1 -inline-all -split-eh -reorder-functions-use-hot-size -peepholes=none -jump-tables=aggressive -inline-ap -indirect-call-promotion=all -dyno-stats -use-gnu-stack -frame-opt=hot --skip-funcs=sre_ucs1_match/1,_PyEval_EvalFrameDefault.localalias/1 "
+ 
+ fi
+ { printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $BOLT_APPLY_FLAGS" >&5
+- 
+2.47.1
