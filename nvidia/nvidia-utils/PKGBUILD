@@ -7,7 +7,7 @@
 pkgbase=nvidia-utils
 pkgname=('nvidia-utils' 'opencl-nvidia' 'nvidia-dkms' 'nvidia-open-dkms')
 pkgver=570.133.07
-pkgrel=2
+pkgrel=3
 arch=('x86_64')
 url="http://www.nvidia.com/"
 license=('custom')
@@ -24,7 +24,13 @@ source=('nvidia-drm-outputclass.conf'
         "https://us.download.nvidia.com/XFree86/Linux-x86_64/${pkgver}/${_pkg}.run"
         "https://download.nvidia.com/XFree86/NVIDIA-kernel-module-source/${_pkg_open}.tar.xz"
         '0001-Enable-atomic-kernel-modesetting-by-default.patch'
-        '0002-Add-IBT-support.patch')
+        '0002-Add-IBT-support.patch'
+        '0003-Kbuild-Convert-EXTRA_CFLAGS-to-ccflags-y.patch'
+        '0004-kernel-open-nvidia-Use-new-timer-functions-for-6.15.patch'
+        '0005-nvidia-drm-nv_drm_connector_mode_valid-Accept-const-.patch'
+        '0006-nvidia-uvm-Use-__iowrite64_hi_lo.patch'
+        '0007-nvidia-uvm-Use-page_pgmap.patch'
+        '0008-nvidia-uvm-Convert-make_device_exclusive_range-to-ma.patch')
 sha256sums=('be99ff3def641bb900c2486cce96530394c5dc60548fc4642f19d3a4c784134d'
             'f77a5247a3ba63e9fad3a3b2822d0fcfa51e0f79b5a90bd79bf08ea34b64ab07'
             '0e54249a7754b668b436f0f7aa7e95fff68edbb12a93dbee4660e09a8c695f84'
@@ -34,7 +40,13 @@ sha256sums=('be99ff3def641bb900c2486cce96530394c5dc60548fc4642f19d3a4c784134d'
             '2d43e64c581be5ef554de9888b1aa90037ef6d45f54284d3d9dcedc08dc4dc26'
             '31b3876fa657e57a144aaa4f2ac99dba3ab065af2a3e1225d685458bf40b729e'
             '84ec3947f8ff355d7fb26ab1cd0bf38c23b1e9c6eccf9fa7b51b74f2e66cdfa7'
-            'ad579d5220ed37035cf6ae6f68782abe01dbb1efd87e131df657d03e3917699e')
+            'ad579d5220ed37035cf6ae6f68782abe01dbb1efd87e131df657d03e3917699e'
+            '72992ed00d9ca41446f0435d97be6d5dd74a3538a413bff68ecdb9f5147e7af8'
+            '3bb9330420a34b208641073879a17328ac56be38039181663f7d120b4c4f242c'
+            '3df270268062bf472ca56fa450bf350800941c0ca7ebc0c63b34269cd4248272'
+            '6ac7c9e4653fdbe9a246d6689dc0212519a5b743082893e0b8097dfe39fb9cc0'
+            'bfe5069a3767b771fa831056b9f15f99b4b27b4772eb98d26bb5709431f5898a'
+            'a50e5513f5b41d4d4d7fefcb75d50bfaf377b20ed4976735c9269aa62b20525e')
 
 
 create_links() {
@@ -58,6 +70,20 @@ prepare() {
     # https://github.com/rpmfusion/nvidia-kmod/blob/master/make_modeset_default.patch
     patch -Np1 -i  "${srcdir}/0001-Enable-atomic-kernel-modesetting-by-default.patch" -d "${srcdir}/${_pkg}/kernel"
     patch -Np1 -i  "${srcdir}/0001-Enable-atomic-kernel-modesetting-by-default.patch" -d "${srcdir}/${_pkg_open}/kernel-open"
+
+    # 6.15 Compatibility
+    patch -Np1 -i  "${srcdir}/0003-Kbuild-Convert-EXTRA_CFLAGS-to-ccflags-y.patch" -d "${srcdir}/${_pkg}/kernel"
+    patch -Np2 -i  "${srcdir}/0004-kernel-open-nvidia-Use-new-timer-functions-for-6.15.patch" -d "${srcdir}/${_pkg}/kernel"
+    patch -Np2 -i  "${srcdir}/0005-nvidia-drm-nv_drm_connector_mode_valid-Accept-const-.patch" -d "${srcdir}/${_pkg}/kernel"
+    patch -Np2 -i  "${srcdir}/0006-nvidia-uvm-Use-__iowrite64_hi_lo.patch" -d "${srcdir}/${_pkg}/kernel"
+
+    patch -Np1 -i  "${srcdir}/0003-Kbuild-Convert-EXTRA_CFLAGS-to-ccflags-y.patch" -d"${srcdir}/${_pkg_open}/kernel-open"
+    patch -Np1 -i  "${srcdir}/0004-kernel-open-nvidia-Use-new-timer-functions-for-6.15.patch" -d"${srcdir}/${_pkg_open}/"
+    patch -Np1 -i  "${srcdir}/0005-nvidia-drm-nv_drm_connector_mode_valid-Accept-const-.patch" -d "${srcdir}/${_pkg_open}/"
+    patch -Np1 -i  "${srcdir}/0006-nvidia-uvm-Use-__iowrite64_hi_lo.patch" -d "${srcdir}/${_pkg_open}/"
+    patch -Np1 -i  "${srcdir}/0007-nvidia-uvm-Use-page_pgmap.patch" -d "${srcdir}/${_pkg_open}/"
+    patch -Np1 -i  "${srcdir}/0008-nvidia-uvm-Convert-make_device_exclusive_range-to-ma.patch" -d "${srcdir}/${_pkg_open}/"
+
 
     # Fix for https://bugs.archlinux.org/task/74886
     patch -Np1 -i "${srcdir}/0002-Add-IBT-support.patch" -d "${srcdir}/${_pkg_open}/"
