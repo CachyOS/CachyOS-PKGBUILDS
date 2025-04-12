@@ -3,8 +3,8 @@
 # Contributor: Balwinder S "bsd" Dheeman (bdheeman AT gmail.com)
 
 pkgname=dkms
-pkgver=3.1.7
-pkgrel=3
+pkgver=3.1.8
+pkgrel=2
 pkgdesc='Dynamic Kernel Modules System'
 arch=('any')
 url='https://github.com/dell/dkms'
@@ -36,7 +36,7 @@ source=("git+https://github.com/dell/dkms.git#tag=v$pkgver"
         'hook.remove'
         'hook.upgrade'
         'hook.sh')
-sha256sums=('0f7b0a644c135426e74856bfd32f095185590178db90ba2d5064660ce9ee763a'
+sha256sums=('322be2381d36fbfe28f86ea3b3460692df3487ce020d39f0768f3b1ff02292df'
             'acdc5b45cc018cea04ee1aec56fd8fc3a2de62cf7bc41acf53b3790872120998'
             '326515cc7d00f93760beb844434ca7442caf7a9424614aa95a8f6d1ab79e15df'
             '4f8dff7716e73a8bba885638f12e3cdc9e87daec1896f75e700b981527e43870'
@@ -44,9 +44,6 @@ sha256sums=('0f7b0a644c135426e74856bfd32f095185590178db90ba2d5064660ce9ee763a'
 
 prepare() {
   cd $pkgname
-
-  # https://github.com/dell/dkms/issues/510
-  git cherry-pick -n 3c9fb67fda3ed400b2dcb28e559856ad1e858576
 }
 
 package() {
