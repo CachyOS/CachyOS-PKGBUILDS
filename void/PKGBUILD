@@ -7,8 +7,8 @@
 #  https://aur.archlinux.org/cgit/aur.git/tree/PKGBUILD?h=code-git
 
 pkgname=void
-_commit=85c2c80db071b183592d5463d33ac97c5e1c39eb # lets assume its latest release which is 1.94.0
-pkgver=1.94.0
+epoch=1
+pkgver=1.0.2
 pkgrel=1
 pkgdesc="Void is the open-source Cursor alternative."
 url="https://voideditor.com/"
@@ -42,15 +42,16 @@ optdepends=(
     'icu69: Needed for live share'
 )
 makedepends=(
-    'nodejs'
-    'npm'
-    'pkg-config'
-    'python'
+    git
+    nodejs
+    npm
+    pkg-config
+    python
 )
 source=(
-    "git+https://github.com/voideditor/void.git#commit=${_commit}"
+    "git+https://github.com/voideditor/void.git#tag=v${pkgver}"
 )
-sha256sums=('70345de6d083542fdddada5a58b9e3adf64ad197b2b4053c05385faf298bf50f')
+sha256sums=('327f20874d44945abf0c73434bdbc723681e80f9c4c678f0242e6b456bf0824b')
 
 ###############################################################################
 # Even though we don't officially support other archs, let's allow the
