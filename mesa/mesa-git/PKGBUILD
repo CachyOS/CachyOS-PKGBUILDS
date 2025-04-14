@@ -58,7 +58,7 @@ if [ "$_lib32" == "true" ]; then
                 'lib32-gcc-libs' 'lib32-libvdpau' 'lib32-libelf' 'lib32-libgcrypt'
                 'lib32-lm_sensors' 'lib32-libxdamage' 'gcc-multilib' 'lib32-libunwind' 'lib32-libglvnd'
                 'lib32-libva' 'lib32-wayland' 'lib32-libvdpau' 'lib32-libxrandr' 'lib32-expat'
-                'lib32-spirv-llvm-translator' 'lib32-rust-libs')
+                'lib32-spirv-llvm-translator' 'lib32-rust-libs' 'lib32-clang')
 fi
 
 depends=('libdrm' 'libxxf86vm' 'libxdamage' 'libxshmfence' 'libelf' 'libomxil-bellagio' 'libunwind'
@@ -512,7 +512,8 @@ build () {
         export CXX="g++ -m32"
       fi
       export PKG_CONFIG=/usr/bin/i686-pc-linux-gnu-pkg-config
-
+      # Fix for NVK
+      export TARGET=i686-unknown-linux-gnu
       arch-meson $_mesa_srcdir _build32 \
           --cross-file lib32 \
           --native-file llvm32.native \
