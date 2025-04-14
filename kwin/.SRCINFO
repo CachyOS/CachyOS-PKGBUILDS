@@ -1,7 +1,7 @@
 pkgbase = kwin
 	pkgdesc = An easy to use, but flexible, composited Window Manager (CachyOS Version)
 	pkgver = 6.3.4
-	pkgrel = 4
+	pkgrel = 5
 	url = https://kde.org/plasma-desktop/
 	install = kwin.install
 	arch = x86_64
@@ -65,7 +65,8 @@ pkgbase = kwin
 	depends = pipewire-session-manager
 	depends = libplasma
 	depends = qt6-5compat
-	depends = qt6-base
+	depends = qt6-base>=6.9
+	depends = qt6-base<6.10
 	depends = qt6-declarative
 	depends = qt6-multimedia
 	depends = qt6-sensors
@@ -82,6 +83,7 @@ pkgbase = kwin
 	source = https://download.kde.org/stable/plasma/6.3.4/kwin-6.3.4.tar.xz.sig
 	source = 0001-libei-no-prompt.patch
 	source = 0002-fifo-v1.patch
+	source = https://invent.kde.org/plasma/kwin/-/commit/93bf2f98.patch
 	validpgpkeys = E0A3EB202F8E57528E13E72FD7574483BB57B18D
 	validpgpkeys = 0AAC775BB6437A8D9AF7A3ACFE0784117FBCE11D
 	validpgpkeys = D07BD8662C56CB291B316EB2F5675605C74E02CF
@@ -90,5 +92,6 @@ pkgbase = kwin
 	sha256sums = SKIP
 	sha256sums = 7df5390ee0df257d2ec2d96b8ef6d99b62704da8512246b8520c58e07612430a
 	sha256sums = f69509e68f8675b3a5bf86b484036c9fcdf0cf97e0c8d18b52116e13a5f91bd1
+	sha256sums = d66a820893c40ec6db2838ef29ac25ec9c7517aadb69c10c7921c504fcafeb6f
 
 pkgname = kwin

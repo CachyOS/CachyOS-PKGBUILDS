@@ -7,7 +7,7 @@ pkgver=6.3.4
 _dirver=$(echo $pkgver | cut -d. -f1-3)
 _qtbasever=6.9
 _qtnextver=6.10
-pkgrel=4
+pkgrel=5
 pkgdesc='An easy to use, but flexible, composited Window Manager (CachyOS Version)'
 arch=(x86_64)
 url='https://kde.org/plasma-desktop/'
@@ -87,12 +87,14 @@ optdepends=('maliit-keyboard: virtual keyboard for kwin-wayland')
 groups=(plasma)
 source=(https://download.kde.org/stable/plasma/$_dirver/$pkgname-$pkgver.tar.xz{,.sig}
         0001-libei-no-prompt.patch
-        0002-fifo-v1.patch)
+        0002-fifo-v1.patch
+        https://invent.kde.org/plasma/kwin/-/commit/93bf2f98.patch)
 install=$pkgname.install
 sha256sums=('e74a61eccc5d3248dbd620b6c2c7b175013b15ff59e17af70f88aefc082445a5'
             'SKIP'
             '7df5390ee0df257d2ec2d96b8ef6d99b62704da8512246b8520c58e07612430a'
-            'f69509e68f8675b3a5bf86b484036c9fcdf0cf97e0c8d18b52116e13a5f91bd1')
+            'f69509e68f8675b3a5bf86b484036c9fcdf0cf97e0c8d18b52116e13a5f91bd1'
+            'd66a820893c40ec6db2838ef29ac25ec9c7517aadb69c10c7921c504fcafeb6f')
 validpgpkeys=('E0A3EB202F8E57528E13E72FD7574483BB57B18D'  # Jonathan Esk-Riddell <jr@jriddell.org>
               '0AAC775BB6437A8D9AF7A3ACFE0784117FBCE11D'  # Bhushan Shah <bshah@kde.org>
               'D07BD8662C56CB291B316EB2F5675605C74E02CF'  # David Edmundson <davidedmundson@kde.org>
@@ -106,6 +108,8 @@ prepare() {
   # Implement fifo-v1 wayland protocol
   # https://invent.kde.org/plasma/kwin/-/merge_requests/6474
   patch -Np1 < ../0002-fifo-v1.patch
+  # Backport crash fix
+  patch -Np1 < ../93bf2f98.patch
 }
 
 build() {
