@@ -151,9 +151,9 @@ if [[ -z "${pkgbuilds_dir}" ]]; then
 fi
 
 if [[ "${pkgbuilds_dir}" == "--ci" ]]; then
-    files=$(find . -name "PKGBUILD")
+    files=$(find . -name ".nvchecker.toml")
     for f in $files; do
-        check_packages "${f%\/PKGBUILD}"
+        check_packages "${f%\/.nvchecker.toml}"
     done
 else
     check_packages "${pkgbuilds_dir}"
