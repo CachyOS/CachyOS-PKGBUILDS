@@ -150,6 +150,13 @@ if [[ -z "${pkgbuilds_dir}" ]]; then
   exit 1
 fi
 
-check_packages "${pkgbuilds_dir}"
+if [[ "${pkgbuilds_dir}" == "--ci" ]]; then
+    files=$(find . -name "PKGBUILD")
+    for f in $files; do
+        check_packages "${f%\/PKGBUILD}"
+    done
+else
+    check_packages "${pkgbuilds_dir}"
+fi
 
 echo "Package checks and GitHub issue updates completed."
