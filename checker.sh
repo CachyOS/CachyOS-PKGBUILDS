@@ -67,7 +67,7 @@ find_existing_issue() {
   local package="${1}"
   local search_title="${package}: "
 
-  local issues_json="$(github_api GET "issues?state=open&labels=out-of-date&sort=created&direction=asc&per_page=100")"
+  local issues_json="$(github_api GET "issues?state=open&labels=out-of-date&sort=created&direction=asc&per_page=100" "")"
   local issue_number="$(jq -r ".[] | select(.title | startswith(\"${search_title}\")) | .number" <<< "${issues_json}")"
 
   if [[ -n "${issue_number}" ]]; then
@@ -112,7 +112,7 @@ check_package() {
     issue_number="$(find_existing_issue "${pkgbase}")"
     if [[ -n "${issue_number}" ]]; then
       # Check if the issue is for the *same* upstream version (to avoid redundant updates)
-      issue_title="$(github_api GET "issues/${issue_number}" | jq -r ".title")"
+      issue_title="$(github_api GET "issues/${issue_number}" "" | jq -r ".title")"
       if [[ "${issue_title}" != "${title}" ]]; then
         update_issue "${issue_number}" "${title}" "${description}"
       else
