@@ -3,7 +3,7 @@
 
 pkgname=lib32-gamescope-plus
 pkgver=3.15.13.plus1
-pkgrel=1
+pkgrel=2
 pkgdesc="WSI Layer for use with gamescope (32-bit)"
 arch=(x86_64)
 url="https://github.com/ChimeraOS/gamescope"
@@ -20,6 +20,8 @@ makedepends=(
     'wayland-protocols'
     'vulkan-headers'
     'lib32-glm')
+provides=('lib32-gamescope')
+conflicts=('lib32-gamescope')
 source=("git+${url}#tag=${pkgver}")
 sha256sums=('2d3deeacc515e45e90c51535c171fe0d36f1d0e3a62127ec54997b213eb08c23')
 
