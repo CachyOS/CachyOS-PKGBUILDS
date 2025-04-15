@@ -1,0 +1,54 @@
+## Valve
+# Maintainer: Vicki Pfau <vi@endrift.com>
+# Maintainer: Jeremy Whiting <jeremy.whiting@collabora.com>
+## CachyOS
+# Maintainer: Eric Naim <dnaim@cachyos.org>
+
+pkgname=steamos-manager
+pkgver=25.5.2
+pkgrel=1
+pkgdesc='SteamOS Manager daemon for running various system management tasks'
+arch=('x86_64')
+url='https://store.steampowered.com/steamos/'
+license=('MIT')
+depends=(
+    'dbus'
+    'gamescope-session-steam-git'
+    'gcc-libs'
+    'glibc'
+    'systemd'
+    'systemd-libs'
+    'wireless_tools')  # For iwconfig
+optdepends=('jupiter-hw-support: jupiter support')  # Needed for jupiter-get-als-gain, jupiter-biosupdate, steamos-format-device, steamos-trim-devices
+makedepends=('git' 'cargo')
+source=("git+https://gitlab.com/evlaV/steamos-manager.git#tag=v${pkgver}"
+        "0001-Makefile-Remove-making-gamescope-session.service.wan.patch"
+        "support-gamescope-session-steam.patch"
+        "more-devices.patch")
+sha256sums=('a6f7ce2d9f381ed44933768ef6f19708f53a9bf5b65a8b861e975a31e892045d'
+            '31b0fb5905d3365f5767e806f5866c0e6897f1e77fac3e89459fc71a612d2ee5'
+            '9eed907b8cb6dfcc0bf8d891ab214d734687c7714ebb44caf4b5581851fbe9b8'
+            'c26b957431f53311e7bb9d56dc70cfbb008cdaa16c6aa575d2668ca24124d390')
+replaces=('ds-inhibit')
+
+prepare() {
+    cd "${pkgname}"
+    patch -Np1 -i ../0001-Makefile-Remove-making-gamescope-session.service.wan.patch
+    patch -Np1 -i ../support-gamescope-session-steam.patch
+    patch -Np1 -i ../more-devices.patch
+
+    cargo fetch --locked --target "x86_64-unknown-linux-gnu"
+}
+
+build() {
+    cd "${pkgname}"
+    make build
+}
+
+package () {
+    cd "${pkgname}"
+    make install DESTDIR="${pkgdir}"
+
+    install -d -m0755 "$pkgdir/usr/lib/systemd/user/gamescope-session-plus@steam.service.wants/"
+    ln -s ../steamos-manager.service "$pkgdir/usr/lib/systemd/user/gamescope-session-plus@steam.service.wants/"
+}
