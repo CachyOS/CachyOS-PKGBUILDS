@@ -84,6 +84,10 @@ b2sums=('912d1b00acf2f826c0147d2b2be8c71d3f095eadecd5fff958fc7152cd35103f0a5aa09
 
 prepare() {
   cd gamescope
+  # Support BOE panels for Rog Ally
+  git cherry-pick -n efa9dd76e81457a61287ec6d632badbe980285a1
+  # Fix Intel handhelds
+  git cherry-pick -n e2090269ff7f352d66734381cbd451e5881f68ba
 
   meson subprojects download
 
