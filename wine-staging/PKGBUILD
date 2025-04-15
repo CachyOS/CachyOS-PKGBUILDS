@@ -7,7 +7,7 @@
 
 pkgname=wine-staging
 pkgver=10.5
-pkgrel=2
+pkgrel=3
 
 _pkgbasever=${pkgver/rc/-rc}
 _winever=$_pkgbasever
@@ -143,6 +143,7 @@ build() {
     --with-wayland \
     --with-gstreamer \
     --with-xattr \
+    --with-freetype \
     --enable-archs=x86_64,i386
 
   make
