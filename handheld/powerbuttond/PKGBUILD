@@ -7,7 +7,7 @@ arch=('x86_64')
 url="https://gitlab.steamos.cloud/jupiter/powerbuttond"
 pkgdesc="Power button daemon"
 license=('BSD-2-Clause')
-depends=('libevdev')
+depends=('glibc' 'libevdev' 'systemd-libs')
 source=("git+https://gitlab.com/evlaV/powerbuttond.git#tag=v${pkgver}"
         "support-more.patch::https://github.com/matte-schwartz/steamos-powerbuttond/commit/0f7874e44162.patch"
         "support-gamescope-session-plus.patch")
