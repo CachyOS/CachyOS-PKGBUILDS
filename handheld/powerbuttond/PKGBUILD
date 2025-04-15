@@ -1,24 +1,23 @@
 # Maintainer: Peter Jung <admin@ptr1337.dev>
 
 pkgname=powerbuttond
-_srctag=v2
-pkgver=${_srctag##v}
-pkgrel=1.1
+pkgver=3.1
+pkgrel=1
 arch=('x86_64')
 url="https://gitlab.steamos.cloud/jupiter/powerbuttond"
 pkgdesc="Power button daemon"
-license=('BSD')
+license=('BSD-2-Clause')
 depends=('libevdev')
-source=("git+https://gitlab.com/evlaV/powerbuttond.git#tag=$_srctag")
-sha512sums=(SKIP)
+source=("git+https://gitlab.com/evlaV/powerbuttond.git#tag=v${pkgver}")
+sha512sums=('7cbd87c05bde6dae6da2ddd38311497cd49a7df775985ab8a4ac90dea0f642c5fccd7183a58c9c92c95276f60b3cc1befee3301276afe35ede9ebc8e889b86db')
 
 build() {
-	make -C "$srcdir/$pkgname"
+    make -C "$srcdir/$pkgname"
 }
 
 package() {
-	make -C "$srcdir/$pkgname" install DESTDIR="$pkgdir"
-	#Symlink for gamescope-session
-	mkdir -m 755 "$pkgdir/usr/bin"
-	ln -s "/usr/lib/hwsupport/powerbuttond" "$pkgdir/usr/bin/powerbuttond"
+    make -C "$srcdir/$pkgname" install DESTDIR="$pkgdir"
+    #Symlink for gamescope-session
+    mkdir -m 755 "$pkgdir/usr/bin"
+    ln -s "/usr/lib/hwsupport/powerbuttond" "$pkgdir/usr/bin/powerbuttond"
 }
