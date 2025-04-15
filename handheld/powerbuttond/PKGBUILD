@@ -28,6 +28,10 @@ build() {
 package() {
     make -C "$srcdir/$pkgname" install DESTDIR="$pkgdir"
     #Symlink for gamescope-session
-    mkdir -m 755 "$pkgdir/usr/bin"
+    install -dm755 "$pkgdir/usr/bin"
     ln -s "/usr/lib/hwsupport/steamos-powerbuttond" "$pkgdir/usr/bin/powerbuttond"
+
+    # Install license to the correct directory
+    install -dm755 "$pkgdir/usr/share/licenses/powerbuttond"
+    mv "$pkgdir/usr/share/licenses/steamos-powerbuttond" "$pkgdir/usr/share/licenses/powerbuttond/LICENSE"
 }
