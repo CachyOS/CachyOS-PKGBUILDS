@@ -1,12 +1,12 @@
 # Maintainer: Eric Naim <dnaim@cachyos.org>
 # Contributor: Matthew Schwartz <matthew.schwartz@linux.dev>
 
-pkgname=lib32-gamescope-plus
-pkgver=3.15.13.plus1
-pkgrel=2
+pkgname=lib32-gamescope
+pkgver=3.16.3
+pkgrel=1
 pkgdesc="WSI Layer for use with gamescope (32-bit)"
 arch=(x86_64)
-url="https://github.com/ChimeraOS/gamescope"
+url="https://github.com/ValveSoftware/gamescope"
 license=('BSD-2-Clause')
 depends=(
     'lib32-wayland'
@@ -20,8 +20,7 @@ makedepends=(
     'wayland-protocols'
     'vulkan-headers'
     'lib32-glm')
-provides=('lib32-gamescope')
-conflicts=('lib32-gamescope')
+replaces=('lib32-gamescope-plus')
 source=("git+${url}#tag=${pkgver}")
 sha256sums=('2d3deeacc515e45e90c51535c171fe0d36f1d0e3a62127ec54997b213eb08c23')
 
