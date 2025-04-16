@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE policyconfig PUBLIC
+ "-//freedesktop//DTD PolicyKit Policy Configuration 1.0//EN"
+ "http://www.freedesktop.org/standards/PolicyKit/1/policyconfig.dtd">
+<policyconfig>
+
+  <vendor>Valve SteamOS Holo</vendor>
+  <vendor_url>http://www.steampowered.com</vendor_url>
+
+  <action id="org.valve.policykit.steamos.pkexec.run-steamos-wifi-set-backend">
+    <description>Run the steamos-wifi-set-backend privileged helper</description>
+    <icon_name>package-x-generic</icon_name>
+    <defaults>
+      <allow_any>yes</allow_any>
+      <allow_inactive>yes</allow_inactive>
+      <allow_active>yes</allow_active>
+    </defaults>
+    <annotate key="org.freedesktop.policykit.exec.path">/usr/bin/steamos-polkit-helpers/steamos-wifi-set-backend-privileged</annotate>
+  </action>
+</policyconfig>
