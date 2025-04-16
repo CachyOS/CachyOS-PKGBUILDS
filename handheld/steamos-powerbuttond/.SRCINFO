@@ -1,13 +1,16 @@
-pkgbase = powerbuttond
+pkgbase = steamos-powerbuttond
 	pkgdesc = Power button daemon
 	pkgver = 3.1
-	pkgrel = 2
+	pkgrel = 3
 	url = https://gitlab.steamos.cloud/jupiter/powerbuttond
 	arch = x86_64
 	license = BSD-2-Clause
 	depends = glibc
 	depends = libevdev
 	depends = systemd-libs
+	provides = powerbuttond
+	conflicts = powerbuttond
+	replaces = powerbuttond
 	source = git+https://gitlab.com/evlaV/powerbuttond.git#tag=v3.1
 	source = support-more.patch::https://github.com/matte-schwartz/steamos-powerbuttond/commit/0f7874e44162.patch
 	source = support-gamescope-session-plus.patch
@@ -15,4 +18,4 @@ pkgbase = powerbuttond
 	sha512sums = 9575acad86a04bc6961c4920f4ca63524926346911d96a897e1d2bae638c2efbf8b64233765a4dad564b83a36b81c4b783a128a23afba0514f0f42e2ec76eb8d
 	sha512sums = 808ef4e23b897a94296314695ad8f388d5ffcc775f22f45c8e7b2cf6a95f9d8abf726139247cf9e041be940a3abad1e699db99e900d427b2334a2c118131fa41
 
-pkgname = powerbuttond
+pkgname = steamos-powerbuttond
