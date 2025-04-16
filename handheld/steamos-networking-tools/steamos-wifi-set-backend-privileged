@@ -1,0 +1,113 @@
+#!/bin/bash
+# -*- mode: sh; indent-tabs-mode: nil; sh-basic-offset: 4; -*-
+# vim: et sts=4 sw=4
+
+# Copyright © 2024 Igalia S.L.
+# Copyright © 2024 Valve Corporation.
+#
+# SPDX-License-Identifier: LGPL-2.1-or-later
+
+set -euo pipefail
+
+
+if [[ "${EUID}" -ne 0 ]];
+then
+    exec pkexec --disable-internal-agent "$0" "$@"
+fi
+
+
+declare -r NM_WIFI_BACKEND_CONF_FILE="/etc/NetworkManager/conf.d/99-valve-wifi-backend.conf"
+
+
+validate_backend() {
+    case "$1" in
+        "iwd"|"wpa_supplicant")
+            ;;
+        *)
+            echo >&2 "ERROR: '$1' is not a valid backend"
+            exit 1
+        ;;
+    esac
+}
+
+write_config_wifi_backend() {
+    local desired_backend="$1"
+    validate_backend "$1"
+
+    echo -e "[device]\nwifi.backend=${desired_backend}" > "${NM_WIFI_BACKEND_CONF_FILE}"
+}
+
+
+# This function re-creates the network interface if missing.
+#
+# As described in https://iwd.wiki.kernel.org/interface_lifecycle,#
+# iwd destroys and re-creates the network interface, unless configured
+# otherwise by "[DriverQuirks] DefaultInterface" or disabled by
+# default in the source (it happens for some drivers):
+# https://git.kernel.org/pub/scm/network/wireless/iwd.git/tree/src/wiphy.c?h=2.14#n88
+#
+# The original LCD model has one of the drivers in which this is
+# disabled at the source-code level, but in the OLED/Galileo model
+# with the ath11k* driver, it is not.
+#
+# NetworkManager brings up the service providing wifi.backend as
+# necessary, but this does not happen when the interface is not
+# present.  So in the OLED model, when switching from "iwd" to
+# "wpa_supplicant", "iwd" destroys the interface when stopped, NM
+# never brings up the newly configured back-end "wpa_supplicant", and
+# the system remains disconnected forever.  When switching from
+# "wpa_supplicant" to "iwd" it's all right because "wpa_supplicant"
+# doesn't destroy the network interface.  And similarly, in the LCD
+# model the interface is never destroyed, so NM always brings up the
+# service for the corresponding wifi.backend just fine.
+#
+# Unfortunately iwd does not support "config fragments" and
+# NetworkManager does not have config for this option like with
+# 'wifi.iwd.autoconnect', so the only possible way is to edit
+# '/etc/iwd/main.conf', which is not the cleanest solution.
+#
+# So, in order to work around this problem, this function re-creates
+# the network interface if missing.
+#
+# Originally discussed in:
+# https://gitlab.steamos.cloud/holo/holo/-/merge_requests/747
+ensure_default_interface() {
+    if ! iw dev wlan0 info &>/dev/null; then
+        echo 'INFO: missing wlan0, creating it explicitly'
+        iw phy phy0 interface add wlan0 type station
+        sleep 1s
+        if ! iw dev wlan0 info &>/dev/null; then
+            echo >&2 'ERROR: wlan0 could not be created'
+        fi
+    fi
+}
+
+
+case "${1}" in
+    write_config)
+        desired_backend="$2"
+        write_config_wifi_backend "${desired_backend}"
+        exit $?
+        ;;
+    restart_units)
+        other_backend="$2"
+        {
+            validate_backend "${other_backend}"
+            systemctl stop NetworkManager
+            systemctl disable --now "${other_backend}"
+            # these systemd units are not set to enabled permanently, NetworkManager will pull them as necessary
+            #systemctl enable --now "${desired_backend}"
+
+            # see comment in ensure_default_interface() for the reason
+            # for this workaround
+            ensure_default_interface
+
+            systemctl restart NetworkManager
+        }
+        exit $?
+        ;;
+    *)
+        echo >&2 "ERROR: unknown request for $0: $*"
+        exit 1
+        ;;
+esac
