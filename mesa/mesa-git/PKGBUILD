@@ -48,7 +48,7 @@ pkgrel=1
 arch=('x86_64')
 makedepends=('git' 'python-mako' 'python-ply' 'xorgproto' 'libxml2' 'libx11' 'libvdpau' 'libva'
              'elfutils' 'libomxil-bellagio' 'libxrandr' 'ocl-icd' 'libgcrypt'  'wayland'
-             'wayland-protocols' 'meson' 'ninja' 'libdrm' 'xorgproto' 'libdrm' 'libxshmfence' 
+             'wayland-protocols' 'meson' 'ninja' 'libdrm' 'xorgproto' 'libdrm' 'libxshmfence'
              'libxxf86vm' 'libxdamage' 'libclc' 'libglvnd' 'libunwind' 'lm_sensors' 'libxrandr'
              'valgrind' 'glslang' 'byacc' 'wget' 'flex' 'bison' 'rust' 'rust-bindgen' 'spirv-llvm-translator'
              'cbindgen' 'python-packaging' 'python-yaml')
@@ -114,7 +114,7 @@ function exit_cleanup {
   rm -f "$_where"/frogminer
 
   remove_deps
-  
+
   msg2 "Cleanup done"
 }
 
@@ -173,9 +173,9 @@ user_patcher() {
 #
 # 1: llvm-minimal-git (aur) preferred value
 # 2: AUR llvm-git
-# 3: llvm-git from LordHeavy unofficial repo 
+# 3: llvm-git from LordHeavy unofficial repo
 # 4  llvm (stable from extra) Default value
-# 
+#
 
 if [[ ! $MESA_WHICH_LLVM ]] && [ ! -e "$_where"/frogminer ]; then
   plain "Which llvm package tree do you want to use to build mesa-git against ?"
@@ -466,7 +466,6 @@ build () {
        -D egl=${_enabled_} \
        -D gallium-extra-hud=true \
        -D gallium-nine=true \
-       -D gallium-opencl=icd \
        -D gallium-va=${_gallium_va} \
        -D gallium-vdpau=${_gallium_vdpau} \
        -D gallium-xa=${_gallium_xa} \
@@ -483,11 +482,11 @@ build () {
        -D opengl=true \
        -D zstd=auto \
        -D valgrind=${_enabled_} $_legacy_switches $_dri_inc $_microsoft_clc $_xvmc $_layers $_optional_codecs $_android_libbacktrace $_intel_rt $_no_lto $_additional_meson_flags $_additional_meson_flags_64
-       
+
     meson configure _build64 --no-pager
 
     # quoted from https://www.mesa3d.org/meson.html
-    # Note: autotools automatically updated translation files (used by the DRI configuration tool) as part of the build process, Meson does not do this. 
+    # Note: autotools automatically updated translation files (used by the DRI configuration tool) as part of the build process, Meson does not do this.
     # Instead, you will need do this:
     if ( cd "$srcdir/$_mesa_srcdir" && ! git merge-base --is-ancestor 2ef983dca61b549a9242afd9008200b231a26e90 HEAD ); then
       ninja $NINJAFLAGS -C _build64 xmlpool-pot xmlpool-update-po xmlpool-gmo
@@ -527,7 +526,6 @@ build () {
           -D egl=${_enabled_} \
           -D gallium-extra-hud=true \
           -D gallium-nine=true \
-          -D gallium-opencl=${_disabled_} \
           -D gallium-va=${_gallium_va} \
           -D gallium-vdpau=${_gallium_vdpau} \
           -D gallium-xa=${_gallium_xa} \
@@ -543,11 +541,11 @@ build () {
           -D shared-glapi=${_enabled_} \
           -D zstd=auto \
           -D valgrind=${_disabled_} $_legacy_switches $_dri_inc $_microsoft_clc $_xvmc $_layers $_optional_codecs $_android_libbacktrace $_intel_rt_32 $_intel_clc_32 $_no_lto $_additional_meson_flags $_additional_meson_flags_32
-       
+
       meson configure _build32 --no-pager
 
       # quoted from https://www.mesa3d.org/meson.html
-      # Note: autotools automatically updated translation files (used by the DRI configuration tool) as part of the build process, Meson does not do this. 
+      # Note: autotools automatically updated translation files (used by the DRI configuration tool) as part of the build process, Meson does not do this.
       # Instead, you will need do this:
       if ( cd "$srcdir/$_mesa_srcdir" && ! git merge-base --is-ancestor 2ef983dca61b549a9242afd9008200b231a26e90 HEAD ); then
         ninja $NINJAFLAGS -C _build32 xmlpool-pot xmlpool-update-po xmlpool-gmo
@@ -570,8 +568,6 @@ package_mesa-git() {
            'expat' 'libclc' 'libx11' 'spirv-tools' $_llvm)
 provides=(
     'vulkan-mesa-layers'
-    'opencl-clover-mesa'
-    'opencl-driver'
     'opengl-driver'
     'vulkan-driver'
     'vulkan-intel'
@@ -586,7 +582,6 @@ provides=(
 )
 conflicts=(
     'vulkan-mesa-layers'
-    'opencl-clover-mesa'
     'vulkan-intel'
     'vulkan-nouveau'
     'vulkan-radeon'
@@ -664,5 +659,5 @@ package_lib32-mesa-git() {
     msg2 '#############################################################################################'
   fi
 }
- 
+
 trap exit_cleanup EXIT
