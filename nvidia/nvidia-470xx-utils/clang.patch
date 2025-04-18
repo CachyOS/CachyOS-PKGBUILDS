@@ -1,6 +1,6 @@
-From c120fd404a01403a6c0009f52749957b4eb2c34c Mon Sep 17 00:00:00 2001
+From 23d507fb74fa0c37172215a155634642fae7b9fc Mon Sep 17 00:00:00 2001
 From: Vasiliy Stelmachenok <ventureo@cachyos.org>
-Date: Thu, 29 Aug 2024 21:25:50 +0300
+Date: Fri, 18 Apr 2025 21:52:32 +0300
 Subject: [PATCH] Fix build 470xx module via Clang
 
 Signed-off-by: Vasiliy Stelmachenok <ventureo@cachyos.org>
@@ -8,19 +8,19 @@ Signed-off-by: Vasiliy Stelmachenok <ventureo@cachyos.org>
  kernel/Kbuild | 2 +-
  1 file changed, 1 insertion(+), 1 deletion(-)
 
-diff --git a/kernel/Kbuild b/kernel/Kbuild
-index eadd8b2..6bd4108 100644
---- a/kernel/Kbuild
-+++ b/kernel/Kbuild
-@@ -68,7 +68,7 @@ $(foreach _module, $(NV_KERNEL_MODULES), \
+diff --git a/Kbuild b/Kbuild
+index f333e0b..84a9d43 100644
+--- a/Kbuild
++++ b/Kbuild
+@@ -61,7 +61,7 @@ $(foreach _module, $(NV_KERNEL_MODULES), \
  
- EXTRA_CFLAGS += -I$(src)/common/inc
- EXTRA_CFLAGS += -I$(src)
--EXTRA_CFLAGS += -Wall -MD $(DEFINES) $(INCLUDES) -Wno-cast-qual -Wno-error -Wno-format-extra-args
-+EXTRA_CFLAGS += -Wall -Wno-deprecated-non-prototype -Wno-strict-prototypes $(DEFINES) $(INCLUDES) -Wno-cast-qual -Wno-error -Wno-format-extra-args
- EXTRA_CFLAGS += -D__KERNEL__ -DMODULE -DNVRM -DNV_VERSION_STRING=\"470.256.02\" -Wno-unused-function -Wuninitialized -fno-strict-aliasing -mno-red-zone -mcmodel=kernel -DNV_UVM_ENABLE
- EXTRA_CFLAGS += $(call cc-option,-Werror=undef,)
- EXTRA_CFLAGS += -DNV_SPECTRE_V2=$(NV_SPECTRE_V2)
+ ccflags-y += -I$(src)/common/inc
+ ccflags-y += -I$(src)
+-ccflags-y += -Wall -MD $(DEFINES) $(INCLUDES) -Wno-cast-qual -Wno-error -Wno-format-extra-args
++ccflags-y += -Wall -Wno-deprecated-non-prototype -Wno-strict-prototypes -MD $(DEFINES) $(INCLUDES) -Wno-cast-qual -Wno-error -Wno-format-extra-args
+ ccflags-y += -D__KERNEL__ -DMODULE -DNVRM -DNV_VERSION_STRING=\"470.256.02\" -Wno-unused-function -Wuninitialized -fno-strict-aliasing -mno-red-zone -mcmodel=kernel -DNV_UVM_ENABLE
+ ccflags-y += $(call cc-option,-Werror=undef,)
+ ccflags-y += -DNV_SPECTRE_V2=$(NV_SPECTRE_V2)
 -- 
-2.46.0
+2.49.0
 
