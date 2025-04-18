@@ -1,17 +1,17 @@
 # Maintainer: Peter Jung <admin@ptr1337.dev>
 
 pkgname=cachyos-handheld
-pkgver=1.0.6
-pkgrel=5
+pkgver=1.2.0
+pkgrel=1
 arch=('any')
 license=('GPL-3.0-later')
 pkgdesc='CachyOS - Handheld!'
-source=(git+https://github.com/CachyOS/CachyOS-Handheld?signed#tag=$pkgver)
+source=("git+https://github.com/CachyOS/CachyOS-Handheld?signed#tag=$pkgver")
 install="$pkgname.install"
 options=(!strip !debug)
 provides=('cachyos-deckify')
 replaces=('cachyos-deckify')
-sha256sums=('7cfc80edefc86018cf7b671dde9ce77f8383a1cb3b4592c7da1986828367b20f')
+sha256sums=('d47ccd30c980d88faaf4621f9fb76adefafc7611adbba8bb5922d463411e7ac7')
 validpgpkeys=(
   E8B9AA39F054E30E8290D492C3C4820857F654FE  # Peter Jung <admin@ptr1337.dev>
   B1B70BB1CD56047DEF31DE2EB62C3D10C54D5DA9  # Vladislav Nepogodin <nepogodin.vlad@gmail.com>
@@ -35,6 +35,7 @@ depends=('gamescope-session-git' 'mangohud' 'jq' 'dmidecode' 'glew' 'glfw' 'glxi
 prepare() {
   cd CachyOS-Handheld
 }
+
 package() {
   install -d "$pkgdir/etc"
   cp -rf "${srcdir}/CachyOS-Handheld/etc" "$pkgdir"
