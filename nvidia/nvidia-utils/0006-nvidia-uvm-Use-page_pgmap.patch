@@ -1,34 +1,16 @@
-From 0104a2ecdb05730bd96bf9f5cf91b9df975a2d47 Mon Sep 17 00:00:00 2001
+From 4026327569a63e6d9fa5f86dc6b7bb9844113e2a Mon Sep 17 00:00:00 2001
 From: Eric Naim <dnaim@cachyos.org>
 Date: Mon, 7 Apr 2025 22:02:00 +0800
-Subject: [PATCH 7/8] nvidia-uvm: Use page_pgmap()
+Subject: [PATCH 6/8] nvidia-uvm: Use page_pgmap()
 
 Signed-off-by: Eric Naim <dnaim@cachyos.org>
 ---
- kernel-open/nvidia-uvm/uvm_common.h  | 6 ++++++
  kernel-open/nvidia-uvm/uvm_hmm.c     | 2 +-
  kernel-open/nvidia-uvm/uvm_pmm_gpu.c | 4 ++--
- 3 files changed, 9 insertions(+), 3 deletions(-)
+ 2 files changed, 3 insertions(+), 3 deletions(-)
 
-diff --git a/kernel-open/nvidia-uvm/uvm_common.h b/kernel-open/nvidia-uvm/uvm_common.h
-index 08f197aa8cd5..5bcd89bc6643 100644
---- a/kernel-open/nvidia-uvm/uvm_common.h
-+++ b/kernel-open/nvidia-uvm/uvm_common.h
-@@ -39,6 +39,12 @@
-     #define UVM_IS_DEVELOP() 0
- #endif
- 
-+#include <linux/version.h>
-+
-+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 15, 0)
-+#define page_pgmap(p) (p)->pgmap
-+#endif
-+
- #include "uvm_types.h"
- #include "uvm_linux.h"
- 
 diff --git a/kernel-open/nvidia-uvm/uvm_hmm.c b/kernel-open/nvidia-uvm/uvm_hmm.c
-index 92bfd7cab5f0..ee87c2ade7ef 100644
+index 92bfd7ca..ee87c2ad 100644
 --- a/kernel-open/nvidia-uvm/uvm_hmm.c
 +++ b/kernel-open/nvidia-uvm/uvm_hmm.c
 @@ -1991,7 +1991,7 @@ static void fill_dst_pfn(uvm_va_block_t *va_block,
@@ -41,7 +23,7 @@ index 92bfd7cab5f0..ee87c2ade7ef 100644
      hmm_mark_gpu_chunk_referenced(va_block, gpu, gpu_chunk);
      UVM_ASSERT(!page_count(dpage));
 diff --git a/kernel-open/nvidia-uvm/uvm_pmm_gpu.c b/kernel-open/nvidia-uvm/uvm_pmm_gpu.c
-index d8c082786be4..cf626ad5ca9a 100644
+index d8c08278..cf626ad5 100644
 --- a/kernel-open/nvidia-uvm/uvm_pmm_gpu.c
 +++ b/kernel-open/nvidia-uvm/uvm_pmm_gpu.c
 @@ -3329,7 +3329,7 @@ void uvm_pmm_gpu_device_p2p_init(uvm_gpu_t *gpu)
@@ -63,5 +45,5 @@ index d8c082786be4..cf626ad5ca9a 100644
  
      gpu->device_p2p_initialised = false;
 -- 
-2.49.0
+2.49.0.391.g4bbb303af6
 
