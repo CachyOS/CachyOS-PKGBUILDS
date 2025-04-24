@@ -12,7 +12,7 @@ _minorver=0
 _securityver=7
 _updatever=6
 pkgver=${_majorver}.${_minorver}.${_securityver}.u${_updatever}
-pkgrel=2
+pkgrel=3
  _git_tag=jdk-${_majorver}.${_minorver}.${_securityver}+${_updatever}
 arch=('x86_64')
 url='https://openjdk.java.net/'
@@ -107,7 +107,7 @@ build() {
     --with-giflib=system \
     --with-libpng=system \
     --with-lcms=system \
-    --with-zlib=system \
+    --with-zlib=bundled \
     --with-harfbuzz=system \
     --with-jvm-features="${jvm_features}" \
     --with-native-debug-symbols=internal \
