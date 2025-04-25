@@ -1,0 +1,1963 @@
+From e5dd51105eb6270fbbc0f53ef59e498a38f28560 Mon Sep 17 00:00:00 2001
+From: Luke Jones <luke@ljones.dev>
+Date: Fri, 25 Apr 2025 15:22:58 +1200
+Subject: [PATCH 01/13] feat: Zotac Zone support
+
+Signed-off-by: Luke Jones <luke@ljones.dev>
+---
+ data/platforms/zotac-zone.toml |   6 ++
+ src/hardware.rs                |  17 ++++++
+ src/platform.rs                |   1 +
+ src/power.rs                   | 102 +++++++++++++++++++++++++++++++--
+ 4 files changed, 122 insertions(+), 4 deletions(-)
+ create mode 100644 data/platforms/zotac-zone.toml
+
+diff --git a/data/platforms/zotac-zone.toml b/data/platforms/zotac-zone.toml
+new file mode 100644
+index 000000000000..dac236fe86ce
+--- /dev/null
++++ b/data/platforms/zotac-zone.toml
+@@ -0,0 +1,6 @@
++[performance_profile]
++platform_profile_name = "zotac_zone_platform"
++suggested_default = "custom"
++
++[tdp_limit]
++method = "zotac_zone_platform"
+diff --git a/src/hardware.rs b/src/hardware.rs
+index 3bcfbe995ca6..e07e02ac7742 100644
+--- a/src/hardware.rs
++++ b/src/hardware.rs
+@@ -37,6 +37,7 @@ pub(crate) enum DeviceType {
+     Unknown,
+     SteamDeck,
+     LegionGoS,
++    ZotacZone,
+ }
+ 
+ #[derive(Display, EnumString, PartialEq, Debug, Copy, Clone, TryFromPrimitive)]
+@@ -81,6 +82,7 @@ pub(crate) async fn device_variant() -> Result<(DeviceType, String)> {
+         ("LENOVO", "83L3" | "83N6" | "83Q2" | "83Q3", _) => {
+             (DeviceType::LegionGoS, product_name.to_string())
+         }
++        ("ZOTAC", _, "G0A1W" | "G1A1W") => (DeviceType::ZotacZone, board_name.to_string()),
+         ("Valve", _, "Jupiter" | "Galileo") => (DeviceType::SteamDeck, board_name.to_string()),
+         _ => (DeviceType::Unknown, String::from("unknown")),
+     })
+@@ -258,6 +260,21 @@ pub mod test {
+             (DeviceType::LegionGoS, String::from("83Q3"))
+         );
+ 
++        write(crate::path(SYS_VENDOR_PATH), "ZOTAC\n")
++            .await
++            .expect("write");
++        write(crate::path(BOARD_NAME_PATH), "G0A1W\n")
++            .await
++            .expect("write");
++        assert_eq!(
++            steam_deck_variant().await.unwrap(),
++            SteamDeckVariant::Unknown
++        );
++        assert_eq!(
++            device_variant().await.unwrap(),
++            (DeviceType::ZotacZone, String::from("G0A1W"))
++        );
++
+         write(crate::path(SYS_VENDOR_PATH), "Valve\n")
+             .await
+             .expect("write");
+diff --git a/src/platform.rs b/src/platform.rs
+index c96872dffd66..ca2a134fe159 100644
+--- a/src/platform.rs
++++ b/src/platform.rs
+@@ -157,6 +157,7 @@ impl PlatformConfig {
+         let platform = match device_type().await? {
+             DeviceType::SteamDeck => "jupiter",
+             DeviceType::LegionGoS => "legion-go-s",
++            DeviceType::ZotacZone => "zotac-zone",
+             _ => return Ok(None),
+         };
+         let config = read_to_string(format!(
+diff --git a/src/power.rs b/src/power.rs
+index c8655daabd05..88ebd22d1d36 100644
+--- a/src/power.rs
++++ b/src/power.rs
+@@ -94,6 +94,7 @@ pub enum CPUScalingGovernor {
+ pub enum TdpLimitingMethod {
+     GpuHwmon,
+     LenovoWmi,
++    ZotacZonePlatform,
+ }
+ 
+ #[derive(Debug)]
+@@ -102,6 +103,9 @@ pub(crate) struct GpuHwmonTdpLimitManager {}
+ #[derive(Debug)]
+ pub(crate) struct LenovoWmiTdpLimitManager {}
+ 
++#[derive(Debug)]
++pub(crate) struct ZotacZoneTdpLimitManager {}
++
+ #[async_trait]
+ pub(crate) trait TdpLimitManager: Send + Sync {
+     async fn get_tdp_limit(&self) -> Result<u32>;
+@@ -114,14 +118,15 @@ pub(crate) trait TdpLimitManager: Send + Sync {
+ 
+ pub(crate) async fn tdp_limit_manager() -> Result<Box<dyn TdpLimitManager>> {
+     let config = platform_config().await?;
+-    let config = config
++    let tdp_config = config
+         .as_ref()
+         .and_then(|config| config.tdp_limit.as_ref())
+         .ok_or(anyhow!("No TDP limit configured"))?;
+ 
+-    Ok(match config.method {
++    Ok(match tdp_config.method {
+         TdpLimitingMethod::LenovoWmi => Box::new(LenovoWmiTdpLimitManager {}),
+         TdpLimitingMethod::GpuHwmon => Box::new(GpuHwmonTdpLimitManager {}),
++        TdpLimitingMethod::ZotacZonePlatform => Box::new(ZotacZoneTdpLimitManager {}),
+     })
+ }
+ 
+@@ -548,6 +553,95 @@ impl TdpLimitManager for LenovoWmiTdpLimitManager {
+     }
+ }
+ 
++impl ZotacZoneTdpLimitManager {
++    const PREFIX: &str = "/sys/class/firmware-attributes/zotac_zone_platform/attributes";
++    const SPL_SUFFIX: &str = "ppt_pl1_spl";
++    const SPPT_SUFFIX: &str = "ppt_pl2_sppt";
++    const FPPT_SUFFIX: &str = "ppt_pl3_fppt";
++}
++
++#[async_trait]
++impl TdpLimitManager for ZotacZoneTdpLimitManager {
++    async fn get_tdp_limit(&self) -> Result<u32> {
++        let config = platform_config().await?;
++        if let Some(config) = config
++            .as_ref()
++            .and_then(|config| config.performance_profile.as_ref())
++        {
++            ensure!(
++                get_platform_profile(&config.platform_profile_name).await? == "custom",
++                "TDP limiting not active"
++            );
++        }
++        let base = path(Self::PREFIX);
++
++        fs::read_to_string(base.join(Self::SPL_SUFFIX).join("current_value"))
++            .await
++            .map_err(|message| anyhow!("Error reading sysfs: {message}"))?
++            .trim()
++            .parse()
++            .map_err(|e| anyhow!("Error parsing value: {e}"))
++    }
++
++    async fn set_tdp_limit(&self, limit: u32) -> Result<()> {
++        ensure!(
++            self.get_tdp_limit_range().await?.contains(&limit),
++            "Invalid limit"
++        );
++
++        let limit = limit.to_string();
++        let base = path(Self::PREFIX);
++        write_synced(
++            base.join(Self::SPL_SUFFIX).join("current_value"),
++            limit.as_bytes(),
++        )
++        .await
++        .inspect_err(|message| error!("Error writing to sysfs file: {message}"))?;
++        write_synced(
++            base.join(Self::SPPT_SUFFIX).join("current_value"),
++            limit.as_bytes(),
++        )
++        .await
++        .inspect_err(|message| error!("Error writing to sysfs file: {message}"))?;
++        write_synced(
++            base.join(Self::FPPT_SUFFIX).join("current_value"),
++            limit.as_bytes(),
++        )
++        .await
++        .inspect_err(|message| error!("Error writing to sysfs file: {message}"))
++    }
++
++    async fn get_tdp_limit_range(&self) -> Result<RangeInclusive<u32>> {
++        let base = path(Self::PREFIX).join(Self::SPL_SUFFIX);
++
++        let min: u32 = fs::read_to_string(base.join("min_value"))
++            .await
++            .map_err(|message| anyhow!("Error reading sysfs: {message}"))?
++            .trim()
++            .parse()
++            .map_err(|e| anyhow!("Error parsing value: {e}"))?;
++        let max: u32 = fs::read_to_string(base.join("max_value"))
++            .await
++            .map_err(|message| anyhow!("Error reading sysfs: {message}"))?
++            .trim()
++            .parse()
++            .map_err(|e| anyhow!("Error parsing value: {e}"))?;
++        Ok(min..=max)
++    }
++
++    async fn is_active(&self) -> Result<bool> {
++        let config = platform_config().await?;
++        if let Some(config) = config
++            .as_ref()
++            .and_then(|config| config.performance_profile.as_ref())
++        {
++            Ok(get_platform_profile(&config.platform_profile_name).await? == "custom")
++        } else {
++            Ok(true)
++        }
++    }
++}
++
+ pub(crate) async fn get_max_charge_level() -> Result<i32> {
+     let config = platform_config().await?;
+     let config = config
+@@ -655,7 +749,7 @@ pub(crate) mod test {
+ 
+         write(base.join("max_battery_charge_level"), "10\n").await?;
+ 
+-        let base = path(PLATFORM_PROFILE_PREFIX).join("platform-profile0");
++        let base = path(PLATFORM_PROFILE_PREFIX).join("platform-profile-0");
+         create_dir_all(&base).await?;
+         write_synced(base.join("name"), b"power-driver\n").await?;
+         write_synced(base.join("choices"), b"a b c\n").await?;
+@@ -1337,7 +1431,7 @@ CCLK_RANGE in Core0:
+             .await
+             .is_err());
+ 
+-        let base = path(PLATFORM_PROFILE_PREFIX).join("platform-profile0");
++        let base = path(PLATFORM_PROFILE_PREFIX).join("platform-profile-0");
+         create_dir_all(&base).await.unwrap();
+         assert!(get_available_platform_profiles("power-driver")
+             .await
+-- 
+2.49.0
+
+
+From 2cfe25a1946f3bbe9118f0c8197b7412c33c83dc Mon Sep 17 00:00:00 2001
+From: Matthew Schwartz <matthew.schwartz@linux.dev>
+Date: Sun, 27 Apr 2025 16:38:10 -0700
+Subject: [PATCH 02/13] hardware/platform: Add Legion Go support
+
+---
+ data/platforms/legion-go.toml |  6 ++++++
+ src/hardware.rs               | 14 ++++++++++++++
+ src/platform.rs               |  1 +
+ 3 files changed, 21 insertions(+)
+ create mode 100644 data/platforms/legion-go.toml
+
+diff --git a/data/platforms/legion-go.toml b/data/platforms/legion-go.toml
+new file mode 100644
+index 000000000000..b0a9b1852ede
+--- /dev/null
++++ b/data/platforms/legion-go.toml
+@@ -0,0 +1,6 @@
++[performance_profile]
++platform_profile_name = "lenovo-wmi-gamezone"
++suggested_default = "custom"
++
++[tdp_limit]
++method = "lenovo_wmi"
+\ No newline at end of file
+diff --git a/src/hardware.rs b/src/hardware.rs
+index e07e02ac7742..f395ad46f795 100644
+--- a/src/hardware.rs
++++ b/src/hardware.rs
+@@ -36,6 +36,7 @@ pub(crate) enum DeviceType {
+     #[default]
+     Unknown,
+     SteamDeck,
++    LegionGo,
+     LegionGoS,
+     ZotacZone,
+ }
+@@ -79,6 +80,7 @@ pub(crate) async fn device_variant() -> Result<(DeviceType, String)> {
+     let board_name = fs::read_to_string(path(BOARD_NAME_PATH)).await?;
+     let board_name = board_name.trim_end();
+     Ok(match (sys_vendor.trim_end(), product_name, board_name) {
++        ("LENOVO", "83E1", _) => (DeviceType::LegionGo, product_name.to_string()),
+         ("LENOVO", "83L3" | "83N6" | "83Q2" | "83Q3", _) => {
+             (DeviceType::LegionGoS, product_name.to_string())
+         }
+@@ -212,6 +214,18 @@ pub mod test {
+             (DeviceType::Unknown, String::from("unknown"))
+         );
+ 
++        write(crate::path(PRODUCT_NAME_PATH), "83E1\n")
++            .await
++            .expect("write");
++        assert_eq!(
++            steam_deck_variant().await.unwrap(),
++            SteamDeckVariant::Unknown
++        );
++        assert_eq!(
++            device_variant().await.unwrap(),
++            (DeviceType::LegionGo, String::from("83E1"))
++        );
++
+         write(crate::path(PRODUCT_NAME_PATH), "83L3\n")
+             .await
+             .expect("write");
+diff --git a/src/platform.rs b/src/platform.rs
+index ca2a134fe159..4292cb074119 100644
+--- a/src/platform.rs
++++ b/src/platform.rs
+@@ -156,6 +156,7 @@ impl PlatformConfig {
+     async fn load() -> Result<Option<PlatformConfig>> {
+         let platform = match device_type().await? {
+             DeviceType::SteamDeck => "jupiter",
++            DeviceType::LegionGo => "legion-go",
+             DeviceType::LegionGoS => "legion-go-s",
+             DeviceType::ZotacZone => "zotac-zone",
+             _ => return Ok(None),
+-- 
+2.49.0
+
+
+From 4469e2cff1391ef8a003c8d0f1da759c53b49698 Mon Sep 17 00:00:00 2001
+From: Matthew Schwartz <matthew.schwartz@linux.dev>
+Date: Thu, 24 Apr 2025 21:34:16 -0700
+Subject: [PATCH 03/13] power: Add ASUS Armoury-based TDP limiting
+
+---
+ src/power.rs | 94 ++++++++++++++++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 94 insertions(+)
+
+diff --git a/src/power.rs b/src/power.rs
+index 88ebd22d1d36..802d5467256d 100644
+--- a/src/power.rs
++++ b/src/power.rs
+@@ -93,6 +93,7 @@ pub enum CPUScalingGovernor {
+ #[strum(serialize_all = "snake_case")]
+ pub enum TdpLimitingMethod {
+     GpuHwmon,
++    AsusArmoury,
+     LenovoWmi,
+     ZotacZonePlatform,
+ }
+@@ -106,6 +107,9 @@ pub(crate) struct LenovoWmiTdpLimitManager {}
+ #[derive(Debug)]
+ pub(crate) struct ZotacZoneTdpLimitManager {}
+ 
++#[derive(Debug)]
++pub(crate) struct AsusArmouryTdpLimitManager {}
++
+ #[async_trait]
+ pub(crate) trait TdpLimitManager: Send + Sync {
+     async fn get_tdp_limit(&self) -> Result<u32>;
+@@ -125,6 +129,7 @@ pub(crate) async fn tdp_limit_manager() -> Result<Box<dyn TdpLimitManager>> {
+ 
+     Ok(match tdp_config.method {
+         TdpLimitingMethod::LenovoWmi => Box::new(LenovoWmiTdpLimitManager {}),
++        TdpLimitingMethod::AsusArmoury => Box::new(AsusArmouryTdpLimitManager {}),
+         TdpLimitingMethod::GpuHwmon => Box::new(GpuHwmonTdpLimitManager {}),
+         TdpLimitingMethod::ZotacZonePlatform => Box::new(ZotacZoneTdpLimitManager {}),
+     })
+@@ -642,6 +647,95 @@ impl TdpLimitManager for ZotacZoneTdpLimitManager {
+     }
+ }
+ 
++impl AsusArmouryTdpLimitManager {
++    const PREFIX: &str = "/sys/class/firmware-attributes/asus-armoury/attributes";
++    const SPL_SUFFIX: &str = "ppt_pl1_spl";
++    const SPPT_SUFFIX: &str = "ppt_pl2_sppt";
++    const FPPT_SUFFIX: &str = "ppt_pl3_fppt";
++}
++
++#[async_trait]
++impl TdpLimitManager for AsusArmouryTdpLimitManager {
++    async fn get_tdp_limit(&self) -> Result<u32> {
++        let config = platform_config().await?;
++        if let Some(config) = config
++            .as_ref()
++            .and_then(|config| config.performance_profile.as_ref())
++        {
++            ensure!(
++                get_platform_profile(&config.platform_profile_name).await? == "performance",
++                "TDP limiting not active"
++            );
++        }
++        let base = path(Self::PREFIX);
++
++        fs::read_to_string(base.join(Self::SPL_SUFFIX).join("current_value"))
++            .await
++            .map_err(|message| anyhow!("Error reading sysfs: {message}"))?
++            .trim()
++            .parse()
++            .map_err(|e| anyhow!("Error parsing value: {e}"))
++    }
++
++    async fn set_tdp_limit(&self, limit: u32) -> Result<()> {
++        ensure!(
++            self.get_tdp_limit_range().await?.contains(&limit),
++            "Invalid limit"
++        );
++
++        let limit = limit.to_string();
++        let base = path(Self::PREFIX);
++        write_synced(
++            base.join(Self::SPL_SUFFIX).join("current_value"),
++            limit.as_bytes(),
++        )
++        .await
++        .inspect_err(|message| error!("Error writing to sysfs file: {message}"))?;
++        write_synced(
++            base.join(Self::SPPT_SUFFIX).join("current_value"),
++            limit.as_bytes(),
++        )
++        .await
++        .inspect_err(|message| error!("Error writing to sysfs file: {message}"))?;
++        write_synced(
++            base.join(Self::FPPT_SUFFIX).join("current_value"),
++            limit.as_bytes(),
++        )
++        .await
++        .inspect_err(|message| error!("Error writing to sysfs file: {message}"))
++    }
++
++    async fn get_tdp_limit_range(&self) -> Result<RangeInclusive<u32>> {
++        let base = path(Self::PREFIX).join(Self::SPL_SUFFIX);
++
++        let min: u32 = fs::read_to_string(base.join("min_value"))
++            .await
++            .map_err(|message| anyhow!("Error reading sysfs: {message}"))?
++            .trim()
++            .parse()
++            .map_err(|e| anyhow!("Error parsing value: {e}"))?;
++        let max: u32 = fs::read_to_string(base.join("max_value"))
++            .await
++            .map_err(|message| anyhow!("Error reading sysfs: {message}"))?
++            .trim()
++            .parse()
++            .map_err(|e| anyhow!("Error parsing value: {e}"))?;
++        Ok(min..=max)
++    }
++
++    async fn is_active(&self) -> Result<bool> {
++        let config = platform_config().await?;
++        if let Some(config) = config
++            .as_ref()
++            .and_then(|config| config.performance_profile.as_ref())
++        {
++            Ok(get_platform_profile(&config.platform_profile_name).await? == "performance")
++        } else {
++            Ok(true)
++        }
++    }
++}
++
+ pub(crate) async fn get_max_charge_level() -> Result<i32> {
+     let config = platform_config().await?;
+     let config = config
+-- 
+2.49.0
+
+
+From 9c8dfbeb6ed2cedee8e4bb1edda1ad6a6537a996 Mon Sep 17 00:00:00 2001
+From: Matthew Schwartz <matthew.schwartz@linux.dev>
+Date: Thu, 24 Apr 2025 21:34:56 -0700
+Subject: [PATCH 04/13] hardware/platform: Add ROG Ally support
+
+---
+ data/platforms/ally.toml |  6 ++++++
+ src/hardware.rs          | 46 ++++++++++++++++++++++++++++++++++++++++
+ src/platform.rs          |  1 +
+ 3 files changed, 53 insertions(+)
+ create mode 100644 data/platforms/ally.toml
+
+diff --git a/data/platforms/ally.toml b/data/platforms/ally.toml
+new file mode 100644
+index 000000000000..36eef6ed93cc
+--- /dev/null
++++ b/data/platforms/ally.toml
+@@ -0,0 +1,6 @@
++[performance_profile]
++platform_profile_name = "asus-wmi"
++suggested_default = "performance"
++
++[tdp_limit]
++method = "asus_armoury"
+diff --git a/src/hardware.rs b/src/hardware.rs
+index f395ad46f795..8836279472db 100644
+--- a/src/hardware.rs
++++ b/src/hardware.rs
+@@ -36,6 +36,7 @@ pub(crate) enum DeviceType {
+     #[default]
+     Unknown,
+     SteamDeck,
++    Ally,
+     LegionGo,
+     LegionGoS,
+     ZotacZone,
+@@ -84,6 +85,9 @@ pub(crate) async fn device_variant() -> Result<(DeviceType, String)> {
+         ("LENOVO", "83L3" | "83N6" | "83Q2" | "83Q3", _) => {
+             (DeviceType::LegionGoS, product_name.to_string())
+         }
++        ("ASUSTeK COMPUTER INC.", "ROG Ally RC71L_RC71L" | "ROG Ally X RC72LA_RC72LA", _) => {
++            (DeviceType::Ally, product_name.to_string())
++        }
+         ("ZOTAC", _, "G0A1W" | "G1A1W") => (DeviceType::ZotacZone, board_name.to_string()),
+         ("Valve", _, "Jupiter" | "Galileo") => (DeviceType::SteamDeck, board_name.to_string()),
+         _ => (DeviceType::Unknown, String::from("unknown")),
+@@ -274,6 +278,48 @@ pub mod test {
+             (DeviceType::LegionGoS, String::from("83Q3"))
+         );
+ 
++        write(crate::path(SYS_VENDOR_PATH), "ASUSTeK COMPUTER INC.\n")
++            .await
++            .expect("write");
++        write(crate::path(BOARD_NAME_PATH), "INVALID\n")
++            .await
++            .expect("write");
++        write(crate::path(PRODUCT_NAME_PATH), "INVALID\n")
++            .await
++            .expect("write");
++        assert_eq!(
++            steam_deck_variant().await.unwrap(),
++            SteamDeckVariant::Unknown
++        );
++        assert_eq!(
++            device_variant().await.unwrap(),
++            (DeviceType::Unknown, String::from("unknown"))
++        );
++
++        write(crate::path(PRODUCT_NAME_PATH), "ROG Ally RC71L_RC71L\n")
++            .await
++            .expect("write");
++        assert_eq!(
++            steam_deck_variant().await.unwrap(),
++            SteamDeckVariant::Unknown
++        );
++        assert_eq!(
++            device_variant().await.unwrap(),
++            (DeviceType::Ally, String::from("ROG Ally RC71L_RC71L"))
++        );
++
++        write(crate::path(PRODUCT_NAME_PATH), "ROG Ally X RC72LA_RC72LA\n")
++            .await
++            .expect("write");
++        assert_eq!(
++            steam_deck_variant().await.unwrap(),
++            SteamDeckVariant::Unknown
++        );
++        assert_eq!(
++            device_variant().await.unwrap(),
++            (DeviceType::Ally, String::from("ROG Ally X RC72LA_RC72LA"))
++        );
++
+         write(crate::path(SYS_VENDOR_PATH), "ZOTAC\n")
+             .await
+             .expect("write");
+diff --git a/src/platform.rs b/src/platform.rs
+index 4292cb074119..ea5bfa8fc3db 100644
+--- a/src/platform.rs
++++ b/src/platform.rs
+@@ -156,6 +156,7 @@ impl PlatformConfig {
+     async fn load() -> Result<Option<PlatformConfig>> {
+         let platform = match device_type().await? {
+             DeviceType::SteamDeck => "jupiter",
++            DeviceType::Ally => "ally",
+             DeviceType::LegionGo => "legion-go",
+             DeviceType::LegionGoS => "legion-go-s",
+             DeviceType::ZotacZone => "zotac-zone",
+-- 
+2.49.0
+
+
+From 02b6739b544904561f2b46095b3cba33105ea11c Mon Sep 17 00:00:00 2001
+From: honjow <honjow311@gmail.com>
+Date: Fri, 25 Apr 2025 22:34:59 +0800
+Subject: [PATCH 05/13] power: add support for Intel GPU frequency control
+
+---
+ src/power.rs | 361 ++++++++++++++++++++++++++++++++++++++++-----------
+ 1 file changed, 288 insertions(+), 73 deletions(-)
+
+diff --git a/src/power.rs b/src/power.rs
+index 802d5467256d..f43666db32fe 100644
+--- a/src/power.rs
++++ b/src/power.rs
+@@ -305,7 +305,288 @@ pub(crate) async fn set_cpu_scaling_governor(governor: CPUScalingGovernor) -> Re
+     write_cpu_governor_sysfs_contents(name).await
+ }
+ 
++#[async_trait]
++trait GpuClockController: Send + Sync {
++    async fn get_clocks_range(&self) -> Result<RangeInclusive<u32>>;
++    async fn set_clocks(&self, clocks: u32) -> Result<()>;
++    async fn get_clocks(&self) -> Result<u32>;
++}
++
++// AMD GPU controller implementation using HWMON
++struct AmdGpuController {
++    hwmon_path: PathBuf,
++}
++
++#[async_trait]
++impl GpuClockController for AmdGpuController {
++    async fn get_clocks_range(&self) -> Result<RangeInclusive<u32>> {
++        let contents = fs::read_to_string(self.hwmon_path.join(GPU_CLOCK_LEVELS_SUFFIX))
++            .await
++            .map_err(|message| anyhow!("Error opening sysfs file for reading {message}"))?;
++
++        let lines = contents.lines();
++        let mut min = 1_000_000;
++        let mut max = 0;
++
++        for line in lines {
++            let Some(caps) = GPU_CLOCK_LEVELS_REGEX.captures(line) else {
++                continue;
++            };
++            let value: u32 = caps["value"].parse().map_err(|message| {
++                anyhow!("Unable to parse value for GPU power profile: {message}")
++            })?;
++            if value < min {
++                min = value;
++            }
++            if value > max {
++                max = value;
++            }
++        }
++
++        ensure!(min <= max, "Could not read any clocks");
++        Ok(min..=max)
++    }
++
++    async fn set_clocks(&self, clocks: u32) -> Result<()> {
++        let mut myfile = File::create(self.hwmon_path.join(GPU_CLOCKS_SUFFIX))
++            .await
++            .inspect_err(|message| error!("Error opening sysfs file for writing: {message}"))?;
++
++        let data = format!("s 0 {clocks}\n");
++        myfile
++            .write(data.as_bytes())
++            .await
++            .inspect_err(|message| error!("Error writing to sysfs file: {message}"))?;
++        myfile.flush().await?;
++
++        let data = format!("s 1 {clocks}\n");
++        myfile
++            .write(data.as_bytes())
++            .await
++            .inspect_err(|message| error!("Error writing to sysfs file: {message}"))?;
++        myfile.flush().await?;
++
++        myfile
++            .write("c\n".as_bytes())
++            .await
++            .inspect_err(|message| error!("Error writing to sysfs file: {message}"))?;
++        myfile.flush().await?;
++
++        Ok(())
++    }
++
++    async fn get_clocks(&self) -> Result<u32> {
++        let clocks_file = File::open(self.hwmon_path.join(GPU_CLOCKS_SUFFIX)).await?;
++        let mut reader = BufReader::new(clocks_file);
++        loop {
++            let mut line = String::new();
++            if reader.read_line(&mut line).await? == 0 {
++                break;
++            }
++            if line != "OD_SCLK:\n" {
++                continue;
++            }
++
++            let mut line = String::new();
++            if reader.read_line(&mut line).await? == 0 {
++                break;
++            }
++            let mhz = match line.split_whitespace().nth(1) {
++                Some(mhz) if mhz.ends_with("Mhz") => mhz.trim_end_matches("Mhz"),
++                _ => break,
++            };
++
++            return Ok(mhz.parse()?);
++        }
++        Ok(0)
++    }
++}
++
++// Intel GPU controller implementation using i915 driver
++struct IntelI915Controller {
++    path: PathBuf,
++}
++
++#[async_trait]
++impl GpuClockController for IntelI915Controller {
++    async fn get_clocks_range(&self) -> Result<RangeInclusive<u32>> {
++        // For i915, the supported frequency range is in the rps_* files
++        let min_path = self.path.join("gt_RPn_freq_mhz");
++        let max_path = self.path.join("gt_RP0_freq_mhz");
++        
++        let min_val = fs::read_to_string(min_path)
++            .await
++            .map_err(|message| anyhow!("Error reading Intel min freq: {message}"))?
++            .trim()
++            .parse::<u32>()
++            .map_err(|e| anyhow!("Error parsing min freq: {e}"))?;
++            
++        let max_val = fs::read_to_string(max_path)
++            .await
++            .map_err(|message| anyhow!("Error reading Intel max freq: {message}"))?
++            .trim()
++            .parse::<u32>()
++            .map_err(|e| anyhow!("Error parsing max freq: {e}"))?;
++            
++        Ok(min_val..=max_val)
++    }
++
++    async fn set_clocks(&self, clocks: u32) -> Result<()> {
++        // For Intel, we set both min and max to the same value to force the frequency
++        let min_path = self.path.join("gt_min_freq_mhz");
++        let max_path = self.path.join("gt_max_freq_mhz");
++
++        let clocks_str = clocks.to_string();
++
++        write_synced(min_path, clocks_str.as_bytes())
++            .await
++            .inspect_err(|message| error!("Error writing to Intel min freq: {message}"))?;
++
++        write_synced(max_path, clocks_str.as_bytes())
++            .await
++            .inspect_err(|message| error!("Error writing to Intel max freq: {message}"))?;
++
++        Ok(())
++    }
++
++    async fn get_clocks(&self) -> Result<u32> {
++        let cur_path = self.path.join("gt_act_freq_mhz");
++
++        let cur_val = fs::read_to_string(cur_path)
++            .await
++            .map_err(|message| anyhow!("Error reading Intel current freq: {message}"))?
++            .trim()
++            .parse::<u32>()
++            .map_err(|e| anyhow!("Error parsing current freq: {e}"))?;
++
++        Ok(cur_val)
++    }
++}
++
++// Intel GPU controller implementation using Xe driver
++struct IntelXeController {
++    path: PathBuf,
++}
++
++#[async_trait]
++impl GpuClockController for IntelXeController {
++    async fn get_clocks_range(&self) -> Result<RangeInclusive<u32>> {
++        // For Xe, directly use hardware limits
++        let min_path = self.path.join("device/tile0/gt0/freq0/rpn_freq");
++        let max_path = self.path.join("device/tile0/gt0/freq0/rp0_freq");
++        
++        let min_val = fs::read_to_string(min_path)
++            .await
++            .map_err(|message| anyhow!("Error reading Intel Xe min freq: {message}"))?
++            .trim()
++            .parse::<u32>()
++            .map_err(|e| anyhow!("Error parsing min freq: {e}"))?;
++            
++        let max_val = fs::read_to_string(max_path)
++            .await
++            .map_err(|message| anyhow!("Error reading Intel Xe max freq: {message}"))?
++            .trim()
++            .parse::<u32>()
++            .map_err(|e| anyhow!("Error parsing max freq: {e}"))?;
++            
++        Ok(min_val..=max_val)
++    }
++
++    async fn set_clocks(&self, clocks: u32) -> Result<()> {
++        let min_path = self.path.join("device/tile0/gt0/freq0/min_freq");
++        let max_path = self.path.join("device/tile0/gt0/freq0/max_freq");
++
++        let clocks_str = clocks.to_string();
++
++        write_synced(min_path, clocks_str.as_bytes())
++            .await
++            .inspect_err(|message| error!("Error writing to Intel Xe min freq: {message}"))?;
++
++        write_synced(max_path, clocks_str.as_bytes())
++            .await
++            .inspect_err(|message| error!("Error writing to Intel Xe max freq: {message}"))?;
++
++        Ok(())
++    }
++
++    async fn get_clocks(&self) -> Result<u32> {
++        let cur_path = self.path.join("device/tile0/gt0/freq0/cur_freq");
++
++        let cur_val = fs::read_to_string(cur_path)
++            .await
++            .map_err(|message| anyhow!("Error reading Intel Xe current freq: {message}"))?
++            .trim()
++            .parse::<u32>()
++            .map_err(|e| anyhow!("Error parsing current freq: {e}"))?;
++
++        Ok(cur_val)
++    }
++}
++
++// Helper function to check if a path exists
++async fn path_exists(path: impl AsRef<Path>) -> bool {
++    match try_exists(path).await {
++        Ok(exists) => exists,
++        Err(_) => false,
++    }
++}
++
++// Helper function to check if a GPU is enabled
++async fn is_gpu_enabled(card_path: impl AsRef<Path>) -> bool {
++    let enable_path = card_path.as_ref().join("device/enable");
++
++    if !path_exists(&enable_path).await {
++        return true; // Assume enabled if no enable file exists
++    }
++
++    match fs::read_to_string(&enable_path).await {
++        Ok(content) => content.trim() == "1",
++        Err(_) => true, // Assume enabled if can't read the file
++    }
++}
++
++// Factory function to get the appropriate GPU controller
++async fn get_gpu_controller() -> Result<Box<dyn GpuClockController>> {
++    // First try AMD GPU via HWMON
++    if let Ok(path) = find_hwmon(GPU_HWMON_NAME).await {
++        debug!("Found AMD GPU via HWMON");
++        return Ok(Box::new(AmdGpuController { hwmon_path: path }));
++    }
++
++    // If no AMD GPU, try Intel GPUs
++    for card_num in 0..4 {
++        // Check card0 to card3
++        let card_path = PathBuf::from(format!("/sys/class/drm/card{}", card_num));
++
++        // Skip if path doesn't exist
++        if !path_exists(&card_path).await {
++            continue;
++        }
++
++        // Skip if GPU is disabled
++        if !is_gpu_enabled(&card_path).await {
++            debug!("Skipping disabled GPU at {}", card_path.display());
++            continue;
++        }
++
++        // Check for Intel i915
++        if path_exists(card_path.join("gt_min_freq_mhz")).await {
++            debug!("Found Intel i915 GPU at {}", card_path.display());
++            return Ok(Box::new(IntelI915Controller { path: card_path }));
++        }
++
++        // Check for Intel Xe
++        if path_exists(card_path.join("device/tile0/gt0/freq0/min_freq")).await {
++            debug!("Found Intel Xe GPU at {}", card_path.display());
++            return Ok(Box::new(IntelXeController { path: card_path }));
++        }
++    }
++
++    bail!("No supported GPU found")
++}
++
+ pub(crate) async fn get_gpu_clocks_range() -> Result<RangeInclusive<u32>> {
++    // First try to get from config
+     if let Some(range) = platform_config()
+         .await?
+         .as_ref()
+@@ -313,86 +594,20 @@ pub(crate) async fn get_gpu_clocks_range() -> Result<RangeInclusive<u32>> {
+     {
+         return Ok(range.min..=range.max);
+     }
+-    let contents = read_gpu_sysfs_contents(GPU_CLOCK_LEVELS_SUFFIX).await?;
+-    let lines = contents.lines();
+-    let mut min = 1_000_000;
+-    let mut max = 0;
+ 
+-    for line in lines {
+-        let Some(caps) = GPU_CLOCK_LEVELS_REGEX.captures(line) else {
+-            continue;
+-        };
+-        let value: u32 = caps["value"]
+-            .parse()
+-            .map_err(|message| anyhow!("Unable to parse value for GPU power profile: {message}"))?;
+-        if value < min {
+-            min = value;
+-        }
+-        if value > max {
+-            max = value;
+-        }
+-    }
+-
+-    ensure!(min <= max, "Could not read any clocks");
+-    Ok(min..=max)
++    // If no config, use the appropriate controller
++    let controller = get_gpu_controller().await?;
++    controller.get_clocks_range().await
+ }
+ 
+ pub(crate) async fn set_gpu_clocks(clocks: u32) -> Result<()> {
+-    // Set GPU clocks to given value valid
+-    // Only used when GPU Performance Level is manual, but write whenever called.
+-    let base = find_hwmon(GPU_HWMON_NAME).await?;
+-    let mut myfile = File::create(base.join(GPU_CLOCKS_SUFFIX))
+-        .await
+-        .inspect_err(|message| error!("Error opening sysfs file for writing: {message}"))?;
+-
+-    let data = format!("s 0 {clocks}\n");
+-    myfile
+-        .write(data.as_bytes())
+-        .await
+-        .inspect_err(|message| error!("Error writing to sysfs file: {message}"))?;
+-    myfile.flush().await?;
+-
+-    let data = format!("s 1 {clocks}\n");
+-    myfile
+-        .write(data.as_bytes())
+-        .await
+-        .inspect_err(|message| error!("Error writing to sysfs file: {message}"))?;
+-    myfile.flush().await?;
+-
+-    myfile
+-        .write("c\n".as_bytes())
+-        .await
+-        .inspect_err(|message| error!("Error writing to sysfs file: {message}"))?;
+-    myfile.flush().await?;
+-
+-    Ok(())
++    let controller = get_gpu_controller().await?;
++    controller.set_clocks(clocks).await
+ }
+ 
+ pub(crate) async fn get_gpu_clocks() -> Result<u32> {
+-    let base = find_hwmon(GPU_HWMON_NAME).await?;
+-    let clocks_file = File::open(base.join(GPU_CLOCKS_SUFFIX)).await?;
+-    let mut reader = BufReader::new(clocks_file);
+-    loop {
+-        let mut line = String::new();
+-        if reader.read_line(&mut line).await? == 0 {
+-            break;
+-        }
+-        if line != "OD_SCLK:\n" {
+-            continue;
+-        }
+-
+-        let mut line = String::new();
+-        if reader.read_line(&mut line).await? == 0 {
+-            break;
+-        }
+-        let mhz = match line.split_whitespace().nth(1) {
+-            Some(mhz) if mhz.ends_with("Mhz") => mhz.trim_end_matches("Mhz"),
+-            _ => break,
+-        };
+-
+-        return Ok(mhz.parse()?);
+-    }
+-    Ok(0)
++    let controller = get_gpu_controller().await?;
++    controller.get_clocks().await
+ }
+ 
+ async fn find_sysdir(prefix: impl AsRef<Path>, expected: &str) -> Result<PathBuf> {
+-- 
+2.49.0
+
+
+From d21d1b8ef2d7173b0820725fb11e2b177a3f0622 Mon Sep 17 00:00:00 2001
+From: honjow <honjow311@gmail.com>
+Date: Fri, 25 Apr 2025 23:53:29 +0800
+Subject: [PATCH 06/13] power: add Intel GPU performance level support
+
+---
+ src/power.rs | 119 ++++++++++++++++++++++++++++++++++++++++++++++-----
+ 1 file changed, 108 insertions(+), 11 deletions(-)
+
+diff --git a/src/power.rs b/src/power.rs
+index f43666db32fe..2dd52e60810d 100644
+--- a/src/power.rs
++++ b/src/power.rs
+@@ -246,9 +246,36 @@ pub(crate) async fn set_gpu_power_profile(value: GPUPowerProfile) -> Result<()>
+     write_gpu_sysfs_contents(GPU_POWER_PROFILE_SUFFIX, profile.as_bytes()).await
+ }
+ 
+-pub(crate) async fn get_available_gpu_performance_levels() -> Result<Vec<GPUPerformanceLevel>> {
+-    let base = find_hwmon(GPU_HWMON_NAME).await?;
+-    if try_exists(base.join(GPU_PERFORMANCE_LEVEL_SUFFIX)).await? {
++// GPU performance level controller interface
++#[async_trait]
++trait GpuPerformanceLevelController: Send + Sync {
++    async fn get_performance_level(&self) -> Result<GPUPerformanceLevel>;
++    async fn set_performance_level(&self, level: GPUPerformanceLevel) -> Result<()>;
++    async fn get_available_performance_levels(&self) -> Result<Vec<GPUPerformanceLevel>>;
++}
++
++// AMD GPU performance level controller implementation
++struct AmdGpuPerformanceController {
++    hwmon_path: PathBuf,
++}
++
++#[async_trait]
++impl GpuPerformanceLevelController for AmdGpuPerformanceController {
++    async fn get_performance_level(&self) -> Result<GPUPerformanceLevel> {
++        let level = fs::read_to_string(self.hwmon_path.join(GPU_PERFORMANCE_LEVEL_SUFFIX))
++            .await
++            .map_err(|message| anyhow!("Error reading performance level: {message}"))?;
++        Ok(GPUPerformanceLevel::from_str(level.trim())?)
++    }
++    
++    async fn set_performance_level(&self, level: GPUPerformanceLevel) -> Result<()> {
++        let level_str = level.to_string();
++        write_synced(self.hwmon_path.join(GPU_PERFORMANCE_LEVEL_SUFFIX), level_str.as_bytes())
++            .await
++            .map_err(|message| anyhow!("Error setting performance level: {message}"))
++    }
++    
++    async fn get_available_performance_levels(&self) -> Result<Vec<GPUPerformanceLevel>> {
+         Ok(vec![
+             GPUPerformanceLevel::Auto,
+             GPUPerformanceLevel::Low,
+@@ -256,19 +283,89 @@ pub(crate) async fn get_available_gpu_performance_levels() -> Result<Vec<GPUPerf
+             GPUPerformanceLevel::Manual,
+             GPUPerformanceLevel::ProfilePeak,
+         ])
+-    } else {
+-        Ok(Vec::new())
+     }
+ }
+ 
++// Intel GPU performance level controller implementation
++struct IntelGpuPerformanceController {
++    clock_controller: Box<dyn GpuClockController>,
++}
++
++#[async_trait]
++impl GpuPerformanceLevelController for IntelGpuPerformanceController {
++    async fn get_performance_level(&self) -> Result<GPUPerformanceLevel> {
++        // Determine mode by checking current clock frequency
++        let current = self.clock_controller.get_clocks().await?;
++        let range = self.clock_controller.get_clocks_range().await?;
++        
++        // If frequency is at extreme values, consider it Manual mode
++        if current == *range.start() || current == *range.end() {
++            Ok(GPUPerformanceLevel::Manual)
++        } else {
++            Ok(GPUPerformanceLevel::Auto)
++        }
++    }
++    
++    async fn set_performance_level(&self, level: GPUPerformanceLevel) -> Result<()> {
++        match level {
++            GPUPerformanceLevel::Auto => {
++                // Auto mode: set to mid-range frequency
++                let range = self.clock_controller.get_clocks_range().await?;
++                let min = *range.start();
++                let max = *range.end();
++                let mid = min + (max - min) / 2;
++                self.clock_controller.set_clocks(mid).await
++            },
++            GPUPerformanceLevel::Manual => {
++                // Manual mode: do nothing, user will set specific frequency later
++                Ok(())
++            },
++            _ => {
++                // Other modes not supported
++                bail!("Intel GPU only supports Auto and Manual performance levels")
++            }
++        }
++    }
++    
++    async fn get_available_performance_levels(&self) -> Result<Vec<GPUPerformanceLevel>> {
++        // Intel GPU only supports two modes
++        Ok(vec![
++            GPUPerformanceLevel::Auto,
++            GPUPerformanceLevel::Manual,
++        ])
++    }
++}
++
++// Factory function to get appropriate GPU performance controller
++async fn get_gpu_performance_controller() -> Result<Box<dyn GpuPerformanceLevelController>> {
++    // First try AMD GPU
++    if let Ok(path) = find_hwmon(GPU_HWMON_NAME).await {
++        if try_exists(path.join(GPU_PERFORMANCE_LEVEL_SUFFIX)).await.unwrap_or(false) {
++            return Ok(Box::new(AmdGpuPerformanceController { hwmon_path: path }));
++        }
++    }
++    
++    // Then try Intel GPU
++    let controller = get_gpu_controller().await?;
++    Ok(Box::new(IntelGpuPerformanceController {
++        clock_controller: controller,
++    }))
++}
++
++// Update public API functions to use the controller
++pub(crate) async fn get_available_gpu_performance_levels() -> Result<Vec<GPUPerformanceLevel>> {
++    let controller = get_gpu_performance_controller().await?;
++    controller.get_available_performance_levels().await
++}
++
+ pub(crate) async fn get_gpu_performance_level() -> Result<GPUPerformanceLevel> {
+-    let level = read_gpu_sysfs_contents(GPU_PERFORMANCE_LEVEL_SUFFIX).await?;
+-    Ok(GPUPerformanceLevel::from_str(level.trim())?)
++    let controller = get_gpu_performance_controller().await?;
++    controller.get_performance_level().await
+ }
+ 
+ pub(crate) async fn set_gpu_performance_level(level: GPUPerformanceLevel) -> Result<()> {
+-    let level: String = level.to_string();
+-    write_gpu_sysfs_contents(GPU_PERFORMANCE_LEVEL_SUFFIX, level.as_bytes()).await
++    let controller = get_gpu_performance_controller().await?;
++    controller.set_performance_level(level).await
+ }
+ 
+ pub(crate) async fn get_available_cpu_scaling_governors() -> Result<Vec<CPUScalingGovernor>> {
+@@ -450,7 +547,7 @@ impl GpuClockController for IntelI915Controller {
+     }
+ 
+     async fn get_clocks(&self) -> Result<u32> {
+-        let cur_path = self.path.join("gt_act_freq_mhz");
++        let cur_path = self.path.join("gt_max_freq_mhz");
+ 
+         let cur_val = fs::read_to_string(cur_path)
+             .await
+@@ -510,7 +607,7 @@ impl GpuClockController for IntelXeController {
+     }
+ 
+     async fn get_clocks(&self) -> Result<u32> {
+-        let cur_path = self.path.join("device/tile0/gt0/freq0/cur_freq");
++        let cur_path = self.path.join("device/tile0/gt0/freq0/max_freq");
+ 
+         let cur_val = fs::read_to_string(cur_path)
+             .await
+-- 
+2.49.0
+
+
+From 5b0e8a079ceff6c84d2bcb532a90b071add52d2c Mon Sep 17 00:00:00 2001
+From: honjow <honjow311@gmail.com>
+Date: Fri, 25 Apr 2025 23:59:52 +0800
+Subject: [PATCH 07/13] power: Refactor performance level setting and improve
+ code formatting
+
+---
+ src/power.rs | 151 ++++++++++++++++++++++++++++++++++++++++++---------
+ 1 file changed, 124 insertions(+), 27 deletions(-)
+
+diff --git a/src/power.rs b/src/power.rs
+index 2dd52e60810d..92cec172d096 100644
+--- a/src/power.rs
++++ b/src/power.rs
+@@ -16,7 +16,7 @@ use std::str::FromStr;
+ use strum::{Display, EnumString, VariantNames};
+ use tokio::fs::{self, try_exists, File};
+ use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
+-use tracing::{error, warn};
++use tracing::{debug, error, warn};
+ 
+ use crate::hardware::{device_type, DeviceType};
+ use crate::platform::platform_config;
+@@ -267,14 +267,17 @@ impl GpuPerformanceLevelController for AmdGpuPerformanceController {
+             .map_err(|message| anyhow!("Error reading performance level: {message}"))?;
+         Ok(GPUPerformanceLevel::from_str(level.trim())?)
+     }
+-    
++
+     async fn set_performance_level(&self, level: GPUPerformanceLevel) -> Result<()> {
+         let level_str = level.to_string();
+-        write_synced(self.hwmon_path.join(GPU_PERFORMANCE_LEVEL_SUFFIX), level_str.as_bytes())
+-            .await
+-            .map_err(|message| anyhow!("Error setting performance level: {message}"))
++        write_synced(
++            self.hwmon_path.join(GPU_PERFORMANCE_LEVEL_SUFFIX),
++            level_str.as_bytes(),
++        )
++        .await
++        .map_err(|message| anyhow!("Error setting performance level: {message}"))
+     }
+-    
++
+     async fn get_available_performance_levels(&self) -> Result<Vec<GPUPerformanceLevel>> {
+         Ok(vec![
+             GPUPerformanceLevel::Auto,
+@@ -297,7 +300,7 @@ impl GpuPerformanceLevelController for IntelGpuPerformanceController {
+         // Determine mode by checking current clock frequency
+         let current = self.clock_controller.get_clocks().await?;
+         let range = self.clock_controller.get_clocks_range().await?;
+-        
++
+         // If frequency is at extreme values, consider it Manual mode
+         if current == *range.start() || current == *range.end() {
+             Ok(GPUPerformanceLevel::Manual)
+@@ -305,48 +308,54 @@ impl GpuPerformanceLevelController for IntelGpuPerformanceController {
+             Ok(GPUPerformanceLevel::Auto)
+         }
+     }
+-    
++
+     async fn set_performance_level(&self, level: GPUPerformanceLevel) -> Result<()> {
+         match level {
+             GPUPerformanceLevel::Auto => {
+-                // Auto mode: set to mid-range frequency
++                // Auto mode: reset min/max to hardware range for dynamic frequency adjustment
+                 let range = self.clock_controller.get_clocks_range().await?;
+                 let min = *range.start();
+                 let max = *range.end();
+-                let mid = min + (max - min) / 2;
+-                self.clock_controller.set_clocks(mid).await
+-            },
++
++                // Set min and max frequencies to hardware limits
++                self.clock_controller.set_min_clocks(min).await?;
++                self.clock_controller.set_max_clocks(max).await
++            }
+             GPUPerformanceLevel::Manual => {
+                 // Manual mode: do nothing, user will set specific frequency later
+                 Ok(())
+-            },
++            }
+             _ => {
+                 // Other modes not supported
+                 bail!("Intel GPU only supports Auto and Manual performance levels")
+             }
+         }
+     }
+-    
++
+     async fn get_available_performance_levels(&self) -> Result<Vec<GPUPerformanceLevel>> {
+         // Intel GPU only supports two modes
+-        Ok(vec![
+-            GPUPerformanceLevel::Auto,
+-            GPUPerformanceLevel::Manual,
+-        ])
++        Ok(vec![GPUPerformanceLevel::Auto, GPUPerformanceLevel::Manual])
+     }
+ }
+ 
+ // Factory function to get appropriate GPU performance controller
+ async fn get_gpu_performance_controller() -> Result<Box<dyn GpuPerformanceLevelController>> {
++    debug!("Getting GPU performance controller");
+     // First try AMD GPU
+     if let Ok(path) = find_hwmon(GPU_HWMON_NAME).await {
+-        if try_exists(path.join(GPU_PERFORMANCE_LEVEL_SUFFIX)).await.unwrap_or(false) {
++        if try_exists(path.join(GPU_PERFORMANCE_LEVEL_SUFFIX))
++            .await
++            .unwrap_or(false)
++        {
+             return Ok(Box::new(AmdGpuPerformanceController { hwmon_path: path }));
+         }
+     }
+-    
++
+     // Then try Intel GPU
+-    let controller = get_gpu_controller().await?;
++    debug!("Getting Intel GPU performance controller");
++    let controller = get_gpu_controller()
++        .await
++        .inspect_err(|message| error!("Error getting GPU controller: {message}"))?;
+     Ok(Box::new(IntelGpuPerformanceController {
+         clock_controller: controller,
+     }))
+@@ -407,6 +416,8 @@ trait GpuClockController: Send + Sync {
+     async fn get_clocks_range(&self) -> Result<RangeInclusive<u32>>;
+     async fn set_clocks(&self, clocks: u32) -> Result<()>;
+     async fn get_clocks(&self) -> Result<u32>;
++    async fn set_min_clocks(&self, clocks: u32) -> Result<()>;
++    async fn set_max_clocks(&self, clocks: u32) -> Result<()>;
+ }
+ 
+ // AMD GPU controller implementation using HWMON
+@@ -497,6 +508,54 @@ impl GpuClockController for AmdGpuController {
+         }
+         Ok(0)
+     }
++
++    async fn set_min_clocks(&self, clocks: u32) -> Result<()> {
++        // For AMD GPUs, set the lower limit (s 0)
++        let mut myfile = File::create(self.hwmon_path.join(GPU_CLOCKS_SUFFIX))
++            .await
++            .inspect_err(|message| error!("Error opening sysfs file for writing: {message}"))?;
++
++        // s 0 sets the lower limit
++        let data = format!("s 0 {clocks}\n");
++        myfile
++            .write(data.as_bytes())
++            .await
++            .inspect_err(|message| error!("Error writing to sysfs file: {message}"))?;
++        myfile.flush().await?;
++
++        // Commit changes
++        myfile
++            .write("c\n".as_bytes())
++            .await
++            .inspect_err(|message| error!("Error writing to sysfs file: {message}"))?;
++        myfile.flush().await?;
++
++        Ok(())
++    }
++
++    async fn set_max_clocks(&self, clocks: u32) -> Result<()> {
++        // For AMD GPUs, set the upper limit (s 1)
++        let mut myfile = File::create(self.hwmon_path.join(GPU_CLOCKS_SUFFIX))
++            .await
++            .inspect_err(|message| error!("Error opening sysfs file for writing: {message}"))?;
++
++        // s 1 sets the upper limit
++        let data = format!("s 1 {clocks}\n");
++        myfile
++            .write(data.as_bytes())
++            .await
++            .inspect_err(|message| error!("Error writing to sysfs file: {message}"))?;
++        myfile.flush().await?;
++
++        // Commit changes
++        myfile
++            .write("c\n".as_bytes())
++            .await
++            .inspect_err(|message| error!("Error writing to sysfs file: {message}"))?;
++        myfile.flush().await?;
++
++        Ok(())
++    }
+ }
+ 
+ // Intel GPU controller implementation using i915 driver
+@@ -510,21 +569,21 @@ impl GpuClockController for IntelI915Controller {
+         // For i915, the supported frequency range is in the rps_* files
+         let min_path = self.path.join("gt_RPn_freq_mhz");
+         let max_path = self.path.join("gt_RP0_freq_mhz");
+-        
++
+         let min_val = fs::read_to_string(min_path)
+             .await
+             .map_err(|message| anyhow!("Error reading Intel min freq: {message}"))?
+             .trim()
+             .parse::<u32>()
+             .map_err(|e| anyhow!("Error parsing min freq: {e}"))?;
+-            
++
+         let max_val = fs::read_to_string(max_path)
+             .await
+             .map_err(|message| anyhow!("Error reading Intel max freq: {message}"))?
+             .trim()
+             .parse::<u32>()
+             .map_err(|e| anyhow!("Error parsing max freq: {e}"))?;
+-            
++
+         Ok(min_val..=max_val)
+     }
+ 
+@@ -558,6 +617,25 @@ impl GpuClockController for IntelI915Controller {
+ 
+         Ok(cur_val)
+     }
++
++    // New methods to set min and max clocks separately for i915
++    async fn set_min_clocks(&self, clocks: u32) -> Result<()> {
++        let min_path = self.path.join("gt_min_freq_mhz");
++        let clocks_str = clocks.to_string();
++
++        write_synced(min_path, clocks_str.as_bytes())
++            .await
++            .inspect_err(|message| error!("Error writing to Intel min freq: {message}"))
++    }
++
++    async fn set_max_clocks(&self, clocks: u32) -> Result<()> {
++        let max_path = self.path.join("gt_max_freq_mhz");
++        let clocks_str = clocks.to_string();
++
++        write_synced(max_path, clocks_str.as_bytes())
++            .await
++            .inspect_err(|message| error!("Error writing to Intel max freq: {message}"))
++    }
+ }
+ 
+ // Intel GPU controller implementation using Xe driver
+@@ -571,21 +649,21 @@ impl GpuClockController for IntelXeController {
+         // For Xe, directly use hardware limits
+         let min_path = self.path.join("device/tile0/gt0/freq0/rpn_freq");
+         let max_path = self.path.join("device/tile0/gt0/freq0/rp0_freq");
+-        
++
+         let min_val = fs::read_to_string(min_path)
+             .await
+             .map_err(|message| anyhow!("Error reading Intel Xe min freq: {message}"))?
+             .trim()
+             .parse::<u32>()
+             .map_err(|e| anyhow!("Error parsing min freq: {e}"))?;
+-            
++
+         let max_val = fs::read_to_string(max_path)
+             .await
+             .map_err(|message| anyhow!("Error reading Intel Xe max freq: {message}"))?
+             .trim()
+             .parse::<u32>()
+             .map_err(|e| anyhow!("Error parsing max freq: {e}"))?;
+-            
++
+         Ok(min_val..=max_val)
+     }
+ 
+@@ -618,6 +696,25 @@ impl GpuClockController for IntelXeController {
+ 
+         Ok(cur_val)
+     }
++
++    // New methods to set min and max clocks separately for Xe
++    async fn set_min_clocks(&self, clocks: u32) -> Result<()> {
++        let min_path = self.path.join("device/tile0/gt0/freq0/min_freq");
++        let clocks_str = clocks.to_string();
++
++        write_synced(min_path, clocks_str.as_bytes())
++            .await
++            .inspect_err(|message| error!("Error writing to Intel Xe min freq: {message}"))
++    }
++
++    async fn set_max_clocks(&self, clocks: u32) -> Result<()> {
++        let max_path = self.path.join("device/tile0/gt0/freq0/max_freq");
++        let clocks_str = clocks.to_string();
++
++        write_synced(max_path, clocks_str.as_bytes())
++            .await
++            .inspect_err(|message| error!("Error writing to Intel Xe max freq: {message}"))
++    }
+ }
+ 
+ // Helper function to check if a path exists
+-- 
+2.49.0
+
+
+From b77031b252bef30a59c7ddb2830bce1455206010 Mon Sep 17 00:00:00 2001
+From: honjow <honjow311@gmail.com>
+Date: Sat, 26 Apr 2025 01:50:22 +0800
+Subject: [PATCH 08/13] power: Add min and max clock frequency retrieval for
+ GPU controllers
+
+---
+ src/power.rs | 103 +++++++++++++++++++++++++++++++++++++++++++++++----
+ 1 file changed, 96 insertions(+), 7 deletions(-)
+
+diff --git a/src/power.rs b/src/power.rs
+index 92cec172d096..445d254e36be 100644
+--- a/src/power.rs
++++ b/src/power.rs
+@@ -297,15 +297,15 @@ struct IntelGpuPerformanceController {
+ #[async_trait]
+ impl GpuPerformanceLevelController for IntelGpuPerformanceController {
+     async fn get_performance_level(&self) -> Result<GPUPerformanceLevel> {
+-        // Determine mode by checking current clock frequency
+-        let current = self.clock_controller.get_clocks().await?;
+         let range = self.clock_controller.get_clocks_range().await?;
++        let min_clock = self.clock_controller.get_min_clocks().await?;
++        let max_clock = self.clock_controller.get_max_clocks().await?;
+ 
+-        // If frequency is at extreme values, consider it Manual mode
+-        if current == *range.start() || current == *range.end() {
+-            Ok(GPUPerformanceLevel::Manual)
+-        } else {
++        // If min same as range start and max same as range end, consider it Auto mode
++        if min_clock == *range.start() && max_clock == *range.end() {
+             Ok(GPUPerformanceLevel::Auto)
++        } else {
++            Ok(GPUPerformanceLevel::Manual)
+         }
+     }
+ 
+@@ -417,7 +417,9 @@ trait GpuClockController: Send + Sync {
+     async fn set_clocks(&self, clocks: u32) -> Result<()>;
+     async fn get_clocks(&self) -> Result<u32>;
+     async fn set_min_clocks(&self, clocks: u32) -> Result<()>;
++    async fn get_min_clocks(&self) -> Result<u32>;
+     async fn set_max_clocks(&self, clocks: u32) -> Result<()>;
++    async fn get_max_clocks(&self) -> Result<u32>;
+ }
+ 
+ // AMD GPU controller implementation using HWMON
+@@ -533,6 +535,28 @@ impl GpuClockController for AmdGpuController {
+         Ok(())
+     }
+ 
++    async fn get_min_clocks(&self) -> Result<u32> {
++        let contents = fs::read_to_string(self.hwmon_path.join(GPU_CLOCKS_SUFFIX))
++            .await
++            .map_err(|message| anyhow!("Error opening sysfs file for reading {message}"))?;
++
++        for line in contents.lines() {
++            let Some(caps) = GPU_CLOCK_LEVELS_REGEX.captures(line) else {
++                continue;
++            };
++
++            // Only find the entry with index 0
++            if &caps["index"] == "0" {
++                let value: u32 = caps["value"].parse().map_err(|message| {
++                    anyhow!("Unable to parse value for GPU power profile: {message}")
++                })?;
++                return Ok(value);
++            }
++        }
++
++        bail!("Could not find minimum GPU clock frequency (index 0) in the clock data")
++    }
++
+     async fn set_max_clocks(&self, clocks: u32) -> Result<()> {
+         // For AMD GPUs, set the upper limit (s 1)
+         let mut myfile = File::create(self.hwmon_path.join(GPU_CLOCKS_SUFFIX))
+@@ -556,9 +580,31 @@ impl GpuClockController for AmdGpuController {
+ 
+         Ok(())
+     }
++
++    async fn get_max_clocks(&self) -> Result<u32> {
++        let contents = fs::read_to_string(self.hwmon_path.join(GPU_CLOCKS_SUFFIX))
++            .await
++            .map_err(|message| anyhow!("Error opening sysfs file for reading {message}"))?;
++
++        for line in contents.lines() {
++            let Some(caps) = GPU_CLOCK_LEVELS_REGEX.captures(line) else {
++                continue;
++            };
++
++            // Only find the entry with index 1
++            if &caps["index"] == "1" {
++                let value: u32 = caps["value"].parse().map_err(|message| {
++                    anyhow!("Unable to parse value for GPU power profile: {message}")
++                })?;
++                return Ok(value);
++            }
++        }
++
++        bail!("Could not find maximum GPU clock frequency (index 1) in the clock data")
++    }
+ }
+ 
+-// Intel GPU controller implementation using i915 driver
++// Intel GPU controller implementation using Xe driver
+ struct IntelI915Controller {
+     path: PathBuf,
+ }
+@@ -628,6 +674,16 @@ impl GpuClockController for IntelI915Controller {
+             .inspect_err(|message| error!("Error writing to Intel min freq: {message}"))
+     }
+ 
++    async fn get_min_clocks(&self) -> Result<u32> {
++        let min_path = self.path.join("gt_min_freq_mhz");
++        let min_val = fs::read_to_string(min_path)
++            .await
++            .map_err(|message| anyhow!("Error reading Intel min freq: {message}"))?
++            .trim()
++            .parse::<u32>()
++            .map_err(|e| anyhow!("Error parsing min freq: {e}"))?;
++        Ok(min_val)
++    }
+     async fn set_max_clocks(&self, clocks: u32) -> Result<()> {
+         let max_path = self.path.join("gt_max_freq_mhz");
+         let clocks_str = clocks.to_string();
+@@ -636,6 +692,17 @@ impl GpuClockController for IntelI915Controller {
+             .await
+             .inspect_err(|message| error!("Error writing to Intel max freq: {message}"))
+     }
++
++    async fn get_max_clocks(&self) -> Result<u32> {
++        let max_path = self.path.join("gt_max_freq_mhz");
++        let max_val = fs::read_to_string(max_path)
++            .await
++            .map_err(|message| anyhow!("Error reading Intel max freq: {message}"))?
++            .trim()
++            .parse::<u32>()
++            .map_err(|e| anyhow!("Error parsing max freq: {e}"))?;
++        Ok(max_val)
++    }
+ }
+ 
+ // Intel GPU controller implementation using Xe driver
+@@ -707,6 +774,17 @@ impl GpuClockController for IntelXeController {
+             .inspect_err(|message| error!("Error writing to Intel Xe min freq: {message}"))
+     }
+ 
++    async fn get_min_clocks(&self) -> Result<u32> {
++        let min_path = self.path.join("device/tile0/gt0/freq0/min_freq");
++        let min_val = fs::read_to_string(min_path)
++            .await
++            .map_err(|message| anyhow!("Error reading Intel Xe min freq: {message}"))?
++            .trim()
++            .parse::<u32>()
++            .map_err(|e| anyhow!("Error parsing min freq: {e}"))?;
++        Ok(min_val)
++    }
++
+     async fn set_max_clocks(&self, clocks: u32) -> Result<()> {
+         let max_path = self.path.join("device/tile0/gt0/freq0/max_freq");
+         let clocks_str = clocks.to_string();
+@@ -715,6 +793,17 @@ impl GpuClockController for IntelXeController {
+             .await
+             .inspect_err(|message| error!("Error writing to Intel Xe max freq: {message}"))
+     }
++
++    async fn get_max_clocks(&self) -> Result<u32> {
++        let max_path = self.path.join("device/tile0/gt0/freq0/max_freq");
++        let max_val = fs::read_to_string(max_path)
++            .await
++            .map_err(|message| anyhow!("Error reading Intel Xe max freq: {message}"))?
++            .trim()
++            .parse::<u32>()
++            .map_err(|e| anyhow!("Error parsing max freq: {e}"))?;
++        Ok(max_val)
++    }
+ }
+ 
+ // Helper function to check if a path exists
+-- 
+2.49.0
+
+
+From 13d889388e70605fb9325e122b87a464be050edf Mon Sep 17 00:00:00 2001
+From: honjow <honjow311@gmail.com>
+Date: Sat, 26 Apr 2025 02:09:38 +0800
+Subject: [PATCH 09/13] power: Update GPU clock frequency retrieval to use
+ minimum frequency paths
+
+---
+ src/power.rs | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/src/power.rs b/src/power.rs
+index 445d254e36be..9eafe28de95e 100644
+--- a/src/power.rs
++++ b/src/power.rs
+@@ -652,7 +652,7 @@ impl GpuClockController for IntelI915Controller {
+     }
+ 
+     async fn get_clocks(&self) -> Result<u32> {
+-        let cur_path = self.path.join("gt_max_freq_mhz");
++        let cur_path = self.path.join("gt_min_freq_mhz");
+ 
+         let cur_val = fs::read_to_string(cur_path)
+             .await
+@@ -752,7 +752,7 @@ impl GpuClockController for IntelXeController {
+     }
+ 
+     async fn get_clocks(&self) -> Result<u32> {
+-        let cur_path = self.path.join("device/tile0/gt0/freq0/max_freq");
++        let cur_path = self.path.join("device/tile0/gt0/freq0/min_freq");
+ 
+         let cur_val = fs::read_to_string(cur_path)
+             .await
+-- 
+2.49.0
+
+
+From f7cbbe7400941eec6aa98fc5a567b36c9c46a77c Mon Sep 17 00:00:00 2001
+From: Matthew Schwartz <matthew.schwartz@linux.dev>
+Date: Wed, 30 Apr 2025 10:56:22 -0700
+Subject: [PATCH 10/13] power: add MSI WMI-based TDP limiting
+
+---
+ src/power.rs | 66 ++++++++++++++++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 66 insertions(+)
+
+diff --git a/src/power.rs b/src/power.rs
+index 9eafe28de95e..88644a7bbfbc 100644
+--- a/src/power.rs
++++ b/src/power.rs
+@@ -95,6 +95,7 @@ pub enum TdpLimitingMethod {
+     GpuHwmon,
+     AsusArmoury,
+     LenovoWmi,
++    MsiWmi,
+     ZotacZonePlatform,
+ }
+ 
+@@ -110,6 +111,9 @@ pub(crate) struct ZotacZoneTdpLimitManager {}
+ #[derive(Debug)]
+ pub(crate) struct AsusArmouryTdpLimitManager {}
+ 
++#[derive(Debug)]
++pub(crate) struct MsiWmiTdpLimitManager {}
++
+ #[async_trait]
+ pub(crate) trait TdpLimitManager: Send + Sync {
+     async fn get_tdp_limit(&self) -> Result<u32>;
+@@ -131,6 +135,7 @@ pub(crate) async fn tdp_limit_manager() -> Result<Box<dyn TdpLimitManager>> {
+         TdpLimitingMethod::LenovoWmi => Box::new(LenovoWmiTdpLimitManager {}),
+         TdpLimitingMethod::AsusArmoury => Box::new(AsusArmouryTdpLimitManager {}),
+         TdpLimitingMethod::GpuHwmon => Box::new(GpuHwmonTdpLimitManager {}),
++        TdpLimitingMethod::MsiWmi => Box::new(MsiWmiTdpLimitManager {}),
+         TdpLimitingMethod::ZotacZonePlatform => Box::new(ZotacZoneTdpLimitManager {}),
+     })
+ }
+@@ -1234,6 +1239,67 @@ impl TdpLimitManager for AsusArmouryTdpLimitManager {
+     }
+ }
+ 
++impl MsiWmiTdpLimitManager {
++    const PREFIX: &str = "/sys/class/firmware-attributes/msi-wmi-platform/attributes";
++    const SPL_SUFFIX: &str = "ppt_pl1_spl";
++    const SPPT_SUFFIX: &str = "ppt_pl2_sppt";
++}
++
++#[async_trait]
++impl TdpLimitManager for MsiWmiTdpLimitManager {
++    async fn get_tdp_limit(&self) -> Result<u32> {
++        let base = path(Self::PREFIX);
++
++        fs::read_to_string(base.join(Self::SPL_SUFFIX).join("current_value"))
++            .await
++            .map_err(|message| anyhow!("Error reading sysfs: {message}"))?
++            .trim()
++            .parse()
++            .map_err(|e| anyhow!("Error parsing value: {e}"))
++    }
++
++    async fn set_tdp_limit(&self, limit: u32) -> Result<()> {
++        ensure!(
++            self.get_tdp_limit_range().await?.contains(&limit),
++            "Invalid limit"
++        );
++
++        let limit = limit.to_string();
++        let base = path(Self::PREFIX);
++        write_synced(
++            base.join(Self::SPL_SUFFIX).join("current_value"),
++            limit.as_bytes(),
++        )
++        .await
++        .inspect_err(|message| error!("Error writing to sysfs file: {message}"))?;
++        write_synced(
++            base.join(Self::SPPT_SUFFIX).join("current_value"),
++            limit.as_bytes(),
++        )
++        .await
++        .inspect_err(|message| error!("Error writing to sysfs file: {message}"))
++    }
++
++    async fn get_tdp_limit_range(&self) -> Result<RangeInclusive<u32>> {
++        let base = path(Self::PREFIX).join(Self::SPL_SUFFIX);
++
++        let min: u32 = fs::read_to_string(base.join("min_value"))
++            .await
++            .map_err(|message| anyhow!("Error reading sysfs: {message}"))?
++            .trim()
++            .parse()
++            .map_err(|e| anyhow!("Error parsing value: {e}"))?;
++        let max: u32 = fs::read_to_string(base.join("max_value"))
++            .await
++            .map_err(|message| anyhow!("Error reading sysfs: {message}"))?
++            .trim()
++            .parse()
++            .map_err(|e| anyhow!("Error parsing value: {e}"))?;
++        Ok(min..=max)
++    }
++}
++
++
+ pub(crate) async fn get_max_charge_level() -> Result<i32> {
+     let config = platform_config().await?;
+     let config = config
+-- 
+2.49.0
+
+
+From f9c00d7b88d77002f39713d9a81739cd77e0c723 Mon Sep 17 00:00:00 2001
+From: Matthew Schwartz <matthew.schwartz@linux.dev>
+Date: Wed, 30 Apr 2025 10:57:37 -0700
+Subject: [PATCH 11/13] platform/hardware: Add MSI Claw support
+
+---
+ data/platforms/claw.toml |  6 +++++
+ src/hardware.rs          | 58 ++++++++++++++++++++++++++++++++++++++++
+ src/platform.rs          |  1 +
+ 3 files changed, 65 insertions(+)
+ create mode 100644 data/platforms/claw.toml
+
+diff --git a/data/platforms/claw.toml b/data/platforms/claw.toml
+new file mode 100644
+index 000000000000..5e94bfbabc70
+--- /dev/null
++++ b/data/platforms/claw.toml
+@@ -0,0 +1,6 @@
++[performance_profile]
++platform_profile_name = "msi-wmi-platform"
++suggested_default = "balanced-performance"
++
++[tdp_limit]
++method = "msi_wmi"
+diff --git a/src/hardware.rs b/src/hardware.rs
+index 8836279472db..b8e4edc51d38 100644
+--- a/src/hardware.rs
++++ b/src/hardware.rs
+@@ -37,6 +37,7 @@ pub(crate) enum DeviceType {
+     Unknown,
+     SteamDeck,
+     Ally,
++    Claw,
+     LegionGo,
+     LegionGoS,
+     ZotacZone,
+@@ -90,6 +91,9 @@ pub(crate) async fn device_variant() -> Result<(DeviceType, String)> {
+         }
+         ("ZOTAC", _, "G0A1W" | "G1A1W") => (DeviceType::ZotacZone, board_name.to_string()),
+         ("Valve", _, "Jupiter" | "Galileo") => (DeviceType::SteamDeck, board_name.to_string()),
++        ("Micro-Star International Co., Ltd.", "Claw 8 AI+ A2VM" | "Claw 7 AI+ A2VM" | "Claw A1M", _) => {
++            (DeviceType::Claw, product_name.to_string())
++        }
+         _ => (DeviceType::Unknown, String::from("unknown")),
+     })
+ }
+@@ -320,6 +324,60 @@ pub mod test {
+             (DeviceType::Ally, String::from("ROG Ally X RC72LA_RC72LA"))
+         );
+ 
++        write(crate::path(SYS_VENDOR_PATH), "Micro-Star International Co., Ltd.\n")
++            .await
++            .expect("write");
++        write(crate::path(BOARD_NAME_PATH), "INVALID\n")
++            .await
++            .expect("write");
++        write(crate::path(PRODUCT_NAME_PATH), "INVALID\n")
++            .await
++            .expect("write");
++        assert_eq!(
++            steam_deck_variant().await.unwrap(),
++            SteamDeckVariant::Unknown
++        );
++        assert_eq!(
++            device_variant().await.unwrap(),
++            (DeviceType::Unknown, String::from("unknown"))
++        );
++
++        write(crate::path(PRODUCT_NAME_PATH), "Claw 8 AI+ A2VM\n")
++            .await
++            .expect("write");
++        assert_eq!(
++            steam_deck_variant().await.unwrap(),
++            SteamDeckVariant::Unknown
++        );
++        assert_eq!(
++            device_variant().await.unwrap(),
++            (DeviceType::Claw, String::from("Claw 8 AI+ A2VM"))
++        );
++
++        write(crate::path(PRODUCT_NAME_PATH), "Claw 7 AI+ A2VM\n")
++            .await
++            .expect("write");
++        assert_eq!(
++            steam_deck_variant().await.unwrap(),
++            SteamDeckVariant::Unknown
++        );
++        assert_eq!(
++            device_variant().await.unwrap(),
++            (DeviceType::Claw, String::from("Claw 7 AI+ A2VM"))
++        );
++
++        write(crate::path(PRODUCT_NAME_PATH), "Claw A1M\n")
++            .await
++            .expect("write");
++        assert_eq!(
++            steam_deck_variant().await.unwrap(),
++            SteamDeckVariant::Unknown
++        );
++        assert_eq!(
++            device_variant().await.unwrap(),
++            (DeviceType::Claw, String::from("Claw A1M"))
++        );
++
+         write(crate::path(SYS_VENDOR_PATH), "ZOTAC\n")
+             .await
+             .expect("write");
+diff --git a/src/platform.rs b/src/platform.rs
+index ea5bfa8fc3db..3892807f1ed0 100644
+--- a/src/platform.rs
++++ b/src/platform.rs
+@@ -157,6 +157,7 @@ impl PlatformConfig {
+         let platform = match device_type().await? {
+             DeviceType::SteamDeck => "jupiter",
+             DeviceType::Ally => "ally",
++            DeviceType::Claw => "claw",
+             DeviceType::LegionGo => "legion-go",
+             DeviceType::LegionGoS => "legion-go-s",
+             DeviceType::ZotacZone => "zotac-zone",
+-- 
+2.49.0
+
+
+From fed93e57490878c0a946e490a3ad4ca90db4dff4 Mon Sep 17 00:00:00 2001
+From: Matthew Schwartz <matthew.schwartz@linux.dev>
+Date: Wed, 30 Apr 2025 11:55:01 -0700
+Subject: [PATCH 12/13] power: fix clippy warning
+
+---
+ src/power.rs | 5 +----
+ 1 file changed, 1 insertion(+), 4 deletions(-)
+
+diff --git a/src/power.rs b/src/power.rs
+index 88644a7bbfbc..6dacb97c2265 100644
+--- a/src/power.rs
++++ b/src/power.rs
+@@ -813,10 +813,7 @@ impl GpuClockController for IntelXeController {
+ 
+ // Helper function to check if a path exists
+ async fn path_exists(path: impl AsRef<Path>) -> bool {
+-    match try_exists(path).await {
+-        Ok(exists) => exists,
+-        Err(_) => false,
+-    }
++    (try_exists(path).await).unwrap_or(false)
+ }
+ 
+ // Helper function to check if a GPU is enabled
+-- 
+2.49.0
+
+
+From 7cabe3b9337e89663d42e0e17bc4bd46b31cb767 Mon Sep 17 00:00:00 2001
+From: Matthew Schwartz <matthew.schwartz@linux.dev>
+Date: Tue, 29 Apr 2025 13:55:24 -0700
+Subject: [PATCH 13/13] [HACK] inputplumber: skip handling on devices that
+ struggle with deck-uhid
+
+This seems to stall steamosctl get-all-properties so let's just skip
+it for now and rely on InputPlumber's default targets.
+---
+ src/inputplumber.rs | 15 ++++++++++++++-
+ 1 file changed, 14 insertions(+), 1 deletion(-)
+
+diff --git a/src/inputplumber.rs b/src/inputplumber.rs
+index a3544efbf869..923604a04dcb 100644
+--- a/src/inputplumber.rs
++++ b/src/inputplumber.rs
+@@ -53,7 +53,10 @@ impl DeckService {
+     }
+ 
+     async fn check_devices(&self, object_manager: &ObjectManagerProxy<'_>) -> Result<()> {
+-        if device_type().await.unwrap_or(DeviceType::Unknown) == DeviceType::LegionGoS {
++        if matches!(
++            device_type().await.unwrap_or(DeviceType::Unknown),
++            DeviceType::LegionGoS | DeviceType::LegionGo | DeviceType::Claw | DeviceType::Ally | DeviceType::ZotacZone
++        ) {
+             // There is a bug on the Legion Go S where querying this information
+             // messes up the mapping for the `deck-uhid` target device. It's not
+             // clear exactly what's causing this, so we just skip on the Legion
+@@ -69,6 +72,16 @@ impl DeckService {
+     }
+ 
+     async fn make_deck_from_ifaces_added(&self, msg: InterfacesAdded) -> Result<()> {
++        if matches!(
++            device_type().await.unwrap_or(DeviceType::Unknown),
++            DeviceType::LegionGoS | DeviceType::LegionGo | DeviceType::Claw | DeviceType::Ally | DeviceType::ZotacZone
++        ) {
++            // There is a bug on the Legion Go S where querying this information
++            // messes up the mapping for the `deck-uhid` target device. It's not
++            // clear exactly what's causing this, so we just skip on the Legion
++            // Go S since it makes a `deck-uhid` target device by default.
++            return Ok(());
++        }
+         let args = msg.args()?;
+         if !args
+             .interfaces_and_properties
+-- 
+2.49.0
+

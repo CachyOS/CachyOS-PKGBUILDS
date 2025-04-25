@@ -23,14 +23,17 @@ depends=(
 optdepends=('jupiter-hw-support: jupiter support')  # Needed for jupiter-get-als-gain, jupiter-biosupdate, steamos-format-device, steamos-trim-devices
 makedepends=('git' 'cargo')
 source=("git+https://gitlab.com/evlaV/steamos-manager.git#tag=v${pkgver}"
-        "support-gamescope-session-steam.patch")
+        "support-gamescope-session-steam.patch"
+        "more-devices.patch")
 sha256sums=('ee1e986cfb23c35ddff137ce299f10ba2f2b5a620b5446058a7898b6a7620f5b'
-            '3c68e6658e99ecb0851a5cc36d1f1d01c24c80818567ae375525560b0f1e2059')
+            '3c68e6658e99ecb0851a5cc36d1f1d01c24c80818567ae375525560b0f1e2059'
+            'bb0c7c16563df341567e8b583989126126abacdccb07a8ca5bc233a089c777c7')
 replaces=('ds-inhibit')
 
 prepare() {
     cd "${pkgname}"
     patch -Np1 -i ../support-gamescope-session-steam.patch
+    patch -Np1 -i ../more-devices.patch
     cargo fetch --locked --target "$CARCH-unknown-linux-gnu"
 }
 
