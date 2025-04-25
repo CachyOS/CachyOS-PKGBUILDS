@@ -2,7 +2,7 @@
 
 pkgname=occt
 pkgver=14.0.8
-pkgrel=1
+pkgrel=2
 pkgdesc="OverClock Checking Tool - CPU/GPU stress testing and monitoring (binary)"
 arch=('x86_64')
 url="https://www.ocbase.com/"
@@ -38,6 +38,7 @@ package() {
 
   # Use configs in home dir
   touch "$pkgdir/opt/occt/app_folder_in_home"
+  touch "$pkgdir/opt/occt/use_home_config"
 
   # Add symlink for easier execution and detection
   install -d "$pkgdir/usr/bin"
