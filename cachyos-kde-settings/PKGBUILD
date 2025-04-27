@@ -3,7 +3,7 @@
 
 pkgname=cachyos-kde-settings
 pkgdesc='CachyOS KDE settings'
-pkgver=4.7
+pkgver=4.8
 pkgrel=1
 arch=('any')
 url="https://github.com/cachyos/$pkgname"
@@ -15,15 +15,15 @@ depends=('ttf-fantasque-nerd'
     'cachyos-alacritty-config'
 )
 makedepends=('coreutils')
-install=$pkgname.install
+install="$pkgname.install"
 provides=('cachyos-desktop-settings')
 conflicts=('cachyos-desktop-settings')
 source=("$pkgname-$pkgver.tar.gz::$url/archive/$pkgver.tar.gz")
-sha512sums=('c55479480467a69e63937530ef44eaff50dfafd4069941b7a7ded99803bf32ed26690a9e702bbc3507e88446ae2e29c4da6f386fcf032433a118dc20c03e5564')
+sha512sums=('b7c7f3e443873b8167f5c1aba531af77a9f6dcfab14a42d3f6144123820d21c2f39ba01175d48da50aa824d717b5ae9976db63491868cd0c51809231e5ca9e22')
 
 package() {
-    install -d $pkgdir/etc
-    cp -rf $srcdir/$pkgname-$pkgver/etc $pkgdir
-    install -d $pkgdir/usr
-    cp -rf $srcdir/$pkgname-$pkgver/usr $pkgdir
+    install -d "$pkgdir/etc"
+    cp -rf "$pkgname-$pkgver/etc" "$pkgdir"
+    install -d "$pkgdir/usr"
+    cp -rf "$pkgname-$pkgver/usr" "$pkgdir"
 }
