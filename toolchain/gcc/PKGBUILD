@@ -13,9 +13,9 @@ _optimize_v3=${_optimize_v3-}
 # ENABLE x86-64-v4 optimization
 _optimize_v4=${_optimize_v4-}
 
-pkgname=(gcc gcc-libs lib32-gcc-libs gcc-ada gcc-d gcc-fortran gcc-go gcc-m2 gcc-objc gcc-rust lto-dump libgccjit)
-pkgver=14.2.1+r753+g1cd744a6828f
-_commit=1cd744a6828f6ab9179906d16434ea40b6404737
+pkgname=(gcc gcc-libs lib32-gcc-libs gcc-ada gcc-d gcc-fortran gcc-go gcc-m2 gcc-objc gcc-rust gcc-gcobol lto-dump libgccjit)
+pkgver=15.1.1+r7+gf36ec88aa85a
+_commit=f36ec88aa85a1a8f4ec300dfcd862fc4fbca1c53
 pkgrel=2
 pkgdesc='The GNU Compiler Collection'
 arch=(x86_64)
@@ -46,12 +46,13 @@ options=(!emptydirs !lto)
 _libdir=usr/lib/gcc/$CHOST/${pkgver%%+*}
 source=(git+https://sourceware.org/git/gcc.git#commit=${_commit}
         c89 c99
-        gcc-ada-repro.patch)
+        gcc-ada-repro.patch
+)
 validpgpkeys=(F3691687D867B81B51CE07D9BBE43771487328A9  # bpiotrowski@archlinux.org
               86CFFCA918CF3AF47147588051E8B148A9999C34  # foutrelis@archlinux.org
               13975A70E63C361C73AE69EF6EEB81F8981C74C7  # richard.guenther@gmail.com
               D3A93CAD751C2AF4F8C7AD516C35B99309B5FA62) # Jakub Jelinek <jakub@redhat.com>
-sha256sums=('33378643f1c72686181f9d3fcd09caf9b06815324467f5dc9b9a3ea41cfba4b4'
+sha256sums=('7dc521dbaf5e8db83574db217c5fdb8c4fed6ec1cc6ce9f0095755f599890b8c'
             'de48736f6e4153f03d0a5d38ceb6c6fdb7f054e8f47ddd6af0a3dbf14f27b931'
             '2513c6d9984dd0a2058557bf00f06d8d5181734e41dcfe07be7ed86f2959622a'
             '1773f5137f08ac1f48f0f7297e324d5d868d55201c03068670ee4602babdef2f')
@@ -130,7 +131,7 @@ build() {
   fi
 
   "$srcdir/gcc/configure" \
-    --enable-languages=ada,c,c++,d,fortran,go,lto,m2,objc,obj-c++,rust \
+    --enable-languages=ada,c,c++,d,fortran,go,lto,m2,objc,obj-c++,rust,cobol \
     --enable-bootstrap \
     "${_confflags[@]:?_confflags unset}"
 
@@ -497,6 +498,21 @@ package_gcc-rust() {
 
  install -Dm755 gcc/gccrs "$pkgdir"/usr/bin/gccrs
  install -Dm755 gcc/crab1 "$pkgdir"/usr/bin/crab1
+
+  # Install Runtime Library Exception
+ install -d "$pkgdir/usr/share/licenses/$pkgname/"
+ ln -s /usr/share/licenses/gcc-libs/RUNTIME.LIBRARY.EXCEPTION \
+   "$pkgdir/usr/share/licenses/$pkgname/"
+}
+
+package_gcc-gcobol() {
+ pkgdesc="Cobol frontend for GCC"
+ depends=("gcc=$pkgver-$pkgrel" libisl.so)
+
+ cd gcc-build
+ make -C gcc DESTDIR="$pkgdir" cobol.install-{common,man,info}
+
+ install -Dm755 gcc/gcobol "$pkgdir"/usr/bin/gcobol
 
   # Install Runtime Library Exception
  install -d "$pkgdir/usr/share/licenses/$pkgname/"
