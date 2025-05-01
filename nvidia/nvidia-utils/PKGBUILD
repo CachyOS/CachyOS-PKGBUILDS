@@ -7,7 +7,7 @@
 pkgbase=nvidia-utils
 pkgname=('nvidia-utils' 'opencl-nvidia' 'nvidia-dkms' 'nvidia-open-dkms')
 pkgver=570.144
-pkgrel=3
+pkgrel=4
 arch=('x86_64')
 url="http://www.nvidia.com/"
 license=('custom')
@@ -46,7 +46,7 @@ sha256sums=('be99ff3def641bb900c2486cce96530394c5dc60548fc4642f19d3a4c784134d'
             '6ac7c9e4653fdbe9a246d6689dc0212519a5b743082893e0b8097dfe39fb9cc0'
             'bfe5069a3767b771fa831056b9f15f99b4b27b4772eb98d26bb5709431f5898a'
             'a50e5513f5b41d4d4d7fefcb75d50bfaf377b20ed4976735c9269aa62b20525e'
-            'b5665de9568e5d783853762282e0e1da1209196e0dc51831ce2576fd73be3e75')
+            'a6c87adbb704c3a0688e5aa18210f86e45c030a7538d49549b3233c46991bf48')
 
 
 create_links() {
@@ -69,6 +69,8 @@ prepare() {
     # https://gitlab.archlinux.org/archlinux/packaging/packages/nvidia-utils/-/issues/14
     # https://github.com/rpmfusion/nvidia-kmod/blob/master/make_modeset_default.patch
     patch -Np1 -i  "${srcdir}/0001-Enable-atomic-kernel-modesetting-by-default.patch" -d "${srcdir}/${_pkg}/kernel"
+    patch -Np2 -i  "${srcdir}/0003-Kbuild-Convert-EXTRA_CFLAGS-to-ccflags-y.patch" -d "${srcdir}/${_pkg}/kernel"
+    patch -Np2 -i  "${srcdir}/0008-kbuild-Add-workaround-for-GCC-15-Compilation.patch" -d "${srcdir}/${_pkg}/kernel"
 
     # Fix for https://bugs.archlinux.org/task/74886
 
