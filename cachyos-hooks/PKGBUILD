@@ -2,7 +2,7 @@
 # Contributor: Michael Bolden <me@sm9.dev>
 
 pkgname=cachyos-hooks
-pkgver=2025.04.26
+pkgver=2025.05.07
 pkgrel=1
 pkgdesc='CachyOS libalpm hooks'
 groups=('cachyos')
@@ -12,7 +12,7 @@ arch=('any')
 license=(GPL-3.0-or-later)
 url="https://github.com/cachyos/${pkgname}/"
 source=("git+https://github.com/CachyOS/cachyos-hooks#tag=$pkgver")
-sha512sums=('6580e4253b478d36ae364f45524f85d90cb9661cff5f0d39a022c9325651be005430b9b85db06c8e924abbf2ced5c2881f18f9e0da0d4ff75b351423bc6810f5')
+sha512sums=('379e0b136799aa291a6f1a80708a5673a8cf7420da05bfc36b79b2ae0cb8bdc0fd6f3d5b4a54e6da802882050490271ca61e7cff1899cb26b2b9a60dd17e1a8b')
 
 package() {
   cd "$pkgname"
@@ -22,6 +22,7 @@ package() {
   install -Dm644 cachyos-hooks.hook "$pkgdir/usr/share/libalpm/hooks/cachyos-hooks.hook"
   install -Dm644 cachyos-reboot-required.hook "$pkgdir/usr/share/libalpm/hooks/cachyos-reboot-required.hook"
   install -Dm644 cachyos-nvidia.hook "$pkgdir/usr/share/libalpm/hooks/cachyos-nvidia.hook"
+  install -Dm755 cachyos-nvidia-hook "$pkgdir/usr/bin/cachyos-nvidia-hook"
   install -Dm755 cachyos-reboot-required "$pkgdir/usr/bin/cachyos-reboot-required"
   install -Dm755 cachyos-hooks-runner "$pkgdir/usr/bin/cachyos-hooks-runner"
 }
