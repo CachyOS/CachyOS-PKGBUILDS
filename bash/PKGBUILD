@@ -10,13 +10,13 @@ pkgname=bash
 _basever=5.2
 _patchlevel=037
 pkgver=${_basever}.${_patchlevel}
-pkgrel=3
+pkgrel=6
 pkgdesc='The GNU Bourne Again shell'
 arch=(x86_64)
 license=('GPL-3.0-or-later')
 url='https://www.gnu.org/software/bash/bash.html'
 backup=(
-  etc/bash.bash{rc,_logout} 
+  etc/bash.bash{rc,_logout}
   etc/skel/.bash{rc,_profile,_logout}
 )
 depends=(
@@ -33,7 +33,9 @@ source=(
   bash-5.2_p15-random-ub.patch
   bash-5.2_p21-wpointer-to-int.patch
   bash-5.2_p32-memory-leaks.patch
-  bash-5.2_p32-read-delimiter-in-invalid-mbchar.patch
+  bash-5.2_p32-erroneous-delimiter-pushback-condition.patch
+  bash-5.2_p32-invalid-continuation-byte-ignored-as-delimiter-1.patch
+  bash-5.2_p32-invalid-continuation-byte-ignored-as-delimiter-2.patch
   dot.bashrc
   dot.bash_profile
   dot.bash_logout
@@ -52,11 +54,13 @@ b2sums=('51b196e710794ebad8eac28c31c93eb99ac1a7db30919a13271e39e1cb66a0672f242df
         'adab09c3f2ce3697e3659e01266120155714b80263bd125808edf556a354291af615540189553b1c32a2d462ac41e28a9df8fb9f7d963a3ca3629d297a46e62d'
         '0c7f5eb5b697abf15c1d17888a973e44d0ead1f095778b41841a6a1937a5b9e7ce5fa6a05e4404504990b0a244fdecfc12ce7c33ee7d67b4c837435e9bfe2b57'
         '373aa3be1f0a6bc65403cde63cbc4dcd612336e86b1cae918670a99e8ca639c665ac7efb467ec8823a62cec0a71c485bd3fda4bbf058d759498377f5cfe90f51'
-        'ab7fe139630be59b26a72f92f22e4a2b556594d341d82b0f15f99880724f5ea5cfd912a8de6b6e1db902c14d65395c74a03379e3e01ce69bb4512c681518301d'
+        '82248ea90a51c9cb5d8c68dae43510556907147d5d721ffea8051543ef1a642380da228cacd207e8b443fa2202088dd7ac93e4782c4fd78f37b8666f2b426560'
+        'c6e48a37c88ab4d361eab3c375de13d837b79755b53cb46aea2f16ce664d6dfd024c2fdb228031e74444891ac70806f0851863fdce02b5dd28f6e7e447137fb7'
+        '32df201c49a259605aac58daac4842bd09404129bc2a2ad8e5a30a2b8d8f0de69cc1d3013d729bc2818f62a8e572edb5fa7113c538f208e9da77590924bb52f1'
         '61cc3b7c9e85ae29b48518a2579896cb037153184a233cb5636d8dce4c2a2fded88624c9d5a986d86fdd4b0d521828b510c7a0d16b3c8b95cfca8d4c0a74da17'
         '2d53f99e485218ed47f2e40907023645594ac8ffcf00d0569050d54a8f4dabe0a2bdcab515a45b663283c2e6299d805b923ea7b7b789c6a4150c37a98a5b117c'
         'dbfe5c1aaea94419305c1f8c9b54b94eab515260910f2309360ff702a27032faa34514e70b31adbb1e41bd912d4e43a610939cb07565f43e05dd19813a81752e'
-        'e349dba4f9d8b9d5eceb928b6fad89bfd2ec052fbb4dece49ba7c012a7e930196f786115e39e11c4f2d59edd169c9d417e7eab4fd59667ed60b750901df55ac3'
+        'c47de7abb7292e1e8cc3bb31fc4212f1fab0d5019d02062ef687c60079e1de2fb4ad2d8a64658528d1151900566baa51c6513039e8545f7fddc0917007ff7003'
         'fc924345d5dab10f1ae328bca3cf1053ddff557e074a6e6dff771bd813b93838980ed5d0f20d3a0584cbd1994332fcacc8a6b0e98f7aa376139198ea6a4d6f5a'
         'd00a8b4fb3babf52c67a3e345158c1f70b5b45e5a54100a6671d96f9cfbf893143d5a23df7e7c5f4d5c0bd650519fb0c447b2304db2d6e0751dfffa651a7cf49'
         'SKIP'
@@ -144,7 +148,9 @@ prepare() {
   patch -Np0 -i ../bash-5.2_p15-random-ub.patch
   patch -Np0 -i ../bash-5.2_p21-wpointer-to-int.patch
   patch -Np0 -i ../bash-5.2_p32-memory-leaks.patch
-  patch -Np0 -i ../bash-5.2_p32-read-delimiter-in-invalid-mbchar.patch
+  patch -Np0 -i ../bash-5.2_p32-invalid-continuation-byte-ignored-as-delimiter-1.patch
+  patch -Np0 -i ../bash-5.2_p32-invalid-continuation-byte-ignored-as-delimiter-2.patch
+  patch -Np0 -i ../bash-5.2_p32-erroneous-delimiter-pushback-condition.patch
 }
 
 build() {
@@ -154,7 +160,8 @@ build() {
                -DSTANDARD_UTILS_PATH=\'\"/usr/bin\"\'
                -DSYS_BASHRC=\'\"/etc/bash.bashrc\"\'
                -DSYS_BASH_LOGOUT=\'\"/etc/bash.bash_logout\"\'
-               -DNON_INTERACTIVE_LOGIN_SHELLS)
+               -DNON_INTERACTIVE_LOGIN_SHELLS
+               -std=gnu17)
   export CFLAGS="${CFLAGS} ${_bashconfig[@]}"
   export CFLAGS="${CFLAGS} -fprofile-generate -fprofile-update=atomic -fprofile-partial-training"
 

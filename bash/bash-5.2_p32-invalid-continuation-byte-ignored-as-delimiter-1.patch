@@ -1,78 +1,67 @@
-From 0432ec33408ac124b620c44416c9c58f0c10b63b Mon Sep 17 00:00:00 2001
+From 2482e34ac12910f7e7436a968caf97ab96f8b582 Mon Sep 17 00:00:00 2001
 From: Kerin Millar <kfm@plushkava.net>
-Date: Fri, 23 Aug 2024 04:14:36 +0100
-Subject: [PATCH] Backport fix for issue with read delimiter in invalid
- mutibyte char
+Date: Sat, 26 Apr 2025 08:43:58 +0100
+Subject: [PATCH 1/3] Backport fix for invalid continuation bytes being ignored
+ as delimiters
 
-This addresses a regression introduced by 5.0. Consider the following
+This is a partial backport of commit 772e7e760e8a098e4d8dee21cf11090be4757918
+from the devel branch. It addresses an issue in read_mbchar() whereby
+the read builtin can read past the delimiter character, provided that is
+invoked with a multibyte character set in effect. Consider the following
 test case.
 
-for i in {194..245}; do printf -v o %o "$i"; printf "\\$o\\n"; done |
-while read -r; do declare -p REPLY; done
-
-BEFORE
-
+$ LC_ALL=en_US.UTF-8
+$ for i in {194..245}; do printf -v o %o "$i"; printf "\\$o\\n"; done |
+  while read -r; do declare -p REPLY; done
 declare -- REPLY=$'\302\n\303\n\304\n\305\n\306\n\307\n\310\n\311\n\312\
 n\313\n\314\n\315\n\316\n\317\n\320\n\321\n\322\n\323\n\324\n\325\n\326\
 n\327\n\330\n\331\n\332\n\333\n\334\n\335\n\336\n\337\n\340\n\341\n\342\
 n\343\n\344\n\345\n\346\n\347\n\350\n\351\n\352\n\353\n\354\n\355\n\356\
 n\357\n\360\n\361\n\362\n\363\n\364\n\365'
 
-AFTER
+The producing loop emits a sequence of bytes in the range 0xC2 - 0xF5.
+Since each is terminated by a <newline> character, one would expect for
+exactly 52 iterations of the consuming loop, with REPLY being assigned a
+single byte each time. Instead, the input is read in its entirety. Why
+is that, one may ask.
+
+Given a legal UTF-8 byte sequence, any bytes whose values are between
+0xC2 - 0xF4 are combinative in nature; they can only be followed by
+between one and three bytes that are outside of that range.
+
+0xC2 - 0xDF : First byte of a 2-byte code unit sequence
+0xE0 - 0xEF : First byte of a 3-byte code unit sequence
+0xF0 - 0xF4 : First byte of a 4-byte code unit sequence
+
+As such, bash begins by reading the 0xC2 byte, for which mbrtowc(3)
+returns -2, indicating an incomplete multibyte sequence. Next, the 0x0A
+byte is read, for which mbrtowc(3) returns -1, indicating an invalid
+multibyte sequence. At this point, bash ought to recognise the most
+recently read byte as a delimiter. Instead, it continues reading the
+input stream up until the delimiter that follows 0xF5, which is neither
+a combining character nor legal in UTF-8 in any capacity.
+
+This patch addresses the issue by introducing the zungetc() function,
+which is used by read_mbchar() to push back the delimiter character that
+transforms the sequence from an incomplete one to an invalid one. Said
+character is then detected by the next invocation of the zread()
+function, allowing for the decision to be made to return.
+
+With this, the output of the test case amounts to 52 lines, as expected.
 
 declare -- REPLY=$'\302'
 declare -- REPLY=$'\303'
-declare -- REPLY=$'\304'
-declare -- REPLY=$'\305'
-declare -- REPLY=$'\306'
-declare -- REPLY=$'\307'
-declare -- REPLY=$'\310'
-declare -- REPLY=$'\311'
-declare -- REPLY=$'\312'
-declare -- REPLY=$'\313'
-declare -- REPLY=$'\314'
-declare -- REPLY=$'\315'
-declare -- REPLY=$'\316'
-declare -- REPLY=$'\317'
-declare -- REPLY=$'\320'
-declare -- REPLY=$'\321'
-declare -- REPLY=$'\322'
-declare -- REPLY=$'\323'
-declare -- REPLY=$'\324'
-declare -- REPLY=$'\325'
-declare -- REPLY=$'\326'
-declare -- REPLY=$'\327'
-declare -- REPLY=$'\330'
-declare -- REPLY=$'\331'
-declare -- REPLY=$'\332'
-declare -- REPLY=$'\333'
-declare -- REPLY=$'\334'
-declare -- REPLY=$'\335'
-declare -- REPLY=$'\336'
-declare -- REPLY=$'\337'
-declare -- REPLY=$'\340'
-declare -- REPLY=$'\341'
-declare -- REPLY=$'\342'
-declare -- REPLY=$'\343'
-declare -- REPLY=$'\344'
-declare -- REPLY=$'\345'
-declare -- REPLY=$'\346'
-declare -- REPLY=$'\347'
-declare -- REPLY=$'\350'
-declare -- REPLY=$'\351'
-declare -- REPLY=$'\352'
-declare -- REPLY=$'\353'
-declare -- REPLY=$'\354'
-declare -- REPLY=$'\355'
-declare -- REPLY=$'\356'
-declare -- REPLY=$'\357'
-declare -- REPLY=$'\360'
-declare -- REPLY=$'\361'
-declare -- REPLY=$'\362'
-declare -- REPLY=$'\363'
+...
 declare -- REPLY=$'\364'
 declare -- REPLY=$'\365'
 
+The issue affects all bash releases from 5.0 to 5.3-alpha. As of the
+time of writing, it has not been addressed by any of the official
+patchlevels, nor has 5.3 been released.
+
+Link: https://pubs.opengroup.org/onlinepubs/9799919799.2024edition/utilities/read.html#tag_20_100_06
+Link: https://mywiki.wooledge.org/BashPitfalls#IFS.3D_read_-r_-d_.27.27_filename
+Link: https://lists.gnu.org/archive/html/bug-bash/2025-04/msg00068.html
 Signed-off-by: Kerin Millar <kfm@plushkava.net>
 ---
  builtins/read.def | 25 ++++++++++++----
@@ -293,5 +282,5 @@ index dafb7f60..7cfbb288 100644
  zreset ()
  {
 -- 
-2.45.2
+2.49.0
 
