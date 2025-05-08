@@ -12,50 +12,48 @@ license=("MIT")
 options=(!debug) # probably will be quite big
 _elnum=34
 depends=( electron${_elnum} ripgrep # replacements
-	libx11
-	libxkbfile
-	libsecret
-	gnupg
-	libnotify
-	libxss
-	lsof # terminal splitting (https://github.com/Microsoft/vscode/issues/62991)
-	shared-mime-info
-	xdg-utils # opening web links
-	alsa-lib
+  libx11
+  libxkbfile
+  libsecret
+  gnupg
+  libnotify
+  libxss
+  lsof # terminal splitting (https://github.com/Microsoft/vscode/issues/62991)
+  shared-mime-info
+  xdg-utils # opening web links
+  alsa-lib
 )
 optdepends=(
-	'electron: /usr/share/void/void-latestron'
-	'glib2: Move to trash functionality'
-	'gvfs: Move to trash functionality'
-	'libdbusmenu-glib: KDE global menu'
-	'org.freedesktop.secrets: Settings sync'
+  'electron: /usr/share/void/void-latestron'
+  'glib2: Move to trash functionality'
+  'gvfs: Move to trash functionality'
+  'libdbusmenu-glib: KDE global menu'
+  'org.freedesktop.secrets: Settings sync'
 )
 makedepends=(
-	git
-	npm
-	nodejs-lts-iron # see .nvmrc
-	pkg-config
+  git
+  npm
+  nodejs-lts-iron # see .nvmrc
+  pkg-config
 )
-source=(
-	"git+https://github.com/voideditor/void.git#commit=2de4cacf0fa3e767229308b4a198f75c8418bb6d"
-	"https://gitlab.archlinux.org/archlinux/packaging/packages/code/-/raw/main/code.sh"
-)
+source=("git+https://github.com/voideditor/void.git#commit=2de4cacf0fa3e767229308b4a198f75c8418bb6d"
+        "https://gitlab.archlinux.org/archlinux/packaging/packages/code/-/raw/main/code.sh")
 sha256sums=('d7bca30f588b136dd527ff1316205459b7a8dcde7e179932da16f0e138a31796'
             '5da1525b5fe804b9192c05e1cbf8d751d852e3717fb2787c7ffe98fd5d93e8c1')
 
 build() {
-	cd "${pkgname}"
-	# Clean npm cache and remove existing node_modules
-	npm cache clean --force
-	rm -rf node_modules
-	# Use version of system electron
-	npm install electron@$(cat /usr/lib/electron${_elnum}/version) --save-dev
-	# Install dependencies with legacy peer deps flag to handle dependency conflicts
-	npm install --legacy-peer-deps
-	# Build react because it fails for some reason
-	npm run buildreact
-	# Bundle it
-	npm run gulp vscode-linux-x64
+  cd "${pkgname}"
+  # Clean npm cache and remove existing node_modules
+  npm cache clean --force
+  rm -rf node_modules
+  # Use version of system electron
+  npm install electron@$(cat /usr/lib/electron${_elnum}/version) --save-dev
+  # Install dependencies with legacy peer deps flag to handle dependency conflicts
+  npm install --legacy-peer-deps
+  # Build react because it fails for some reason
+  npm run buildreact
+  # Bundle it
+  npm run gulp vscode-linux-x64
 }
 
 package() {
@@ -68,19 +66,19 @@ package() {
   mkdir -p "${pkgdir}/usr/share/"{applications,mime/packages}
   #todo cleanup
   sed -e s/@@NAME@@/void/ -e s/@@EXEC@@/void/g -e s/@@ICON@@/void/g -e s/@@NAME_SHORT@@/Void/g -e s/@@NAME_LONG@@/Void/g \
-  	void/resources/linux/code.desktop > "${pkgdir}/usr/share/applications/void.desktop"
+    void/resources/linux/code.desktop > "${pkgdir}/usr/share/applications/void.desktop"
   sed -e s/@@NAME_LONG@@/Void/ -e s/@@EXEC@@/void/ -e s/@@ICON@@/void/ -e s/@@URLPROTOCOL@@/vscode/ \
     void/resources/linux/code-url-handler.desktop > "${pkgdir}/usr/share/applications/void-url-handler.desktop"
   sed -e s/@@NAME@@/void/ -e s/@@NAME_LONG@@/Void/g \
-  	void/resources/linux/code-workspace.xml > "${pkgdir}/usr/share/mime/packages/void-workspace.xml"
+    void/resources/linux/code-workspace.xml > "${pkgdir}/usr/share/mime/packages/void-workspace.xml"
   # shell completions
   install -Dm644 "${_pkg}/resources/completions/bash/${pkgname}" "${pkgdir}/usr/share/bash-completion/completions/${pkgname}"
   install -Dm644 "${_pkg}/resources/completions/zsh/_${pkgname}" "${pkgdir}/usr/share/zsh/site-functions/_${pkgname}"
   # launcher
   _app=/usr/share/void/resources/app
   sed -e "s|code-flags|void-flags|" \
-   -e "s|/usr/lib/code/out/cli.js|${_app}/out/cli.js|" \
-   -e "s|/usr/lib/code/code.mjs|--app=${_app}|" code.sh > run.sh
+    -e "s|/usr/lib/code/out/cli.js|${_app}/out/cli.js|" \
+    -e "s|/usr/lib/code/code.mjs|--app=${_app}|" code.sh > run.sh
   sed "s/name=electron/name=electron${_elnum}/" run.sh > run-safe.sh
   install -Dm755 run-safe.sh "${pkgdir}/usr/bin/void"
   install -Dm755 run.sh "${pkgdir}/usr/share/void/void-latestron"
