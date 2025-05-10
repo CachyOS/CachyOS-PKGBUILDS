@@ -1,0 +1,25 @@
+From 4e27a392a17b0eadb671a4de335ac41f1bbf8514 Mon Sep 17 00:00:00 2001
+From: Stelios Tsampas <loathingkernel@gmail.com>
+Date: Sat, 10 May 2025 13:59:56 +0300
+Subject: [PATCH] Makefile: include gettext 0.25 m4 directory in autoreconf
+
+---
+ Makefile | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/Makefile b/Makefile
+index 4c3540c..22d7d21 100644
+--- a/Makefile
++++ b/Makefile
+@@ -66,7 +66,7 @@ xrandr-install: xrandr-dist
+ $(OBJDIR)/.build-cabextract-dist: | $(OBJDIR)
+ 	$(info :: Building cabextract )
+ 	cd subprojects/libmspack/cabextract && \
+-	./autogen.sh && \
++	autoreconf -fiv -I /usr/share/gettext/m4/ && \
+ 	./configure --prefix=/usr --sysconfdir=/etc --mandir=/usr/share/man && \
+ 	make
+ 	touch $(@)
+-- 
+2.49.0
+
