@@ -23,7 +23,7 @@ pkgname=(
   mesa-docs
 )
 pkgver=25.1.0
-pkgrel=3
+pkgrel=4
 epoch=1
 pkgdesc="Open-source OpenGL drivers"
 url="https://www.mesa3d.org/"
@@ -93,6 +93,7 @@ options=(
 )
 source=(
   "https://mesa.freedesktop.org/archive/mesa-$pkgver.tar.xz"{,.sig}
+  34944.patch
 )
 validpgpkeys=(
   946D09B5E4C9845E63075FF1D961C596A7203456 # Andres Gomez <tanty@igalia.com>
@@ -131,6 +132,7 @@ done
 
 sha256sums=('b1c45888969ee5df997e2542654f735ab1b772924b442f3016d2293414c99c14'
             'SKIP'
+            'b6766dabca6fa8c26d139f2bbbb5688b75523afabe29a8073e2cb4866beb7697'
             'ed646292ffc8188ef8ea4d1e0e0150fb15a5c2e12ad9b8fc191ae7a8a7f3c4b9'
             '7f9f832470494906d1fca5329f8ab5791cc60beb230c74815dff541cbd2b5ca0'
             '168fb715dda47215e360912c096649d23d58bf392ac62f73919e831745e40f26'
@@ -148,6 +150,7 @@ sha256sums=('b1c45888969ee5df997e2542654f735ab1b772924b442f3016d2293414c99c14'
             '901fa70d88b9d6c98022e23b4136f9f3e54e4662c3bc1bd1d84a42a9a0f0c1e9')
 b2sums=('5057c6664ca135177d0ccf9cc0c6e0c6ea7efa4cff7ee626050bec1682c9e864dc684c5579eff6a9df77ac0f7280bf10e6e93474d0369de250ccf38c9dc7d104'
         'SKIP'
+        '05e952ab9ba9bdf321f56117ef814bdfa99024254d022a3410af47f6057c738b3c95fe8993f6371b82ee6cb3b1645579d3052043c5bcb1f87196062321304a27'
         'a6d47c903be6094423d89b8ec3ca899d0a84df6dbd6e76632bb6c9b9f40ad9c216f8fa400310753d392f85072756b43ac3892e0a2c4d55f87ab6463002554823'
         '9a73962e1e38b84131ab2350b69a1f5d611c549533eec73e898c394a9b9442f357bb5d5f59e1be12270dd29bdf237dc2d21786c0c2210736e224ef5d48300dcf'
         'fac5cf6339dc3c0a40b100035a5c874cc7b2efeafeb31c51488d25156e392dc9db86a497e76eead351d2126f69d060422faa9c55d73407a0de9f5be18d234123'
@@ -169,6 +172,8 @@ b2sums=('5057c6664ca135177d0ccf9cc0c6e0c6ea7efa4cff7ee626050bec1682c9e864dc684c5
 prepare() {
   cd mesa-$pkgver
 
+  # Doom fix
+  patch -Np1 < ../34944.patch
   # Include package release in version string so Chromium invalidates
   # its GPU cache; otherwise it can cause pages to render incorrectly.
   # https://bugs.launchpad.net/ubuntu/+source/chromium-browser/+bug/2020604
