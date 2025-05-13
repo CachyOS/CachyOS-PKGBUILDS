@@ -2,13 +2,13 @@
 # Maintainer: loathingkernel <loathingkernel _a_ gmail _d_ com>
 
 pkgname=proton-cachyos
-_srctag=9.0-20250426
+_srctag=10.0-20250509
 _commit=
 pkgver=${_srctag//-/.}
 _geckover=2.47.4
 _monover=10.0.0
 _xaliaver=0.4.6
-pkgrel=2
+pkgrel=1
 epoch=1
 
 source=(
@@ -16,10 +16,6 @@ source=(
     https://dl.winehq.org/wine/wine-gecko/${_geckover}/wine-gecko-${_geckover}-x86{,_64}.tar.xz
     https://github.com/madewokherd/wine-mono/releases/download/wine-mono-${_monover}/wine-mono-${_monover}-x86.tar.xz
     https://github.com/madewokherd/xalia/releases/download/xalia-${_xaliaver}/xalia-${_xaliaver}-net48-mono.zip
-    glslang-renderdoc-1.36-gcc15-fix.patch
-    openfst-18e94e63870ebcf79ebb42b7035cd3cb626ec090.patch
-    protonfixes-0001-Makefile-include-gettext-0.25-m4-directory-in-autore.patch
-    wine-gcc15.patch
 )
 noextract=(
     wine-gecko-${_geckover}-{x86,x86_64}.tar.xz
@@ -42,7 +38,6 @@ depends=(
   gcc-libs        lib32-gcc-libs
   gettext         lib32-gettext
   glib2           lib32-glib2
-  lapack          lib32-lapack
   libgudev        lib32-libgudev
   libpcap         lib32-libpcap
   libsoup         lib32-libsoup
@@ -179,10 +174,6 @@ prepare() {
     git submodule update --init --filter=tree:0 --recursive
 
     ./patches/apply.sh
-    patch -Np1 -i "${srcdir}"/wine-gcc15.patch
-    pushd glslang; patch -Np1 -i "${srcdir}"/glslang-renderdoc-1.36-gcc15-fix.patch; popd
-    pushd openfst; patch -Np1 -i "${srcdir}"/openfst-18e94e63870ebcf79ebb42b7035cd3cb626ec090.patch; popd
-    pushd protonfixes; patch -Np1 -i "${srcdir}"/protonfixes-0001-Makefile-include-gettext-0.25-m4-directory-in-autore.patch; popd
 
     for rustlib in gst-plugins-rs; do
     pushd $rustlib
@@ -236,24 +227,11 @@ package() {
     mkdir -p "$_compatdir/${pkgname}"
     rsync --delete -arx dist/* "$_compatdir/${pkgname}"
 
-    # For some unknown to me reason, 32bit vkd3d (not vkd3d-proton) always links
-    # to libgcc_s_dw2-1.dll no matter what linker options I tried.
-    # Copy the required dlls into the package, they will be copied later into the prefix
-    # by the patched proton script. Bundle them to not depend on mingw-w64-gcc being installed.
-    cp /usr/i686-w64-mingw32/bin/{libgcc_s_dw2-1.dll,libwinpthread-1.dll} \
-        "$_compatdir/${pkgname}"/files/lib/vkd3d/
-    cp /usr/x86_64-w64-mingw32/bin/{libgcc_s_seh-1.dll,libwinpthread-1.dll} \
-        "$_compatdir/${pkgname}"/files/lib64/vkd3d/
-
     mkdir -p "$pkgdir/usr/share/licenses/${pkgname}"
     mv "$_compatdir/${pkgname}"/LICENSE{,.OFL} \
         "$pkgdir/usr/share/licenses/${pkgname}"
 
     cd "$_compatdir/${pkgname}/files"
-    i686-w64-mingw32-strip --strip-unneeded \
-        $(find lib/wine \( -iname fakedlls -or -iname i386-windows \) -prune -false -or -iname "*.dll" -or -iname "*.exe")
-    x86_64-w64-mingw32-strip --strip-unneeded \
-        $(find lib64/wine \( -iname fakedlls -or -iname x86_64-windows \) -prune -false -or -iname "*.dll" -or -iname "*.exe")
 
     local _geckodir="share/wine/gecko/wine-gecko-${_geckover}"
     i686-w64-mingw32-strip --strip-unneeded \
@@ -272,12 +250,8 @@ package() {
         $(find "$_monodir" -iname "*x86_64.dll" -or -iname "*x86_64.exe")
 }
 
-b2sums=('398a5e24a39b752a81066942e8d330d8dee71ecfacc185dfaa8261a7e395b4544ca239e7985276e3dcd7ded45737aba179e34842e9aaba8b7dc274a4380612c1'
+b2sums=('c1a30e5c1b00eabb8d178ecfd80fde231072be10f30e7c1786435438a6fc8378c4a16342b23ea124f2f4f59939e268f1e4f5ce828312ccc73f7778c5d226af2b'
         '2a73c12585b502ae11188482cbc9fb1f45f95bfe4383a7615011104b132f4845f9813d01fb40277e1934fab5f1b35ab40b4f4a66a9967463dd1d666a666904e9'
         '62856a88266b4757602c0646e024f832974a93f03b9df253fd4895d4f11a41b435840ad8f7003ec85a0d8087dec15f2e096dbfb4b01ebe4d365521e48fd0c5c0'
         'a7efb7e9e3c03a92f3fc2c66172a2597ab4febfbf23a98c20d9ba46c48f0b96f568b21ea61f43cfa0cbbad2557cfafd665b63f3115611f0df9dd75ab358ecf43'
-        '4d30eea9306392790677a4e19f7e416a387aaf10c4a7681aa8fcd94faf07be81a984b28ba1437428d7c215c5ecdbba70993091547068fbdc224e809c3f7abd85'
-        '4cfff1bef00424b4f407f2f311c49f8ff0f91bdfc6e0fde39217500e497cf789698fadee50b480d157068cafa3481dfafb399bd11ff76af3035f7d8c53032e68'
-        '9d723631965b392d6aa425e46a52bdb4781bd20c9f1a30274441c78c8955669f2907e47f7efff078e95774dfc686ba3edf625ac5b5bff9dab83c23e1e2ed9e12'
-        '9ddd325435931ab094349e75f7d538530990c849ec01fcc0e4ae713f98cffb1506c65dd59e0cc338085da753e7bb33c2e73062503eb91d51d2e0378a1d8d3fc4'
-        '17c807bec411acf8202b609cb6c1db38a071858b55069ce24f153b601205842fc5b43d77e747476efe52b99dfad6395d63f630fe9ab642deb2a24ba006d50bca')
+        '4d30eea9306392790677a4e19f7e416a387aaf10c4a7681aa8fcd94faf07be81a984b28ba1437428d7c215c5ecdbba70993091547068fbdc224e809c3f7abd85')
