@@ -19,11 +19,15 @@ makedepends=(
     'meson'
     'ninja'
     'wayland-protocols'
-    'vulkan-headers'
-    'lib32-glm')
+    'vulkan-headers')
 replaces=('lib32-gamescope-plus')
 source=("git+${url}#tag=${pkgver}")
 sha256sums=('b96f7bd67613742a0848c0c2caa77c8b973c9a7a9cddfbab13f6ccaddb27e2fe')
+
+prepare() {
+    cd gamescope
+    meson subprojects download
+}
 
 build() {
     export CC="gcc -m32"
