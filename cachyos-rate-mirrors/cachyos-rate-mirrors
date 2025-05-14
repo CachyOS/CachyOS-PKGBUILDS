@@ -141,10 +141,20 @@ rate_mirror_ex_cos() {
     rm "${TMPFILE}"
 }
 
+check_ru_location() {
+    # special check for ru loc where CDN77 mirror gets timeouted due to blockings
+    # that mirror is applied by default on the ISO
+    curl -s 'https://geoip.kde.org/v1/ubiquity' | grep -q '<CountryCode>RU<'
+    echo $?
+}
+
 MIRRORS_DEFAULT_DIR="/etc/pacman.d"
 ISO_DETECT_DIR="/run/archiso"
+IS_RU_LOCATION="$(check_ru_location)"
 
-if [ ! -d "${ISO_DETECT_DIR}" ]; then
+if [ $IS_RU_LOCATION -eq 0 ]; then
+    rate_mirror_ex arch "${MIRRORS_DEFAULT_DIR}/mirrorlist"
+elif [ ! -d "${ISO_DETECT_DIR}" ]; then
     rate_mirror_ex arch "${MIRRORS_DEFAULT_DIR}/mirrorlist"
 #    sed -i '1iServer = https://archlinux.cachyos.org/repo/$repo/os/$arch' /etc/pacman.d/mirrorlist
 fi
