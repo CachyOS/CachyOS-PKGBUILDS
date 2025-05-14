@@ -4,7 +4,7 @@
 # Contributor: PedroHLC <root@pedrohlc.com>
 
 pkgname=gamescope
-pkgver=3.16.4
+pkgver=3.16.7
 pkgrel=2
 pkgdesc='SteamOS session compositing window manager'
 arch=(x86_64)
@@ -72,7 +72,7 @@ source=(
   git+https://github.com/Joshua-Ashton/wlroots.git
   https://github.com/ValveSoftware/openvr/pull/1890.patch
 )
-b2sums=('e773a84decd8664f7f641a9cf43d75eefbe4d653d8b31dfbb136f73007e09799213597947a70454a6983d615a06813039fa455943b954c1e11a4da843e811b1a'
+b2sums=('a0f7aff163f231926f6437d04f8fe05256058d8254babe872862c2d72c6b418706165662fd6ebb395ae697e7faee6e2d67f441193579e6f9a46b1f1fea1f0c3a'
         'SKIP'
         'SKIP'
         'SKIP'
@@ -84,12 +84,6 @@ b2sums=('e773a84decd8664f7f641a9cf43d75eefbe4d653d8b31dfbb136f73007e097992135979
 
 prepare() {
   cd gamescope
-  # Support BOE panels for Rog Ally
-  git cherry-pick -n efa9dd76e81457a61287ec6d632badbe980285a1
-  # Fix Intel handhelds
-  git cherry-pick -n e2090269ff7f352d66734381cbd451e5881f68ba
-  # https://github.com/ValveSoftware/gamescope/issues/1794
-  git cherry-pick -n a0707cc4a8539488063a019ec389043a759959c3
 
   meson subprojects download
 
