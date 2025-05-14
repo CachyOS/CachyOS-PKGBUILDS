@@ -1,0 +1,25 @@
+From 0a04eeabe3dfc7d2d3ea26e9224196eaaa0e02e7 Mon Sep 17 00:00:00 2001
+From: Stelios Tsampas <loathingkernel@gmail.com>
+Date: Wed, 14 May 2025 16:38:59 +0300
+Subject: [PATCH] build: ensure vkd3d is present before making default prefix
+
+---
+ Makefile.in | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/Makefile.in b/Makefile.in
+index 940a4361..1a7fcb99 100644
+--- a/Makefile.in
++++ b/Makefile.in
+@@ -1406,6 +1406,8 @@ all-dist: $(OVR_i386_DIST) $(OVR_x86_64_DIST)
+ ## default_pfx
+ ##
+ 
++default_pfx: vkd3d
++
+ default_pfx: wine gst_good gst_bad gst_libav gst_plugins_rs lsteamclient steamexe vrclient wineopenxr dxvk dxvk-nvapi vkd3d-proton
+ 	find $(DST_LIBDIR)/wine -type f -execdir chmod a-w '{}' '+'
+ 	rm -rf $(abspath $(DIST_PREFIX))
+-- 
+2.49.0
+

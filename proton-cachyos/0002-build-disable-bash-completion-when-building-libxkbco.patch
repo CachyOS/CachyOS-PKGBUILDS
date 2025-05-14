@@ -1,0 +1,25 @@
+From c21fcb3ae45cd70d6824252f6a2ca056e80625bc Mon Sep 17 00:00:00 2001
+From: Stelios Tsampas <loathingkernel@gmail.com>
+Date: Wed, 14 May 2025 11:19:07 +0300
+Subject: [PATCH 2/2] build: disable bash completion when building libxkbcommon
+
+fixes: CachyOS/proton-cachyos#23
+---
+ Makefile.in | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/Makefile.in b/Makefile.in
+index 1681fd68..1eaf834b 100644
+--- a/Makefile.in
++++ b/Makefile.in
+@@ -125,6 +125,7 @@ LIBXKBCOMMON_MESON_ARGS := \
+ 	-Denable-xkbregistry=true \
+ 	-Denable-docs=false \
+ 	-Denable-x11=false \
++	-Denable-bash-completion=false \
+ 	-Denable-wayland=false
+ 
+ $(eval $(call rules-source,libxkbcommon,$(SRCDIR)/libxkbcommon))
+-- 
+2.49.0
+
