@@ -156,7 +156,7 @@ if [ $IS_RU_LOCATION -eq 0 ]; then
     rate_mirror_ex arch "${MIRRORS_DEFAULT_DIR}/mirrorlist"
 elif [ ! -d "${ISO_DETECT_DIR}" ]; then
     rate_mirror_ex arch "${MIRRORS_DEFAULT_DIR}/mirrorlist"
-#    sed -i '1iServer = https://archlinux.cachyos.org/repo/$repo/os/$arch' /etc/pacman.d/mirrorlist
+    sed -i '1iServer = https://archlinux.cachyos.org/repo/$repo/os/$arch' /etc/pacman.d/mirrorlist
 fi
 
 rate_mirror_ex_cos cachyos "${MIRRORS_DEFAULT_DIR}/cachyos-mirrorlist"
