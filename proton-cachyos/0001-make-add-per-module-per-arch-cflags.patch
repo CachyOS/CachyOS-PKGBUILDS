@@ -1,0 +1,29 @@
+From ae0964a8239cee8e8028927af68740897537ab2d Mon Sep 17 00:00:00 2001
+From: Stelios Tsampas <loathingkernel@gmail.com>
+Date: Wed, 14 May 2025 23:43:20 +0300
+Subject: [PATCH 1/2] make: add per module per arch cflags
+
+---
+ make/rules-common.mk | 6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/make/rules-common.mk b/make/rules-common.mk
+index a296ee2c..f0a79d72 100644
+--- a/make/rules-common.mk
++++ b/make/rules-common.mk
+@@ -139,9 +139,9 @@ $(2)_$(3)_ENV = \
+     PKG_CONFIG_PATH="$$(call list-join,:,$$(foreach d,$$($(2)_$(3)_DEPS),$$($$(d)_$(3)_LIBDIR)/$$($(3)-$(4)_LIBDIR)/pkgconfig))" \
+     PKG_CONFIG_LIBDIR="/usr/lib/$$($(3)-$(4)_LIBDIR)/pkgconfig:/usr/share/pkgconfig" \
+     CMAKE_PREFIX_PATH="$$(call list-join,:,$$(foreach d,$$($(2)_$(3)_DEPS),$$($$(d)_$(3)_DST)))" \
+-    CFLAGS="$$($(2)_$(3)_INCFLAGS) $$($(2)_CFLAGS) $$($(3)_CFLAGS) $$(CFLAGS)" \
+-    CPPFLAGS="$$($(2)_$(3)_INCFLAGS) $$($(2)_CFLAGS) $$($(3)_CFLAGS) $$(CFLAGS)" \
+-    CXXFLAGS="$$($(2)_$(3)_INCFLAGS) -std=c++17 $$($(2)_CFLAGS) $$($(3)_CFLAGS) $$(CFLAGS)" \
++    CFLAGS="$$($(2)_$(3)_INCFLAGS) $$($(2)_CFLAGS) $$($(3)_CFLAGS) $$(CFLAGS) $$($(2)_$(3)_CFLAGS)" \
++    CPPFLAGS="$$($(2)_$(3)_INCFLAGS) $$($(2)_CFLAGS) $$($(3)_CFLAGS) $$(CFLAGS) $$($(2)_$(3)_CFLAGS)" \
++    CXXFLAGS="$$($(2)_$(3)_INCFLAGS) -std=c++17 $$($(2)_CFLAGS) $$($(3)_CFLAGS) $$(CFLAGS) $$($(2)_$(3)_CFLAGS)" \
+     LDFLAGS="$$($(2)_$(3)-$(4)_LIBFLAGS) $$($(2)_$(3)_LIBFLAGS) $$($(2)_LDFLAGS) $$($(3)_LDFLAGS) $$(LDFLAGS)" \
+     SOURCE_DATE_EPOCH="$$($(2)_$(3)_SOURCE_DATE_EPOCH)" \
+ 
+-- 
+2.49.0
+
