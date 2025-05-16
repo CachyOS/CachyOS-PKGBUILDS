@@ -11,7 +11,7 @@ arch=('x86_64')
 license=("MIT")
 options=(!debug) # probably will be quite big
 _elnum=34
-depends=( electron${_elnum} ripgrep # replacements
+depends=( electron${_elnum} ripgrep xdg-utils # replacements
   libx11
   libxkbfile
   libsecret
@@ -19,7 +19,6 @@ depends=( electron${_elnum} ripgrep # replacements
   libnotify
   libxss
   shared-mime-info
-  xdg-utils # opening web links
   alsa-lib
 )
 optdepends=(
@@ -33,7 +32,7 @@ makedepends=(
   git
   npm
   nodejs-lts-iron # see .nvmrc
-  pkg-config
+  pkgconf
   python
 )
 _codever=1.100.2-1
@@ -53,7 +52,7 @@ build() {
   _elver=$(cat /usr/lib/electron${_elnum}/version)
   echo Replacing $(rg -m 1 '"electron":\s*"[0-9]+' package.json) with ${_elver}
   echo 'Fix if major version is wrong.'
-  npm install electron@${_elver} --save-dev
+  npm pkg set devDependencies.electron=${_elver}
   # Install dependencies with legacy peer deps flag to handle dependency conflicts
   npm install --legacy-peer-deps
   # Build react because it fails for some reason
@@ -88,9 +87,10 @@ package() {
     -e "s|/usr/lib/code/code.mjs|--app=${_app}|" \
     -e "s/name=electron/name=electron${_elnum}/" code.sh > run.sh
   install -Dm755 run.sh "${pkgdir}/usr/bin/void"
-  # Installs edirot on /usr/share for compability with void-bin
+  # Installs editor on /usr/share for compability with void-bin
   install -d "${pkgdir}/usr/share/void"
   cp -r --reflink=auto "${_pkg}/resources" "${pkgdir}/usr/share/void/resources"
-  # Replace ripgrep downloaded by npm
-  ln -svf /usr/bin/rg "${pkgdir}"/usr/share/void/resources/app/node_modules/@vscode/ripgrep/bin/rg
+  # Use system-wide tools
+  ln -svf /usr/bin/rg "${pkgdir}${_app}"/node_modules/@vscode/ripgrep/bin/rg
+  ln -svf /usr/bin/xdg-open "${pkgdir}${_app}"/node_modules/open/xdg-open
 }
