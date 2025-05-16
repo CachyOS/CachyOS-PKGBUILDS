@@ -11,7 +11,7 @@ pkgver=${_srctag//-/.}
 _geckover=2.47.4
 _monover=10.0.0
 _xaliaver=0.4.6
-pkgrel=1
+pkgrel=2
 epoch=2
 
 _pkgbasever=${pkgver/rc/-rc}
@@ -38,77 +38,77 @@ arch=(x86_64 x86_64_v3)
 options=(!staticlibs !lto !debug)
 license=(LGPL-2.1-or-later)
 depends=(
-  attr            #lib32-attr
+  attr            lib32-attr
   desktop-file-utils
-  fontconfig      #lib32-fontconfig
-  freetype2       #lib32-freetype2
-  gcc-libs        #lib32-gcc-libs
-  gettext         #lib32-gettext
-  libpcap         #lib32-libpcap
-  libxcursor      #lib32-libxcursor
-  libxkbcommon    #lib32-libxkbcommon
-  libxi           #lib32-libxi
-  libxrandr       #lib32-libxrandr
-  wayland         #lib32-wayland
+  fontconfig      lib32-fontconfig
+  freetype2       lib32-freetype2
+  gcc-libs        lib32-gcc-libs
+  gettext         lib32-gettext
+  libpcap         lib32-libpcap
+  libxcursor      lib32-libxcursor
+  libxkbcommon    lib32-libxkbcommon
+  libxi           lib32-libxi
+  libxrandr       lib32-libxrandr
+  wayland         lib32-wayland
 )
 makedepends=(autoconf bison perl flex mingw-w64-gcc
   git
-  alsa-lib              #lib32-alsa-lib
+  alsa-lib              lib32-alsa-lib
   ffmpeg
-  giflib                #lib32-giflib
-  gnutls                #lib32-gnutls
-  gst-plugins-base-libs #lib32-gst-plugins-base-libs
-  gst-plugins-good      #lib32-gst-plugins-good
-  gtk3                  #lib32-gtk3
-  libcups               #lib32-libcups
+  giflib                lib32-giflib
+  gnutls                lib32-gnutls
+  gst-plugins-base-libs lib32-gst-plugins-base-libs
+  gst-plugins-good      lib32-gst-plugins-good
+  gtk3                  lib32-gtk3
+  libcups               lib32-libcups
   libgphoto2
-  libpulse              #lib32-libpulse
-  libva                 #lib32-libva
-  libxcomposite         #lib32-libxcomposite
-  libxinerama           #lib32-libxinerama
-  libxxf86vm            #lib32-libxxf86vm
-  mesa                  #lib32-mesa
-  mesa-libgl            #lib32-mesa-libgl
+  libpulse              lib32-libpulse
+  libva                 lib32-libva
+  libxcomposite         lib32-libxcomposite
+  libxinerama           lib32-libxinerama
+  libxxf86vm            lib32-libxxf86vm
+  mesa                  lib32-mesa
+  mesa-libgl            lib32-mesa-libgl
   opencl-headers
-  opencl-icd-loader     #lib32-opencl-icd-loader
+  opencl-icd-loader     lib32-opencl-icd-loader
   python
   samba
   sane
-  sdl2                  #lib32-sdl2
+  sdl2                  lib32-sdl2
   unzip
-  v4l-utils             #lib32-v4l-utils
-  vulkan-icd-loader     #lib32-vulkan-icd-loader
+  v4l-utils             lib32-v4l-utils
+  vulkan-icd-loader     lib32-vulkan-icd-loader
 )
 optdepends=(
-  alsa-lib              #lib32-alsa-lib
-  alsa-plugins          #lib32-alsa-plugins
-  cups                  #lib32-libcups
+  alsa-lib              lib32-alsa-lib
+  alsa-plugins          lib32-alsa-plugins
+  cups                  lib32-libcups
   dosbox
   ffmpeg
-  giflib                #lib32-giflib
-  gnutls                #lib32-gnutls
-  gst-plugins-base-libs #lib32-gst-plugins-base-libs
-  gst-plugins-good      #lib32-gst-plugins-good
-  gtk3                  #lib32-gtk3
+  giflib                lib32-giflib
+  gnutls                lib32-gnutls
+  gst-plugins-base-libs lib32-gst-plugins-base-libs
+  gst-plugins-good      lib32-gst-plugins-good
+  gtk3                  lib32-gtk3
   libgphoto2
-  libpulse              #lib32-libpulse
-  libva                 #lib32-libva
-  libxcomposite         #lib32-libxcomposite
-  libxinerama           #lib32-libxinerama
-  opencl-icd-loader     #lib32-opencl-icd-loader
+  libpulse              lib32-libpulse
+  libva                 lib32-libva
+  libxcomposite         lib32-libxcomposite
+  libxinerama           lib32-libxinerama
+  opencl-icd-loader     lib32-opencl-icd-loader
   samba
   sane
-  sdl2                  #lib32-sdl2
-  v4l-utils             #lib32-v4l-utils
-  vulkan-icd-loader     #lib32-vulkan-icd-loader
+  sdl2                  lib32-sdl2
+  v4l-utils             lib32-v4l-utils
+  vulkan-icd-loader     lib32-vulkan-icd-loader
 )
 
 install=wine.install
 
 prepare() {
   # Get rid of old build dirs
-  rm -rf ${pkgname//-opt}-64-build
-  mkdir ${pkgname//-opt}-64-build
+  rm -rf ${pkgname//-opt}-{32,64}-build
+  mkdir ${pkgname//-opt}-{32,64}-build
 
   pushd ${pkgname//-opt}
   git config user.email "wine@cachyos.org"
@@ -151,8 +151,8 @@ build() {
   echo "Building Wine-64..."
   export CFLAGS="$COMMON_FLAGS -mcmodel=small $LTO_CFLAGS"
   export CXXFLAGS="$COMMON_FLAGS -mcmodel=small -std=c++17 $LTO_CFLAGS"
-  export CROSSCFLAGS="$COMMON_FLAGS"
-  export CROSSCXXFLAGS="$COMMON_FLAGS -std=c++17"
+  export CROSSCFLAGS="$COMMON_FLAGS -mcmodel=small"
+  export CROSSCXXFLAGS="$COMMON_FLAGS -mcmodel=small -std=c++17"
   export PKG_CONFIG_PATH="/usr/lib/pkgconfig:/usr/share/pkgconfig"
   cd "$srcdir/${pkgname//-opt}-64-build"
   ../${pkgname//-opt}/configure \
@@ -167,12 +167,41 @@ build() {
     --without-oss \
     --disable-winemenubuilder \
     --disable-tests \
-    --enable-archs=x86_64,i386
+    --enable-win64
+
+  make
+
+  echo "Building Wine-32..."
+  export CFLAGS="$COMMON_FLAGS -mstackrealign $LTO_CFLAGS"
+  export CXXFLAGS="$COMMON_FLAGS -mstackrealign -std=c++17 $LTO_CFLAGS"
+  export CROSSCFLAGS="$COMMON_FLAGS -mstackrealign"
+  export CROSSCXXFLAGS="$COMMON_FLAGS -mstackrealign -std=c++17"
+  export PKG_CONFIG_PATH="/usr/lib32/pkgconfig:/usr/share/pkgconfig"
+  cd "$srcdir/${pkgname//-opt}-32-build"
+  ../${pkgname//-opt}/configure \
+    --prefix=/opt/"${pkgname//-opt}" \
+    --libdir=/opt/"${pkgname//-opt}"/lib \
+    --with-x \
+    --with-wayland \
+    --with-gstreamer \
+    --with-mingw \
+    --with-alsa \
+    --without-ffmpeg \
+    --without-oss \
+    --disable-winemenubuilder \
+    --disable-tests \
+    --with-wine64="$srcdir/${pkgname//-opt}-64-build"
 
   make
 }
 
 package() {
+  echo "Packaging Wine-32..."
+  cd "$srcdir/${pkgname//-opt}-32-build"
+  make prefix="$pkgdir/opt/${pkgname//-opt}" \
+    libdir="$pkgdir/opt/${pkgname//-opt}/lib" \
+    dlldir="$pkgdir/opt/${pkgname//-opt}/lib/wine" install-lib
+
   echo "Packaging Wine-64..."
   cd "$srcdir/${pkgname//-opt}-64-build"
   make prefix="$pkgdir/opt/${pkgname//-opt}" \
