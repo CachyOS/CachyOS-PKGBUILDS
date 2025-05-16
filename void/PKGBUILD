@@ -3,7 +3,7 @@
 
 pkgname=void
 epoch=1
-pkgver=1.3.2
+pkgver=1.3.9
 pkgrel=1
 pkgdesc="The open-source Cursor alternative"
 url="https://voideditor.com/"
@@ -18,16 +18,15 @@ depends=( electron${_elnum} ripgrep # replacements
   gnupg
   libnotify
   libxss
-  lsof # terminal splitting (https://github.com/Microsoft/vscode/issues/62991)
   shared-mime-info
   xdg-utils # opening web links
   alsa-lib
 )
 optdepends=(
-  'electron: /usr/share/void/void-latestron'
   'glib2: Move to trash functionality'
   'gvfs: Move to trash functionality'
   'libdbusmenu-glib: KDE global menu'
+  'lsof: terminal splitting' # https://github.com/Microsoft/vscode/issues/62991
   'org.freedesktop.secrets: Settings sync'
 )
 makedepends=(
@@ -35,19 +34,26 @@ makedepends=(
   npm
   nodejs-lts-iron # see .nvmrc
   pkg-config
+  python
 )
-source=("git+https://github.com/voideditor/void.git#commit=2de4cacf0fa3e767229308b4a198f75c8418bb6d"
-        "https://gitlab.archlinux.org/archlinux/packaging/packages/code/-/raw/main/code.sh")
-sha256sums=('d7bca30f588b136dd527ff1316205459b7a8dcde7e179932da16f0e138a31796'
+_codever=1.100.2-1
+source=("git+https://github.com/voideditor/void.git#commit=2ae288e2edddebc65cab4b50e215139b10097549" # https://github.com/voideditor/void/commit/2ae288e2edddebc65cab4b50e215139b10097549
+        "https://gitlab.archlinux.org/archlinux/packaging/packages/code/-/raw/${_codever}/code.sh")
+sha256sums=('00528641094027de35cbe44ecf75a428e4d4a96597baff0a6fba6c97e25b3202'
             '5da1525b5fe804b9192c05e1cbf8d751d852e3717fb2787c7ffe98fd5d93e8c1')
 
 build() {
+  # Do not tain user dir by cache
+  export XDG_CACHE_HOME="${srcdir}/xdgcache" HOME="${srcdir}/home"
   cd "${pkgname}"
   # Clean npm cache and remove existing node_modules
   npm cache clean --force
   rm -rf node_modules
-  # Use version of system electron
-  npm install electron@$(cat /usr/lib/electron${_elnum}/version) --save-dev
+  # Set version of electron
+  _elver=$(cat /usr/lib/electron${_elnum}/version)
+  echo Replacing $(rg -m 1 '"electron":\s*"[0-9]+' package.json) with ${_elver}
+  echo 'Fix if major version is wrong.'
+  npm install electron@${_elver} --save-dev
   # Install dependencies with legacy peer deps flag to handle dependency conflicts
   npm install --legacy-peer-deps
   # Build react because it fails for some reason
@@ -58,13 +64,15 @@ build() {
 
 package() {
   _pkg=VSCode-linux-x64
+  _app=/usr/share/void/resources/app
   # Licenses
-  install -Dm644 "${_pkg}/resources/app/LICENSE.txt" "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE"
-  install -Dm644 "${_pkg}/resources/app/ThirdPartyNotices.txt" "${pkgdir}/usr/share/licenses/${pkgname}/ThirdPartyNotices.txt"
+  install -d "${pkgdir}/usr/share/licenses/${pkgname}"
+  ln -svf "${_app}/LICENSE.txt" "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE"
+  ln -svf "${_app}/ThirdPartyNotices.txt" "${pkgdir}/usr/share/licenses/${pkgname}/"
   # appdata and desktop files
   install -Dm644 "${_pkg}/resources/app/resources/linux/code.png" "${pkgdir}/usr/share/icons/${pkgname}.png"
   mkdir -p "${pkgdir}/usr/share/"{applications,mime/packages}
-  #todo cleanup
+  # todo cleanup
   sed -e s/@@NAME@@/void/ -e s/@@EXEC@@/void/g -e s/@@ICON@@/void/g -e s/@@NAME_SHORT@@/Void/g -e s/@@NAME_LONG@@/Void/g \
     void/resources/linux/code.desktop > "${pkgdir}/usr/share/applications/void.desktop"
   sed -e s/@@NAME_LONG@@/Void/ -e s/@@EXEC@@/void/ -e s/@@ICON@@/void/ -e s/@@URLPROTOCOL@@/vscode/ \
@@ -75,15 +83,14 @@ package() {
   install -Dm644 "${_pkg}/resources/completions/bash/${pkgname}" "${pkgdir}/usr/share/bash-completion/completions/${pkgname}"
   install -Dm644 "${_pkg}/resources/completions/zsh/_${pkgname}" "${pkgdir}/usr/share/zsh/site-functions/_${pkgname}"
   # launcher
-  _app=/usr/share/void/resources/app
   sed -e "s|code-flags|void-flags|" \
     -e "s|/usr/lib/code/out/cli.js|${_app}/out/cli.js|" \
-    -e "s|/usr/lib/code/code.mjs|--app=${_app}|" code.sh > run.sh
-  sed "s/name=electron/name=electron${_elnum}/" run.sh > run-safe.sh
-  install -Dm755 run-safe.sh "${pkgdir}/usr/bin/void"
-  install -Dm755 run.sh "${pkgdir}/usr/share/void/void-latestron"
-  # resources
+    -e "s|/usr/lib/code/code.mjs|--app=${_app}|" \
+    -e "s/name=electron/name=electron${_elnum}/" code.sh > run.sh
+  install -Dm755 run.sh "${pkgdir}/usr/bin/void"
+  # Installs edirot on /usr/share for compability with void-bin
+  install -d "${pkgdir}/usr/share/void"
   cp -r --reflink=auto "${_pkg}/resources" "${pkgdir}/usr/share/void/resources"
-  # ripgrep
+  # Replace ripgrep downloaded by npm
   ln -svf /usr/bin/rg "${pkgdir}"/usr/share/void/resources/app/node_modules/@vscode/ripgrep/bin/rg
 }
