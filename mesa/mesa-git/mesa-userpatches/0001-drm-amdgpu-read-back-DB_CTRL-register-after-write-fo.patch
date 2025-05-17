@@ -1,0 +1,33 @@
+From b2dae42ac1a20eb77d3dde4647c5174f5a565048 Mon Sep 17 00:00:00 2001
+From: "David (Ming Qiang) Wu" <David.Wu3@amd.com>
+Date: Mon, 12 May 2025 15:14:43 -0400
+Subject: [PATCH] drm/amdgpu: read back DB_CTRL register after write for VCN
+ 4.0.5
+
+On VCN 4.0.5 there is a race condition where the WPTR is not
+updated after idle when doorbell is used. The read back of
+regVCN_RB1_DB_CTRL register after written is to ensure the
+doorbell_index is updated before it can work properly.
+
+Link: https://gitlab.freedesktop.org/mesa/mesa/-/issues/12528
+Signed-off-by: David (Ming Qiang) Wu <David.Wu3@amd.com>
+---
+ drivers/gpu/drm/amd/amdgpu/vcn_v4_0_5.c | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/drivers/gpu/drm/amd/amdgpu/vcn_v4_0_5.c b/drivers/gpu/drm/amd/amdgpu/vcn_v4_0_5.c
+index ed00d35039c1..a55ad6aadb22 100644
+--- a/drivers/gpu/drm/amd/amdgpu/vcn_v4_0_5.c
++++ b/drivers/gpu/drm/amd/amdgpu/vcn_v4_0_5.c
+@@ -1033,6 +1033,8 @@ static int vcn_v4_0_5_start_dpg_mode(struct amdgpu_vcn_inst *vinst,
+ 	WREG32_SOC15(VCN, inst_idx, regVCN_RB1_DB_CTRL,
+ 			ring->doorbell_index << VCN_RB1_DB_CTRL__OFFSET__SHIFT |
+ 			VCN_RB1_DB_CTRL__EN_MASK);
++	/* Read DB_CTRL to flush the write DB_CTRL command. */
++	RREG32_SOC15(VCN, inst_idx, regVCN_RB1_DB_CTRL);
+ 
+ 	return 0;
+ }
+-- 
+2.49.0
+
