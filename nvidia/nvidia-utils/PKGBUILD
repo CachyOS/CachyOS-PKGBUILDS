@@ -7,7 +7,7 @@
 pkgbase=nvidia-utils
 pkgname=('nvidia-utils' 'opencl-nvidia' 'nvidia-dkms' 'nvidia-open-dkms')
 pkgver=570.144
-pkgrel=4
+pkgrel=5
 arch=('x86_64')
 url="http://www.nvidia.com/"
 license=('custom')
@@ -30,7 +30,8 @@ source=('nvidia-drm-outputclass.conf'
         '0005-nvidia-uvm-Use-__iowrite64_hi_lo.patch'
         '0006-nvidia-uvm-Use-page_pgmap.patch'
         '0007-nvidia-uvm-Convert-make_device_exclusive_range-to-ma.patch'
-        '0008-kbuild-Add-workaround-for-GCC-15-Compilation.patch')
+        '0008-kbuild-Add-workaround-for-GCC-15-Compilation.patch'
+        'limit-vram-usage')
 sha256sums=('be99ff3def641bb900c2486cce96530394c5dc60548fc4642f19d3a4c784134d'
             'f77a5247a3ba63e9fad3a3b2822d0fcfa51e0f79b5a90bd79bf08ea34b64ab07'
             '0e54249a7754b668b436f0f7aa7e95fff68edbb12a93dbee4660e09a8c695f84'
@@ -46,7 +47,8 @@ sha256sums=('be99ff3def641bb900c2486cce96530394c5dc60548fc4642f19d3a4c784134d'
             '6ac7c9e4653fdbe9a246d6689dc0212519a5b743082893e0b8097dfe39fb9cc0'
             'bfe5069a3767b771fa831056b9f15f99b4b27b4772eb98d26bb5709431f5898a'
             'a50e5513f5b41d4d4d7fefcb75d50bfaf377b20ed4976735c9269aa62b20525e'
-            'a6c87adbb704c3a0688e5aa18210f86e45c030a7538d49549b3233c46991bf48')
+            'a6c87adbb704c3a0688e5aa18210f86e45c030a7538d49549b3233c46991bf48'
+            'a116f30ecedaf6f75c5f07efcd8723494f74ffd338022aa9ce400b0ebd3eea5a')
 
 
 create_links() {
@@ -292,6 +294,8 @@ package_nvidia-utils() {
     # application profiles
     install -Dm644 "nvidia-application-profiles-${pkgver}-rc" "${pkgdir}/usr/share/nvidia/nvidia-application-profiles-${pkgver}-rc"
     install -Dm644 "nvidia-application-profiles-${pkgver}-key-documentation" "${pkgdir}/usr/share/nvidia/nvidia-application-profiles-${pkgver}-key-documentation"
+    # Application profiles to fix vram usage at electron applications
+    install -Dm644 "$srcdir"/limit-vram-usage "${pkgdir}/etc/nvidia/nvidia-application-profiles-rc.d/limit-vram-usage"
 
     install -Dm644 LICENSE "${pkgdir}/usr/share/licenses/nvidia-utils/LICENSE"
     install -Dm644 README.txt "${pkgdir}/usr/share/doc/nvidia/README"
