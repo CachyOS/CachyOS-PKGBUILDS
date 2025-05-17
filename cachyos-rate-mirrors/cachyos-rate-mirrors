@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Copyright (C) 2022-2025 CachyOS team
 #
 # This program is free software; you can redistribute it and/or modify
@@ -14,22 +14,16 @@
 # You should have received a copy of the GNU General Public License along
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
-
 set -e
 
-export LC_MESSAGES=C
-export LANG=C
+declare -r MIRRORS_DEFAULT_DIR="/etc/pacman.d"
+declare -a RATE_MIRRORS_ARCH_FLAGS=(--completion=1 --max-delay=10000)
 
-if [ "$EUID" -ne 0 ]; then
-  echo "Please, run script as root"
-  exit 1
-fi
-
-disable_colors(){
+disable_colors() {
     unset ALL_OFF BOLD BLUE GREEN RED YELLOW
 }
 
-enable_colors(){
+enable_colors() {
     # prefer terminal safe colored and bold text when tput is supported
     if tput setaf 0 &>/dev/null; then
         ALL_OFF="$(tput sgr0)"
@@ -56,114 +50,83 @@ else
 fi
 
 msg() {
-    local mesg=$1; shift
+    local mesg="$1"; shift
     printf "${GREEN}==>${ALL_OFF}${BOLD} ${mesg}${ALL_OFF}\n" "$@" >&2
 }
 
 info() {
-    local mesg=$1; shift
+    local mesg="$1"; shift
     printf "${YELLOW} -->${ALL_OFF}${BOLD} ${mesg}${ALL_OFF}\n" "$@" >&2
 }
 
 error() {
-    local mesg=$1; shift
+    local mesg="$1"; shift
     printf "${RED}==> ERROR:${ALL_OFF}${BOLD} ${mesg}${ALL_OFF}\n" "$@" >&2
 }
 
 cleanup() {
-    exit ${1:-0}
+    exit "${1:-0}"
 }
 
 die() {
-    (( $# )) && error "$@"
+    (($#)) && error "$@"
     cleanup 255
 }
 
-rate_mirror_ex() {
-    local name=$1
-    local mirrorlist_path=$2
-    local special_arch=$3
-    local _exitcode=-1
+if [ "$EUID" -ne 0 ]; then
+    die "Please, run script as root"
+fi
 
-    info "name '${name}'; mirrorlist_path '${mirrorlist_path}'; special_arch '${special_arch}'"
+declare -r TMPFILE="$(mktemp)"
+trap 'rm -f -- "$TMPFILE"' EXIT
 
-    TMPFILE="$(mktemp)"
+rate_repository_mirrors() {
+    local repo="$1"
+    local path="$2"
+    [[ -n "$3" ]] && local -n repo_flags="$3"
+    local -a rate_mirrors_flags=(
+        --save "$TMPFILE"
+        --allow-root
+        "$repo"
+        --fetch-mirrors-timeout=300000
+        "${repo_flags[@]}"
+    )
 
-    _rate_mirrors_flags=("--allow-root" "--save=${TMPFILE}" "${name}" "--fetch-mirrors-timeout=300000" "--completion=1" "--max-delay=10000")
-    if [[ -n "${special_arch}" ]]; then
-        _rate_mirrors_flags+=("--arch=${special_arch}")
-    fi
+    info "Ranking mirrors for ${repo} repository in ${path}..."
 
-    rate-mirrors "${_rate_mirrors_flags[@]}"
-    _exitcode=$?
-    if [[ "${_exitcode}" -eq 0 ]]; then
-        if [ ! -f "${mirrorlist_path}" ]; then
-            die "${mirrorlist_path} doesn't exist! You must install "${mirrorlist_path##*/}". Run sudo pacman -S ${mirrorlist_path##*/}"
+    if rate-mirrors "${rate_mirrors_flags[@]}"; then
+        if [ ! -f "${path}" ]; then
+            die "${path} doesn't exist! You must install package $(pacman -Fq "$path" 2>/dev/null || echo "that contains $path")"
         fi
-        cat "${mirrorlist_path}" > "${mirrorlist_path}-backup"
-        cat "${TMPFILE}" > "${mirrorlist_path}"
-        msg "Done [${name}] ${mirrorlist_path}"
+        cp -f --backup=simple --suffix="-backup" "${TMPFILE}" "${path}"
+        msg "Done [${repo}] ${path}"
     else
-        die "rate-mirrors failed [errcode=%d]." "${_exitcode}"
+        die "rate-mirrors failed [errcode=$?]."
     fi
-
-    rm "${TMPFILE}"
 }
 
-rate_mirror_ex_cos() {
-    local name=$1
-    local mirrorlist_path=$2
-    local special_arch=$3
-    local _exitcode=-1
-
-    info "name '${name}'; mirrorlist_path '${mirrorlist_path}'; special_arch '${special_arch}'"
-
-    TMPFILE="$(mktemp)"
-
-    _rate_mirrors_flags=("--allow-root" "--save=${TMPFILE}" "${name}" "--fetch-mirrors-timeout=300000")
-    if [[ -n "${special_arch}" ]]; then
-        _rate_mirrors_flags+=("--arch=${special_arch}")
-    fi
-
-    rate-mirrors "${_rate_mirrors_flags[@]}"
-    _exitcode=$?
-    if [[ "${_exitcode}" -eq 0 ]]; then
-        if [ ! -f "${mirrorlist_path}" ]; then
-            die "${mirrorlist_path} doesn't exist! You must install "${mirrorlist_path##*/}". Run sudo pacman -S ${mirrorlist_path##*/}"
-        fi
-        cat "${mirrorlist_path}" > "${mirrorlist_path}-backup"
-        cat "${TMPFILE}" > "${mirrorlist_path}"
-        msg "Done [${name}] ${mirrorlist_path}"
-    else
-        die "rate-mirrors failed [errcode=%d]." "${_exitcode}"
-    fi
-
-    rm "${TMPFILE}"
-}
-
+# Special check for RU region where CDN77 mirror gets timeouted due to
+# blockings that mirror is applied by default on the ISO
 check_ru_location() {
-    # special check for ru loc where CDN77 mirror gets timeouted due to blockings
-    # that mirror is applied by default on the ISO
     curl -s 'https://geoip.kde.org/v1/ubiquity' | grep -q '<CountryCode>RU<'
-    echo $?
+    return $?
 }
-
-MIRRORS_DEFAULT_DIR="/etc/pacman.d"
-ISO_DETECT_DIR="/run/archiso"
-IS_RU_LOCATION="$(check_ru_location)"
 
 # rate archlinux mirrors anyway
-rate_mirror_ex arch "${MIRRORS_DEFAULT_DIR}/mirrorlist"
+rate_repository_mirrors arch "${MIRRORS_DEFAULT_DIR}/mirrorlist" \
+    RATE_MIRRORS_ARCH_FLAGS
 
-# always insert CDN77 mirror to the start, unless ru loc is detected
-if [ $IS_RU_LOCATION -ne 0 ]; then
+# Always insert CDN77 mirror to the start, unless RU region is detected
+if ! check_ru_location; then
     sed -i '1iServer = https://archlinux.cachyos.org/repo/$repo/os/$arch' "${MIRRORS_DEFAULT_DIR}/mirrorlist"
 fi
 
-rate_mirror_ex_cos cachyos "${MIRRORS_DEFAULT_DIR}/cachyos-mirrorlist"
+rate_repository_mirrors cachyos "${MIRRORS_DEFAULT_DIR}/cachyos-mirrorlist"
 
-cp -f --backup=simple --suffix="-backup" "${MIRRORS_DEFAULT_DIR}/cachyos-mirrorlist" "${MIRRORS_DEFAULT_DIR}/cachyos-v3-mirrorlist"
-cp -f --backup=simple --suffix="-backup" "${MIRRORS_DEFAULT_DIR}/cachyos-mirrorlist" "${MIRRORS_DEFAULT_DIR}/cachyos-v4-mirrorlist"
+cp -f --backup=simple --suffix="-backup" "${MIRRORS_DEFAULT_DIR}/cachyos-mirrorlist" \
+    "${MIRRORS_DEFAULT_DIR}/cachyos-v3-mirrorlist"
+cp -f --backup=simple --suffix="-backup" "${MIRRORS_DEFAULT_DIR}/cachyos-mirrorlist" \
+    "${MIRRORS_DEFAULT_DIR}/cachyos-v4-mirrorlist"
 
 sed -i 's|/$arch/|/$arch_v3/|g' "${MIRRORS_DEFAULT_DIR}/cachyos-v3-mirrorlist"
 sed -i 's|/$arch/|/$arch_v4/|g' "${MIRRORS_DEFAULT_DIR}/cachyos-v4-mirrorlist"
