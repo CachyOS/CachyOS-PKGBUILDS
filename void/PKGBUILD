@@ -10,7 +10,7 @@ url="https://voideditor.com/"
 arch=('x86_64')
 license=("MIT")
 options=(!debug) # probably will be quite big
-_elnum=34
+_elnum=34 # 35+ will fail
 depends=( electron${_elnum} ripgrep xdg-utils # replacements
   libx11
   libxkbfile
@@ -35,11 +35,10 @@ makedepends=(
   pkgconf
   python
 )
-_codever=1.100.2-1
-source=("git+https://github.com/voideditor/void.git#commit=2ae288e2edddebc65cab4b50e215139b10097549" # https://github.com/voideditor/void/commit/2ae288e2edddebc65cab4b50e215139b10097549
-        "https://gitlab.archlinux.org/archlinux/packaging/packages/code/-/raw/${_codever}/code.sh")
-sha256sums=('00528641094027de35cbe44ecf75a428e4d4a96597baff0a6fba6c97e25b3202'
-            '5da1525b5fe804b9192c05e1cbf8d751d852e3717fb2787c7ffe98fd5d93e8c1')
+source=("git+https://github.com/voideditor/void.git#commit=2ae288e2edddebc65cab4b50e215139b10097549")
+# https://github.com/voideditor/void/commit/2ae288e2edddebc65cab4b50e215139b10097549
+
+sha256sums=('5da1525b5fe804b9192c05e1cbf8d751d852e3717fb2787c7ffe98fd5d93e8c1')
 
 build() {
   # Do not tain user dir by cache
@@ -82,10 +81,9 @@ package() {
   install -Dm644 "${_pkg}/resources/completions/bash/${pkgname}" "${pkgdir}/usr/share/bash-completion/completions/${pkgname}"
   install -Dm644 "${_pkg}/resources/completions/zsh/_${pkgname}" "${pkgdir}/usr/share/zsh/site-functions/_${pkgname}"
   # launcher
-  sed -e "s|code-flags|void-flags|" \
-    -e "s|/usr/lib/code/out/cli.js|${_app}/out/cli.js|" \
-    -e "s|/usr/lib/code/code.mjs|--app=${_app}|" \
-    -e "s/name=electron/name=electron${_elnum}/" code.sh > run.sh
+  sed -e "s|exec /usr|ELECTRON_RUN_AS_NODE=1 exec /usr|" \
+      -e "s|flags=()|flags=(${_app}/out/cli.js --app=${_app})|" \
+      /usr/bin/electron${_elnum} > run.sh
   install -Dm755 run.sh "${pkgdir}/usr/bin/void"
   # Installs editor on /usr/share for compability with void-bin
   install -d "${pkgdir}/usr/share/void"
