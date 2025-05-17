@@ -152,11 +152,12 @@ MIRRORS_DEFAULT_DIR="/etc/pacman.d"
 ISO_DETECT_DIR="/run/archiso"
 IS_RU_LOCATION="$(check_ru_location)"
 
-if [ $IS_RU_LOCATION -eq 0 ]; then
-    rate_mirror_ex arch "${MIRRORS_DEFAULT_DIR}/mirrorlist"
-elif [ ! -d "${ISO_DETECT_DIR}" ]; then
-    rate_mirror_ex arch "${MIRRORS_DEFAULT_DIR}/mirrorlist"
-    sed -i '1iServer = https://archlinux.cachyos.org/repo/$repo/os/$arch' /etc/pacman.d/mirrorlist
+# rate archlinux mirrors anyway
+rate_mirror_ex arch "${MIRRORS_DEFAULT_DIR}/mirrorlist"
+
+# always insert CDN77 mirror to the start, unless ru loc is detected
+if [ $IS_RU_LOCATION -ne 0 ]; then
+    sed -i '1iServer = https://archlinux.cachyos.org/repo/$repo/os/$arch' "${MIRRORS_DEFAULT_DIR}/mirrorlist"
 fi
 
 rate_mirror_ex_cos cachyos "${MIRRORS_DEFAULT_DIR}/cachyos-mirrorlist"
