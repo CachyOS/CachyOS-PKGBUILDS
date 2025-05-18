@@ -61,8 +61,9 @@ build() {
   bsdtar --format zip -cf "${_cachedir}/${_zip}" /dev/null
   echo $(sha256sum "${_cachedir}/${_zip}" | cut -d " " -f 1) *${_zip} > build/checksums/electron.txt
   export ELECTRON_SKIP_BINARY_DOWNLOAD=1 PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
-  # Build react because it fails for some reason
-  npm run buildreact
+  # build
+  npm install
+  npm run buildreact # for some reason
   # Bundle it
   npm run gulp vscode-linux-x64 #-min minify. Cause OOM
 }
