@@ -4,8 +4,8 @@
 pkgname=void
 epoch=1 # Version scheme is different from prebuild source
 pkgver=1.3.10
-pkgrel=1
-pkgdesc="The open-source Cursor alternative"
+pkgrel=2
+pkgdesc="The Cursor alternative"
 url="https://voideditor.com/"
 arch=('x86_64')
 license=("MIT")
@@ -41,7 +41,6 @@ source=("git+https://github.com/voideditor/void.git#commit=5cab7e61e5ebf95fc24ee
 sha256sums=('df6e3859b83af81775098f50cdb2f99706a39f65cc2cc3913c918de91fba1085')
 
 build() {
-  # export NODE_ENV=production cause build failure
   # Do not tain user dir by cache
   export XDG_CACHE_HOME="${srcdir}/xdgcache" HOME="${srcdir}/home"
   cd "${pkgname}"
@@ -51,22 +50,21 @@ build() {
   # Set version of electron
   _elver=$(cat /usr/lib/electron${_elnum}/version)
   _elorig=$(npm pkg get devDependencies.electron|sed 's/"//g')
-  echo Replacing ${_elverorig} with ${_elver}
+  sed -i "s/^target=.*/target=\"${_elver}\"/" .npmrc # for native modules
+  echo Replacing ${_elorig} with $(rg -N 'target' .npmrc)
   npm pkg set devDependencies.electron=${_elver}
   # Stop downloading 870MB+ bins
-  _hash=$(echo -n "https://github.com/electron/electron/releases/download/v${_elorig}" | sha256sum | cut -d ' ' -f 1)
+  _hash=$(echo -n "https://github.com/electron/electron/releases/download/v${_elver}" | sha256sum | cut -d ' ' -f 1)
   _cachedir="${XDG_CACHE_HOME}/electron/${_hash}"
-  _zip="electron-v${_elorig}-linux-x64.zip"
+  _zip="electron-v${_elver}-linux-x64.zip"
   mkdir -p "${XDG_CACHE_HOME}/electron/${_hash}"
   bsdtar --format zip -cf "${_cachedir}/${_zip}" /dev/null
   echo $(sha256sum "${_cachedir}/${_zip}" | cut -d " " -f 1) *${_zip} > build/checksums/electron.txt
   export ELECTRON_SKIP_BINARY_DOWNLOAD=1 PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
-  # Install dependencies with legacy peer deps flag to handle dependency conflicts
-  npm install --legacy-peer-deps
   # Build react because it fails for some reason
   npm run buildreact
   # Bundle it
-  npm run gulp vscode-linux-x64 # Add -min to minify. Cause OOM
+  npm run gulp vscode-linux-x64 #-min minify. Cause OOM
 }
 
 package() {
