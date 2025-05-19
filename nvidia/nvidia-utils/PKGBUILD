@@ -6,8 +6,8 @@
 
 pkgbase=nvidia-utils
 pkgname=('nvidia-utils' 'opencl-nvidia' 'nvidia-dkms' 'nvidia-open-dkms')
-pkgver=570.144
-pkgrel=5
+pkgver=570.153.02
+pkgrel=2
 arch=('x86_64')
 url="http://www.nvidia.com/"
 license=('custom')
@@ -25,12 +25,6 @@ source=('nvidia-drm-outputclass.conf'
         "https://download.nvidia.com/XFree86/NVIDIA-kernel-module-source/${_pkg_open}.tar.xz"
         '0001-Enable-atomic-kernel-modesetting-by-default.patch'
         '0002-Add-IBT-support.patch'
-        '0003-Kbuild-Convert-EXTRA_CFLAGS-to-ccflags-y.patch'
-        '0004-kernel-open-nvidia-Use-new-timer-functions-for-6.15.patch'
-        '0005-nvidia-uvm-Use-__iowrite64_hi_lo.patch'
-        '0006-nvidia-uvm-Use-page_pgmap.patch'
-        '0007-nvidia-uvm-Convert-make_device_exclusive_range-to-ma.patch'
-        '0008-kbuild-Add-workaround-for-GCC-15-Compilation.patch'
         'limit-vram-usage')
 sha256sums=('be99ff3def641bb900c2486cce96530394c5dc60548fc4642f19d3a4c784134d'
             'f77a5247a3ba63e9fad3a3b2822d0fcfa51e0f79b5a90bd79bf08ea34b64ab07'
@@ -38,16 +32,10 @@ sha256sums=('be99ff3def641bb900c2486cce96530394c5dc60548fc4642f19d3a4c784134d'
             'c5aa7b8abe69e72bfdc6b9ee8afbfd350bcc557e894558f2e6e4087fa9aa0dd8'
             '1d053c5078387021338cfc3a732bed61be1a20a549775573788e9134775c8149'
             '12d31a5425aba66be9e9129012cde82755ad4d5b7ce9933df8fc398c4fa8d631'
-            'c0b8d7ecf2e20b83767674bab8fee4d1323dc55580274d8e934635e8955f3be6'
-            'd0e741683b7b1f07c7482ab8297c95ac3675b748a0ef3a870eab1848a05aab1f'
+            '148886e4f69576fa8fa67140e6e5dd6e51f90b2ec74a65f1a7a7334dfa5de1b6'
+            '9489672240a49268412925680785f42845ff0b5c16d3e01ccc34a2b3d85b5623'
             '163c57160cc1033020680f638b44ebd94b496152dcd8951e87d5077d4d5c2009'
             'a0088d49d46b699d1727e5944fd9aca5ede93ea3678dd5e91ca58084bc2fa0ee'
-            '052933e01eb6856f9cb77b35a3312fc45be916e6a8e70dbdc167b9d4427fec98'
-            '328f9825f4f1d7a06a0403869aab7135f0bb1925e80ed3abea53dcd3b5c0b30e'
-            '6ac7c9e4653fdbe9a246d6689dc0212519a5b743082893e0b8097dfe39fb9cc0'
-            'bfe5069a3767b771fa831056b9f15f99b4b27b4772eb98d26bb5709431f5898a'
-            'a50e5513f5b41d4d4d7fefcb75d50bfaf377b20ed4976735c9269aa62b20525e'
-            'a6c87adbb704c3a0688e5aa18210f86e45c030a7538d49549b3233c46991bf48'
             '3d977b159c5278e9c84fb907faecb7722335e118af1c8c155da919755fa15243')
 
 
@@ -71,22 +59,11 @@ prepare() {
     # https://gitlab.archlinux.org/archlinux/packaging/packages/nvidia-utils/-/issues/14
     # https://github.com/rpmfusion/nvidia-kmod/blob/master/make_modeset_default.patch
     patch -Np1 -i  "${srcdir}/0001-Enable-atomic-kernel-modesetting-by-default.patch" -d "${srcdir}/${_pkg}/kernel"
-    patch -Np2 -i  "${srcdir}/0003-Kbuild-Convert-EXTRA_CFLAGS-to-ccflags-y.patch" -d "${srcdir}/${_pkg}/kernel"
-    patch -Np2 -i  "${srcdir}/0008-kbuild-Add-workaround-for-GCC-15-Compilation.patch" -d "${srcdir}/${_pkg}/kernel"
 
     # Fix for https://bugs.archlinux.org/task/74886
-
     # NVIDIA-open
     patch -Np1 -i  "${srcdir}/0001-Enable-atomic-kernel-modesetting-by-default.patch" -d "${srcdir}/${_pkg_open}/kernel-open"
     patch -Np1 -i "${srcdir}/0002-Add-IBT-support.patch" -d "${srcdir}/${_pkg_open}/"
-    patch -Np1 -i  "${srcdir}/0003-Kbuild-Convert-EXTRA_CFLAGS-to-ccflags-y.patch" -d"${srcdir}/${_pkg_open}"
-    patch -Np1 -i  "${srcdir}/0004-kernel-open-nvidia-Use-new-timer-functions-for-6.15.patch" -d"${srcdir}/${_pkg_open}/"
-    patch -Np1 -i  "${srcdir}/0005-nvidia-uvm-Use-__iowrite64_hi_lo.patch" -d "${srcdir}/${_pkg_open}/"
-    patch -Np1 -i  "${srcdir}/0006-nvidia-uvm-Use-page_pgmap.patch" -d "${srcdir}/${_pkg_open}/"
-    patch -Np1 -i  "${srcdir}/0007-nvidia-uvm-Convert-make_device_exclusive_range-to-ma.patch" -d "${srcdir}/${_pkg_open}/"
-    patch -Np1 -i  "${srcdir}/0008-kbuild-Add-workaround-for-GCC-15-Compilation.patch" -d "${srcdir}/${_pkg_open}/"
-
-
 
     # Attempt to make builds reproducible
     sed -i "s/^  HOSTNAME.*/  HOSTNAME = echo cachyos/" "${srcdir}/${_pkg_open}/utils.mk"
