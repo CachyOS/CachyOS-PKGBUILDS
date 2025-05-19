@@ -28,11 +28,8 @@ optdepends=(
   'org.freedesktop.secrets: Settings sync'
 )
 makedepends=(
-  git
-  npm
+  git libarchive npm pkgconf python
   nodejs-lts-iron # -jod for electron36
-  pkgconf
-  python
 )
 source=("git+https://github.com/voideditor/void.git#commit=5cab7e61e5ebf95fc24eec6b4213f035f85eb857")
 # https://github.com/voideditor/void/commit/5cab7e61e5ebf95fc24eec6b4213f035f85eb857
@@ -59,7 +56,7 @@ build() {
   _cachedir="${XDG_CACHE_HOME}/electron/${_hash}"
   _zip="electron-v${_elver}-linux-x64.zip"
   mkdir -p "${XDG_CACHE_HOME}/electron/${_hash}"
-  bsdtar --format zip -cf "${_cachedir}/${_zip}" /dev/null
+  bsdtar --format zip -cf "${_cachedir}/${_zip}" /dev/null 2> /dev/null
   echo $(sha256sum "${_cachedir}/${_zip}" | cut -d " " -f 1) *${_zip} > build/checksums/electron.txt
   export ELECTRON_SKIP_BINARY_DOWNLOAD=1 PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
   # build
