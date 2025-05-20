@@ -30,7 +30,8 @@ source=('nvidia-drm-outputclass.conf'
         '0005-nvidia-uvm-Use-__iowrite64_hi_lo.patch'
         '0006-nvidia-uvm-Use-page_pgmap.patch'
         '0007-nvidia-uvm-Convert-make_device_exclusive_range-to-ma.patch'
-        '0008-kbuild-Add-workaround-for-GCC-15-Compilation.patch')
+        '0008-kbuild-Add-workaround-for-GCC-15-Compilation.patch'
+        'limit-vram-usage')
 sha256sums=('be99ff3def641bb900c2486cce96530394c5dc60548fc4642f19d3a4c784134d'
             'f77a5247a3ba63e9fad3a3b2822d0fcfa51e0f79b5a90bd79bf08ea34b64ab07'
             '0e54249a7754b668b436f0f7aa7e95fff68edbb12a93dbee4660e09a8c695f84'
@@ -43,10 +44,11 @@ sha256sums=('be99ff3def641bb900c2486cce96530394c5dc60548fc4642f19d3a4c784134d'
             '1189d81c7307b94c9106631334a4c387621e0f689256d8b533383b64325ded88'
             '9e44bca005ee458279b080f398f92e03e7972e273330c7762bbd80fbe0f8b723'
             'c58dceccad1ceec06bc5adc68e24bca7e4058dc81365f73551ed13802ed3e365'
-            'be2c372f6137fc67ec06bbdb5e6b5558ef91f48e7fe5f2a87a4a46f9b0245188'
-            '210ac12a33a571d7970f4c9037faccf533b4619a6433a0012ad56e4a418f3259'
-            'f00b97cc19fcf4b231cfc57dc676819869cca0e3c555b6708c38116f0d4e0ee4'
-            '2fe386ef1d006aa0089ab7e362126e5ecefaa01be934d2da66e08c9ffd192172')
+            'c57b7807f4043d8a657f80e926bab0ecab66e88fff971179155a761d7e2b31c6'
+            '1baa087a6e3278fdee947bb50ccb8a20563ad9a9e0aac3abcc29f92a4436f1a2'
+            '0e6e1198aef746b284966300f469f418e0bd13c2e79c7d7f71883a73c9cc1025'
+            '2fe386ef1d006aa0089ab7e362126e5ecefaa01be934d2da66e08c9ffd192172'
+            '3d977b159c5278e9c84fb907faecb7722335e118af1c8c155da919755fa15243')
 
 
 create_links() {
@@ -294,6 +296,7 @@ package_nvidia-utils() {
     # application profiles
     install -Dm644 "nvidia-application-profiles-${pkgver}-rc" "${pkgdir}/usr/share/nvidia/nvidia-application-profiles-${pkgver}-rc"
     install -Dm644 "nvidia-application-profiles-${pkgver}-key-documentation" "${pkgdir}/usr/share/nvidia/nvidia-application-profiles-${pkgver}-key-documentation"
+    install -Dm644 "$srcdir"/limit-vram-usage "${pkgdir}/etc/nvidia/nvidia-application-profiles-rc.d/limit-vram-usage"
 
     install -Dm644 LICENSE "${pkgdir}/usr/share/licenses/nvidia-utils/LICENSE"
     install -Dm644 README.txt "${pkgdir}/usr/share/doc/nvidia/README"
