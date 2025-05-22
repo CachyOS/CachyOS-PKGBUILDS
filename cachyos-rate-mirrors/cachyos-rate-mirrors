@@ -108,7 +108,7 @@ rate_repository_mirrors() {
 # Special check for RU region where CDN77 mirror gets timeouted due to
 # blockings that mirror is applied by default on the ISO
 check_ru_location() {
-    curl -s 'https://geoip.kde.org/v1/ubiquity' | grep -q '<CountryCode>RU<'
+    curl -sL --connect-timeout 5 https://cdn77.com
     return $?
 }
 
