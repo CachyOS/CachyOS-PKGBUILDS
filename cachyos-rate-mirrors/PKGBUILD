@@ -2,7 +2,7 @@
 # Contributor: Michael Bolden Jnr SM9(); <me@sm9.dev>
 
 pkgname=cachyos-rate-mirrors
-pkgver=13
+pkgver=14
 pkgrel=1
 groups=(cachyos)
 arch=('any')
@@ -15,11 +15,9 @@ source=(
     cachyos-rate-mirrors.service
     cachyos-rate-mirrors.timer
 )
-sha256sums=(
-    '0f05a9fb7cd6d852e6ac3bb510e182a05f3fa9387c11525cf3d8d1f48ed7d3a3'
-    '599f7675454b0dd4f305051288c304e185cf9880df86f61588d1be7ffc041409'
-    'd8f45568d7bd4d4b5b2f8932afe4cc0af1cfb05960be59e13b982f1aadd28058'
-)
+sha256sums=('56228fa778433b6bee7fd60a0547a94a5e5a7e57af01921c1814b41f32382b8b'
+            '599f7675454b0dd4f305051288c304e185cf9880df86f61588d1be7ffc041409'
+            'd8f45568d7bd4d4b5b2f8932afe4cc0af1cfb05960be59e13b982f1aadd28058')
 
 package() {
     install -Dm755 "$pkgname" "$pkgdir/usr/bin/$pkgname"
