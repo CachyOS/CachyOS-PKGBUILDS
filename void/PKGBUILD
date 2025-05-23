@@ -48,8 +48,9 @@ build() {
   # Clean npm cache and remove existing node_modules
   npm cache clean --force
   rm -rf node_modules
-  # Set version of electron
+  # Set version of electron and build native modules for our electron
   _elver=$(cat /usr/lib/electron${_elnum}/version)
+  sed -i "s/^target=.*/target=\"${_elver}\"/" .npmrc
   echo Replacing $(rg -m 1 '"electron":\s*"[0-9]+' package.json) with ${_elver}
   echo 'Fix if major version is wrong.'
   npm pkg set devDependencies.electron=${_elver}
