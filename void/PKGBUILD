@@ -34,6 +34,7 @@ makedepends=(
   nodejs-lts-iron # see .nvmrc
   pkgconf
   python
+  libarchive
 )
 source=("git+https://github.com/voideditor/void.git#commit=5cab7e61e5ebf95fc24eec6b4213f035f85eb857")
 # https://github.com/voideditor/void/commit/5cab7e61e5ebf95fc24eec6b4213f035f85eb857
@@ -54,6 +55,13 @@ build() {
   echo Replacing $(rg -m 1 '"electron":\s*"[0-9]+' package.json) with ${_elver}
   echo 'Fix if major version is wrong.'
   npm pkg set devDependencies.electron=${_elver}
+  # Stop downloading electron
+  _cachedir="${XDG_CACHE_HOME}"/electron/$(echo -n "https://github.com/electron/electron/releases/download/v${_elver}" | sha256sum | cut -d ' ' -f 1)
+  _zip="electron-v${_elver}-linux-x64.zip"
+  mkdir -p "${_cachedir}"
+  bsdtar --format zip -cf "${_cachedir}/${_zip}" /dev/null 2> /dev/null
+  echo $(sha256sum "${_cachedir}/${_zip}" | cut -d " " -f 1) *${_zip} > build/checksums/electron.txt
+  export ELECTRON_SKIP_BINARY_DOWNLOAD=1 PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
   # Install dependencies with legacy peer deps flag to handle dependency conflicts
   npm install --legacy-peer-deps
   # Build react because it fails for some reason
