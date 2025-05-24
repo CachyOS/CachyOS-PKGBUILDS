@@ -7,7 +7,7 @@
 pkgbase=nvidia-utils
 pkgname=('nvidia-utils' 'opencl-nvidia' 'nvidia-dkms' 'nvidia-open-dkms')
 pkgver=575.51.02
-pkgrel=2
+pkgrel=3
 arch=('x86_64')
 url="http://www.nvidia.com/"
 license=('custom')
@@ -31,6 +31,7 @@ source=('nvidia-drm-outputclass.conf'
         '0006-nvidia-uvm-Use-page_pgmap.patch'
         '0007-nvidia-uvm-Convert-make_device_exclusive_range-to-ma.patch'
         '0008-kbuild-Add-workaround-for-GCC-15-Compilation.patch'
+        '0003-Workaround-nv_vm_flags_-calling-GPL-only-code.patch'
         'limit-vram-usage')
 sha256sums=('be99ff3def641bb900c2486cce96530394c5dc60548fc4642f19d3a4c784134d'
             'f77a5247a3ba63e9fad3a3b2822d0fcfa51e0f79b5a90bd79bf08ea34b64ab07'
@@ -48,6 +49,7 @@ sha256sums=('be99ff3def641bb900c2486cce96530394c5dc60548fc4642f19d3a4c784134d'
             '1baa087a6e3278fdee947bb50ccb8a20563ad9a9e0aac3abcc29f92a4436f1a2'
             '0e6e1198aef746b284966300f469f418e0bd13c2e79c7d7f71883a73c9cc1025'
             '2fe386ef1d006aa0089ab7e362126e5ecefaa01be934d2da66e08c9ffd192172'
+            '46f9d80a5101a3610055a1231ec39319e3c89e69fdf6dda72f96d50e484af4d8'
             '3d977b159c5278e9c84fb907faecb7722335e118af1c8c155da919755fa15243')
 
 
@@ -70,17 +72,18 @@ prepare() {
     # This avoids various issue, when Simplefb is used
     # https://gitlab.archlinux.org/archlinux/packaging/packages/nvidia-utils/-/issues/14
     # https://github.com/rpmfusion/nvidia-kmod/blob/master/make_modeset_default.patch
-    patch -Np1 -i  "${srcdir}/0001-Enable-atomic-kernel-modesetting-by-default.patch" -d "${srcdir}/${_pkg}/kernel"
-    patch -Np1 -i  "${srcdir}/0001-Enable-atomic-kernel-modesetting-by-default.patch" -d "${srcdir}/${_pkg_open}/kernel-open"
+    patch -Np1 -i "${srcdir}/0001-Enable-atomic-kernel-modesetting-by-default.patch" -d "${srcdir}/${_pkg}/kernel"
+    patch -Np1 -i "${srcdir}/0003-Workaround-nv_vm_flags_-calling-GPL-only-code.patch" -d "${srcdir}/${_pkg}/kernel"
 
+    patch -Np1 -i "${srcdir}/0001-Enable-atomic-kernel-modesetting-by-default.patch" -d "${srcdir}/${_pkg_open}/kernel-open"
     # 6.15 Compatibility
-    patch -Np1 -i  "${srcdir}/0003-Kbuild-Convert-EXTRA_CFLAGS-to-ccflags-y.patch" -d "${srcdir}/${_pkg_open}"
-    patch -Np1 -i  "${srcdir}/0004-kernel-open-nvidia-Use-new-timer-functions-for-6.15.patch" -d "${srcdir}/${_pkg_open}/"
-    patch -Np1 -i  "${srcdir}/0005-nvidia-uvm-Use-__iowrite64_hi_lo.patch" -d "${srcdir}/${_pkg_open}/"
-    patch -Np1 -i  "${srcdir}/0006-nvidia-uvm-Use-page_pgmap.patch" -d "${srcdir}/${_pkg_open}/"
-    patch -Np1 -i  "${srcdir}/0007-nvidia-uvm-Convert-make_device_exclusive_range-to-ma.patch" -d "${srcdir}/${_pkg_open}/"
+    patch -Np1 -i "${srcdir}/0003-Kbuild-Convert-EXTRA_CFLAGS-to-ccflags-y.patch" -d "${srcdir}/${_pkg_open}"
+    patch -Np1 -i "${srcdir}/0004-kernel-open-nvidia-Use-new-timer-functions-for-6.15.patch" -d "${srcdir}/${_pkg_open}/"
+    patch -Np1 -i "${srcdir}/0005-nvidia-uvm-Use-__iowrite64_hi_lo.patch" -d "${srcdir}/${_pkg_open}/"
+    patch -Np1 -i "${srcdir}/0006-nvidia-uvm-Use-page_pgmap.patch" -d "${srcdir}/${_pkg_open}/"
+    patch -Np1 -i "${srcdir}/0007-nvidia-uvm-Convert-make_device_exclusive_range-to-ma.patch" -d "${srcdir}/${_pkg_open}/"
     # GCC 15 Compatibility
-    patch -Np1 -i  "${srcdir}/0008-kbuild-Add-workaround-for-GCC-15-Compilation.patch" -d "${srcdir}/${_pkg_open}/"
+    patch -Np1 -i "${srcdir}/0008-kbuild-Add-workaround-for-GCC-15-Compilation.patch" -d "${srcdir}/${_pkg_open}/"
 
 
     # Fix for https://bugs.archlinux.org/task/74886
