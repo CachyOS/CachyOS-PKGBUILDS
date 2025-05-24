@@ -2,7 +2,7 @@
 
 pkgname=jupiter-hw-support
 pkgver=20250521.1
-pkgrel=1
+pkgrel=2
 arch=('any')
 license=('MIT')
 depends=('python-evdev'
@@ -31,6 +31,10 @@ sha256sums=('8d05a6608e4a31c8fc62a0fa74b808f0960160bc70ececbc00dcec861810ee53'
             'd6b5636eb09d2190b10eb665238c30960babba96424fc9768e36966495fa795e'
             'd3098f26eaa26d9eccfedeac792e47a03317bdd16b17ba03be0fbd1ed6621c5d')
 prepare() {
+  cd "${pkgname}"
+  git revert -n c97d8aa369b4c377a17919eba7ae62fbf6b035ae
+  git revert -n 7d74ae6dd3ab70e5cd0808e57e31aeb270eb9a3f
+
   patch --directory=$pkgname --forward --strip=1 --input=../steamos-btrfs-automount.patch
   patch --directory=$pkgname --forward --strip=1 --input=../cachyos-automount.patch
   patch --directory=$pkgname --forward --strip=1 --input=../udev-automount-rules.patch
