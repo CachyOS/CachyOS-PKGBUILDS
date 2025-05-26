@@ -342,11 +342,6 @@ build () {
       _enabled_="true"
       _disabled_="false"
     fi
-    if [ "$_gallium_xa" = "false" ] || [ "$_gallium_xa" = "disabled" ]; then
-      _gallium_xa="${_disabled_}"
-    else
-      _gallium_xa="${_enabled_}"
-    fi
 
     # gallium_vdpau requires either r300, r600, radeonsi or nouveau
     if [[ $_gallium_drivers != *r300* ]] && [[ $_gallium_drivers != *r600* ]] && [[ $_gallium_drivers != *radeonsi* ]] && [[ $_gallium_drivers != *nouveau* ]]; then
