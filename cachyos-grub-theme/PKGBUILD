@@ -1,21 +1,22 @@
-# Maintainer: ptr1337 <admin@ptr1337.dev>
+# Maintainer: Peter Jung <ptr1337@cachyos.org>
 
 pkgname=cachyos-grub-theme
-pkgver=1
-pkgrel=2
-pkgdesc="CachyOS - GRUB-THEME"
+pkgver=1.0.0
+pkgrel=1
+pkgdesc='Grub2 Theme for CachyOS'
 arch=('any')
-license=(GPL-1.0-only)
-depends=(grub)
-groups=('cachyos')
-install="$pkgname.install"
-source=('git+https://gitlab.com/cachyos/themes-and-settings/theme/cachyos-grub-theme.git')
-makedepends=('git')
-sha256sums=('SKIP')
-conflicts=("$pkgname")
-provides=("$pkgname=$pkgver")
+url='https://github.com/diegons490/cachyos-grub-theme/'
+license=('GPL-3.0-only')
+makedepends=(
+  git
+)
+source=(git+$url#commit=395b18a7ebe04c36a5f97c14031e84dfa8899ec0)
+sha256sums=('683e9c2a5e1d5cc788cf693bfb42952e82e57e178c65ecfc973653372d017a1b')
 
 package() {
-  mkdir -p "${pkgdir}/boot/grub/themes/${pkgname}"
-  cp -TR "${srcdir}/${pkgname}/theme" "${pkgdir}/boot/grub/themes/${pkgname}"
+  cd "$pkgname"
+  # remove other files
+  rm -rf LICENSE .gitattributes
+  install -d "$pkgdir/usr/share/grub/themes/"
+  cp -a --no-preserve=ownership . "$pkgdir/usr/share/grub/themes/cachyos"
 }

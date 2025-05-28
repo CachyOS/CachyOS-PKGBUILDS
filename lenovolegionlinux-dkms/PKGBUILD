@@ -4,37 +4,32 @@
 
 pkgname=lenovolegionlinux-dkms
 _pkgname=lenovolegionlinux
-pkgver=0.0.19
-pkgrel=3
+pkgver=0.0.20
+pkgrel=1
 pkgdesc="LenovoLegionLinux (LLL) DKMS module"
 arch=("x86_64")
 url="https://github.com/johnfanv2/LenovoLegionLinux"
 license=('GPL-2.0-only')
 makedepends=(
-  lm_sensors
-  i2c-tools
-  dmidecode
-  git
+    lm_sensors
+    i2c-tools
+    dmidecode
+    git
 )
 depends=(
-  dkms
-  lenovolegionlinux
+    dkms
+    lenovolegionlinux
 )
 source=("${_pkgname}::git+https://github.com/johnfanv2/LenovoLegionLinux.git#tag=v${pkgver}")
-sha256sums=('60d8cc141ced3c5845fc0897cebbc23c9519171b5ade2b4b306e979e4070750a')
+sha256sums=('08bae6daef717a9b289bd1fffbef2e1ba52bb8588a7c0db015ad87a6e58f8aa7')
 install="lenovolegionlinux.install"
 
-prepare() {
-  cd ${_pkgname}
-  git cherry-pick -n 52bf5d7efc92b78458f99ba9125b873f0a32ca86
-}
-
 package() {
-	cd "${srcdir}/${_pkgname}/kernel_module/"
-	install -Dm644 dkms.conf ${pkgdir}/usr/src/${_pkgname}-1.0.0/dkms.conf
-	cp -r {issue-warning.sh,legion-laptop-unused-snippets.c,legion-laptop.c,Makefile} ${pkgdir}/usr/src/$_pkgname-1.0.0/
+    cd "${srcdir}/${_pkgname}/kernel_module/"
+    install -Dm644 dkms.conf "${pkgdir}/usr/src/${_pkgname}-${pkgver}/dkms.conf"
+    cp -r {issue-warning.sh,legion-laptop-unused-snippets.c,legion-laptop.c,Makefile} "${pkgdir}/usr/src/$_pkgname-${pkgver}/"
 
-	cd "${srcdir}/${_pkgname}/deploy/"
-	install -Dm644 LenovoLegionLinux.hook ${pkgdir}/etc/pacman.d/hooks/LenovoLegionLinux.hook
-	install -Dm775 LenovoLegionLinux ${pkgdir}/usr/bin/LenovoLegionLinux
+    cd "${srcdir}/${_pkgname}/deploy/"
+    install -Dm644 LenovoLegionLinux.hook "${pkgdir}/etc/pacman.d/hooks/LenovoLegionLinux.hook"
+    install -Dm755 LenovoLegionLinux "${pkgdir}/usr/bin/LenovoLegionLinux"
 }

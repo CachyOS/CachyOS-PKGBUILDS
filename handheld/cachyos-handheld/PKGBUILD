@@ -1,40 +1,30 @@
 # Maintainer: Peter Jung <admin@ptr1337.dev>
 
 pkgname=cachyos-handheld
-pkgver=1.0.6
-pkgrel=2
+pkgver=1.2.1
+pkgrel=1
 arch=('any')
 license=('GPL-3.0-later')
 pkgdesc='CachyOS - Handheld!'
-source=(git+https://github.com/CachyOS/CachyOS-Handheld?signed#tag=$pkgver)
+source=("git+https://github.com/CachyOS/CachyOS-Handheld?signed#tag=$pkgver")
 install="$pkgname.install"
 options=(!strip !debug)
 provides=('cachyos-deckify')
 replaces=('cachyos-deckify')
-sha256sums=('7cfc80edefc86018cf7b671dde9ce77f8383a1cb3b4592c7da1986828367b20f')
+sha256sums=('371aa89891facff01af92ce89f44bcac97238c4758275cba27bccf417447dabe')
 validpgpkeys=(
   E8B9AA39F054E30E8290D492C3C4820857F654FE  # Peter Jung <admin@ptr1337.dev>
   B1B70BB1CD56047DEF31DE2EB62C3D10C54D5DA9  # Vladislav Nepogodin <nepogodin.vlad@gmail.com>
 )
-
 depends=('gamescope-session-git' 'mangohud' 'jq' 'dmidecode' 'glew' 'glfw' 'glxinfo' 'curl' 'tar'
          'scx-scheds' 'qt5-tools' 'gamescope-session-steam-git' 'jupiter-hw-support'
-         'gamescope-plus' 'lib32-gamescope-plus' 'cachyos-vapor' 'cachyos-alacritty-config'
-         # Common dependecies
-         wine-cachyos giflib lib32-giflib libpng lib32-libpng libldap lib32-libldap gnutls
-         lib32-gnutls mpg123 lib32-mpg123 openal lib32-openal v4l-utils lib32-v4l-utils
-         libpulse lib32-libpulse libgpg-error lib32-libgpg-error alsa-plugins lib32-alsa-plugins
-         alsa-lib lib32-alsa-lib libjpeg-turbo lib32-libjpeg-turbo sqlite lib32-sqlite libxcomposite
-         lib32-libxcomposite libxinerama lib32-libgcrypt libgcrypt lib32-libxinerama ncurses
-         lib32-ncurses ocl-icd lib32-ocl-icd libxslt lib32-libxslt libva lib32-libva gtk3 lib32-gtk3
-         gst-plugins-base-libs lib32-gst-plugins-base-libs vulkan-icd-loader lib32-vulkan-icd-loader
-         bottles dosbox glfw lib32-opencl-icd-loader lib32-vkd3d lutris opencl-icd-loader samba
-         steam steam-native-runtime vkd3d wine-gecko wine-mono winetricks protontricks goverlay
-         mangohud lib32-mangohud ttf-liberation lib32-fontconfig)
+         'gamescope' 'lib32-gamescope' 'cachyos-vapor' 'cachyos-alacritty-config'
+         'steam' 'steam-native-runtime')
 
 prepare() {
   cd CachyOS-Handheld
 }
+
 package() {
   install -d "$pkgdir/etc"
   cp -rf "${srcdir}/CachyOS-Handheld/etc" "$pkgdir"

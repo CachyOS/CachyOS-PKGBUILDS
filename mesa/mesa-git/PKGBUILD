@@ -48,7 +48,7 @@ pkgrel=1
 arch=('x86_64')
 makedepends=('git' 'python-mako' 'python-ply' 'xorgproto' 'libxml2' 'libx11' 'libvdpau' 'libva'
              'elfutils' 'libomxil-bellagio' 'libxrandr' 'ocl-icd' 'libgcrypt'  'wayland'
-             'wayland-protocols' 'meson' 'ninja' 'libdrm' 'xorgproto' 'libdrm' 'libxshmfence' 
+             'wayland-protocols' 'meson' 'ninja' 'libdrm' 'xorgproto' 'libdrm' 'libxshmfence'
              'libxxf86vm' 'libxdamage' 'libclc' 'libglvnd' 'libunwind' 'lm_sensors' 'libxrandr'
              'valgrind' 'glslang' 'byacc' 'wget' 'flex' 'bison' 'rust' 'rust-bindgen' 'spirv-llvm-translator'
              'cbindgen' 'python-packaging' 'python-yaml')
@@ -58,7 +58,7 @@ if [ "$_lib32" == "true" ]; then
                 'lib32-gcc-libs' 'lib32-libvdpau' 'lib32-libelf' 'lib32-libgcrypt'
                 'lib32-lm_sensors' 'lib32-libxdamage' 'gcc-multilib' 'lib32-libunwind' 'lib32-libglvnd'
                 'lib32-libva' 'lib32-wayland' 'lib32-libvdpau' 'lib32-libxrandr' 'lib32-expat'
-                'lib32-spirv-llvm-translator' 'lib32-rust-libs')
+                'lib32-spirv-llvm-translator' 'lib32-rust-libs' 'lib32-clang')
 fi
 
 depends=('libdrm' 'libxxf86vm' 'libxdamage' 'libxshmfence' 'libelf' 'libomxil-bellagio' 'libunwind'
@@ -114,7 +114,7 @@ function exit_cleanup {
   rm -f "$_where"/frogminer
 
   remove_deps
-  
+
   msg2 "Cleanup done"
 }
 
@@ -173,9 +173,9 @@ user_patcher() {
 #
 # 1: llvm-minimal-git (aur) preferred value
 # 2: AUR llvm-git
-# 3: llvm-git from LordHeavy unofficial repo 
+# 3: llvm-git from LordHeavy unofficial repo
 # 4  llvm (stable from extra) Default value
-# 
+#
 
 if [[ ! $MESA_WHICH_LLVM ]] && [ ! -e "$_where"/frogminer ]; then
   plain "Which llvm package tree do you want to use to build mesa-git against ?"
@@ -342,11 +342,6 @@ build () {
       _enabled_="true"
       _disabled_="false"
     fi
-    if [ "$_gallium_xa" = "false" ] || [ "$_gallium_xa" = "disabled" ]; then
-      _gallium_xa="${_disabled_}"
-    else
-      _gallium_xa="${_enabled_}"
-    fi
 
     # gallium_vdpau requires either r300, r600, radeonsi or nouveau
     if [[ $_gallium_drivers != *r300* ]] && [[ $_gallium_drivers != *r600* ]] && [[ $_gallium_drivers != *radeonsi* ]] && [[ $_gallium_drivers != *nouveau* ]]; then
@@ -465,11 +460,9 @@ build () {
        -D vulkan-drivers=${_vulkan_drivers} \
        -D egl=${_enabled_} \
        -D gallium-extra-hud=true \
-       -D gallium-nine=true \
-       -D gallium-opencl=icd \
+       -D gallium-mediafoundation=${_disabled_} \
        -D gallium-va=${_gallium_va} \
        -D gallium-vdpau=${_gallium_vdpau} \
-       -D gallium-xa=${_gallium_xa} \
        -D gbm=${_enabled_} \
        -D gles1=${_disabled_} \
        -D gles2=${_enabled_} \
@@ -483,11 +476,11 @@ build () {
        -D opengl=true \
        -D zstd=auto \
        -D valgrind=${_enabled_} $_legacy_switches $_dri_inc $_microsoft_clc $_xvmc $_layers $_optional_codecs $_android_libbacktrace $_intel_rt $_no_lto $_additional_meson_flags $_additional_meson_flags_64
-       
+
     meson configure _build64 --no-pager
 
     # quoted from https://www.mesa3d.org/meson.html
-    # Note: autotools automatically updated translation files (used by the DRI configuration tool) as part of the build process, Meson does not do this. 
+    # Note: autotools automatically updated translation files (used by the DRI configuration tool) as part of the build process, Meson does not do this.
     # Instead, you will need do this:
     if ( cd "$srcdir/$_mesa_srcdir" && ! git merge-base --is-ancestor 2ef983dca61b549a9242afd9008200b231a26e90 HEAD ); then
       ninja $NINJAFLAGS -C _build64 xmlpool-pot xmlpool-update-po xmlpool-gmo
@@ -512,7 +505,8 @@ build () {
         export CXX="g++ -m32"
       fi
       export PKG_CONFIG=/usr/bin/i686-pc-linux-gnu-pkg-config
-
+      # Fix for NVK
+      export TARGET=i686-unknown-linux-gnu
       arch-meson $_mesa_srcdir _build32 \
           --cross-file lib32 \
           --native-file llvm32.native \
@@ -525,11 +519,9 @@ build () {
           -D vulkan-drivers=${_vulkan_drivers} \
           -D egl=${_enabled_} \
           -D gallium-extra-hud=true \
-          -D gallium-nine=true \
-          -D gallium-opencl=${_disabled_} \
+	  -D gallium-mediafoundation=${_disabled_} \
           -D gallium-va=${_gallium_va} \
           -D gallium-vdpau=${_gallium_vdpau} \
-          -D gallium-xa=${_gallium_xa} \
           -D gbm=${_enabled_} \
           -D gles1=${_disabled_} \
           -D gles2=${_enabled_} \
@@ -542,11 +534,11 @@ build () {
           -D shared-glapi=${_enabled_} \
           -D zstd=auto \
           -D valgrind=${_disabled_} $_legacy_switches $_dri_inc $_microsoft_clc $_xvmc $_layers $_optional_codecs $_android_libbacktrace $_intel_rt_32 $_intel_clc_32 $_no_lto $_additional_meson_flags $_additional_meson_flags_32
-       
+
       meson configure _build32 --no-pager
 
       # quoted from https://www.mesa3d.org/meson.html
-      # Note: autotools automatically updated translation files (used by the DRI configuration tool) as part of the build process, Meson does not do this. 
+      # Note: autotools automatically updated translation files (used by the DRI configuration tool) as part of the build process, Meson does not do this.
       # Instead, you will need do this:
       if ( cd "$srcdir/$_mesa_srcdir" && ! git merge-base --is-ancestor 2ef983dca61b549a9242afd9008200b231a26e90 HEAD ); then
         ninja $NINJAFLAGS -C _build32 xmlpool-pot xmlpool-update-po xmlpool-gmo
@@ -569,8 +561,6 @@ package_mesa-git() {
            'expat' 'libclc' 'libx11' 'spirv-tools' $_llvm)
 provides=(
     'vulkan-mesa-layers'
-    'opencl-clover-mesa'
-    'opencl-driver'
     'opengl-driver'
     'vulkan-driver'
     'vulkan-intel'
@@ -585,7 +575,6 @@ provides=(
 )
 conflicts=(
     'vulkan-mesa-layers'
-    'opencl-clover-mesa'
     'vulkan-intel'
     'vulkan-nouveau'
     'vulkan-radeon'
@@ -621,7 +610,7 @@ conflicts=(
 package_lib32-mesa-git() {
   depends=('lib32-libdrm' 'lib32-libxxf86vm' 'lib32-libxdamage' 'lib32-libxshmfence'
            'lib32-lm_sensors' 'lib32-libelf' 'lib32-wayland'
-           'lib32-libglvnd' 'lib32-libx11' 'spirv-tools' 'mesa' $_lib32_llvm)
+           'lib32-libglvnd' 'lib32-libx11' 'lib32-spirv-tools' 'mesa' $_lib32_llvm)
   provides=(lib32-mesa=$pkgver-$pkgrel lib32-vulkan-intel=$pkgver-$pkgrel lib32-vulkan-radeon=$pkgver-$pkgrel lib32-vulkan-nouveau=$pkgver-$pkgrel lib32-vulkan-mesa-layers=$pkgver-$pkgrel lib32-mesa-vulkan-layers=$pkgver-$pkgrel lib32-libva-mesa-driver=$pkgver-$pkgrel lib32-mesa-vdpau=$pkgver-$pkgrel lib32-opengl-driver lib32-vulkan-driver lib32-ati-dri lib32-intel-dri lib32-nouveau-dri lib32-mesa-dri lib32-mesa-libgl lib32-vulkan-swrast)
   conflicts=('lib32-mesa' 'lib32-vulkan-intel' 'lib32-vulkan-radeon' 'lib32-vulkan-nouveau' 'lib32-vulkan-mesa-layers' 'lib32-mesa-vulkan-layers' 'lib32-libva-mesa-driver' 'lib32-mesa-vdpau' 'lib32-vulkan-swrast')
 
@@ -663,5 +652,5 @@ package_lib32-mesa-git() {
     msg2 '#############################################################################################'
   fi
 }
- 
+
 trap exit_cleanup EXIT

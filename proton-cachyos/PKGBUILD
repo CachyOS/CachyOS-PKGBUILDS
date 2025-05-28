@@ -2,13 +2,13 @@
 # Maintainer: loathingkernel <loathingkernel _a_ gmail _d_ com>
 
 pkgname=proton-cachyos
-_srctag=9.0-20250307
+_srctag=10.0-20250520
 _commit=
 pkgver=${_srctag//-/.}
 _geckover=2.47.4
-_monover=9.3.1
-_xaliaver=0.4.5
-pkgrel=4
+_monover=10.0.0
+_xaliaver=0.4.6
+pkgrel=2
 epoch=1
 
 source=(
@@ -16,12 +16,7 @@ source=(
     https://dl.winehq.org/wine/wine-gecko/${_geckover}/wine-gecko-${_geckover}-x86{,_64}.tar.xz
     https://github.com/madewokherd/wine-mono/releases/download/wine-mono-${_monover}/wine-mono-${_monover}-x86.tar.xz
     https://github.com/madewokherd/xalia/releases/download/xalia-${_xaliaver}/xalia-${_xaliaver}-net48-mono.zip
-    0001-proton-fix-logic-error-that-caused-proton-to-hang-on.patch
-    0002-proton-replace-junk-wayland-enablement-code-with-ups.patch
-    0001-Revert-proton-wait-for-process-to-exit-when-run-thro.patch
-    0001-build-disable-wine-display-drivers-when-building.patch
-    0001-explorer-Enable-the-Wayland-driver.patch
-    0001-Revert-HACK-winegstreamer-Set-GST_GL_WINDOW-environm.patch
+    ffmpeg-0001-libavcodec-fix-Wint-conversion-in-vulkan.patch
 )
 noextract=(
     wine-gecko-${_geckover}-{x86,x86_64}.tar.xz
@@ -43,7 +38,7 @@ depends=(
   freetype2       lib32-freetype2
   gcc-libs        lib32-gcc-libs
   gettext         lib32-gettext
-  lapack          lib32-lapack
+  glib2           lib32-glib2
   libgudev        lib32-libgudev
   libpcap         lib32-libpcap
   libsoup         lib32-libsoup
@@ -54,9 +49,11 @@ depends=(
   libxrandr       lib32-libxrandr
   lzo             lib32-lzo
   python
+  python-six
   sdl2            lib32-sdl2
   speex           lib32-speex
   steam-native-runtime
+  unzip
 )
 depends+=(
   wayland         lib32-wayland
@@ -80,6 +77,7 @@ makedepends=(autoconf bison perl flex mingw-w64-gcc
   libva                 lib32-libva
   libxcomposite         lib32-libxcomposite
   libxinerama           lib32-libxinerama
+  libxml2-legacy
   libxxf86vm            lib32-libxxf86vm
   lld
   mesa                  lib32-mesa
@@ -89,16 +87,18 @@ makedepends=(autoconf bison perl flex mingw-w64-gcc
   nasm
   opencl-headers
   opencl-icd-loader     lib32-opencl-icd-loader
+  perl-json
   rsync
   rust                  lib32-rust-libs
   python
   python-pefile
+  python-setuptools-scm
   sdl2                  lib32-sdl2
-  unzip
   v4l-utils             lib32-v4l-utils
   vulkan-headers
   vulkan-icd-loader     lib32-vulkan-icd-loader
   wget
+  xorg-util-macros
 )
 makedepends+=(
   wayland-protocols
@@ -175,15 +175,7 @@ prepare() {
     git submodule update --init --filter=tree:0 --recursive
 
     ./patches/apply.sh
-    patch -Np1 -i "$srcdir"/0001-proton-fix-logic-error-that-caused-proton-to-hang-on.patch
-    patch -Np1 -i "$srcdir"/0002-proton-replace-junk-wayland-enablement-code-with-ups.patch
-    patch -Np1 -i "$srcdir"/0001-Revert-proton-wait-for-process-to-exit-when-run-thro.patch
-    patch -Np1 -i "$srcdir"/0001-build-disable-wine-display-drivers-when-building.patch
-
-    pushd wine
-        patch -Np1 -i "$srcdir"/0001-explorer-Enable-the-Wayland-driver.patch
-        patch -Np1 -i "$srcdir"/0001-Revert-HACK-winegstreamer-Set-GST_GL_WINDOW-environm.patch
-    popd
+    pushd ffmpeg; patch -Np1 -i "$srcdir"/ffmpeg-0001-libavcodec-fix-Wint-conversion-in-vulkan.patch; popd
 
     for rustlib in gst-plugins-rs; do
     pushd $rustlib
@@ -199,18 +191,10 @@ prepare() {
 build() {
     export PATH="$(pwd)/wrappers:$PATH"
 
-    cd build
-    ROOTLESS_CONTAINER="" \
-    ../proton-cachyos/configure.sh \
-        --container-engine="none" \
-        --proton-sdk-image="" \
-        --build-name="${pkgname}"
-
     local -a split=($CFLAGS)
     local -A flags
     for opt in "${split[@]}"; do flags["${opt%%=*}"]="${opt##*=}"; done
     local march="${flags["-march"]:-nocona}"
-    #local mtune="${flags["-mtune"]:-core-avx2}"
     local mtune="core-avx2"
 
     CFLAGS="-O2 -march=$march -mtune=$mtune -pipe -fno-semantic-interposition"
@@ -222,9 +206,13 @@ build() {
 
     export RUSTUP_TOOLCHAIN=stable
     export CARGO_HOME="${SRCDEST}"/proton-cargo
-    export WINEESYNC=0
-    export WINEFSYNC=0
-    export WINEDLLOVERRIDES="winex11.drv,winewayland.drv,winemenubuild=d;"
+
+    cd build
+    ROOTLESS_CONTAINER="" \
+    ../proton-cachyos/configure.sh \
+        --container-engine="none" \
+        --proton-sdk-image="" \
+        --build-name="${pkgname}"
 
     SUBJOBS=$([[ "$MAKEFLAGS" =~ -j\ *([1-9][0-9]*) ]] && echo "${BASH_REMATCH[1]}" || echo "$(nproc)") \
         make -j1 dist
@@ -240,50 +228,32 @@ package() {
     mkdir -p "$_compatdir/${pkgname}"
     rsync --delete -arx dist/* "$_compatdir/${pkgname}"
 
-    # For some unknown to me reason, 32bit vkd3d (not vkd3d-proton) always links
-    # to libgcc_s_dw2-1.dll no matter what linker options I tried.
-    # Copy the required dlls into the package, they will be copied later into the prefix
-    # by the patched proton script. Bundle them to not depend on mingw-w64-gcc being installed.
-    cp /usr/i686-w64-mingw32/bin/{libgcc_s_dw2-1.dll,libwinpthread-1.dll} \
-        "$_compatdir/${pkgname}"/files/lib/vkd3d/
-    cp /usr/x86_64-w64-mingw32/bin/{libgcc_s_seh-1.dll,libwinpthread-1.dll} \
-        "$_compatdir/${pkgname}"/files/lib64/vkd3d/
-
     mkdir -p "$pkgdir/usr/share/licenses/${pkgname}"
     mv "$_compatdir/${pkgname}"/LICENSE{,.OFL} \
         "$pkgdir/usr/share/licenses/${pkgname}"
 
     cd "$_compatdir/${pkgname}/files"
-    i686-w64-mingw32-strip --strip-unneeded \
-        $(find lib/wine \( -iname fakedlls -or -iname i386-windows \) -prune -false -or -iname "*.dll" -or -iname "*.exe")
-    x86_64-w64-mingw32-strip --strip-unneeded \
-        $(find lib64/wine \( -iname fakedlls -or -iname x86_64-windows \) -prune -false -or -iname "*.dll" -or -iname "*.exe")
 
     local _geckodir="share/wine/gecko/wine-gecko-${_geckover}"
-    i686-w64-mingw32-strip --strip-unneeded \
+    i686-w64-mingw32-strip --strip-debug \
         $(find "$_geckodir"-x86 -iname "*.dll" -or -iname "*.exe")
-    x86_64-w64-mingw32-strip --strip-unneeded \
+    x86_64-w64-mingw32-strip --strip-debug \
         $(find "$_geckodir"-x86_64 -iname "*.dll" -or -iname "*.exe")
 
     local _monodir="share/wine/mono/wine-mono-${_monover}"
-    i686-w64-mingw32-strip --strip-unneeded \
+    i686-w64-mingw32-strip --strip-debug \
         $(find "$_monodir"/lib/mono -iname "*.dll" -or -iname "*.exe")
-    i686-w64-mingw32-strip --strip-unneeded \
+    i686-w64-mingw32-strip --strip-debug \
         "$_monodir"/lib/x86/*.dll \
         $(find "$_monodir" -iname "*x86.dll" -or -iname "*x86.exe")
-    x86_64-w64-mingw32-strip --strip-unneeded \
+    x86_64-w64-mingw32-strip --strip-debug \
         "$_monodir"/lib/x86_64/*.dll \
         $(find "$_monodir" -iname "*x86_64.dll" -or -iname "*x86_64.exe")
 }
 
-b2sums=('18c40da4d5405b9d11ad0391e30b5395a83962e1aca5c2b4ed669de9453ae2119e3a120d6cadbed6ca2f408fc2e73429bad7d28ecb4564d77638d9308394b415'
+b2sums=('936f592a587aae9ac458162eafa42b8df3de2252cf483e9b1a2bd91cb7a63c68d3616fd65e913032ed6ee3c8820b13a9b56b6f4bc3213035f01c8a9996c0bfc4'
         '2a73c12585b502ae11188482cbc9fb1f45f95bfe4383a7615011104b132f4845f9813d01fb40277e1934fab5f1b35ab40b4f4a66a9967463dd1d666a666904e9'
         '62856a88266b4757602c0646e024f832974a93f03b9df253fd4895d4f11a41b435840ad8f7003ec85a0d8087dec15f2e096dbfb4b01ebe4d365521e48fd0c5c0'
-        '5f4c2a07355a3d394086467f1b0c45698cd83731a4137b59975abdeda2d564f44922a67b1bec111e4209c4fe74247486076e95dffc84d88b5b7a02774efd070b'
-        '5c3985080995a62c1c765244d430cea86cca82d187874a95d89b3fd9303c89a6944613ae5de7d31354053e5c91d2fc39842e57ee7866a87c529e9becc458ec49'
-        '783cd2a1dd7ca96b431d084924a4a77579ab70731da1ad0cf32491158ee85ec78e43429b6334dd1976a511910e64fb28792e38166735e2b8a5fdebc5614c0cce'
-        '65c69c53a54794aa67e3c469710d8271114f250646fa580dbb3398b669b70b1bfe8ca33ecb5219e97a17449e4c10c19f61b39db453646ad52e822b162657c180'
-        '270c6fe54f3f988b7a5477bf2affb9364d3900eb50f58aea5c688f32c1a66b6c957c6f7578582c78afaa8ef74b92aa980ad1fcc67be6687c45d52ce6b2eaa69b'
-        '375bdb818649b5e8f5e35362419869710d74f371e76f70a972b6127104930ca05c0d9660bc423d722bdc3425594b25f78d0c2d7e475b554243e44dc0f9edc9a7'
-        'cf36bf091c607b8d08d89462bc5a4f10bd0293258ca4ebd15ecbb433df33e8bb787018a164dfaf52e20c64fb5e8a150343e789b566b40c1205f69652d27ee60d'
-        '094007808c97c97008b4be4d2e3c24afe636d4af189e22e3e4fbc86e06ef280d580d696940d9356f03c7813c9238e7ef70ee512b9c7df2a6dcaa29bc1f6c2ff3')
+        'a7efb7e9e3c03a92f3fc2c66172a2597ab4febfbf23a98c20d9ba46c48f0b96f568b21ea61f43cfa0cbbad2557cfafd665b63f3115611f0df9dd75ab358ecf43'
+        '4d30eea9306392790677a4e19f7e416a387aaf10c4a7681aa8fcd94faf07be81a984b28ba1437428d7c215c5ecdbba70993091547068fbdc224e809c3f7abd85'
+        '0d8ecae210cf3e604bbc3b49b7cf0e535289fd1ed0e4b3a89e9658db37849050b66e3b3821c98bfe039d3926292eaeffa5c59f82ff3a7ee62fdcd5df93eb14df')

@@ -1,0 +1,38 @@
+From 66ea257d8ee78ca460e506165381937a40fb3b91 Mon Sep 17 00:00:00 2001
+From: Eric Naim <dnaim@cachyos.org>
+Date: Tue, 15 Apr 2025 19:33:27 +0800
+Subject: [PATCH] powerbuttond: Support gamescope-session-plus
+
+Signed-off-by: Eric Naim <dnaim@cachyos.org>
+---
+ Makefile                     | 4 ++--
+ steamos-powerbuttond.service | 2 +-
+ 2 files changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/Makefile b/Makefile
+index bc70634ac329..b5caf5a80a99 100644
+--- a/Makefile
++++ b/Makefile
+@@ -32,5 +32,5 @@ install: all LICENSE
+ 	install -D -m 644 steamos-powerbuttond.service $(DESTDIR)/usr/lib/systemd/user/steamos-powerbuttond.service
+ 	install -D -m 644 steamos-power-button.rules $(DESTDIR)/usr/lib/udev/rules.d/80-steamos-power-button.rules
+ 	install -D -m 644 steamos-power-button.hwdb $(DESTDIR)/usr/lib/udev/hwdb.d/80-steamos-power-button.hwdb
+-	install -d -m 755 $(DESTDIR)/usr/lib/systemd/user/gamescope-session.service.wants
+-	ln -s ../steamos-powerbuttond.service $(DESTDIR)/usr/lib/systemd/user/gamescope-session.service.wants/
++	install -d -m 755 $(DESTDIR)/usr/lib/systemd/user/gamescope-session-plus@steam.service.wants
++	ln -s ../steamos-powerbuttond.service $(DESTDIR)/usr/lib/systemd/user/gamescope-session-plus@steam.service.wants/
+diff --git a/steamos-powerbuttond.service b/steamos-powerbuttond.service
+index 478e3f46c323..1a17c593c440 100644
+--- a/steamos-powerbuttond.service
++++ b/steamos-powerbuttond.service
+@@ -1,6 +1,6 @@
+ [Unit]
+ Description=Power Button daemon for SteamOS
+-Requisite=gamescope-session.service
++Requisite=gamescope-session-plus@steam.service
+ 
+ [Service]
+ ExecStart=/usr/lib/hwsupport/steamos-powerbuttond
+-- 
+2.49.0
+

@@ -1,0 +1,22 @@
+# Maintainer: Peter Jung <ptr1337@cachyos.org>
+# Contributor: SoulHarsh007 <admin@soulharsh007.dev>
+
+pkgname=cachyos-plymouth-bootanimation
+_pkgname=plymouth-theme
+pkgver=2
+pkgrel=1
+groups=("cachyos")
+arch=("any")
+url="https://github.com/CachyOS/plymouth-theme.git#commit=29a5d7648fbe32ee4ea241919f14363be0a98903"
+license=("GPL")
+pkgdesc="CachyOS Bootanimation (new)"
+depends=("plymouth")
+optdepends=("plymouth-kcm: for KDE settings integration")
+source=(git+https://github.com/CachyOS/plymouth-theme.git)
+sha256sums=('SKIP')
+
+package() {
+  install -d "$pkgdir/usr/share/plymouth/themes"
+  cp -rf "${srcdir}/$_pkgname/cachyos-bootanimation" "${pkgdir}/usr/share/plymouth/themes/cachyos-bootanimation"
+#  install -Dm644 "${srcdir}/${pkgname}/LICENSE" "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE"
+}

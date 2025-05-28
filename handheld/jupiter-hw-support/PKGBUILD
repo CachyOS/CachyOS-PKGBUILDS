@@ -1,10 +1,8 @@
 # Maintainer: Peter Jung <admin@ptr1337.dev>
 
 pkgname=jupiter-hw-support
-_srctag=jupiter-20240919.2
-_srcver=${_srctag#jupiter-}
-pkgver=${_srcver//-/.}
-pkgrel=1
+pkgver=20250521.1
+pkgrel=2
 arch=('any')
 license=('MIT')
 depends=('python-evdev'
@@ -20,26 +18,27 @@ depends=('python-evdev'
 optdepends=('grub-steamos')
 makedepends=('rsync' 'git' 'openssh' 'xorg-xcursorgen')
 pkgdesc='CachyOS - Deckify Steam Deck HW Support'
-source=("git+https://gitlab.com/evlaV/jupiter-hw-support.git#tag=$_srctag"
-        "pythonhid.patch"
+source=("git+https://gitlab.com/evlaV/jupiter-hw-support.git#tag=jupiter-${pkgver}"
         "steamos-btrfs-automount.patch"
         "cachyos-automount.patch"
         "udev-automount-rules.patch"
         "priv-write.patch")
 #install="$pkgname.install"
 options=(!strip !debug)
-sha256sums=('43ce35e4c57f71e524018e672fda583df2f3f545f855ccf038fb94e47d6bccc4'
-            '05f7a3d1fcff857aad4e5a8dae400f6acbf32c7e505db347f441dd33a6601df4'
+sha256sums=('8d05a6608e4a31c8fc62a0fa74b808f0960160bc70ececbc00dcec861810ee53'
             'fe064240bf77dabfa4d161b10c33c82385a0ca22a49350e70ab9301b0e98dc7b'
             'c7db0e977fb0c3a1526b8482e349f73304fc6397d7337c48fe0c990bde64412c'
             'd6b5636eb09d2190b10eb665238c30960babba96424fc9768e36966495fa795e'
             'd3098f26eaa26d9eccfedeac792e47a03317bdd16b17ba03be0fbd1ed6621c5d')
 prepare() {
-  patch --directory=$pkgname --forward --strip=1 --input=../pythonhid.patch
-  patch --directory=$pkgname --forward --strip=1 --input=../steamos-btrfs-automount.patch
-  patch --directory=$pkgname --forward --strip=1 --input=../cachyos-automount.patch
-  patch --directory=$pkgname --forward --strip=1 --input=../udev-automount-rules.patch
-  patch --directory=$pkgname --forward --strip=1 --input=../priv-write.patch
+  cd "${pkgname}"
+  git revert -n c97d8aa369b4c377a17919eba7ae62fbf6b035ae
+  git revert -n 7d74ae6dd3ab70e5cd0808e57e31aeb270eb9a3f
+
+  patch --forward --strip=1 --input=../steamos-btrfs-automount.patch
+  patch --forward --strip=1 --input=../cachyos-automount.patch
+  patch --forward --strip=1 --input=../udev-automount-rules.patch
+  patch --forward --strip=1 --input=../priv-write.patch
 }
 
 package() {

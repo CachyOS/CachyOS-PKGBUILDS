@@ -1,0 +1,177 @@
+#!/bin/bash
+# -*- mode: sh; indent-tabs-mode: nil; sh-basic-offset: 4; -*-
+# vim: et sts=4 sw=4
+
+# Copyright © 2024 Igalia S.L.
+# Copyright © 2024 Valve Corporation.
+#
+# SPDX-License-Identifier: LGPL-2.1-or-later
+
+set -euo pipefail
+
+declare -r HELPER="${HELPER:-/usr/bin/steamos-polkit-helpers/steamos-wifi-set-backend-privileged}"
+declare -r NM_WIFI_BACKEND_CONF_FILE="/etc/NetworkManager/conf.d/99-valve-wifi-backend.conf"
+declare -r NM_DEFAULT_CONF_FILE="/usr/lib/NetworkManager/conf.d/10-steamos-defaults.conf"
+
+is_debug_enabled() {
+    if [[ -v DEBUG ]] && [[ "${DEBUG}" != "0" ]] && [[ "${DEBUG}" != "false" ]] ; then
+        return 0
+    else
+        return 1
+    fi
+}
+
+debug()              { if is_debug_enabled ; then echo >&2 "DEBUG: $*"; fi }
+info()               { echo "INFO: $*"; }
+warning()            { echo >&2 "WARNING: $*"; }
+error()              { echo >&2 "ERROR: $*"; }
+exit_with_warning()  { warning "$*"; exit 0; }
+exit_fail()          { error   "$*"; exit 1; }
+usage()              { echo >&2 "Usage: $(basename "$0") [--check] [iwd|wpa_supplicant]"; exit 1; }
+
+run_privileged() {
+  pkexec "${HELPER}" "$@"
+}
+
+debug_dump_config() {
+    if is_debug_enabled ; then
+
+        debug "contents of '${NM_DEFAULT_CONF_FILE}'"
+        # print contents to stderr with indent=2, excluding empty lines
+        sed -n '/^.*[[:alnum:]].*$/ s/^\(.*\)$/  \1/p' "${NM_DEFAULT_CONF_FILE}" >&2
+
+        if [[ -e "${NM_WIFI_BACKEND_CONF_FILE}" ]]; then
+            debug "contents of '${NM_WIFI_BACKEND_CONF_FILE}'"
+            sed -n '/^.*[[:alnum:]].*$/ s/^\(.*\)$/  \1/p' "${NM_WIFI_BACKEND_CONF_FILE}" >&2
+        fi
+
+        echo >&2 "/DEBUG"
+    fi
+}
+
+get_unit_status() {
+    local unit="$1"
+
+    local is_active="UNDEFINED"
+    is_active=$(systemctl is-active "${unit}" || true)
+    local is_failed="UNDEFINED"
+    is_failed=$(systemctl is-failed "${unit}" || true)
+
+    echo "{${is_active},${is_failed}}"
+}
+
+check_unit_status() {
+    local unit="$1"
+    local unit_status_expected="$2"
+
+    local unit_status="UNDEFINED"
+    unit_status=$(get_unit_status "${unit}")
+
+    if [[ "${unit_status}" != "${unit_status_expected}" ]] ; then
+        warning "systemd-unit '${unit}' status {is-active,is-failed} check failed:"
+        warning " - expected: ${unit_status_expected}"
+        warning " - detected: ${unit_status}"
+        return 1
+    else
+        debug "systemd-unit ${unit} status {is-active,is-failed} expected to be '${unit_status_expected}', and it is :-)"
+        return 0
+    fi
+}
+
+get_backend() {
+    if [[ -e "${NM_WIFI_BACKEND_CONF_FILE}" ]]; then
+        sed -n '/^wifi\.backend[ \t]*=/ s/^wifi\.backend[ \t]*=[ \t]*//p' "${NM_WIFI_BACKEND_CONF_FILE}"
+    elif [[ -e "${NM_DEFAULT_CONF_FILE}" ]]; then
+        sed -n '/^wifi\.backend[ \t]*=/ s/^wifi\.backend[ \t]*=[ \t]*//p' "${NM_DEFAULT_CONF_FILE}"
+    fi
+}
+
+if [[ $# -ne 1 ]]; then
+    usage
+fi
+
+debug_dump_config
+
+CURRENT_BACKEND=$(get_backend)
+
+case "${CURRENT_BACKEND}" in
+    "iwd"|"wpa_supplicant")
+        ;;
+    *)
+        exit_fail "'${NM_WIFI_BACKEND_CONF_FILE}' does not contain a valid/supported 'wifi.backend', detected: '${CURRENT_BACKEND}'"
+        ;;
+esac
+
+# special argument: --check
+if [[ "$1" == "--check" ]]; then
+    echo "${CURRENT_BACKEND}"
+    exit 0
+fi
+
+DESIRED_BACKEND="${1:-}"
+
+# check if already set to desired back-end
+if [[ "${CURRENT_BACKEND}" == "${DESIRED_BACKEND}" ]]; then
+    debug "'wifi.backend' in config file: " "$(get_backend)"
+    exit_with_warning "'wifi.backend' is currently set to '${DESIRED_BACKEND}' already, nothing to do"
+fi
+
+OTHER_BACKEND="UNDEFINED"
+case "${DESIRED_BACKEND}" in
+    "iwd")
+        OTHER_BACKEND="wpa_supplicant"
+        ;;
+    "wpa_supplicant")
+        OTHER_BACKEND="iwd"
+        ;;
+    *)
+        exit_fail "unsupported/unknown back-end: '${DESIRED_BACKEND}'"
+        ;;
+esac
+
+case "${DESIRED_BACKEND}" in
+    "iwd"|"wpa_supplicant")
+        info "switching back-end to '${DESIRED_BACKEND}'"
+        run_privileged write_config "${DESIRED_BACKEND}"
+        debug_dump_config
+
+        info "stopping old back-end service and restarting NetworkManager,"
+        echo "      networking will be disrupted (hopefully only momentary blip, max 10 seconds)..."
+        sleep 0.5s
+        run_privileged restart_units "${OTHER_BACKEND}"
+        info "restarting done"
+
+        # status: final checks
+        sleeping_seconds=2
+        info "checking status of services ..."
+        echo "      (sleeping for ${sleeping_seconds} seconds to catch-up with state)"
+        sleep "${sleeping_seconds}s"
+        unit_failed=false
+        if is_debug_enabled ; then
+            for svc in "${OTHER_BACKEND}" "${DESIRED_BACKEND}" NetworkManager; do
+                debug "status of services (backends old and new + NetworkManager): ${svc}"
+                echo >&2 "----------"
+                (systemctl status "${svc}" | sed 's/^/  /' >&2) || true
+                echo >&2 "----------"
+                echo >&2
+            done
+        fi
+        # status DESIRED_BACKEND
+        if ! check_unit_status "${DESIRED_BACKEND}" "{active,active}" ; then
+            unit_failed=true
+        fi
+        # status OTHER_BACKEND
+        if ! check_unit_status "${OTHER_BACKEND}" "{inactive,inactive}" ; then
+            unit_failed=true
+        fi
+        # status summary
+        if "${unit_failed:-UNDEFINED}"; then
+            exit_fail "Problem detected: unit status not as expected, check messages above"
+        else
+            info "status OK"
+        fi
+        ;;
+    *)
+        exit_fail "unsupported/unknown back-end: '${DESIRED_BACKEND}'"
+        ;;
+esac

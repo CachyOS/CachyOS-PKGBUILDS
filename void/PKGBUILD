@@ -1,240 +1,95 @@
 # Maintainer: Darkest Medium <darkestmedium@gmail.com>
 # Maintainer: Vladislav Nepogodin (vnepogodin) <nepogodin.vlad@gmail.com>
 
-# Package reference:
-#  https://aur.archlinux.org/cgit/aur.git/tree/PKGBUILD?h=visual-studio-code-bin
-#  https://aur.archlinux.org/cgit/aur.git/tree/PKGBUILD?h=vscodium-git
-#  https://aur.archlinux.org/cgit/aur.git/tree/PKGBUILD?h=code-git
-
 pkgname=void
-_commit=85c2c80db071b183592d5463d33ac97c5e1c39eb # lets assume its latest release which is 1.94.0
-pkgver=1.94.0
+epoch=1 # Version scheme is different from prebuild source
+pkgver=1.3.10
 pkgrel=1
-pkgdesc="Void is the open-source Cursor alternative."
+pkgdesc="The open-source Cursor alternative"
 url="https://voideditor.com/"
 arch=('x86_64')
 license=("MIT")
-options=(!debug) # probably will be quite big
-# lsof: needed for terminal splitting, see https://github.com/Microsoft/vscode/issues/62991
-# xdg-utils: needed for opening web links with xdg-open
-depends=(
-    libx11
-    libxkbfile
-    libsecret
-    gnupg
-    gtk3
-    nss
-    gcc-libs
-    libnotify
-    libxss
-    glibc
-    lsof
-    shared-mime-info
-    xdg-utils
-    alsa-lib
+options=('!strip' '!debug')
+_elnum=34 # 35+ will fail
+depends=( electron${_elnum} ripgrep xdg-utils # replacements
+  libx11
+  libxkbfile
+  libsecret
+  gnupg
+  libnotify
+  libxss
+  shared-mime-info
+  alsa-lib
 )
 optdepends=(
-    'glib2: Needed for move to trash functionality'
-    'gvfs: For move to trash functionality'
-    'libdbusmenu-glib: For KDE global menu'
-    'org.freedesktop.secrets: Needed for settings sync'
-    # See https://github.com/MicrosoftDocs/live-share/issues/4650
-    'icu69: Needed for live share'
+  'glib2: Move to trash functionality'
+  'gvfs: Move to trash functionality'
+  'libdbusmenu-glib: KDE global menu'
+  'lsof: terminal splitting' # https://github.com/Microsoft/vscode/issues/62991
+  'org.freedesktop.secrets: Settings sync'
 )
 makedepends=(
-    'nodejs'
-    'npm'
-    'pkg-config'
-    'python'
+  git
+  npm
+  nodejs-lts-iron # see .nvmrc
+  pkgconf
+  python
 )
-source=(
-    "git+https://github.com/voideditor/void.git#commit=${_commit}"
-)
-sha256sums=('70345de6d083542fdddada5a58b9e3adf64ad197b2b4053c05385faf298bf50f')
+source=("git+https://github.com/voideditor/void.git#commit=5cab7e61e5ebf95fc24eec6b4213f035f85eb857")
+# https://github.com/voideditor/void/commit/5cab7e61e5ebf95fc24eec6b4213f035f85eb857
 
-###############################################################################
-# Even though we don't officially support other archs, let's allow the
-# user to use this PKGBUILD to compile the package for their architecture.
-case "$CARCH" in
-    i686)
-        _vscode_arch=ia32
-        _electron_arch=ia32
-        ;;
-    x86_64)
-        _vscode_arch=x64
-        _electron_arch=x64
-        ;;
-    armv7h)
-        _vscode_arch=arm
-        _electron_arch=armv7l
-        ;;
-    riscv64)
-        _vscode_arch=riscv64
-        _electron_arch=riscv64
-        ;;
-    *)
-        # Needed for mksrcinfo
-        _vscode_arch=DUMMY
-        _electron_arch=DUMMY
-        ;;
-esac
-
-
-_set_meta_info() {
-    sed 's/@@NAME_LONG@@/Void/g' "$1" |\
-    sed 's/@@NAME_SHORT@@/Void/g' |\
-    sed 's/@@NAME@@/void/g' |\
-    sed 's#@@EXEC@@#/usr/bin/void#g' |\
-    sed 's/@@ICON@@/void/g' |\
-    sed 's/@@URLPROTOCOL@@/vscode/g'
-}
-
-_pkg() {
-    if [ "${CARCH}" = "aarch64" ]; then
-        echo 'VSCode-linux-arm64'
-    elif [ "${CARCH}" = "armv7h" ]; then
-        echo 'VSCode-linux-armhf'
-    elif [ "${CARCH}" = "i686" ]; then
-        echo 'VSCode-linux-ia32'
-    else
-        echo 'VSCode-linux-x64'
-    fi
-}
-
-prepare() {
-# Generate our own entries for now - we need to align it like this cause it will output the tabs too
-echo '[Desktop Entry]
-Name=@@NAME_LONG@@
-Comment=Code Editing. Redefined.
-GenericName=Text Editor
-Exec=@@EXEC@@ %F
-Icon=@@ICON@@
-Type=Application
-StartupNotify=false
-StartupWMClass=@@NAME_SHORT@@
-Categories=TextEditor;Development;IDE;
-MimeType=application/x-@@NAME@@-workspace;
-Actions=new-empty-window;
-Keywords=vscode;
-
-[Desktop Action new-empty-window]
-Name=New Empty Window
-Name[de]=Neues leeres Fenster
-Name[es]=Nueva ventana vacía
-Name[fr]=Nouvelle fenêtre vide
-Name[it]=Nuova finestra vuota
-Name[ja]=新しい空のウィンドウ
-Name[ko]=새 빈 창
-Name[ru]=Новое пустое окно
-Name[zh_CN]=新建空窗口
-Name[zh_TW]=開新空視窗
-Exec=@@EXEC@@ --new-window %F
-Icon=@@ICON@@' | tee "${srcdir}/${pkgname}.desktop.in"
-
-echo '[Desktop Entry]
-Name=@@NAME_LONG@@ - URL Handler
-Comment=Code Editing. Redefined.
-GenericName=Text Editor
-Exec=@@EXEC@@ --open-url %U
-Icon=@@ICON@@
-Type=Application
-NoDisplay=true
-StartupNotify=true
-Categories=Utility;TextEditor;Development;IDE;
-MimeType=x-scheme-handler/@@URLPROTOCOL@@;
-Keywords=vscode;' | tee "${srcdir}/${pkgname}-url-handler.desktop.in"
-
-echo '<?xml version="1.0" encoding="utf-8"?>
-<mime-info xmlns="http://www.freedesktop.org/standards/shared-mime-info">
-  <mime-type type="application/x-@@NAME@@-workspace">
-    <comment>@@NAME_LONG@@ Workspace</comment>
-    <glob pattern="*.code-workspace"/>
-  </mime-type>
-</mime-info>' | tee "${srcdir}/${pkgname}-workspace.xml.in"
-
-_set_meta_info "${srcdir}/${pkgname}.desktop.in" > "${srcdir}/${pkgname}.desktop"
-_set_meta_info "${srcdir}/${pkgname}-url-handler.desktop.in" > "${srcdir}/${pkgname}-url-handler.desktop"
-_set_meta_info "${srcdir}/${pkgname}-workspace.xml.in" > "${srcdir}/${pkgname}-workspace.xml"
-
-# Generate launcher
-echo '#!/bin/bash
-
-XDG_CONFIG_HOME=${XDG_CONFIG_HOME:-~/.config}
-
-# Allow users to override command-line options
-if [[ -f $XDG_CONFIG_HOME/void-flags.conf ]]; then
-   CODE_USER_FLAGS="$(sed 's/#.*//' $XDG_CONFIG_HOME/void-flags.conf | tr '\n' ' ')"
-fi
-
-# Launch
-exec /opt/void/bin/void "$@" $CODE_USER_FLAGS' | tee "${srcdir}/${pkgname}/${pkgname}"
-
-}
+sha256sums=('df6e3859b83af81775098f50cdb2f99706a39f65cc2cc3913c918de91fba1085')
 
 build() {
-    cd "${srcdir}/${pkgname}"
-
-    # Remove old build - do we need this?
-    if [ -d "vscode" ]; then
-        rm -rf vscode* VSCode*
-    fi
-    # Clean npm cache and remove existing node_modules
-    npm cache clean --force
-    rm -rf node_modules package-lock.json
-
-    # Install dependencies with legacy peer deps flag to handle dependency conflicts
-    npm install --arch=$_vscode_arch --legacy-peer-deps
-    npm install ajv@latest ajv-keywords@latest --legacy-peer-deps
-
-    # Build react because it fails for some reason
-    npm run buildreact
-
-    # Bundle it
-    npm run gulp vscode-linux-$_vscode_arch
+  # export NODE_ENV=production cause build failure
+  # Do not tain user dir by cache
+  export XDG_CACHE_HOME="${srcdir}/xdgcache" HOME="${srcdir}/home"
+  cd "${pkgname}"
+  # Clean npm cache and remove existing node_modules
+  npm cache clean --force
+  rm -rf node_modules
+  # Set version of electron
+  _elver=$(cat /usr/lib/electron${_elnum}/version)
+  echo Replacing $(rg -m 1 '"electron":\s*"[0-9]+' package.json) with ${_elver}
+  echo 'Fix if major version is wrong.'
+  npm pkg set devDependencies.electron=${_elver}
+  # Install dependencies with legacy peer deps flag to handle dependency conflicts
+  npm install --legacy-peer-deps
+  # Build react because it fails for some reason
+  npm run buildreact
+  # Bundle it
+  npm run gulp vscode-linux-x64
 }
 
 package() {
-    _pkg=VSCode-linux-x64
-    if [ "${CARCH}" = "aarch64" ]; then
-        _pkg=VSCode-linux-arm64
-    fi
-    if [ "${CARCH}" = "armv7h" ]; then
-        _pkg=VSCode-linux-armhf
-    fi
-    if [ "${CARCH}" = "i686" ]; then
-        _pkg=VSCode-linux-ia32
-    fi
-
-    # Create directories
-  install -d "${pkgdir}/opt/${pkgname}"
-  install -d "${pkgdir}/usr/bin"
-  install -d "${pkgdir}/usr/share/applications"
-  install -d "${pkgdir}/usr/share/icons"
+  _pkg=VSCode-linux-x64
+  _app=/usr/share/void/resources/app
+  # Licenses
   install -d "${pkgdir}/usr/share/licenses/${pkgname}"
-  install -d "${pkgdir}/usr/share/mime/packages"
-
-    # Install license files
-  install -m644 "${srcdir}/$(_pkg)/resources/app/LICENSE.txt" "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE.txt"
-    install -m644 "${srcdir}/$(_pkg)/resources/app/ThirdPartyNotices.txt" "${pkgdir}/usr/share/licenses/${pkgname}/ThirdPartyNotices.txt"
-
-    # Install appdata and desktop files
-  install -m644 "${srcdir}/$(_pkg)/resources/app/resources/linux/code.png" "${pkgdir}/usr/share/icons/${pkgname}.png"
-  install -m644 "${srcdir}/${pkgname}.desktop" "${pkgdir}/usr/share/applications/${pkgname}.desktop"
-  install -m644 "${srcdir}/${pkgname}-url-handler.desktop" "${pkgdir}/usr/share/applications/${pkgname}-url-handler.desktop"
-  install -m644 "${srcdir}/${pkgname}-workspace.xml" "${pkgdir}/usr/share/mime/packages/${pkgname}-workspace.xml"
-
-    # Install bash and zsh completions
-  install -Dm 644 "${srcdir}/$(_pkg)/resources/completions/bash/${pkgname}" "${pkgdir}/usr/share/bash-completion/completions/${pkgname}"
-  install -Dm 644 "${srcdir}/$(_pkg)/resources/completions/zsh/_${pkgname}" "${pkgdir}/usr/share/zsh/site-functions/_${pkgname}"
-
-    # Install app files and binaries
-  cp -r "${srcdir}/$(_pkg)/"* "${pkgdir}/opt/${pkgname}"
-
-  # Install launcher
-  cp "${srcdir}/${pkgname}/${pkgname}" "${pkgdir}/usr/bin/${pkgname}"
-    # ln -sf "${pkgdir}/opt/${pkgname}/bin/code-oss" "${pkgdir}/usr/bin/${pkgname}"
-
-    # Permissions for executable files
-    chmod +x "${pkgdir}/usr/bin/${pkgname}"
-    chmod +x "${pkgdir}/opt/${pkgname}/bin/${pkgname}"
+  ln -svf "${_app}/LICENSE.txt" "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE"
+  ln -svf "${_app}/ThirdPartyNotices.txt" "${pkgdir}/usr/share/licenses/${pkgname}/"
+  # appdata and desktop files
+  install -Dm644 "${_pkg}/resources/app/resources/linux/code.png" "${pkgdir}/usr/share/icons/${pkgname}.png"
+  mkdir -p "${pkgdir}/usr/share/"{applications,mime/packages}
+  # todo cleanup
+  sed -e s/@@NAME@@/void/ -e s/@@EXEC@@/void/g -e s/@@ICON@@/void/g -e s/@@NAME_SHORT@@/Void/g -e s/@@NAME_LONG@@/Void/g \
+    void/resources/linux/code.desktop > "${pkgdir}/usr/share/applications/void.desktop"
+  sed -e s/@@NAME_LONG@@/Void/ -e s/@@EXEC@@/void/ -e s/@@ICON@@/void/ -e s/@@URLPROTOCOL@@/vscode/ \
+    void/resources/linux/code-url-handler.desktop > "${pkgdir}/usr/share/applications/void-url-handler.desktop"
+  sed -e s/@@NAME@@/void/ -e s/@@NAME_LONG@@/Void/g \
+    void/resources/linux/code-workspace.xml > "${pkgdir}/usr/share/mime/packages/void-workspace.xml"
+  # shell completions
+  install -Dm644 "${_pkg}/resources/completions/bash/${pkgname}" "${pkgdir}/usr/share/bash-completion/completions/${pkgname}"
+  install -Dm644 "${_pkg}/resources/completions/zsh/_${pkgname}" "${pkgdir}/usr/share/zsh/site-functions/_${pkgname}"
+  # launcher
+  sed -e "s|exec /usr|ELECTRON_RUN_AS_NODE=1 exec /usr|" \
+      -e "s|flags=()|flags=(${_app}/out/cli.js --app=${_app})|" \
+      /usr/bin/electron${_elnum} > run.sh
+  install -Dm755 run.sh "${pkgdir}/usr/bin/void"
+  # Installs editor on /usr/share for compability with void-bin
+  install -d "${pkgdir}/usr/share/void"
+  cp -r --reflink=auto "${_pkg}/resources" "${pkgdir}/usr/share/void/resources"
+  # Use system-wide tools
+  ln -svf /usr/bin/rg "${pkgdir}${_app}"/node_modules/@vscode/ripgrep/bin/rg
+  ln -svf /usr/bin/xdg-open "${pkgdir}${_app}"/node_modules/open/xdg-open
 }

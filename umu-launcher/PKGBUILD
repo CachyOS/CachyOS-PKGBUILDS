@@ -1,0 +1,104 @@
+# Maintainer: Peter Jung <ptr1337@archlinux.org>
+# Contributor: loathingkernel <loathingkernel _a_ gmail _d_ com>
+
+pkgname=umu-launcher
+pkgver=1.2.6
+pkgrel=3
+pkgdesc="This is the Unified Launcher for Windows Games on Linux, to run Proton with fixes outside of Steam"
+arch=('x86_64')
+url="https://github.com/Open-Wine-Components/umu-launcher"
+license=('GPL-3.0-only')
+depends=(
+  bash
+  desktop-file-utils
+  diffutils
+  hicolor-icon-theme
+  curl
+  dbus
+  freetype2
+  gdk-pixbuf2
+  ttf-font
+  zenity
+  lsb-release
+  nss
+  usbutils
+  xorg-xrandr
+  vulkan-driver
+  vulkan-icd-loader
+  lsof
+  python
+  xdg-user-dirs
+  glibc
+  libxcrypt
+  libxcrypt-compat
+  gcc-libs
+  python-xlib
+  python-xxhash
+  python-pyzstd
+  python-cbor2
+  python-urllib3
+)
+depends_x86_64=(
+  lib32-glibc
+  lib32-libxcrypt
+  lib32-libxcrypt-compat
+  lib32-libgl
+  lib32-gcc-libs
+  lib32-libx11
+  lib32-libxss
+  lib32-alsa-plugins
+  lib32-libgpg-error
+  lib32-nss
+  lib32-vulkan-driver
+  lib32-vulkan-icd-loader
+)
+makedepends=(
+  cargo
+  git
+  scdoc
+  python-build
+  python-installer
+  python-hatchling
+  python-maturin
+  python-pip
+)
+optdepends=(
+  'python-truststore: Verify certificates using OS trust stores'
+)
+source=(
+    "git+https://github.com/Open-Wine-Components/umu-launcher.git#tag=$pkgver"
+    "https://patch-diff.githubusercontent.com/raw/Open-Wine-Components/umu-launcher/pull/427.patch"
+    "https://patch-diff.githubusercontent.com/raw/Open-Wine-Components/umu-launcher/pull/429.patch"
+    "https://patch-diff.githubusercontent.com/raw/Open-Wine-Components/umu-launcher/pull/434.patch"
+)
+sha256sums=('15044c5546b80ef16ad0ef7eb192ccc76258063f273bcc4f2a2f1b35d7113169'
+            '715fc08c0ff2e01e0638b4a1fb499139389c0ccadf6c8054ff5c3e0b65731f28'
+            '4f0c9f1dc78d59b9fd5d6f7c295b4d6d45d28c691d1182f4934653c8cff3fdb2'
+            '38dd154d271df3c75072a6ff33f1ec5f6ab657899bdfe871d4247a75ab5d943a')
+
+prepare() {
+  cd "$srcdir"/umu-launcher
+
+  patch -Np1 -i "$srcdir/427.patch"
+  patch -Np1 -i "$srcdir/429.patch"
+  patch -Np1 -i "$srcdir/434.patch"
+
+  export RUSTUP_TOOLCHAIN=stable
+  export CARGO_HOME="${srcdir}"/umu-cargo
+  cargo update
+  cargo fetch --locked --target "$(rustc -vV | sed -n 's/host: //p')"
+}
+
+build() {
+  cd "$srcdir"/umu-launcher
+  export RUSTUP_TOOLCHAIN=stable
+  export CARGO_HOME="${srcdir}"/umu-cargo
+  ./configure.sh --prefix=/usr --use-system-pyzstd --use-system-urllib
+  make
+}
+
+package() {
+  cd "$srcdir"/umu-launcher
+  make DESTDIR="$pkgdir" install
+}
+

@@ -1,55 +1,71 @@
 #!/usr/bin/env bash
-
-if [ "$(id -u)" -ne 0 ]; then
-  echo "Error: This script must be run with root privileges."
-  exit 1
-fi
-
 file_path="/sys/kernel/mm/ksm/run"
 conf_path="/etc/tmpfiles.d/ksm.conf"
 save="y"
 
+die() {
+    echo "$@" >&2
+    exit 1
+}
+
 if [ "$#" -eq 0 ]; then
-  echo "Usage: $0 [--unsave|-u] {--enable|-e|--disable|-d}"
-  echo "  --enable , -e :  Enable KSM"
-  echo "  --disable, -d : Disable KSM"
-  echo "  --unsave, -u : Do not save choice to config files"
-  exit 1
+    die "$(cat << EOF
+Usage: $0 [--unsave|-u] {--enable|-e|--disable|-d|--status|-s}
+  --enable,  -e :  Enable KSM
+  --disable, -d :  Disable KSM
+  --status,  -s :  Print the current KSM status
+  --unsave,  -u :  Do not save choice to config files
+EOF
+)"
 fi
 
 while [[ "$#" -gt 0 ]]; do
     case "$1" in
-      --enable | -e)
-        new_state="1"
-        shift
-        ;;
-      --disable | -d)
-        new_state="0"
-        shift
-        ;;
-      -u | --unsave)
-        unset save
-        shift
-        ;;
-      *)
-        echo "Error: Invalid argument. Use --enable, -e, --disable, or -d." >&2
-        exit 1
-        ;;
+        --enable | -e)
+            new_state="1"
+            shift
+            ;;
+        --disable | -d)
+            new_state="0"
+            shift
+            ;;
+        --status | -s)
+            status="Unknown KSM state"
+
+            case "$(cat "$file_path")" in
+                0) status="KSM disabled, already merged tables kept" ;;
+                1) status="KSM enabled and working" ;;
+                2) status="KSM disabled, already merged tables unmerged" ;;
+                *) ;;
+            esac
+
+            echo "$status"
+            exit 0
+            ;;
+        -u | --unsave)
+            unset save
+            shift
+            ;;
+        *)
+            die "Error: Invalid argument. Use --enable, -e, --disable, --status, -s or -d."
+            ;;
     esac
 done
 
-if [ -z "$new_state" ]; then
-    echo "Error: Missing action. Use --enable, -e, --disable, or -d." >&2
-    exit 1
+if [ "$(id -u)" -ne 0 ]; then
+    die "Error: This script must be run with root privileges."
 fi
 
-if [ "$new_state" -gt 0 ]; then
+if [ -z "$new_state" ]; then
+    die "Error: Missing action. Use --enable, -e, --disable, or -d." >&2
+fi
+
+if ((new_state > 0)); then
     echo "Enabling Kernel Samepage Merging..."
     echo "1" > "$file_path"
 else
     echo "Disabling Kernel Samepage Merging..."
     echo "2" > "$file_path"
-
 fi
 
 if [ -n "$save" ]; then

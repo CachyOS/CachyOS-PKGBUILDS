@@ -1,0 +1,118 @@
+# Maintainer: Maxime Gauduin <alucryd@archlinux.org>
+# Maintainer: Giancarlo Razzolini <grazzolini@archlinux.org>
+# Contributor: Samuel "scrufulufugus" Monson <smonson@irbash.net>
+# Contributor: PedroHLC <root@pedrohlc.com>
+
+pkgname=gamescope
+pkgver=3.16.10
+pkgrel=2
+pkgdesc='SteamOS session compositing window manager'
+arch=(x86_64)
+url=https://github.com/ValveSoftware/gamescope
+license=(
+  BSD-2-Clause
+  BSD-3-Clause
+  LicenseRef-Reshade
+)
+depends=(
+  gcc-libs
+  glibc
+  lcms2
+  libavif
+  libcap.so
+  libdecor
+  libdrm
+  libei
+  libinput
+  libpipewire-0.3.so
+  libx11
+  libxcb
+  libxcomposite
+  libxcursor
+  libxdamage
+  libxext
+  libxfixes
+  libxi
+  libxkbcommon.so
+  libxmu
+  libxrender
+  libxres
+  libxtst
+  libxxf86vm
+  luajit
+  pixman
+  sdl2
+  seatd
+  systemd-libs
+  vulkan-icd-loader
+  wayland
+  xcb-util-errors
+  xcb-util-wm
+  xorg-server-xwayland
+)
+makedepends=(
+  benchmark
+  cmake
+  git
+  glslang
+  meson
+  ninja
+  vulkan-headers
+  wayland-protocols
+)
+replaces=('gamescope-plus')
+source=(
+  git+https://github.com/ValveSoftware/gamescope.git#tag=${pkgver}
+  git+https://gitlab.freedesktop.org/emersion/libdisplay-info.git
+  git+https://gitlab.freedesktop.org/emersion/libliftoff.git
+  git+https://github.com/ValveSoftware/openvr.git
+  git+https://github.com/Joshua-Ashton/reshade.git
+  git+https://github.com/KhronosGroup/SPIRV-Headers.git
+  git+https://github.com/Joshua-Ashton/vkroots.git
+  git+https://github.com/Joshua-Ashton/wlroots.git
+  https://github.com/ValveSoftware/openvr/pull/1890.patch
+)
+b2sums=('074ea219d2bc4532027fbc2d86854cce35530fe7c0477afdd2325f4f49dc952ec987221a8de56209d251a3f25b2be3fb1c693232f6a3c3d1d6ae2a1559997cae'
+        'SKIP'
+        'SKIP'
+        'SKIP'
+        'SKIP'
+        'SKIP'
+        'SKIP'
+        'SKIP'
+        'ca715d31473649b6e342d75f44c8cf22cb4c303d546718085a18f00afa2e32532f478261c8c150bd0799005b6742a993575c1914575f5da39ae551315f8cac31')
+
+prepare() {
+  cd gamescope
+
+  meson subprojects download
+
+  for submodule in src/reshade subprojects/{libdisplay-info,libliftoff,openvr,vkroots,wlroots} thirdparty/SPIRV-Headers; do
+    git submodule init ${submodule}
+    git config submodule.${submodule}.url ../${submodule##*/}
+  done
+  git -c protocol.file.allow=always submodule update
+
+  cd subprojects/openvr
+  patch -Np1 -i ${srcdir}/1890.patch
+}
+
+pkgver() {
+  cd gamescope
+  git describe --tags | sed 's/-//'
+}
+
+build() {
+  arch-meson gamescope build \
+    -Dforce_fallback_for=glm,stb,libdisplay-info,libliftoff,vkroots,wlroots \
+    -Dpipewire=enabled
+  meson compile -C build
+}
+
+package() {
+  DESTDIR="${pkgdir}" meson install -C build \
+    --skip-subprojects
+  install -Dm 644 gamescope/LICENSE -t "${pkgdir}"/usr/share/licenses/gamescope/
+}
+
+# vim: ts=2 sw=2 et:
