@@ -2,7 +2,7 @@
 
 pkgname=cachyos-hello
 _pkgname=CachyOS-Welcome
-pkgver=0.17.0
+pkgver=0.17.2
 pkgrel=1
 pkgdesc='Welcome screen for CachyOS'
 arch=('x86_64')
@@ -18,20 +18,19 @@ depends=(
 makedepends=(
   cargo
   clang
-  clang
   git
   lld
   llvm
   meson
 )
-source=("${pkgname}-${pkgver}.tar.gz::$url/archive/v$pkgver.tar.gz")
-sha512sums=('62b699c65919e688966a7d9687b347a4614b8f166fed7903c50966e2c5404bfdcba1fe46706408fb42cd9eab6e33767c0e8da2bb6cc3efb611989720cca08a3c')
-provides=('cachyos-hello')
-conflicts=('cachyos-hello')
-options=(strip)
+source=("${pkgname}::git+$url.git#tag=v${pkgver}?signed")
+sha512sums=('acfa97e6da3f8cbd5e5185ad36352936543cae0d81e19e73778438e6a409fdae9a69fbeac2ce8f7f200a14f2084ac19513641f346aa6e677febbf48038e8d1a5')
+validpgpkeys=(
+  'B1B70BB1CD56047DEF31DE2EB62C3D10C54D5DA9'  # Vladislav Nepogodin <nepogodin.vlad@gmail.com>
+)
 
 build() {
-  cd "${srcdir}/${_pkgname}-${pkgver}"
+  cd "${srcdir}/${pkgname}"
 
   # Compile with clang
   export AR=llvm-ar
@@ -47,7 +46,7 @@ build() {
 }
 
 package() {
-  cd "${srcdir}/${_pkgname}-${pkgver}"/build
+  cd "${srcdir}/${pkgname}"/build
 
   # Compile with clang
   export AR=llvm-ar
