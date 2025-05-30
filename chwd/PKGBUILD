@@ -2,7 +2,7 @@
 # Contributor: Vasiliy Stelmachenok <ventureo@yandex.ru>
 
 pkgname=chwd
-pkgver=1.12.6
+pkgver=1.12.7
 pkgrel=1
 pkgdesc="CachyOS Hardware Detection Tool"
 arch=(x86_64)
@@ -14,11 +14,14 @@ provides=('chwd-db')
 replaces=('chwd-db')
 conflicts=('chwd-db')
 groups=('cachyos')
-source=("chwd-$pkgver.tar.gz::$url/archive/$pkgver.tar.gz")
-sha256sums=('62f2f46065c933d7d7ac835efb19a660dc4745d55f1eba4ea18630fb3e2795c7')
+source=("chwd::git+$url.git#tag=${pkgver}?signed")
+sha256sums=('e5ae1f82fa8800750dd3363bb028d09546333b2f159a68fab91925873f332f98')
+validpgpkeys=(
+  'B1B70BB1CD56047DEF31DE2EB62C3D10C54D5DA9'  # Vladislav Nepogodin <nepogodin.vlad@gmail.com>
+)
 
 prepare() {
-  cd "$srcdir/$pkgname-$pkgver"
+  cd "$srcdir/$pkgname"
 
   cargo fetch --locked --target "$CARCH-unknown-linux-gnu"
 
@@ -27,7 +30,7 @@ prepare() {
 }
 
 build() {
-  cd "$srcdir/$pkgname-$pkgver"
+  cd "$srcdir/$pkgname"
 
   # Compile with clang
   export AR=llvm-ar
@@ -47,7 +50,7 @@ build() {
 }
 
 package() {
-  cd "$srcdir/$pkgname-$pkgver"
+  cd "$srcdir/$pkgname"
 
   install -Dm755 "target/release/chwd" "$pkgdir/usr/bin/chwd"
   install -Dm755 scripts/chwd "$pkgdir"/var/lib/chwd/scripts/chwd
