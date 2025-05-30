@@ -201,7 +201,7 @@ linux ${kernel}
 EOF
         append_initrd_entries "${entry_path}.conf" "${kernelpath}${initramfs}.img"
 
-        if [ "${DISABLE_FALLBACK}" != "yes" ]; then
+        if [[ -e "${kernelpath}${initramfs}-fallback.img" && "${DISABLE_FALLBACK}" != "yes" ]]; then
             cat <<EOF >"${entry_path}-fallback.conf"
 title ${title} (Fallback)
 options ${sdoptions} ${LINUX_FALLBACK_OPTIONS}
