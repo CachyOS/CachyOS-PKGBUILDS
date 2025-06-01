@@ -38,14 +38,12 @@ build() {
     -Dcpu=baseline
 }
 
-
-
 package() {
-    cd "${pkgname}"/$pkgname
-    cp -a build/* "$pkgdir"
-    mkdir -p $pkgdir/usr/share/falcond
-    cp -r $srcdir/falcond-profiles/usr/share/falcond $pkgdir/usr/share
-    mkdir -p $pkgdir/usr/lib/systemd/system/
-    cp $srcdir/falcond.service $pkgdir/usr/lib/systemd/system/falcond.service
-    install --verbose -D --mode=644 ../LICENSE "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE"
+  cd "${pkgname}"/$pkgname
+  cp -a build/* "$pkgdir"
+  mkdir -p $pkgdir/usr/share/falcond
+  cp -r $srcdir/falcond-profiles/usr/share/falcond $pkgdir/usr/share
+  mkdir -p $pkgdir/usr/lib/systemd/system/
+  cp $srcdir/falcond.service $pkgdir/usr/lib/systemd/system/falcond.service
+  install --verbose -D --mode=644 ../LICENSE "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE"
 }
