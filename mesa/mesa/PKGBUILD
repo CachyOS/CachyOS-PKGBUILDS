@@ -22,8 +22,8 @@ pkgname=(
   vulkan-mesa-layers
   mesa-docs
 )
-pkgver=25.1.1
-pkgrel=3
+pkgver=25.1.2
+pkgrel=2
 epoch=1
 pkgdesc="Open-source OpenGL drivers"
 url="https://www.mesa3d.org/"
@@ -93,7 +93,6 @@ options=(
 )
 source=(
   "https://mesa.freedesktop.org/archive/mesa-$pkgver.tar.xz"{,.sig}
-  https://gitlab.freedesktop.org/mesa/mesa/-/commit/e6481d3f42e0cd735fda38fb3029e6f8abf5a0e6.patch
 )
 validpgpkeys=(
   946D09B5E4C9845E63075FF1D961C596A7203456 # Andres Gomez <tanty@igalia.com>
@@ -130,9 +129,8 @@ for _crate in "${!_crates[@]}"; do
   )
 done
 
-sha256sums=('cf942a18b7b9e9b88524dcbf0b31fed3cde18e6d52b3375b0ab6587a14415bce'
+sha256sums=('c29c93fd35119b949a589463d1feb61b4000c0daad04e8d543d7f909f119bd97'
             'SKIP'
-            '31eaf68fcd47b1116af83308dd3cb1b6da5c91df7ea8287276c66af5414a2439'
             'ed646292ffc8188ef8ea4d1e0e0150fb15a5c2e12ad9b8fc191ae7a8a7f3c4b9'
             '7f9f832470494906d1fca5329f8ab5791cc60beb230c74815dff541cbd2b5ca0'
             '168fb715dda47215e360912c096649d23d58bf392ac62f73919e831745e40f26'
@@ -148,9 +146,8 @@ sha256sums=('cf942a18b7b9e9b88524dcbf0b31fed3cde18e6d52b3375b0ab6587a14415bce'
             'db7d01726be8ab66ab32f9df467ae8b1148906685bbe75c82d1e65d7f5b3f841'
             '692fcb63b64b1758029e0a96ee63e049ce8c5948587f2f7208df04625e5f6b56'
             '901fa70d88b9d6c98022e23b4136f9f3e54e4662c3bc1bd1d84a42a9a0f0c1e9')
-b2sums=('73618405dee247f7e3141f817ab66e5bbb6256d116cc1bb3eb86ed8c9511194891d3e68b3d7d36cdc3a68fab25a231da58e3bba2da7914e8c7d55ea861d50952'
+b2sums=('2c92a5fb09353034936951f75848fbc1da113a1c78391d781cecc61a8b2aed6e579f0c5e2cf95b213af0f8b8823c73dc48659cb51f124c3e1ee266bfed408189'
         'SKIP'
-        'b502d8595fb9f29b685833248c9341519cb523524664e774a8152c146b28d33ef880210d1a087eefb459fc0e4f0d5d6a885d44aae09f590af7428b3067e77521'
         'a6d47c903be6094423d89b8ec3ca899d0a84df6dbd6e76632bb6c9b9f40ad9c216f8fa400310753d392f85072756b43ac3892e0a2c4d55f87ab6463002554823'
         '9a73962e1e38b84131ab2350b69a1f5d611c549533eec73e898c394a9b9442f357bb5d5f59e1be12270dd29bdf237dc2d21786c0c2210736e224ef5d48300dcf'
         'fac5cf6339dc3c0a40b100035a5c874cc7b2efeafeb31c51488d25156e392dc9db86a497e76eead351d2126f69d060422faa9c55d73407a0de9f5be18d234123'
@@ -171,8 +168,6 @@ b2sums=('73618405dee247f7e3141f817ab66e5bbb6256d116cc1bb3eb86ed8c9511194891d3e68
 
 prepare() {
   cd mesa-$pkgver
-  # Fix for QEMU not working with virtio
-  patch -Np1 < ../e6481d3f42e0cd735fda38fb3029e6f8abf5a0e6.patch
 
   # Include package release in version string so Chromium invalidates
   # its GPU cache; otherwise it can cause pages to render incorrectly.
@@ -259,7 +254,7 @@ package_mesa() {
     'mesa-vdpau<1:24.2.7-1'
   )
 
-  meson install -C build --destdir "$pkgdir"
+  meson install -C build --destdir "$pkgdir" --no-rebuild
 
   (
     local libdir=usr/lib icddir=usr/share/vulkan/icd.d
