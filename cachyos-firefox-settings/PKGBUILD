@@ -1,0 +1,29 @@
+# Maintainer: Vasiliy Stelmachenok <ventureo@cachyos.org>
+pkgname=cachyos-firefox-settings
+pkgver=20250607
+pkgrel=1
+pkgdesc='CachyOS settings for Firefox browser'
+depends=('firefox' 'xdg-desktop-portal-impl')
+arch=('any')
+backup=('etc/firefox/policies/policies.json')
+url="https://github.com/CachyOS/CachyOS-PKGBUILDS/tree/master/$pkgname"
+conflicts=(firefox-settings)
+replaces=(firefox-settings)
+provides=(firefox-settings)
+source=(
+    cachyos.js
+    policies.json
+)
+sha256sums=(
+    '2e3483172ac071960f6912ade26fdd66f2a8fe28ba4d27c066d544a7a67d23af'
+    '1e4c43ef30b5952df184859dc97bcab5fc34dbcd977d4852851d45a236e2f45d'
+)
+
+pkgver() {
+    date +%Y%m%d
+}
+
+package() {
+    install -Dm644 cachyos.js "$pkgdir/usr/lib/firefox/browser/defaults/preferences/cachyos.js"
+    install -Dm644 policies.json "$pkgdir/etc/firefox/policies/policies.json"
+}
