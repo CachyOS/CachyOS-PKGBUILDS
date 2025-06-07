@@ -59,7 +59,7 @@ post_install() {
     for service in "${SERVICES[@]}"; do
         systemctl enable "$service" --now
     done
-  
+
   steamos_steam
   # Update users sddm config to reflect the changes
   echo "Updating Handheld Configs."
@@ -70,17 +70,7 @@ post_install() {
 }
 
 post_upgrade() {
-    echo "Enabling services..."
-    systemctl daemon-reload >/dev/null
-
-    for service in "${SERVICES[@]}"; do
-        if systemctl is-active "$service" >/dev/null; then
-            systemctl restart "$service"
-        else
-            systemctl enable "$service"
-        fi
-    done
-   #Update files to reflect the changes
+   # Update files to reflect the changes
    echo "Updating Handheld Configs."
    update_user
 }
