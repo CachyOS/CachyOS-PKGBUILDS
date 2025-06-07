@@ -3,7 +3,7 @@
 _gitname=CachyOS-Settings
 pkgname=cachyos-settings
 pkgver=1.2.5
-pkgrel=1
+pkgrel=2
 epoch=1
 groups=(cachyos)
 arch=('any')
@@ -27,7 +27,11 @@ depends=(
 optdepends=('libluv: for topmem'
             'lua-luv: for topmem'
             'power-profiles-daemon: For game-performance')
-
+prepare() {
+  cd $_gitname
+  git cherry-pick -n b1d779042134e0f0574a7df7b3044b58b9fcd480
+  git cherry-pick -n 908e886b35e20e96ccd05fa36868858f3738a147
+}
 package() {
   install -d "$pkgdir/etc"
   cp -rf "${srcdir}/${_gitname}/etc" "$pkgdir"
