@@ -1,4 +1,4 @@
-From ccaba8535669f57820de99830cbc31be167f9502 Mon Sep 17 00:00:00 2001
+From d56b20f813dd1bb1b50287d463af20c00e4a2b90 Mon Sep 17 00:00:00 2001
 From: Elizabeth Figura <zfigura@codeweavers.com>
 Date: Tue, 9 Mar 2021 12:08:29 -0600
 Subject: [PATCH 01/29] ntdll: Add some traces to synchronization methods.
@@ -231,7 +231,7 @@ index a16507155c8..f7ce10f315c 100644
 2.49.0
 
 
-From ed27bceacf392fe23eb236b617ca3dfa015688d4 Mon Sep 17 00:00:00 2001
+From 8198137b2fdeb9dd5834b83d24c1fce969b08d84 Mon Sep 17 00:00:00 2001
 From: Elizabeth Figura <zfigura@codeweavers.com>
 Date: Mon, 10 Feb 2025 16:18:15 -0600
 Subject: [PATCH 02/29] ntdll: Add stub functions for in-process
@@ -427,7 +427,7 @@ index f7ce10f315c..74d4f8815a8 100644
 2.49.0
 
 
-From 0eec8d18e5759c4c01c6fa8091617b6ebe3e5fa0 Mon Sep 17 00:00:00 2001
+From f5cbe3333c7724e7595fde2643046416dd13b596 Mon Sep 17 00:00:00 2001
 From: Elizabeth Figura <zfigura@codeweavers.com>
 Date: Mon, 10 Feb 2025 16:44:49 -0600
 Subject: [PATCH 03/29] ntdll: Retrieve and cache an ntsync device in wait
@@ -450,10 +450,10 @@ Subject: [PATCH 03/29] ntdll: Retrieve and cache an ntsync device in wait
  create mode 100644 server/inproc_sync.c
 
 diff --git a/configure b/configure
-index c057cd378c2..c144001d97a 100755
+index 7d19e0af956..ac4b9ac5cb7 100755
 --- a/configure
 +++ b/configure
-@@ -9831,6 +9831,12 @@ if test "x$ac_cv_header_linux_major_h" = xyes
+@@ -9907,6 +9907,12 @@ if test "x$ac_cv_header_linux_major_h" = xyes
  then :
    printf "%s\n" "#define HAVE_LINUX_MAJOR_H 1" >>confdefs.h
  
@@ -467,10 +467,10 @@ index c057cd378c2..c144001d97a 100755
  ac_fn_c_check_header_compile "$LINENO" "linux/param.h" "ac_cv_header_linux_param_h" "$ac_includes_default"
  if test "x$ac_cv_header_linux_param_h" = xyes
 diff --git a/configure.ac b/configure.ac
-index 06da342bd4f..ea9e1fe03d3 100644
+index 053c639ade1..440c741b459 100644
 --- a/configure.ac
 +++ b/configure.ac
-@@ -665,6 +665,7 @@ AC_CHECK_HEADERS(\
+@@ -667,6 +667,7 @@ AC_CHECK_HEADERS(\
  	linux/input.h \
  	linux/ioctl.h \
  	linux/major.h \
@@ -479,10 +479,10 @@ index 06da342bd4f..ea9e1fe03d3 100644
  	linux/serial.h \
  	linux/types.h \
 diff --git a/dlls/ntdll/unix/server.c b/dlls/ntdll/unix/server.c
-index 9c26e087b4a..5f7d9d2e01f 100644
+index 3969c2bb898..ddc98e79df2 100644
 --- a/dlls/ntdll/unix/server.c
 +++ b/dlls/ntdll/unix/server.c
-@@ -103,7 +103,7 @@ sigset_t server_block_set;  /* signals to block during server calls */
+@@ -104,7 +104,7 @@ sigset_t server_block_set;  /* signals to block during server calls */
  static int fd_socket = -1;  /* socket to exchange file descriptors with the server */
  static int initial_cwd = -1;
  static pid_t server_pid;
@@ -491,7 +491,7 @@ index 9c26e087b4a..5f7d9d2e01f 100644
  
  /* atomically exchange a 64-bit value */
  static inline LONG64 interlocked_xchg64( LONG64 *dest, LONG64 val )
-@@ -960,7 +960,7 @@ void wine_server_send_fd( int fd )
+@@ -961,7 +961,7 @@ void wine_server_send_fd( int fd )
   *
   * Receive a file descriptor passed from the server.
   */
@@ -500,7 +500,7 @@ index 9c26e087b4a..5f7d9d2e01f 100644
  {
      struct iovec vec;
      struct msghdr msghdr;
-@@ -1155,7 +1155,7 @@ int server_get_unix_fd( HANDLE handle, unsigned int wanted_access, int *unix_fd,
+@@ -1156,7 +1156,7 @@ int server_get_unix_fd( HANDLE handle, unsigned int wanted_access, int *unix_fd,
                  if (type) *type = reply->type;
                  if (options) *options = reply->options;
                  access = reply->access;
@@ -509,7 +509,7 @@ index 9c26e087b4a..5f7d9d2e01f 100644
                  {
                      assert( wine_server_ptr_handle(fd_handle) == handle );
                      *needs_close = (!reply->cacheable ||
-@@ -1608,7 +1608,7 @@ size_t server_init_process(void)
+@@ -1609,7 +1609,7 @@ size_t server_init_process(void)
      pthread_sigmask( SIG_BLOCK, &server_block_set, NULL );
  
      /* receive the first thread request fd on the main socket */
@@ -660,10 +660,10 @@ index 74d4f8815a8..d15e18644dc 100644
  /******************************************************************************
   *              NtCreateSemaphore (NTDLL.@)
 diff --git a/dlls/ntdll/unix/unix_private.h b/dlls/ntdll/unix/unix_private.h
-index 8f9e9173263..70d8f7ac895 100644
+index 721bdeda08a..2a24055a3c4 100644
 --- a/dlls/ntdll/unix/unix_private.h
 +++ b/dlls/ntdll/unix/unix_private.h
-@@ -206,6 +206,8 @@ extern NTSTATUS load_start_exe( WCHAR **image, void **module );
+@@ -222,6 +222,8 @@ extern NTSTATUS load_start_exe( WCHAR **image, void **module );
  extern ULONG_PTR redirect_arm64ec_rva( void *module, ULONG_PTR rva, const IMAGE_ARM64EC_METADATA *metadata );
  extern void start_server( BOOL debug );
  
@@ -672,7 +672,7 @@ index 8f9e9173263..70d8f7ac895 100644
  extern unsigned int server_call_unlocked( void *req_ptr );
  extern void server_enter_uninterrupted_section( pthread_mutex_t *mutex, sigset_t *sigset );
  extern void server_leave_uninterrupted_section( pthread_mutex_t *mutex, sigset_t *sigset );
-@@ -218,6 +220,7 @@ extern unsigned int server_queue_process_apc( HANDLE process, const union apc_ca
+@@ -234,6 +236,7 @@ extern unsigned int server_queue_process_apc( HANDLE process, const union apc_ca
  extern int server_get_unix_fd( HANDLE handle, unsigned int wanted_access, int *unix_fd,
                                 int *needs_close, enum server_fd_type *type, unsigned int *options );
  extern void wine_server_send_fd( int fd );
@@ -681,10 +681,10 @@ index 8f9e9173263..70d8f7ac895 100644
  extern size_t server_init_process(void);
  extern void server_init_process_done(void);
 diff --git a/include/config.h.in b/include/config.h.in
-index ad49a3a21e4..bf962ab591b 100644
+index 0c1565a3636..20f186357cc 100644
 --- a/include/config.h.in
 +++ b/include/config.h.in
-@@ -201,6 +201,9 @@
+@@ -198,6 +198,9 @@
  /* Define to 1 if you have the <linux/major.h> header file. */
  #undef HAVE_LINUX_MAJOR_H
  
@@ -912,7 +912,7 @@ index d58584a7ec6..6f19bf5af84 100644
 2.49.0
 
 
-From 59a2bd859414faa16f56567e0e5604e188328a31 Mon Sep 17 00:00:00 2001
+From be3d47b01637d2d3c7f7be5a0e0c04781f23db12 Mon Sep 17 00:00:00 2001
 From: Elizabeth Figura <zfigura@codeweavers.com>
 Date: Mon, 8 Mar 2021 14:31:06 -0600
 Subject: [PATCH 04/29] server: Add an object operation to retrieve an
@@ -1321,7 +1321,7 @@ index c54281c2101..8de68b3dede 100644
      mailslot_device_file_destroy            /* destroy */
  };
 diff --git a/server/mapping.c b/server/mapping.c
-index 6704ef27e36..22a9c3dbc7d 100644
+index 61e026359ae..d6dba06991e 100644
 --- a/server/mapping.c
 +++ b/server/mapping.c
 @@ -79,6 +79,7 @@ static const struct object_ops ranges_ops =
@@ -1700,7 +1700,7 @@ index 3cdb9e5be5f..87cfde364be 100644
      token_destroy              /* destroy */
  };
 diff --git a/server/window.c b/server/window.c
-index 914d376a44a..80458b193aa 100644
+index c59b8646118..475a5641a2a 100644
 --- a/server/window.c
 +++ b/server/window.c
 @@ -119,6 +119,7 @@ static const struct object_ops window_ops =
@@ -1735,7 +1735,7 @@ index b3746090ccf..4b8a4972971 100644
 2.49.0
 
 
-From 908f615045808057e837e77cbba5501e6f4a52bb Mon Sep 17 00:00:00 2001
+From 2a0ad5aa3345f77bd8a5521dbeaada65ed5d490a Mon Sep 17 00:00:00 2001
 From: Elizabeth Figura <zfigura@codeweavers.com>
 Date: Thu, 13 Mar 2025 14:09:42 -0500
 Subject: [PATCH 05/29] server: Create in-process synchronization objects for
@@ -2000,7 +2000,7 @@ index 08ad412dc5e..612770235dd 100644
 2.49.0
 
 
-From 3bf02f6343804fe2f1bcc396d702982d0411dbbb Mon Sep 17 00:00:00 2001
+From 7cddff717934bc626fe1faa90127ff36f673ddf1 Mon Sep 17 00:00:00 2001
 From: Elizabeth Figura <zfigura@codeweavers.com>
 Date: Thu, 13 Mar 2025 14:32:22 -0500
 Subject: [PATCH 06/29] server: Create in-process synchronization objects for
@@ -2217,7 +2217,7 @@ index 094741bf36d..f3b8179f5fe 100644
 2.49.0
 
 
-From bbd3c3736b5e9ad6a009b373a1001f64efd7bdb9 Mon Sep 17 00:00:00 2001
+From a515bcb7f60d900b5757cef1672a8ac84cb9e65d Mon Sep 17 00:00:00 2001
 From: Elizabeth Figura <zfigura@codeweavers.com>
 Date: Thu, 13 Mar 2025 14:49:49 -0500
 Subject: [PATCH 07/29] server: Create in-process synchronization objects for
@@ -2552,7 +2552,7 @@ index e7be6de6333..6678b439e8c 100644
 2.49.0
 
 
-From 5f8dadcdee7c5885c9e9e68ed46a57344f458417 Mon Sep 17 00:00:00 2001
+From 9abc17dbef99cbdc4ec40086c783fe77bb7dee78 Mon Sep 17 00:00:00 2001
 From: Elizabeth Figura <zfigura@codeweavers.com>
 Date: Thu, 11 Mar 2021 20:32:58 -0600
 Subject: [PATCH 08/29] server: Create in-process synchronization objects for
@@ -2664,7 +2664,7 @@ index ac598e85229..11e39c93a99 100644
 2.49.0
 
 
-From fb7d2724eae497d2dd6ae8fac9c708e8fe379278 Mon Sep 17 00:00:00 2001
+From 3a2c25917c5e39694e463b440c963dac9b7e96d2 Mon Sep 17 00:00:00 2001
 From: Elizabeth Figura <zfigura@codeweavers.com>
 Date: Wed, 19 Mar 2025 16:43:36 -0500
 Subject: [PATCH 09/29] server: Create in-process synchronization objects for
@@ -2764,7 +2764,7 @@ index 50304f746e5..135f7336a47 100644
 2.49.0
 
 
-From 4ff6e5bcf82044b87f0a5412e4e99891fb254f47 Mon Sep 17 00:00:00 2001
+From 4b652143c0d81b13de2d836281d9ca739972aed6 Mon Sep 17 00:00:00 2001
 From: Elizabeth Figura <zfigura@codeweavers.com>
 Date: Wed, 19 Mar 2025 17:06:29 -0500
 Subject: [PATCH 10/29] server: Create in-process synchronization objects for
@@ -2873,7 +2873,7 @@ index 135f7336a47..64e827f84a2 100644
 2.49.0
 
 
-From 74f2a283e532f655a5b43820f8b5aa139afcd644 Mon Sep 17 00:00:00 2001
+From aa34fca58bb711cd1319993e46908034aac6cc98 Mon Sep 17 00:00:00 2001
 From: Elizabeth Figura <zfigura@codeweavers.com>
 Date: Wed, 19 Mar 2025 17:14:45 -0500
 Subject: [PATCH 11/29] server: Create in-process synchronization objects for
@@ -2978,7 +2978,7 @@ index 64e827f84a2..3fa994c4fb2 100644
 2.49.0
 
 
-From cc8780390d464b0f243539ff91847b8bc55e4e43 Mon Sep 17 00:00:00 2001
+From b0e3029ed4f931a01967ce39532f708595201d7f Mon Sep 17 00:00:00 2001
 From: Elizabeth Figura <zfigura@codeweavers.com>
 Date: Wed, 19 Mar 2025 17:30:31 -0500
 Subject: [PATCH 12/29] server: Create in-process synchronization objects for
@@ -3082,7 +3082,7 @@ index 3fa994c4fb2..2a36d301bae 100644
 2.49.0
 
 
-From 83681bd89ab561e4fd8bcb95af25906b05d67f78 Mon Sep 17 00:00:00 2001
+From 39f744b22beb80060e22296ce1798d37959b6cc3 Mon Sep 17 00:00:00 2001
 From: Elizabeth Figura <zfigura@codeweavers.com>
 Date: Wed, 19 Mar 2025 17:35:15 -0500
 Subject: [PATCH 13/29] server: Create in-process synchronization objects for
@@ -3187,7 +3187,7 @@ index 2a36d301bae..58ba8ee4634 100644
 2.49.0
 
 
-From f95ed10d31df007af27c8ced9123f16861fc21ed Mon Sep 17 00:00:00 2001
+From ff60f841a1d87c341c77bd6622080cdaa7c13439 Mon Sep 17 00:00:00 2001
 From: Elizabeth Figura <zfigura@codeweavers.com>
 Date: Mon, 8 Mar 2021 17:11:03 -0600
 Subject: [PATCH 14/29] server: Create in-process synchronization objects for
@@ -3288,7 +3288,7 @@ index cab5f95eefd..2aaa87ed792 100644
 2.49.0
 
 
-From 27bff9553aca342cdba9a60cf126846d4743db4f Mon Sep 17 00:00:00 2001
+From dc2304d6e9c1a0e6925f601daa0c01b2d47ef2ff Mon Sep 17 00:00:00 2001
 From: Elizabeth Figura <zfigura@codeweavers.com>
 Date: Wed, 10 Mar 2021 11:02:42 -0600
 Subject: [PATCH 15/29] server: Create in-process synchronization objects for
@@ -3403,7 +3403,7 @@ index 253bdf44aae..e8671f18f9e 100644
 2.49.0
 
 
-From 9666b23dd40955df588695a8963c28c0a14776c7 Mon Sep 17 00:00:00 2001
+From 7f7f43207c4edca763ac735c8f4791970f846bb6 Mon Sep 17 00:00:00 2001
 From: Elizabeth Figura <zfigura@codeweavers.com>
 Date: Mon, 8 Mar 2021 17:13:20 -0600
 Subject: [PATCH 16/29] server: Create in-process synchronization objects for
@@ -3477,7 +3477,7 @@ index 6f1b0bec022..2b93ae2fa76 100644
 2.49.0
 
 
-From 52fb1bed05447507d74fff2339f777094ba4a59a Mon Sep 17 00:00:00 2001
+From c528d6caa12258e944be72dd779f4980aeeb6ac4 Mon Sep 17 00:00:00 2001
 From: Elizabeth Figura <zfigura@codeweavers.com>
 Date: Mon, 8 Mar 2021 17:16:53 -0600
 Subject: [PATCH 17/29] server: Create in-process synchronization objects for
@@ -3565,7 +3565,7 @@ index 1648e46fe98..160dc4b4b43 100644
 2.49.0
 
 
-From 29633ee392453665e95908c1e855fd27ebb9bc4c Mon Sep 17 00:00:00 2001
+From 5de4d8e73107490be82edb0aae2bed7d17633050 Mon Sep 17 00:00:00 2001
 From: Elizabeth Figura <zfigura@codeweavers.com>
 Date: Mon, 8 Mar 2021 17:17:35 -0600
 Subject: [PATCH 18/29] server: Create in-process synchronization objects for
@@ -3641,7 +3641,7 @@ index 998435a6e91..58814d28f46 100644
 2.49.0
 
 
-From 4184ef66ecd5532773a2f59261d3a09366edb9ce Mon Sep 17 00:00:00 2001
+From 49a8f966175e75d278187e52722328a9b3108c37 Mon Sep 17 00:00:00 2001
 From: Elizabeth Figura <zfigura@codeweavers.com>
 Date: Mon, 8 Mar 2021 17:24:15 -0600
 Subject: [PATCH 19/29] server: Create in-process synchronization objects for
@@ -3791,7 +3791,7 @@ index f41bb45ccf4..23ee75a53e0 100644
 2.49.0
 
 
-From 2be8aa8ae8e3b210839f9cbe7e3835469150cd67 Mon Sep 17 00:00:00 2001
+From 9fcf24b3d40e4b076af457258fee69f6852d243f Mon Sep 17 00:00:00 2001
 From: Elizabeth Figura <zfigura@codeweavers.com>
 Date: Mon, 8 Mar 2021 17:26:35 -0600
 Subject: [PATCH 20/29] server: Create in-process synchronization objects for
@@ -3878,7 +3878,7 @@ index 7fdae3a629f..7c31d4e3326 100644
 2.49.0
 
 
-From ac97a5e566a26d6f0b4508cba31efe50e5237d66 Mon Sep 17 00:00:00 2001
+From d12ec7ad1ce443ac86d8f0c01b7c58225f73552e Mon Sep 17 00:00:00 2001
 From: Elizabeth Figura <zfigura@codeweavers.com>
 Date: Mon, 8 Mar 2021 17:29:38 -0600
 Subject: [PATCH 21/29] server: Create in-process synchronization objects for
@@ -3992,7 +3992,7 @@ index fef447bc4aa..d763d4695a7 100644
 2.49.0
 
 
-From dfc716a2320c916a92bf4d62914d58389fe93cbf Mon Sep 17 00:00:00 2001
+From 4cefd96bcc1e11c654c2b9352977821acc22271f Mon Sep 17 00:00:00 2001
 From: Elizabeth Figura <zfigura@codeweavers.com>
 Date: Mon, 8 Mar 2021 17:40:57 -0600
 Subject: [PATCH 22/29] server: Create in-process synchronization objects for
@@ -4233,7 +4233,7 @@ index 4d711c61f22..42e81e2beec 100644
 2.49.0
 
 
-From e9f815502a8266f3070d90a7142029c928593940 Mon Sep 17 00:00:00 2001
+From 32d31edb8dd6655a6aacf47e6454a9af99ffebc9 Mon Sep 17 00:00:00 2001
 From: Elizabeth Figura <zfigura@codeweavers.com>
 Date: Wed, 19 Mar 2025 19:32:55 -0500
 Subject: [PATCH 23/29] server: Add a request to retrieve the in-process
@@ -4424,7 +4424,7 @@ index 6f19bf5af84..c6c9c030598 100644
 2.49.0
 
 
-From 1177c5e4f16f0cfab11931cb2a9b6c9be7883278 Mon Sep 17 00:00:00 2001
+From d811fa02d5450a9a38a19b5cda66cb80b8babd7c Mon Sep 17 00:00:00 2001
 From: Elizabeth Figura <zfigura@codeweavers.com>
 Date: Tue, 9 Mar 2021 11:32:25 -0600
 Subject: [PATCH 24/29] server: Introduce select_inproc_queue and
@@ -4673,7 +4673,7 @@ index c6c9c030598..42eb12ac59b 100644
 2.49.0
 
 
-From 53585487c2cd60ec9c8bc7c2609f07aee3de3bfc Mon Sep 17 00:00:00 2001
+From d10a5ae6957271bbeba8d5dedc2696fe5e88ff90 Mon Sep 17 00:00:00 2001
 From: Elizabeth Figura <zfigura@codeweavers.com>
 Date: Thu, 21 Apr 2022 16:11:14 -0500
 Subject: [PATCH 25/29] server: Allow creating an event object for client-side
@@ -4905,7 +4905,7 @@ index 7c31d4e3326..e7a63a1a6ce 100644
 2.49.0
 
 
-From dbbf35b831fbbe94cb8914033233da94380592b0 Mon Sep 17 00:00:00 2001
+From 981aeda1df4529a6f32960686c346ec61759feec Mon Sep 17 00:00:00 2001
 From: Elizabeth Figura <zfigura@codeweavers.com>
 Date: Mon, 8 Mar 2021 18:07:23 -0600
 Subject: [PATCH 26/29] ntdll: Introduce a helper to wait on an internal server
@@ -4947,10 +4947,10 @@ index 36ffe20f6dc..c086731cd69 100644
      {
          req->info = wine_server_obj_handle( process_info );
 diff --git a/dlls/ntdll/unix/server.c b/dlls/ntdll/unix/server.c
-index 5f7d9d2e01f..ce7cbdb49cf 100644
+index ddc98e79df2..404a2dc2df3 100644
 --- a/dlls/ntdll/unix/server.c
 +++ b/dlls/ntdll/unix/server.c
-@@ -817,6 +817,21 @@ unsigned int server_wait( const union select_op *select_op, data_size_t size, UI
+@@ -818,6 +818,21 @@ unsigned int server_wait( const union select_op *select_op, data_size_t size, UI
  }
  
  
@@ -4972,7 +4972,7 @@ index 5f7d9d2e01f..ce7cbdb49cf 100644
  /***********************************************************************
   *              NtContinue  (NTDLL.@)
   */
-@@ -893,7 +908,7 @@ unsigned int server_queue_process_apc( HANDLE process, const union apc_call *cal
+@@ -894,7 +909,7 @@ unsigned int server_queue_process_apc( HANDLE process, const union apc_call *cal
          }
          else
          {
@@ -5004,10 +5004,10 @@ index d15e18644dc..c3e6a078709 100644
      if (status != WAIT_OBJECT_0) goto done;
  
 diff --git a/dlls/ntdll/unix/thread.c b/dlls/ntdll/unix/thread.c
-index c4086fdf20d..194db4f4fb0 100644
+index 6a59fdb3cb3..2344cbcba58 100644
 --- a/dlls/ntdll/unix/thread.c
 +++ b/dlls/ntdll/unix/thread.c
-@@ -1801,7 +1801,7 @@ NTSTATUS get_thread_context( HANDLE handle, void *context, BOOL *self, USHORT ma
+@@ -1804,7 +1804,7 @@ NTSTATUS get_thread_context( HANDLE handle, void *context, BOOL *self, USHORT ma
  
      if (ret == STATUS_PENDING)
      {
@@ -5017,10 +5017,10 @@ index c4086fdf20d..194db4f4fb0 100644
          SERVER_START_REQ( get_thread_context )
          {
 diff --git a/dlls/ntdll/unix/unix_private.h b/dlls/ntdll/unix/unix_private.h
-index 70d8f7ac895..fa3cbb59593 100644
+index 2a24055a3c4..8035c5f7089 100644
 --- a/dlls/ntdll/unix/unix_private.h
 +++ b/dlls/ntdll/unix/unix_private.h
-@@ -215,6 +215,7 @@ extern unsigned int server_select( const union select_op *select_op, data_size_t
+@@ -231,6 +231,7 @@ extern unsigned int server_select( const union select_op *select_op, data_size_t
                                     timeout_t abs_timeout, struct context_data *context, struct user_apc *user_apc );
  extern unsigned int server_wait( const union select_op *select_op, data_size_t size, UINT flags,
                                   const LARGE_INTEGER *timeout );
@@ -5028,7 +5028,7 @@ index 70d8f7ac895..fa3cbb59593 100644
  extern unsigned int server_queue_process_apc( HANDLE process, const union apc_call *call,
                                                union apc_result *result );
  extern int server_get_unix_fd( HANDLE handle, unsigned int wanted_access, int *unix_fd,
-@@ -454,7 +455,7 @@ static inline struct async_data server_async( HANDLE handle, struct async_fileio
+@@ -470,7 +471,7 @@ static inline struct async_data server_async( HANDLE handle, struct async_fileio
  
  static inline NTSTATUS wait_async( HANDLE handle, BOOL alertable )
  {
@@ -5041,7 +5041,7 @@ index 70d8f7ac895..fa3cbb59593 100644
 2.49.0
 
 
-From 5fd7f505bdf7e6b2eb8b445f00ae4cc41653235c Mon Sep 17 00:00:00 2001
+From 111ac28caa5e77a4e98b1142fe86f390e6818606 Mon Sep 17 00:00:00 2001
 From: Elizabeth Figura <zfigura@codeweavers.com>
 Date: Tue, 6 Apr 2021 15:37:02 -0500
 Subject: [PATCH 27/29] ntdll: Use in-process synchronization objects.
@@ -5706,18 +5706,18 @@ index c3e6a078709..52ad22f125a 100644
  
  #else
 diff --git a/dlls/ntdll/unix/unix_private.h b/dlls/ntdll/unix/unix_private.h
-index fa3cbb59593..190a7885aa9 100644
+index 8035c5f7089..cde92bb50e0 100644
 --- a/dlls/ntdll/unix/unix_private.h
 +++ b/dlls/ntdll/unix/unix_private.h
-@@ -112,6 +112,7 @@ struct ntdll_thread_data
-     PRTL_THREAD_START_ROUTINE start;  /* thread entry point */
-     void              *param;         /* thread entry point parameter */
-     void              *jmp_buf;       /* setjmp buffer for exception handling */
-+    int                linux_alert_obj; /* fd for the linux in-process alert event */
+@@ -115,6 +115,7 @@ struct ntdll_thread_data
+     PRTL_THREAD_START_ROUTINE start;         /* thread entry point */
+     void                     *param;         /* thread entry point parameter */
+     void                     *jmp_buf;       /* setjmp buffer for exception handling */
++    int                       linux_alert_obj; /* fd for the linux in-process alert event */
  };
  
  C_ASSERT( sizeof(struct ntdll_thread_data) <= sizeof(((TEB *)0)->GdiTebBatch) );
-@@ -390,6 +391,7 @@ extern void call_raise_user_exception_dispatcher(void);
+@@ -400,6 +401,7 @@ extern void call_raise_user_exception_dispatcher(void);
  #define IMAGE_DLLCHARACTERISTICS_PREFER_NATIVE 0x0010 /* Wine extension */
  
  #define TICKSPERSEC 10000000
@@ -5726,7 +5726,7 @@ index fa3cbb59593..190a7885aa9 100644
  
  static inline ULONGLONG ticks_from_time_t( time_t time )
 diff --git a/dlls/ntdll/unix/virtual.c b/dlls/ntdll/unix/virtual.c
-index c797c89952f..eeed788ae73 100644
+index f82929ef57f..67be3e817dc 100644
 --- a/dlls/ntdll/unix/virtual.c
 +++ b/dlls/ntdll/unix/virtual.c
 @@ -4018,6 +4018,7 @@ static TEB *init_teb( void *ptr, BOOL is_wow )
@@ -5754,7 +5754,7 @@ index c6f79081b6f..f3c6a37fc8c 100644
 2.49.0
 
 
-From 71135b7014f2ec2adc1e375112784bd280790263 Mon Sep 17 00:00:00 2001
+From a693c469208ddf3c7e4cf1073d140043562eff8c Mon Sep 17 00:00:00 2001
 From: Elizabeth Figura <zfigura@codeweavers.com>
 Date: Tue, 20 Apr 2021 17:55:59 -0500
 Subject: [PATCH 28/29] ntdll: Use server_wait_for_object() when waiting on
@@ -5790,7 +5790,7 @@ index 52ad22f125a..228cf195b20 100644
 2.49.0
 
 
-From 30bc8ba6ae92d56f150c7dfd2601c2022d6419e0 Mon Sep 17 00:00:00 2001
+From 124301d8685d3453b5f21d2fccc772a7244404bd Mon Sep 17 00:00:00 2001
 From: Elizabeth Figura <zfigura@codeweavers.com>
 Date: Fri, 12 Mar 2021 15:04:17 -0600
 Subject: [PATCH 29/29] ntdll: Cache in-process synchronization objects.
@@ -5802,10 +5802,10 @@ Subject: [PATCH 29/29] ntdll: Cache in-process synchronization objects.
  3 files changed, 192 insertions(+), 9 deletions(-)
 
 diff --git a/dlls/ntdll/unix/server.c b/dlls/ntdll/unix/server.c
-index ce7cbdb49cf..44adbf3f03d 100644
+index 404a2dc2df3..4c31186da88 100644
 --- a/dlls/ntdll/unix/server.c
 +++ b/dlls/ntdll/unix/server.c
-@@ -1836,12 +1836,17 @@ NTSTATUS WINAPI NtDuplicateObject( HANDLE source_process, HANDLE source, HANDLE
+@@ -1840,12 +1840,17 @@ NTSTATUS WINAPI NtDuplicateObject( HANDLE source_process, HANDLE source, HANDLE
          return result.dup_handle.status;
      }
  
@@ -5823,7 +5823,7 @@ index ce7cbdb49cf..44adbf3f03d 100644
  
      SERVER_START_REQ( dup_handle )
      {
-@@ -1907,12 +1912,16 @@ NTSTATUS WINAPI NtClose( HANDLE handle )
+@@ -1911,12 +1916,16 @@ NTSTATUS WINAPI NtClose( HANDLE handle )
      if (HandleToLong( handle ) >= ~5 && HandleToLong( handle ) <= ~0)
          return STATUS_SUCCESS;
  
@@ -6096,10 +6096,10 @@ index 228cf195b20..f2ad8ef0435 100644
  {
      return STATUS_NOT_IMPLEMENTED;
 diff --git a/dlls/ntdll/unix/unix_private.h b/dlls/ntdll/unix/unix_private.h
-index 190a7885aa9..f946b925fef 100644
+index cde92bb50e0..90e3835aef8 100644
 --- a/dlls/ntdll/unix/unix_private.h
 +++ b/dlls/ntdll/unix/unix_private.h
-@@ -383,6 +383,8 @@ extern NTSTATUS wow64_wine_spawnvp( void *args );
+@@ -393,6 +393,8 @@ extern NTSTATUS wow64_wine_spawnvp( void *args );
  
  extern void dbg_init(void);
  

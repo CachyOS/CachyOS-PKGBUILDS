@@ -10,7 +10,7 @@
 pkgbase=nvidia-470xx-utils
 pkgname=('nvidia-470xx-utils' 'opencl-nvidia-470xx' 'nvidia-470xx-dkms')
 pkgver=470.256.02
-pkgrel=12
+pkgrel=13
 arch=('x86_64')
 url="http://www.nvidia.com/"
 license=('custom')
@@ -32,6 +32,7 @@ source=(
     "0002-Fix-conftest-to-use-a-short-wchar_t.patch"
     "0003-Fix-conftest-to-use-nv_drm_gem_vmap-which-has-the-se.patch"
     "clang.patch"
+    "gcc-15.patch"
     "nvidia-470xx-Enable-modeset-by-default.patch"
 )
 
@@ -51,6 +52,7 @@ sha512sums=(
     'dbdd609247740079446faf38482c7c14c03fbd71f816812d26c803b2619de7b7d7f034048fc8f662c5b864dd43b8e75aa7c09a837b31dd08655e6622f00ee1e3'
     'e1371e2ed622d642b0242a2be34438fae97fa33ef42afc1e7897177c10dc8831f20b9a8b37d25d9dc079743df03b10221decfb23577650233af8981a4ffb813c'
     '89e6a48ac3870b3414c5d486f5c54132cddfa6af1bad72a59601d75f3102272bc6f80da179eb051f287db1a228a715aaf92ce02b7fb7eb33c4cef30dee56b255'
+    'e251fbd8799719483d44a5bc26973b6a4dec46f60a20e4961d951db4cac542be0d2b99a2354de38692b24ada5e8f03e1a05c8cbfafcd884efdcf9c85f007ba60'
     'd5f1b73a08d8515ee0e3f0476d7348fa1eca4dbdb3a50f12ed85f0d5d73ba2a0c667a79f8928568f3035e8b681d0b6c86d92d7d208e739a20aec3819e1062125'
 )
 
@@ -74,7 +76,7 @@ prepare() {
     patch -p1 -i "${srcdir}/nvidia-470xx-Enable-modeset-by-default.patch"
 
     cd kernel
-    
+
     patch -p1 -i "${srcdir}/0001-Fix-conftest-to-ignore-implicit-function-declaration.patch"
     patch -p1 -i "${srcdir}/0002-Fix-conftest-to-use-a-short-wchar_t.patch"
     patch -p1 -i "${srcdir}/0003-Fix-conftest-to-use-nv_drm_gem_vmap-which-has-the-se.patch"
@@ -88,6 +90,9 @@ prepare() {
 
     # Fix clang build
     patch -p1 -i "${srcdir}/clang.patch"
+
+    # Fix GCC 15 build
+    patch -p1 -i "${srcdir}/gcc-15.patch" -d "${srcdir}/${_pkg}"
 
     sed -i "s/__VERSION_STRING/${pkgver}/" dkms.conf
     sed -i 's/__JOBS/`nproc`/' dkms.conf
@@ -171,9 +176,9 @@ package_nvidia-470xx-utils() {
     install -D "libGLX_nvidia.so.${pkgver}" "${pkgdir}/usr/lib/libGLX_nvidia.so.${pkgver}"
 
     # OpenGL libraries
-    install -D     "libEGL_nvidia.so.${pkgver}" "${pkgdir}/usr/lib/libEGL_nvidia.so.${pkgver}"
-    install -D     "libGLESv1_CM_nvidia.so.${pkgver}" "${pkgdir}/usr/lib/libGLESv1_CM_nvidia.so.${pkgver}"
-    install -D     "libGLESv2_nvidia.so.${pkgver}" "${pkgdir}/usr/lib/libGLESv2_nvidia.so.${pkgver}"
+    install -D "libEGL_nvidia.so.${pkgver}" "${pkgdir}/usr/lib/libEGL_nvidia.so.${pkgver}"
+    install -D "libGLESv1_CM_nvidia.so.${pkgver}" "${pkgdir}/usr/lib/libGLESv1_CM_nvidia.so.${pkgver}"
+    install -D "libGLESv2_nvidia.so.${pkgver}" "${pkgdir}/usr/lib/libGLESv2_nvidia.so.${pkgver}"
     install -Dm644 "10_nvidia.json" "${pkgdir}/usr/share/glvnd/egl_vendor.d/10_nvidia.json"
 
     # OpenGL core library
@@ -229,28 +234,28 @@ package_nvidia-470xx-utils() {
     install -D nvidia-debugdump "${pkgdir}/usr/bin/nvidia-debugdump"
 
     # nvidia-xconfig
-    install -D     nvidia-xconfig "${pkgdir}/usr/bin/nvidia-xconfig"
+    install -D nvidia-xconfig "${pkgdir}/usr/bin/nvidia-xconfig"
     install -Dm644 nvidia-xconfig.1.gz "${pkgdir}/usr/share/man/man1/nvidia-xconfig.1.gz"
 
     # nvidia-bug-report
     install -D nvidia-bug-report.sh "${pkgdir}/usr/bin/nvidia-bug-report.sh"
 
     # nvidia-smi
-    install -D     nvidia-smi "${pkgdir}/usr/bin/nvidia-smi"
+    install -D nvidia-smi "${pkgdir}/usr/bin/nvidia-smi"
     install -Dm644 nvidia-smi.1.gz "${pkgdir}/usr/share/man/man1/nvidia-smi.1.gz"
 
     # nvidia-cuda-mps
-    install -D     nvidia-cuda-mps-server "${pkgdir}/usr/bin/nvidia-cuda-mps-server"
-    install -D     nvidia-cuda-mps-control "${pkgdir}/usr/bin/nvidia-cuda-mps-control"
+    install -D nvidia-cuda-mps-server "${pkgdir}/usr/bin/nvidia-cuda-mps-server"
+    install -D nvidia-cuda-mps-control "${pkgdir}/usr/bin/nvidia-cuda-mps-control"
     install -Dm644 nvidia-cuda-mps-control.1.gz "${pkgdir}/usr/share/man/man1/nvidia-cuda-mps-control.1.gz"
 
     # nvidia-modprobe
     # This should be removed if nvidia fixed their uvm module!
     install -Dm4755 nvidia-modprobe "${pkgdir}/usr/bin/nvidia-modprobe"
-    install -Dm644  nvidia-modprobe.1.gz "${pkgdir}/usr/share/man/man1/nvidia-modprobe.1.gz"
+    install -Dm644 nvidia-modprobe.1.gz "${pkgdir}/usr/share/man/man1/nvidia-modprobe.1.gz"
 
     # nvidia-persistenced
-    install -D     nvidia-persistenced "${pkgdir}/usr/bin/nvidia-persistenced"
+    install -D nvidia-persistenced "${pkgdir}/usr/bin/nvidia-persistenced"
     install -Dm644 nvidia-persistenced.1.gz "${pkgdir}/usr/share/man/man1/nvidia-persistenced.1.gz"
     install -Dm644 nvidia-persistenced-init/systemd/nvidia-persistenced.service.template "${pkgdir}/usr/lib/systemd/system/nvidia-persistenced.service"
     sed -i 's/__USER__/nvidia-persistenced/' "${pkgdir}/usr/lib/systemd/system/nvidia-persistenced.service"
@@ -269,8 +274,8 @@ package_nvidia-470xx-utils() {
     install -Dm644 systemd/system/nvidia-suspend.service "${pkgdir}/usr/lib/systemd/system/nvidia-suspend.service"
     install -Dm644 systemd/system/nvidia-hibernate.service "${pkgdir}/usr/lib/systemd/system/nvidia-hibernate.service"
     install -Dm644 systemd/system/nvidia-resume.service "${pkgdir}/usr/lib/systemd/system/nvidia-resume.service"
-    install -D     systemd/system-sleep/nvidia "${pkgdir}/usr/lib/systemd/system-sleep/nvidia"
-    install -D     systemd/nvidia-sleep.sh "${pkgdir}/usr/bin/nvidia-sleep.sh"
+    install -D systemd/system-sleep/nvidia "${pkgdir}/usr/lib/systemd/system-sleep/nvidia"
+    install -D systemd/nvidia-sleep.sh "${pkgdir}/usr/bin/nvidia-sleep.sh"
 
     # attempt to mitigate system freeze with systemd v256
     install -Dm644 "${srcdir}"/systemd-homed-override.conf "${pkgdir}"/usr/lib/systemd/system/systemd-homed.service.d/10-nvidia-no-freeze-session.conf
@@ -278,7 +283,6 @@ package_nvidia-470xx-utils() {
     install -Dm644 "${srcdir}"/systemd-suspend-override.conf "${pkgdir}"/usr/lib/systemd/system/systemd-suspend-then-hibernate.service.d/10-nvidia-no-freeze-session.conf
     install -Dm644 "${srcdir}"/systemd-suspend-override.conf "${pkgdir}"/usr/lib/systemd/system/systemd-hibernate.service.d/10-nvidia-no-freeze-session.conf
     install -Dm644 "${srcdir}"/systemd-suspend-override.conf "${pkgdir}"/usr/lib/systemd/system/systemd-hybrid-sleep.service.d/10-nvidia-no-freeze-session.conf
-
 
     # distro specific files must be installed in /usr/share/X11/xorg.conf.d
     install -Dm644 "${srcdir}/nvidia-drm-outputclass.conf" "${pkgdir}/usr/share/X11/xorg.conf.d/10-nvidia-drm-outputclass.conf"

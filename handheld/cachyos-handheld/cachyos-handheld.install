@@ -1,6 +1,5 @@
 SERVICES=("bluetooth" "scx")
 
-
 update_user() {
   # edit user name for sddm autologin and decky environment variables
   export LANG=C
@@ -55,32 +54,23 @@ steamos_steam() {
 }
 
 post_install() {
-    echo "Enabling services..."
-    for service in "${SERVICES[@]}"; do
-        systemctl enable "$service" --now
-    done
-  
+  # Use scx_lavd as default scheduler
+  scx_lavd_default
+
+  echo "Enabling services..."
+  for service in "${SERVICES[@]}"; do
+    systemctl enable "$service" --now
+  done
+
   steamos_steam
   # Update users sddm config to reflect the changes
   echo "Updating Handheld Configs."
   update_user
-  # Use scx_lavd as default scheduler
-  scx_lavd_default
   #echo "If you are installing this without the CachyOS Installation, please update your username in the /etc/sddm.conf.d/*"
 }
 
 post_upgrade() {
-    echo "Enabling services..."
-    systemctl daemon-reload >/dev/null
-
-    for service in "${SERVICES[@]}"; do
-        if systemctl is-active "$service" >/dev/null; then
-            systemctl restart "$service"
-        else
-            systemctl enable "$service"
-        fi
-    done
-   #Update files to reflect the changes
-   echo "Updating Handheld Configs."
-   update_user
+  # Update files to reflect the changes
+  echo "Updating Handheld Configs."
+  update_user
 }

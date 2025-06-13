@@ -1,0 +1,13 @@
+[Unit]
+Description=Falcon Daemon Service
+After=multi-user.target
+Wants=graphical.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/falcond
+User=root
+Restart=on-failure
+
+[Install]
+WantedBy=graphical.target

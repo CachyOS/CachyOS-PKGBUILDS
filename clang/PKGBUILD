@@ -2,7 +2,7 @@
 # Contributor: Jan "heftig" Steffens <jan.steffens@gmail.com>
 
 pkgname=clang
-pkgver=19.1.7
+pkgver=20.1.6
 pkgrel=2
 pkgdesc="C language family frontend for LLVM"
 arch=('x86_64')
@@ -23,21 +23,19 @@ source=($_source_base/clang-$pkgver.src.tar.xz{,.sig}
         $_source_base/llvm-$pkgver.src.tar.xz{,.sig}
         $_source_base/cmake-$pkgver.src.tar.xz{,.sig}
         $_source_base/third-party-$pkgver.src.tar.xz{,.sig}
-        clang-disable-float128-diagnostics-for-device-compilation.patch::https://github.com/llvm/llvm-project/commit/318bff6811e7.patch
-        support-__GCC_-CON-DE-STRUCTIVE_SIZE.patch
+        0001-Revert-clang-driver-When-fveclib-ArmPL-flag-is-in-us.patch
         enable-fstack-protector-strong-by-default.patch)
-sha256sums=('11e5e4ecab5338b9914de3b83a4622cb200de466b7c56ba675afb72fa7d64675'
+sha256sums=('49a16d6b6878a6bdd9ead2d31ffb94c792675607471afa40096fbd48b3cbab66'
             'SKIP'
-            '430b088bf820550090a6cf0eec67183d045273c18b3f1d6c5207e46d93391be7'
+            '988db645aa1287649f66cbcbbc69f229da2900194df567453fa13aae0dc8c4e8'
             'SKIP'
-            '96f833c6ad99a3e8e1d9aca5f439b8fd2c7efdcf83b664e0af1c0712c5315910'
+            'f09e304ca98bb809f492ec34f94f587361b4b0d06ed783fb3a41e7fb218e47a1'
             'SKIP'
-            '11c5a28f90053b0c43d0dec3d0ad579347fc277199c005206b963c19aae514e3'
+            'b4b3efa5d5b01b3f211f1ba326bb6f0c318331f828202d332c95b7f30fca5f8c'
             'SKIP'
-            'b96deca1d3097c7ffd4ff2bb904a50bdd56bec7ed1413ffb0d1d01af87b72c12'
+            '33530189d31b2396b76a7ebac8f938747b3619154cc37015cef9dea29292f7e2'
             'SKIP'
-            '94a3d4df2443f9dc9e256e6c0c661ff4a4ca4f34a5ca351f065511b9694faf2a'
-            '8832b4ee02fe8a0e57fca608288242f80e348ee9b60be3eb0069c8b91a42fbf4'
+            'e88768730a7a46e7952758ec80f831997e30e7dbab53077decae3f71f4fc315e'
             'ef319e65f927718e1d3b1a23c480d686b1d292e2a0bf27229540964f9734117a')
 validpgpkeys=('474E22316ABF4785A88C6E8EA2C794A986419D8A'  # Tom Stellard <tstellar@redhat.com>
               'D574BD5D1D0E98895E3BF90044F2485E45D59042') # Tobias Hieta <tobias@hieta.se>
@@ -67,6 +65,9 @@ prepare() {
   mkdir build
   mv "$srcdir/clang-tools-extra-$pkgver.src" tools/extra
   patch -Np2 -i ../enable-fstack-protector-strong-by-default.patch
+
+  # Revert always linking against libamath when -fveclib=ArmPL
+  patch -Np2 -i ../0001-Revert-clang-driver-When-fveclib-ArmPL-flag-is-in-us.patch
 
   # Fix hardcoded test path
   sed -i 's/clang-tools-extra/tools\/extra/g' tools/extra/test/clang-doc/enum.cpp
@@ -107,6 +108,7 @@ build() {
     -DLLVM_LINK_LLVM_DYLIB=ON
     -DLLVM_MAIN_SRC_DIR="$srcdir/llvm-$pkgver.src"
     -DSPHINX_WARNINGS_AS_ERRORS=OFF
+    -DPACKAGE_BUGREPORT=https://gitlab.archlinux.org/archlinux/packaging/packages/clang/-/issues
   )
 
   # Use Clang as compiler
@@ -193,6 +195,11 @@ package() {
 
   # Compile Python scripts
   _python_optimize "$pkgdir/usr/share" "$pkgdir/$site_packages"
+
+  # Move bash completion
+  local bash_completion_destdir="$pkgdir/usr/share/bash-completion/completions"
+  install -d $bash_completion_destdir
+  mv "$pkgdir/usr/share/clang/bash-autocomplete.sh" "$bash_completion_destdir/clang"
 }
 
 # vim:set ts=2 sw=2 et:

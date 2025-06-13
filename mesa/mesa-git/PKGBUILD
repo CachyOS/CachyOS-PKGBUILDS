@@ -342,11 +342,6 @@ build () {
       _enabled_="true"
       _disabled_="false"
     fi
-    if [ "$_gallium_xa" = "false" ] || [ "$_gallium_xa" = "disabled" ]; then
-      _gallium_xa="${_disabled_}"
-    else
-      _gallium_xa="${_enabled_}"
-    fi
 
     # gallium_vdpau requires either r300, r600, radeonsi or nouveau
     if [[ $_gallium_drivers != *r300* ]] && [[ $_gallium_drivers != *r600* ]] && [[ $_gallium_drivers != *radeonsi* ]] && [[ $_gallium_drivers != *nouveau* ]]; then
@@ -465,10 +460,9 @@ build () {
        -D vulkan-drivers=${_vulkan_drivers} \
        -D egl=${_enabled_} \
        -D gallium-extra-hud=true \
-       -D gallium-nine=true \
+       -D gallium-mediafoundation=${_disabled_} \
        -D gallium-va=${_gallium_va} \
        -D gallium-vdpau=${_gallium_vdpau} \
-       -D gallium-xa=${_gallium_xa} \
        -D gbm=${_enabled_} \
        -D gles1=${_disabled_} \
        -D gles2=${_enabled_} \
@@ -525,10 +519,9 @@ build () {
           -D vulkan-drivers=${_vulkan_drivers} \
           -D egl=${_enabled_} \
           -D gallium-extra-hud=true \
-          -D gallium-nine=true \
+	  -D gallium-mediafoundation=${_disabled_} \
           -D gallium-va=${_gallium_va} \
           -D gallium-vdpau=${_gallium_vdpau} \
-          -D gallium-xa=${_gallium_xa} \
           -D gbm=${_enabled_} \
           -D gles1=${_disabled_} \
           -D gles2=${_enabled_} \
