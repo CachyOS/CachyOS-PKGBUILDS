@@ -42,9 +42,8 @@ source=("git+https://github.com/voideditor/void.git#commit=5cab7e61e5ebf95fc24ee
 sha256sums=('df6e3859b83af81775098f50cdb2f99706a39f65cc2cc3913c918de91fba1085')
 
 build() {
-  # export NODE_ENV=production cause build failure
-  # Do not tain user dir by cache
-  export XDG_CACHE_HOME="${srcdir}/xdgcache" HOME="${srcdir}/home"
+  # Don't put broken files on user dir
+  export XDG_CACHE_HOME="${srcdir}/xdgcache" TMPDIR="$srcdir"/tmp HOME="${srcdir}/home"
   cd "${pkgname}"
   # Clean npm cache and remove existing node_modules
   npm cache clean --force
@@ -55,7 +54,16 @@ build() {
   echo Replacing $(rg -m 1 '"electron":\s*"[0-9]+' package.json) with ${_elver}
   echo 'Fix if major version is wrong.'
   npm pkg set devDependencies.electron=${_elver}
-  # Stop downloading electron
+  # Don't DL ripgrep
+  _vsrgver=$(npm pkg get dependencies.@vscode/ripgrep | sed 's/[\"^]//g')
+  _rgver=13.0.0-10
+  mkdir -p "$TMPDIR"/vscode-ripgrep-cache-$_vsrgver
+  touch rg # Archived symlink is replaced
+  bsdtar -czf "$TMPDIR"/vscode-ripgrep-cache-${_vsrgver}/ripgrep-v${_rgver}-x86_64-unknown-linux-musl.tar.gz rg
+  _vsrgver2=1.15.10
+  mkdir -p "$TMPDIR"/vscode-ripgrep-cache-$_vsrgver2
+  ln -sf "$TMPDIR"/vscode-ripgrep-cache-{${_vsrgver},${_vsrgver2}}/ripgrep-v${_rgver}-x86_64-unknown-linux-musl.tar.gz
+  # Don't DL Electron
   _cachedir="${XDG_CACHE_HOME}"/electron/$(echo -n "https://github.com/electron/electron/releases/download/v${_elver}" | sha256sum | cut -d ' ' -f 1)
   _zip="electron-v${_elver}-linux-x64.zip"
   mkdir -p "${_cachedir}"
