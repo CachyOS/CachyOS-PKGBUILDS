@@ -34,6 +34,7 @@ makedepends=(
   nodejs-lts-iron # see .nvmrc
   pkgconf
   python
+  libarchive
 )
 source=("git+https://github.com/voideditor/void.git#commit=5cab7e61e5ebf95fc24eec6b4213f035f85eb857")
 # https://github.com/voideditor/void/commit/5cab7e61e5ebf95fc24eec6b4213f035f85eb857
@@ -41,18 +42,34 @@ source=("git+https://github.com/voideditor/void.git#commit=5cab7e61e5ebf95fc24ee
 sha256sums=('df6e3859b83af81775098f50cdb2f99706a39f65cc2cc3913c918de91fba1085')
 
 build() {
-  # export NODE_ENV=production cause build failure
-  # Do not tain user dir by cache
-  export XDG_CACHE_HOME="${srcdir}/xdgcache" HOME="${srcdir}/home"
+  # Don't put broken files on user dir
+  export XDG_CACHE_HOME="${srcdir}/xdgcache" TMPDIR="$srcdir"/tmp HOME="${srcdir}/home"
   cd "${pkgname}"
   # Clean npm cache and remove existing node_modules
   npm cache clean --force
   rm -rf node_modules
-  # Set version of electron
+  # Set version of electron and build native modules for our electron
   _elver=$(cat /usr/lib/electron${_elnum}/version)
+  sed -i "s/^target=.*/target=\"${_elver}\"/" .npmrc
   echo Replacing $(rg -m 1 '"electron":\s*"[0-9]+' package.json) with ${_elver}
   echo 'Fix if major version is wrong.'
   npm pkg set devDependencies.electron=${_elver}
+  # Don't DL ripgrep
+  _vsrgver=$(npm pkg get dependencies.@vscode/ripgrep | sed 's/[\"^]//g')
+  _rgver=13.0.0-10
+  mkdir -p "$TMPDIR"/vscode-ripgrep-cache-$_vsrgver
+  touch rg # Archived symlink is replaced
+  bsdtar -czf "$TMPDIR"/vscode-ripgrep-cache-${_vsrgver}/ripgrep-v${_rgver}-x86_64-unknown-linux-musl.tar.gz rg
+  _vsrgver2=1.15.10
+  mkdir -p "$TMPDIR"/vscode-ripgrep-cache-$_vsrgver2
+  ln -sf "$TMPDIR"/vscode-ripgrep-cache-{${_vsrgver},${_vsrgver2}}/ripgrep-v${_rgver}-x86_64-unknown-linux-musl.tar.gz
+  # Don't DL Electron
+  _cachedir="${XDG_CACHE_HOME}"/electron/$(echo -n "https://github.com/electron/electron/releases/download/v${_elver}" | sha256sum | cut -d ' ' -f 1)
+  _zip="electron-v${_elver}-linux-x64.zip"
+  mkdir -p "${_cachedir}"
+  bsdtar --format zip -cf "${_cachedir}/${_zip}" /dev/null 2> /dev/null
+  echo $(sha256sum "${_cachedir}/${_zip}" | cut -d " " -f 1) *${_zip} > build/checksums/electron.txt
+  export ELECTRON_SKIP_BINARY_DOWNLOAD=1 PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
   # Install dependencies with legacy peer deps flag to handle dependency conflicts
   npm install --legacy-peer-deps
   # Build react because it fails for some reason
