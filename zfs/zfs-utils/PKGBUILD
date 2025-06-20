@@ -43,7 +43,7 @@ build() {
     export CFLAGS="$CFLAGS -fno-tree-vectorize"
     export CXXFLAGS="$CXXFLAGS -fno-tree-vectorize"
 
-    cd "${srcdir}"/zfs-${pkgver}
+    cd "${srcdir}"/zfs
 
     ./configure --prefix=/usr \
                 --sysconfdir=/etc \
@@ -61,7 +61,7 @@ build() {
 }
 
 package() {
-    cd "${srcdir}"/zfs-${pkgver}
+    cd "${srcdir}"/zfs
 
     make DESTDIR="${pkgdir}" install
     install -D -m644 contrib/bash_completion.d/zfs "${pkgdir}"/usr/share/bash-completion/completions/zfs
