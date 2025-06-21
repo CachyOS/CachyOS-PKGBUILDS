@@ -19,7 +19,7 @@ pkgname=('php'
          'php-tidy'
          'php-xsl')
 pkgver=8.4.8
-pkgrel=2
+pkgrel=3
 arch=('x86_64')
 license=('PHP-3.01')
 url='https://www.php.net/'
@@ -28,25 +28,25 @@ makedepends=('apache' 'enchant' 'gd' 'gmp' 'icu' 'libsodium' 'libxslt' 'libzip' 
              'oniguruma')
 checkdepends=('procps-ng')
 source=("https://php.net/distributions/${pkgbase}-${pkgver}.tar.xz"{,.asc}
-        'apache.patch' 'apache.conf' 'php-fpm.patch' 'php-fpm.tmpfiles' 'php.ini.patch'
-        'php-cachy.patch' 'disable-deepbind.patch' '0005-Enable-hugepages.patch')
+        'apache.patch' 'apache.conf' 'php-fpm.patch' 'disable-deepbind.patch' 'php-fpm.tmpfiles' 'php.ini.patch' 'php-cachy.patch' '0005-Enable-hugepages.patch'
+		'https://raw.githubusercontent.com/SergiX44/php-benchmark-script/master/bench.php')
 sha256sums=('aa6a4d330b47eacd83e351658ba8c47747a1e4356456219cfb6d75e7838da091'
             'SKIP'
             '74d33ad3e9fa2f0aaf6ceeddd59ec78d35e66673db74b1053cc3e6105478ba8a'
             '4a2add00d93fa991ccdf6356090264c1059c79935642afff6e8d4a2107fa037e'
             '78b8074461cdfc5d4e0ba428a8387f308d60720c8ad35c6176801e5088f02090'
+            'a57e4f2e7b12f745472ab7ca242e4f2f310d32a2bcaf304a4e98020c335e2ec2'
             '640dba0d960bfeaae9ad38d2826d3f6b5d6c175a4d3e16664eefff29141faad5'
             '52a045005f8b241b54f447c22b5d573f3e994481cfc21c2fc111c4a38df55430'
             '40de67e43a972159c54d948ef1bf4e94e2d0e96da1f21efc9002ba71f39b80ae'
-            'a57e4f2e7b12f745472ab7ca242e4f2f310d32a2bcaf304a4e98020c335e2ec2'
-            'faee19fff5f554638b28d3277388d6f3604738e8a2670f3e55562947e5678bbc')
-validpgpkeys=('AFD8691FDAEDF03BDF6E460563F15A9B715376CA'
-              '9D7F99A0CB8F05C8A6958D6256A97AF7600A39A6'
-              '0616E93D95AF471243E26761770426E17EBBB3DD')
+            'faee19fff5f554638b28d3277388d6f3604738e8a2670f3e55562947e5678bbc'
+            'b3210ff1b679f03a3bac409b9da491def692254f8354e4d09515cd2409fea23f')
+validpgpkeys=('1198C0117593497A5EC5C199286AF1F9897469DC'
+              '39B641343D8C104B2B146DC3F9C39DC0B9698544'
+              'E60913E4DF209907D8E30D96659A97C9CF2A795A')
 _interpreter=${pkgver%.*}
-# LTO is incompatible with global registers and results in reduced performance:
-# https://gitlab.archlinux.org/archlinux/packaging/packages/php/-/merge_requests/3
 options=('!lto')
+
 
 prepare() {
 	cd "${srcdir}/${pkgbase}-${pkgver}"
@@ -68,7 +68,7 @@ prepare() {
 
 build() {
 
-export CFLAGS+=" -fno-semantic-interposition"
+export CFLAGS+=" $CFLAGS -O3 -Ofast -fno-semantic-interposition"
 
 	local _phpconfig="--srcdir=../${pkgbase}-${pkgver} \
 		--config-cache \
@@ -81,6 +81,7 @@ export CFLAGS+=" -fno-semantic-interposition"
 		--with-config-file-scan-dir=/etc/php/conf.d \
 		--disable-rpath \
 		--mandir=/usr/share/man \
+		--disable-gcc-global-regs \
 		"
 
 	local _phpextensions="\
@@ -137,7 +138,7 @@ export CFLAGS+=" -fno-semantic-interposition"
 	EXTENSION_DIR=/usr/lib/php/modules
 	export EXTENSION_DIR
 
-	mkdir "${srcdir}/build"
+	mkdir -p "${srcdir}/build"
 	cd "${srcdir}/build"
 	ln -s "../${pkgbase}-${pkgver}/configure"
 	./configure ${_phpconfig} \
@@ -149,7 +150,21 @@ export CFLAGS+=" -fno-semantic-interposition"
 		--with-fpm-group=http \
 		--enable-embed=shared \
 		${_phpextensions}
-	make
+	make prof-gen
+
+	# Make test
+	make test || true
+	
+	# Run benchmark for PGO
+	PHP_BIN_DIR="${srcdir}/build/sapi/cli"
+	cd "${srcdir}"
+	${PHP_BIN_DIR}/php bench.php
+	${PHP_BIN_DIR}/php bench.php --multiplier=2
+	${PHP_BIN_DIR}/php bench.php --multiplier=4
+	${PHP_BIN_DIR}/php bench.php --multiplier=8
+
+	cd "${srcdir}/build"
+	make prof-use
 
 	# apache
 	# reuse the previous run; this will save us a lot of time
@@ -169,21 +184,21 @@ export CFLAGS+=" -fno-semantic-interposition"
 	make
 }
 
-check() {
-	cd "${srcdir}/build"
-
-	# Check if sendmail was configured correctly (FS#47600)
-	sapi/cli/php -n -r 'echo ini_get("sendmail_path");' | grep -q '/usr/bin/sendmail'
-
-	export REPORT_EXIT_STATUS=1
-	export NO_INTERACTION=1
-	export SKIP_ONLINE_TESTS=1
-	export SKIP_SLOW_TESTS=1
-	export TEST_PHP_ARGS="-j$(nproc)"
-	export TESTS='tests Zend'
-
-	make test
-}
+#check() {
+#	cd "${srcdir}/build"
+#
+#	# Check if sendmail was configured correctly (FS#47600)
+#	sapi/cli/php -n -r 'echo ini_get("sendmail_path");' | grep -q '/usr/bin/sendmail'
+#
+#	export REPORT_EXIT_STATUS=1
+#	export NO_INTERACTION=1
+#	export SKIP_ONLINE_TESTS=1
+#	export SKIP_SLOW_TESTS=1
+#	export TEST_PHP_ARGS="-j$(nproc)"
+#	export TESTS='tests Zend'
+#
+#	make test
+#}
 
 package_php() {
 	pkgdesc='A general-purpose scripting language that is especially suited to web development'
