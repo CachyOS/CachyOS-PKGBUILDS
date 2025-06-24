@@ -1,4 +1,4 @@
-SERVICES=("ananicy-cpp" "systemd-resolved" "systemd-oomd")
+SERVICES=("ananicy-cpp" "systemd-resolved" )
 
 post_install() {
     echo "Enabling services..."
@@ -14,6 +14,8 @@ post_upgrade() {
         if systemctl is-active "$service" >/dev/null; then
             systemctl restart "$service"
         fi
-
     done
+    if systemctl is-active "systemd-oomd" >/dev/null; then
+        systemctl disable systemd-oomd
+    fi
 }
