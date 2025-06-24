@@ -15,14 +15,14 @@ sha256sums=('SKIP')
 install=galileo-mura.install
 
 build() {
-	cd "galileo-mura-extractor"
+    cd "galileo-mura-extractor"
 
-	arch-meson . build --prefix /usr ..
-	ninja -C build
+    arch-meson . build --prefix /usr ..
+    ninja -C build
 }
 
 package() {
-	cd "galileo-mura-extractor"
+    cd "galileo-mura-extractor"
 
-	DESTDIR="$pkgdir" meson install -C build --skip-subprojects
+    DESTDIR="$pkgdir" meson install -C build --skip-subprojects
 }
