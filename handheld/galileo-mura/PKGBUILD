@@ -9,13 +9,13 @@ url="https://gitlab.steamos.cloud/jupiter/galileo-mura-extractor"
 license=('MIT')
 depends=('tar' 'sed')
 makedepends=(meson ninja)
-source=("git+https://gitlab.com/evlaV/galileo-mura-extractor.git#tag=v${pkvgver}")
+source=("git+https://gitlab.com/evlaV/galileo-mura-extractor.git#tag=v${pkgver}")
 sha256sums=('SKIP')
 
 build() {
     cd "galileo-mura-extractor"
 
-    arch-meson . build --prefix /usr ..
+    arch-meson . build --prefix /usr
     ninja -C build
 }
 
