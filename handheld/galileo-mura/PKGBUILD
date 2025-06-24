@@ -1,8 +1,7 @@
 # Maintainer: Joshua Ashton <joshua@froggi.es>
 
 pkgname=galileo-mura
-_srctag=v0.9
-pkgver=${_srctag//-/.}
+pkgver=0.9
 pkgrel=1
 pkgdesc="Utilities for setting and reading mura correction on Galileo"
 arch=(x86_64)
@@ -10,27 +9,20 @@ url="https://gitlab.steamos.cloud/jupiter/galileo-mura-extractor"
 license=('MIT')
 depends=('tar' 'sed')
 makedepends=(meson ninja)
-source=("git+https://gitlab.com/evlaV/galileo-mura-extractor.git#tag=$_srctag")
+source=("git+https://gitlab.com/evlaV/galileo-mura-extractor.git#tag=v${pkvgver}")
 sha256sums=('SKIP')
 
 install=galileo-mura.install
 
-prepare() {
-	cd "galileo-mura-extractor"
-}
-
 build() {
 	cd "galileo-mura-extractor"
 
-	rm -rf build
-	mkdir build
-	cd build
-	arch-meson --buildtype release --prefix /usr ..
-	ninja
+	arch-meson . build --prefix /usr ..
+	ninja -C build
 }
 
 package() {
-	cd "galileo-mura-extractor/build"
+	cd "galileo-mura-extractor"
 
-	DESTDIR="$pkgdir" meson install --skip-subprojects
+	DESTDIR="$pkgdir" meson install -C build --skip-subprojects
 }
