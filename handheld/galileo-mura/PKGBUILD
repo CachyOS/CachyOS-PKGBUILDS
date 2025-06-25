@@ -1,0 +1,28 @@
+# Maintainer: Sterophonick
+# Original PKGBUILD: Joshua Ashton <joshua@froggi.es>
+
+pkgname=galileo-mura
+pkgver=0.9
+pkgrel=1
+pkgdesc="Utilities for setting and reading mura correction on Galileo"
+arch=(x86_64)
+url="https://gitlab.com/evlaV/galileo-mura-extractor"
+license=('MIT')
+depends=('bash' 'glibc' 'tar' 'sed')
+makedepends=(meson ninja)
+source=("git+https://gitlab.com/evlaV/galileo-mura-extractor.git#tag=v${pkgver}")
+sha256sums=('d9704ec6605e0cd13e6f3e04c1fe00a377a19d8873dce94b59ba52beb24789e0')
+
+build() {
+    cd "galileo-mura-extractor"
+
+    arch-meson . build --prefix /usr
+    ninja -C build
+}
+
+package() {
+    cd "galileo-mura-extractor"
+
+    DESTDIR="$pkgdir" meson install -C build --skip-subprojects
+    install -Dm 644 LICENSE -t "${pkgdir}"/usr/share/licenses/galileo-mura/
+}
