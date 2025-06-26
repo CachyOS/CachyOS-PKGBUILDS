@@ -3,15 +3,17 @@
 
 pkgname=galileo-mura
 pkgver=0.9
-pkgrel=1
+pkgrel=2
 pkgdesc="Utilities for setting and reading mura correction on Galileo"
 arch=(x86_64)
 url="https://gitlab.com/evlaV/galileo-mura-extractor"
 license=('MIT')
 depends=('bash' 'glibc' 'tar' 'sed')
 makedepends=(meson ninja)
-source=("git+https://gitlab.com/evlaV/galileo-mura-extractor.git#tag=v${pkgver}")
-sha256sums=('d9704ec6605e0cd13e6f3e04c1fe00a377a19d8873dce94b59ba52beb24789e0')
+source=("git+https://gitlab.com/evlaV/galileo-mura-extractor.git#tag=v${pkgver}"
+        galileo-mura.service)
+sha256sums=('d9704ec6605e0cd13e6f3e04c1fe00a377a19d8873dce94b59ba52beb24789e0'
+            '13350ed52e47a6413c86619060b2978435a7429184af4f41626669c30a6a1df3')
 
 build() {
     cd "galileo-mura-extractor"
@@ -25,4 +27,6 @@ package() {
 
     DESTDIR="$pkgdir" meson install -C build --skip-subprojects
     install -Dm 644 LICENSE -t "${pkgdir}"/usr/share/licenses/galileo-mura/
+
+    install -Dm 644 $srcdir/galileo-mura.service -t "${pkgdir}"/usr/lib/systemd/user/
 }
