@@ -1,0 +1,18 @@
+# USB devices and topological children
+SUBSYSTEMS=="usb", TAG+="uaccess"
+
+# HID devices over hidraw
+KERNEL=="hidraw*", TAG+="uaccess"
+
+# Steam Controller udev write access
+KERNEL=="uinput", SUBSYSTEM=="misc", TAG+="uaccess", OPTIONS+="static_node=uinput"
+
+# LED color write access
+SUBSYSTEM=="leds", RUN+="/usr/bin/chown 1000:1000 '/sys/class/leds/%k/brightness'"
+SUBSYSTEM=="leds", RUN+="/usr/bin/chown 1000:1000 '/sys/class/leds/%k/effect'"
+SUBSYSTEM=="leds", RUN+="/usr/bin/chown 1000:1000 '/sys/class/leds/%k/enabled'"
+SUBSYSTEM=="leds", RUN+="/usr/bin/chown 1000:1000 '/sys/class/leds/%k/mode'"
+SUBSYSTEM=="leds", RUN+="/usr/bin/chown 1000:1000 '/sys/class/leds/%k/multi_intensity'"
+SUBSYSTEM=="leds", RUN+="/usr/bin/chown 1000:1000 '/sys/class/leds/%k/profile'"
+SUBSYSTEM=="leds", RUN+="/usr/bin/chown 1000:1000 '/sys/class/leds/%k/speed'"
+
