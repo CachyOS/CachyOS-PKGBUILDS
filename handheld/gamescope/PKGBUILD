@@ -70,7 +70,6 @@ source=(
   git+https://github.com/KhronosGroup/SPIRV-Headers.git
   git+https://github.com/Joshua-Ashton/vkroots.git
   git+https://github.com/Joshua-Ashton/wlroots.git
-  https://github.com/ValveSoftware/openvr/pull/1890.patch
 )
 b2sums=('659bfa966084c1e1bb604ce081364a8d9c712c44c16e47b3903f9a0a26cde03b1cb4cefb2537a5728c981b2bdfea956281687026e667829e91e8c48d000ab37d'
         'SKIP'
@@ -79,8 +78,7 @@ b2sums=('659bfa966084c1e1bb604ce081364a8d9c712c44c16e47b3903f9a0a26cde03b1cb4cef
         'SKIP'
         'SKIP'
         'SKIP'
-        'SKIP'
-        'ca715d31473649b6e342d75f44c8cf22cb4c303d546718085a18f00afa2e32532f478261c8c150bd0799005b6742a993575c1914575f5da39ae551315f8cac31')
+        'SKIP')
 
 prepare() {
   cd gamescope
@@ -92,9 +90,6 @@ prepare() {
     git config submodule.${submodule}.url ../${submodule##*/}
   done
   git -c protocol.file.allow=always submodule update
-
-  cd subprojects/openvr
-  patch -Np1 -i ${srcdir}/1890.patch
 }
 
 build() {
