@@ -8,7 +8,7 @@ pkgver=${_srctag//-/.}
 _geckover=2.47.4
 _monover=10.0.0
 _xaliaver=0.4.6
-pkgrel=1
+pkgrel=3
 epoch=1
 
 source=(
@@ -195,9 +195,9 @@ build() {
     local march="${flags["-march"]:-nocona}"
     local mtune="core-avx2"
 
-    CFLAGS="-O3 -march=$march -mtune=$mtune -pipe -fno-semantic-interposition"
-    CXXFLAGS="-O3 -march=$march -mtune=$mtune -pipe -fno-semantic-interposition"
-    RUSTFLAGS="-C opt-level=3 -C target-cpu=$march"
+    CFLAGS="-O2 -march=$march -mtune=$mtune -pipe -fno-semantic-interposition"
+    CXXFLAGS="-O2 -march=$march -mtune=$mtune -pipe -fno-semantic-interposition"
+    RUSTFLAGS="-C opt-level=2 -C target-cpu=$march"
     LDFLAGS="-Wl,-O1,--sort-common,--as-needed"
 
     export CFLAGS CXXFLAGS RUSTFLAGS LDFLAGS
