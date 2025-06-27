@@ -75,6 +75,7 @@ pref("browser.urlbar.suggest.quicksuggest.nonsponsored", false, locked);
 pref("browser.urlbar.suggest.quicksuggest.sponsored", false, locked);
 pref("browser.urlbar.suggest.quicksuggest.topsites", false, locked);
 pref("browser.urlbar.suggest.trending", false, locked);
+pref("browser.vpn_promo.enabled", false, locked);
 pref("captivedetect.canonicalURL", "", locked);
 pref("devtools.debugger.remote-enabled", false, locked);
 pref("dom.private-attribution.submission.enabled", false, locked);
