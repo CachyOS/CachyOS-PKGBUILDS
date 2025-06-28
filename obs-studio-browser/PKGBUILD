@@ -6,8 +6,8 @@
 # Contributor: ledti <antergist at gmail dot com>
 
 pkgname=obs-studio-browser
-pkgver=31.0.3
-pkgrel=5
+pkgver=31.0.4
+pkgrel=1
 pkgdesc="Free and open source software for video recording and live streaming. With everything except service integration"
 arch=("x86_64")
 url="https://github.com/obsproject/obs-studio"
@@ -116,7 +116,7 @@ source=(
   "obs-websocket::git+https://github.com/obsproject/obs-websocket.git"
 )
 source_x86_64=("https://cdn-fastly.obsproject.com/downloads/cef_binary_6533_linux_x86_64.tar.xz")
-sha256sums=('f1c65d95181f43912955d9bea725172659f61a9f3e59a25fe5a0d5a4662f3a7b'
+sha256sums=('b9dae8000b1f75433b27e58270d6eff50aab657ce47cfe576ce6ae6a26adf0b2'
             'SKIP'
             'SKIP')
 sha256sums_x86_64=('fab66dfc9cfd2e26fb87798f855aef30c2004edc8e19570d37af555644ae1655')
@@ -127,12 +127,6 @@ prepare() {
   git config submodule.plugins/obs-browser.url $srcdir/obs-browser
   git config submodule.plugins/obs-websocket.url $srcdir/obs-websocket
   git -c protocol.file.allow=always submodule update
-
-  ## deps/json11: Fix compile error on GCC 15+
-  git cherry-pick -n 6931d80e16afc92498e345835204059ac1980782
-
-  ## linux-v4l2: Fix virtual camera start failure
-  git cherry-pick -n 12c6febae21f369da50f09d511b54eadc1dc1342
 
   ## Mark log and titlebar version
   sed -i "s|obs_get_version_string()|\"$_pkgver-$_suffix-$pkgrel\"|" UI/obs-app.cpp
