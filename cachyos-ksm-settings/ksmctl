@@ -1,33 +1,58 @@
 #!/usr/bin/env bash
+# Copyright (C) 2024-2025 Vasiliy Stelmachenok for CachyOS
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License along
+# with this program; if not, write to the Free Software Foundation, Inc.,
+# 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 file_path="/sys/kernel/mm/ksm/run"
-conf_path="/etc/tmpfiles.d/ksm.conf"
-save="y"
 
 die() {
     echo "$@" >&2
     exit 1
 }
 
-if [ "$#" -eq 0 ]; then
+help() {
     die "$(cat << EOF
-Usage: $0 [--unsave|-u] {--enable|-e|--disable|-d|--status|-s}
+Usage: $0 {--enable|-e|--disable|-d|--status|-s|--pause|-p|--help|-h}
   --enable,  -e :  Enable KSM
   --disable, -d :  Disable KSM
+  --pause,   -p :  Temporarily disable KSM without unmerging pages
   --status,  -s :  Print the current KSM status
-  --unsave,  -u :  Do not save choice to config files
+  --help,    -h :  Print this message
 EOF
 )"
+}
+
+if [ "$#" -eq 0 ]; then
+    help
 fi
 
 while [[ "$#" -gt 0 ]]; do
     case "$1" in
+        --pause | -p)
+            new_state="0"
+            shift
+            ;;
         --enable | -e)
             new_state="1"
             shift
             ;;
         --disable | -d)
-            new_state="0"
+            new_state="2"
             shift
+            ;;
+        --help | -h)
+            help
             ;;
         --status | -s)
             status="Unknown KSM state"
@@ -42,12 +67,8 @@ while [[ "$#" -gt 0 ]]; do
             echo "$status"
             exit 0
             ;;
-        -u | --unsave)
-            unset save
-            shift
-            ;;
         *)
-            die "Error: Invalid argument. Use --enable, -e, --disable, --status, -s or -d."
+            die "Error: Invalid argument. Use --enable, --disable, --pause, --status or --help."
             ;;
     esac
 done
@@ -57,17 +78,16 @@ if [ "$(id -u)" -ne 0 ]; then
 fi
 
 if [ -z "$new_state" ]; then
-    die "Error: Missing action. Use --enable, -e, --disable, or -d." >&2
+    die "Error: Missing action. Use --enable, --disable or --pause" >&2
 fi
 
-if ((new_state > 0)); then
+if ((new_state == 0)); then
+    echo "Pausing Kernel Samepage Merging..."
+    echo "0" > "$file_path"
+elif ((new_state == 1)); then
     echo "Enabling Kernel Samepage Merging..."
     echo "1" > "$file_path"
 else
     echo "Disabling Kernel Samepage Merging..."
     echo "2" > "$file_path"
-fi
-
-if [ -n "$save" ]; then
-    echo "w! /sys/kernel/mm/ksm/run - - - - $new_state" > "$conf_path"
 fi
