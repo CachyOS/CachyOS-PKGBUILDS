@@ -1,0 +1,12 @@
+[Unit]
+Description=Activates Kernel Samepage Merging
+ConditionPathExists=/sys/kernel/mm/ksm
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/bin/ksmctl -e
+ExecStop=/usr/bin/ksmctl -d
+
+[Install]
+WantedBy=multi-user.target
