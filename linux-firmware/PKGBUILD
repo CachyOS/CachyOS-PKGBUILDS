@@ -25,9 +25,9 @@ pkgname=(
   linux-firmware-radeon
   linux-firmware-realtek
 )
-_tag=20250509
-pkgver=20250508.788aadc8
-pkgrel=3
+pkgver=20250627
+pkgrel=1
+pkgrel=1
 epoch=1
 pkgdesc="Firmware files for Linux"
 url="https://gitlab.com/kernel-firmware/linux-firmware"
@@ -43,8 +43,8 @@ options=(
   !debug
   !strip
 )
-source=("git+$url.git?signed#tag=${_tag}")
-b2sums=('6e606e0b656c8fb177064a71dc7542661141efb2eb4824479f569b2284aac2b14e0afb1bbbf0c1fe6edd442663b4cb971aa537039da17fad34c4dc1c56fae320')
+source=("git+$url.git?signed#tag=${pkgver}")
+b2sums=('02e6f518e2988599dfb4339af0aaa1bcb5332a3e1b5649b14e118d5f1066fbd17e1705afc4849fcfc3f8e955096efb69b587f74a1db98e1db3d09a3032be3e3e')
 validpgpkeys=(
   4CDE8575E547BF835FE15807A31B6BD72486CFD6 # Josh Boyer <jwboyer@fedoraproject.org>
 )
@@ -53,7 +53,10 @@ _backports=(
 )
 
 _reverts=(
-  360fd45301707daa3d95be32d84132481b17db46 # revert ath12k: https://bugzilla.kernel.org/show_bug.cgi?id=220108
+  # https://gitlab.archlinux.org/archlinux/packaging/packages/linux-firmware/-/issues/11
+  # https://bugzilla.kernel.org/show_bug.cgi?id=220212#c3
+  2e91d8c3c4bd34a27177180a38f62d3ba3c96031
+  360fd45301707daa3d95be32d84132481b17db46
 )
 
 prepare() {
@@ -68,14 +71,6 @@ prepare() {
     echo Reverting $(git log --oneline -1 "${c}")
     git revert -n "${c}"
   done
-}
-
-pkgver() {
-  cd ${pkgbase}
-
-  # Commit date + short rev
-  echo $(TZ=UTC git show -s --pretty=%cd \
-    --date=format-local:%Y%m%d HEAD).$(git rev-parse --short HEAD)
 }
 
 build() {
@@ -175,6 +170,9 @@ package_linux-firmware-other() {
 
   # dedup after splitting
   make -C ${pkgbase} FIRMWAREDIR="${pkgdir}/usr/lib/firmware" dedup
+
+  install -Dm644 ${pkgbase}/LICEN[CS]E* \
+    -t "${pkgdir}/usr/share/licenses/${pkgname}"
 }
 
 package_amd-ucode() {
@@ -191,7 +189,10 @@ package_amd-ucode() {
 
 package_linux-firmware-amdgpu() {
   pkgdesc+=" - Firmware for AMD Radeon GPUs"
-  license+=(LicenseRef-amdgpu)
+  license+=(
+    LicenseRef-amdgpu
+    MIT
+  )
   depends=(linux-firmware-whence)
 
   mv -v ${pkgname#linux-firmware-}/* "${pkgdir}"
@@ -233,7 +234,7 @@ package_linux-firmware-broadcom() {
   mv -v ${pkgname#linux-firmware-}/* "${pkgdir}"
   make -C ${pkgbase} FIRMWAREDIR="${pkgdir}/usr/lib/firmware" dedup
 
-  install -Dm644 ${pkgbase}/LICENCE.{broadcom_*,cypress} \
+  install -Dm644 ${pkgbase}/LICENCE.{bnx2*,broadcom_*,cypress,tigon} \
     -t "${pkgdir}/usr/share/licenses/${pkgname}"
 }
 
