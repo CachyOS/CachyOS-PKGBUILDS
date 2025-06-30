@@ -9,7 +9,7 @@
 # Contributor: TIanyi Cui <tianyicui@gmail.com>
 
 pkgname=nodejs
-pkgver=24.2.0
+pkgver=24.3.0
 pkgrel=2
 pkgdesc='Evented I/O for V8 javascript ("Current" release)'
 arch=('x86_64')
@@ -39,7 +39,7 @@ makedepends=(
 optdepends=('npm: nodejs package manager')
 options=('!lto')
 source=("git+https://github.com/nodejs/node.git#tag=v$pkgver?signed")
-sha512sums=('f46ae0ae953642f4fe88b961c3c128a6bf56501210de2f9dd4cbb703c8685b8599021d450197797a3e9dc3465992a33cd77708472f4ea8031d96e9b7da21fe2c')
+sha512sums=('39263321e76cfd6c1fb75895299acb3d6b98c96aba99d6e6a2db07ff11ac68cd4674d6225c66dcc8a1ff52eb83e53749765c697d63d0d91d281c4b9e4a359c0e')
 validpgpkeys=(
   '8FCCA13FEF1D0C2E91008E09770F7A9A5AE15600' # Michaël Zasso (Targos) <targos@protonmail.com>
   '890C08DB8579162FEE0DF9DB8BEAB4DFCF555EF4' # RafaelGSS <rafael.nunu@hotmail.com>
@@ -53,13 +53,17 @@ _set_flags() {
   CXXFLAGS="${CXXFLAGS/_FORTIFY_SOURCE=3/_FORTIFY_SOURCE=2}"
 }
 
+prepare() {
+  cd node
+  # Fix flaky test-config test https://github.com/nodejs/node/pull/58799
+  git cherry-pick -n cd685fe3b6b18d2a1433f2635470513896faebe6
+  git cherry-pick -n 100c6da238bec44ea0b18a3df4e82080a8ae05b3
+}
+
 build() {
   _set_flags
   cd node
 
-  # /usr/lib/libnode.so uses malloc_usable_size, which is incompatible with fortification level 3
-  export CFLAGS="${CFLAGS/_FORTIFY_SOURCE=3/_FORTIFY_SOURCE=2}"
-  export CXXFLAGS="${CXXFLAGS/_FORTIFY_SOURCE=3/_FORTIFY_SOURCE=2}"
   # Do not error on PGO mismatch
   export CFLAGS+=" -fno-semantic-interposition -Wno-error=coverage-mismatch"
   export CXXFLAGS+=" -fno-semantic-interposition -Wno-error=coverage-mismatch"
