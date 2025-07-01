@@ -6,8 +6,8 @@
 
 pkgbase=nvidia-utils
 pkgname=('nvidia-utils' 'opencl-nvidia' 'nvidia-dkms' 'nvidia-open-dkms')
-pkgver=575.64
-pkgrel=3
+pkgver=575.64.03
+pkgrel=2
 arch=('x86_64')
 url="http://www.nvidia.com/"
 license=('custom')
@@ -25,8 +25,6 @@ source=('nvidia-drm-outputclass.conf'
         "https://download.nvidia.com/XFree86/NVIDIA-kernel-module-source/${_pkg_open}.tar.xz"
         '0001-Enable-atomic-kernel-modesetting-by-default.patch'
         '0002-Add-IBT-support.patch'
-        '0003-nv-dmabuf-Inline-dma_buf_attachment_is_dynamic.patch'
-        '0004-nvidia-uvm-Disable-SVA-support-for-6.16.patch'
         'limit-vram-usage')
 sha256sums=('be99ff3def641bb900c2486cce96530394c5dc60548fc4642f19d3a4c784134d'
             'f77a5247a3ba63e9fad3a3b2822d0fcfa51e0f79b5a90bd79bf08ea34b64ab07'
@@ -34,12 +32,10 @@ sha256sums=('be99ff3def641bb900c2486cce96530394c5dc60548fc4642f19d3a4c784134d'
             'c5aa7b8abe69e72bfdc6b9ee8afbfd350bcc557e894558f2e6e4087fa9aa0dd8'
             '1d053c5078387021338cfc3a732bed61be1a20a549775573788e9134775c8149'
             '12d31a5425aba66be9e9129012cde82755ad4d5b7ce9933df8fc398c4fa8d631'
-            'eb01bcfe73b06c7d24b6083c27e6414f6979542f06e65601421b64ccc0ad68b1'
-            '3da8e6cecd404ad25ee93c3c3f4b938538108dda593bbdf3943b631895d38704'
+            '4bb7aa86004b2ed299c7d430a0622c5c90327ce3aca4f6e9a531d4c41d3a0ca0'
+            '0c909f27a48ad5f76e3da98ca657e47c96a46479b5a37be117284cd7ce17db8c'
             '163c57160cc1033020680f638b44ebd94b496152dcd8951e87d5077d4d5c2009'
             'a0088d49d46b699d1727e5944fd9aca5ede93ea3678dd5e91ca58084bc2fa0ee'
-            'c68eb2b8eac20a5561eaa313c732deff60110eef58e7d8dc6e349b497d835ed6'
-            '38179bf7bdba640649a654deb729e3ea02c00f351f921b10c5c8ee81fed80797'
             'cae9133d31ac7592425a25af03f734c70aa93cefc8e591f360f96b595fa4eb1d')
 
 
@@ -68,8 +64,6 @@ prepare() {
     # NVIDIA-open
     patch -Np1 -i  "${srcdir}/0001-Enable-atomic-kernel-modesetting-by-default.patch" -d "${srcdir}/${_pkg_open}/kernel-open"
     patch -Np1 -i "${srcdir}/0002-Add-IBT-support.patch" -d "${srcdir}/${_pkg_open}/"
-    patch -Np1 -i "${srcdir}/0003-nv-dmabuf-Inline-dma_buf_attachment_is_dynamic.patch" -d "${srcdir}/${_pkg_open}/"
-    patch -Np1 -i "${srcdir}/0004-nvidia-uvm-Disable-SVA-support-for-6.16.patch" -d "${srcdir}/${_pkg_open}/"
 
     # Attempt to make builds reproducible
     sed -i "s/^  HOSTNAME.*/  HOSTNAME = echo cachyos/" "${srcdir}/${_pkg_open}/utils.mk"
