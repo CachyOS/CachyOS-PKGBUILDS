@@ -1,4 +1,4 @@
-From f56fde27b47266a5378fe6433b9f0978c82590af Mon Sep 17 00:00:00 2001
+From de3f7765ef7cf53929013922eb855bf1b2a60e59 Mon Sep 17 00:00:00 2001
 From: Stelios Tsampas <loathingkernel@gmail.com>
 Date: Sat, 22 Mar 2025 17:33:47 +0200
 Subject: [PATCH 01/13] umu_utils: use contextmanager to redirect stdout to
@@ -14,7 +14,7 @@ later.
  1 file changed, 3 insertions(+), 2 deletions(-)
 
 diff --git a/umu/umu_util.py b/umu/umu_util.py
-index 3915e93..40adb12 100644
+index 2a30e05..5f4c600 100644
 --- a/umu/umu_util.py
 +++ b/umu/umu_util.py
 @@ -1,7 +1,7 @@
@@ -25,8 +25,8 @@ index 3915e93..40adb12 100644
 +from contextlib import contextmanager, redirect_stdout
  from ctypes.util import find_library
  from fcntl import LOCK_EX, LOCK_UN, flock
- from functools import lru_cache
-@@ -219,7 +219,8 @@ def xdisplay(no: str):
+ from functools import cache
+@@ -220,7 +220,8 @@ def xdisplay(no: str):
      d: display.Display | None = None
  
      try:
@@ -37,10 +37,10 @@ index 3915e93..40adb12 100644
      finally:
          if d is not None:
 -- 
-2.49.0
+2.50.0
 
 
-From b2a8d3b47af6476ad60e09ba88ed7c795582048f Mon Sep 17 00:00:00 2001
+From 4d0ba34c9b6add64e2ece8c0ebcc9ba582bbb5da Mon Sep 17 00:00:00 2001
 From: Stelios Tsampas <loathingkernel@gmail.com>
 Date: Wed, 2 Apr 2025 15:38:03 +0300
 Subject: [PATCH 02/13] umu_run: complete the implemtation of reaper in umu
@@ -51,18 +51,18 @@ Subject: [PATCH 02/13] umu_run: complete the implemtation of reaper in umu
  2 files changed, 24 insertions(+), 10 deletions(-)
 
 diff --git a/umu/umu_run.py b/umu/umu_run.py
-index a69351e..bac2450 100755
+index fc849b3..5b0bb8f 100755
 --- a/umu/umu_run.py
 +++ b/umu/umu_run.py
-@@ -16,7 +16,6 @@ from pathlib import Path
- from pwd import getpwuid
+@@ -16,7 +16,6 @@ from pwd import getpwuid
  from re import match
+ from secrets import token_hex
  from socket import AF_INET, SOCK_DGRAM, socket
 -from subprocess import Popen
  from typing import Any
  
  from urllib3 import PoolManager, Retry
-@@ -596,7 +595,7 @@ def monitor_windows(
+@@ -574,7 +573,7 @@ def monitor_windows(d_secondary: display.Display, pid: int) -> None:
              set_steam_game_property(d_secondary, diff, steam_appid)
  
  
@@ -71,7 +71,7 @@ index a69351e..bac2450 100755
      """Set properties on gamescope windows when running in steam mode.
  
      Currently, Flatpak apps that use umu as their runtime will not have their
-@@ -614,7 +613,9 @@ def run_in_steammode(proc: Popen) -> int:
+@@ -592,7 +591,9 @@ def run_in_steammode(proc: Popen) -> int:
      # TODO: Find a robust way to get gamescope displays both in a container
      # and outside a container
      try:
@@ -82,10 +82,10 @@ index a69351e..bac2450 100755
              gamescope_baselayer_sequence = get_gamescope_baselayer_appid(d_primary)
              # Dont do window fuckery if we're not inside gamescope
              if (
-@@ -639,20 +640,16 @@ def run_in_steammode(proc: Popen) -> int:
+@@ -610,20 +611,16 @@ def run_in_steammode(proc: Popen) -> int:
                  )
-                 baselayer_thread.daemon = True
-                 baselayer_thread.start()
+                 window_thread.daemon = True
+                 window_thread.start()
 -            return proc.wait()
      except DisplayConnectionError as e:
          # Case where steamos changed its display outputs as we're currently
@@ -103,7 +103,7 @@ index a69351e..bac2450 100755
      ret: int = 0
      prctl_ret: int = 0
      libc: str = get_libc()
-@@ -688,9 +685,25 @@ def run_command(command: tuple[Path | str, ...]) -> int:
+@@ -662,9 +659,25 @@ def run_command(command: tuple[Path | str, ...]) -> int:
      prctl_ret = prctl(PR_SET_CHILD_SUBREAPER, 1, 0, 0, 0, 0)
      log.debug("prctl exited with status: %s", prctl_ret)
  
@@ -133,10 +133,10 @@ index a69351e..bac2450 100755
      return ret
  
 diff --git a/umu/umu_test.py b/umu/umu_test.py
-index 123cd15..03a3264 100644
+index ee596ed..78e1cc5 100644
 --- a/umu/umu_test.py
 +++ b/umu/umu_test.py
-@@ -1250,6 +1250,7 @@ class TestGameLauncher(unittest.TestCase):
+@@ -1115,6 +1115,7 @@ class TestGameLauncher(unittest.TestCase):
          if not libc:
              return
  
@@ -145,10 +145,10 @@ index 123cd15..03a3264 100644
          with (
              patch.object(
 -- 
-2.49.0
+2.50.0
 
 
-From 15e7b4ee4709ad12d19bd9c95282c91c2adc22f3 Mon Sep 17 00:00:00 2001
+From b8d550eb9f8b23a80d79ba9c52a893a406c749c5 Mon Sep 17 00:00:00 2001
 From: Stelios Tsampas <loathingkernel@gmail.com>
 Date: Thu, 3 Apr 2025 10:12:17 +0300
 Subject: [PATCH 03/13] umu_runtime: use `exec` to replace the shell in
@@ -161,10 +161,10 @@ umu directly knows about for as long as possible.
  1 file changed, 1 insertion(+), 6 deletions(-)
 
 diff --git a/umu/umu_runtime.py b/umu/umu_runtime.py
-index e443d19..3862f6b 100644
+index c8b4632..5795597 100644
 --- a/umu/umu_runtime.py
 +++ b/umu/umu_runtime.py
-@@ -55,12 +55,7 @@ def create_shim(file_path: Path):
+@@ -56,12 +56,7 @@ def create_shim(file_path: Path):
          "fi\n"
          "\n"
          "# Execute the passed command\n"
@@ -179,10 +179,10 @@ index e443d19..3862f6b 100644
  
      # Write the script content to the specified file path
 -- 
-2.49.0
+2.50.0
 
 
-From ba0e9acbf2bcbde3fc0839288ad67baaef98ddcc Mon Sep 17 00:00:00 2001
+From 92bd1ddef02b5db3b5af983bb020289fc018e9ef Mon Sep 17 00:00:00 2001
 From: Stelios Tsampas <loathingkernel@gmail.com>
 Date: Thu, 22 May 2025 09:45:42 +0300
 Subject: [PATCH 04/13] umu_run: run steammode workaround on the main process
@@ -192,10 +192,10 @@ Subject: [PATCH 04/13] umu_run: run steammode workaround on the main process
  1 file changed, 2 insertions(+), 2 deletions(-)
 
 diff --git a/umu/umu_run.py b/umu/umu_run.py
-index bac2450..8e4324a 100755
+index 5b0bb8f..c4a84d5 100755
 --- a/umu/umu_run.py
 +++ b/umu/umu_run.py
-@@ -692,10 +692,10 @@ def run_command(command: tuple[Path | str, ...]) -> int:
+@@ -666,10 +666,10 @@ def run_command(command: tuple[Path | str, ...]) -> int:
      if pid == 0:
          sys.stdout.flush()
          sys.stderr.flush()
@@ -209,24 +209,24 @@ index bac2450..8e4324a 100755
      while True:
          try:
 -- 
-2.49.0
+2.50.0
 
 
-From b97df656747de1a7ad6c2941b9fb4a8288b10000 Mon Sep 17 00:00:00 2001
+From 7122d1563d29d10f4a9f87e06cefdca1e298e82f Mon Sep 17 00:00:00 2001
 From: Stelios Tsampas <loathingkernel@gmail.com>
 Date: Tue, 3 Jun 2025 11:45:40 +0300
 Subject: [PATCH 05/13] umu_run: use hardcoded display values for now
 
 commit for targeted revert
 ---
- umu/umu_run.py | 4 +---
- 1 file changed, 1 insertion(+), 3 deletions(-)
+ umu/umu_run.py | 6 ++----
+ 1 file changed, 2 insertions(+), 4 deletions(-)
 
 diff --git a/umu/umu_run.py b/umu/umu_run.py
-index 8e4324a..dc19ad8 100755
+index c4a84d5..8bdb8a2 100755
 --- a/umu/umu_run.py
 +++ b/umu/umu_run.py
-@@ -613,9 +613,7 @@ def run_in_steammode() -> None:
+@@ -591,9 +591,7 @@ def run_in_steammode() -> None:
      # TODO: Find a robust way to get gamescope displays both in a container
      # and outside a container
      try:
@@ -237,11 +237,20 @@ index 8e4324a..dc19ad8 100755
              gamescope_baselayer_sequence = get_gamescope_baselayer_appid(d_primary)
              # Dont do window fuckery if we're not inside gamescope
              if (
+@@ -657,7 +655,7 @@ def run_command(command: tuple[Path | str, ...]) -> int:
+         c_ulong,
+     ]
+     prctl_ret = prctl(PR_SET_CHILD_SUBREAPER, 1, 0, 0, 0, 0)
+-    log.debug("prctl exited with status: %s", prctl_ret)
++    log.debug("prctl PR_SET_CHILD_SUBREAPER exited with status: %s", prctl_ret)
+ 
+     pid = os.fork()
+     if pid == -1:
 -- 
-2.49.0
+2.50.0
 
 
-From 597d17e41cb3fecee4694b18b34fd5fa35448837 Mon Sep 17 00:00:00 2001
+From 4db185e3505a3a22a3be5414e252d4afd50a03ec Mon Sep 17 00:00:00 2001
 From: Stelios Tsampas <loathingkernel@gmail.com>
 Date: Thu, 20 Mar 2025 11:57:43 +0200
 Subject: [PATCH 06/13] Reapply "umu_run: handle Protons without an explicit
@@ -269,10 +278,10 @@ index 367f1ac..7bed18f 100644
  RUNTIMEPATH=steamrt3 UMU_LOG=debug GAMEID=umu-1141086411 STORE=gog "$PWD/.venv/bin/python" "$HOME/.local/bin/umu-run" --config "$tmp" 2> /tmp/umu-log.txt && grep -E "INFO: Non-steam game Silent Hill 4: The Room \(umu-1141086411\)" /tmp/umu-log.txt
  # Run the 'game' using UMU-Proton9.0-3.2 and ensure the protonfixes module finds its fix in umu-database.csv
 diff --git a/umu/umu_plugins.py b/umu/umu_plugins.py
-index 8766dfc..5a8f1fd 100644
+index ec859f0..887dab7 100644
 --- a/umu/umu_plugins.py
 +++ b/umu/umu_plugins.py
-@@ -51,9 +51,9 @@ def set_env_toml(
+@@ -52,9 +52,9 @@ def set_env_toml(
      _check_env_toml(toml)
  
      # Required environment variables
@@ -286,10 +295,10 @@ index 8766dfc..5a8f1fd 100644
      env["GAMEID"] = toml["umu"].get("game_id", "")
      env["STORE"] = toml["umu"].get("store", "")
 diff --git a/umu/umu_run.py b/umu/umu_run.py
-index dc19ad8..8ff8217 100755
+index 8bdb8a2..3d0c8aa 100755
 --- a/umu/umu_run.py
 +++ b/umu/umu_run.py
-@@ -41,7 +41,7 @@ from umu.umu_consts import (
+@@ -39,7 +39,7 @@ from umu.umu_consts import (
  from umu.umu_log import log
  from umu.umu_plugins import set_env_toml
  from umu.umu_proton import get_umu_proton
@@ -298,7 +307,7 @@ index dc19ad8..8ff8217 100755
  from umu.umu_util import (
      get_libc,
      get_library_paths,
-@@ -90,9 +90,7 @@ def setup_pfx(path: str) -> None:
+@@ -88,9 +88,7 @@ def setup_pfx(path: str) -> None:
          wineuser.symlink_to("steamuser")
  
  
@@ -309,7 +318,7 @@ index dc19ad8..8ff8217 100755
      """Before executing a game, check for environment variables and set them.
  
      GAMEID is strictly required and the client is responsible for setting this.
-@@ -124,9 +122,10 @@ def check_env(
+@@ -122,9 +120,10 @@ def check_env(
  
      env["WINEPREFIX"] = os.environ.get("WINEPREFIX", "")
  
@@ -319,9 +328,9 @@ index dc19ad8..8ff8217 100755
 -        return env
 +        return env, do_download
  
+     # Proton Version
      path: Path = STEAM_COMPAT.joinpath(os.environ.get("PROTONPATH", ""))
-     if os.environ.get("PROTONPATH") and path.name == "UMU-Latest":
-@@ -138,16 +137,28 @@ def check_env(
+@@ -133,16 +132,28 @@ def check_env(
  
      # Proton Codename
      if os.environ.get("PROTONPATH") in {"GE-Proton", "GE-Latest", "UMU-Latest"}:
@@ -353,7 +362,7 @@ index dc19ad8..8ff8217 100755
          err: str = (
              "Environment variable not set or is empty: PROTONPATH\n"
              f"Possible reason: GE-Proton or UMU-Proton not found in '{STEAM_COMPAT}'"
-@@ -155,8 +166,6 @@ def check_env(
+@@ -150,8 +161,6 @@ def check_env(
          )
          raise FileNotFoundError(err)
  
@@ -362,7 +371,7 @@ index dc19ad8..8ff8217 100755
  
  def set_env(
      env: dict[str, str], args: Namespace | tuple[str, list[str]]
-@@ -291,12 +300,17 @@ def enable_steam_game_drive(env: dict[str, str]) -> dict[str, str]:
+@@ -289,12 +298,17 @@ def enable_steam_game_drive(env: dict[str, str]) -> dict[str, str]:
  def build_command(
      env: dict[str, str],
      local: Path,
@@ -382,7 +391,7 @@ index dc19ad8..8ff8217 100755
  
      if env.get("UMU_NO_PROTON") != "1" and not proton.is_file():
          err: str = "The following file was not found in PROTONPATH: proton"
-@@ -305,7 +319,7 @@ def build_command(
+@@ -303,7 +317,7 @@ def build_command(
      # Exit if the entry point is missing
      # The _v2-entry-point script and container framework tools are included in
      # the same image, so this can happen if the image failed to download
@@ -391,7 +400,7 @@ index dc19ad8..8ff8217 100755
          err: str = (
              f"_v2-entry-point (umu) cannot be found in '{local}'\n"
              "Runtime Platform missing or download incomplete"
-@@ -317,10 +331,7 @@ def build_command(
+@@ -315,10 +329,7 @@ def build_command(
          # The position of arguments matter for winetricks
          # Usage: ./winetricks [options] [command|verb|path-to-verb] ...
          return (
@@ -403,7 +412,7 @@ index dc19ad8..8ff8217 100755
              proton,
              env["PROTON_VERB"],
              env["EXE"],
-@@ -332,7 +343,7 @@ def build_command(
+@@ -330,7 +341,7 @@ def build_command(
      # Ideally, for reliability, executables should be compiled within
      # the Steam Runtime
      if env.get("UMU_NO_PROTON") == "1":
@@ -412,7 +421,7 @@ index dc19ad8..8ff8217 100755
  
      # Will run the game outside the Steam Runtime w/ Proton
      if env.get("UMU_NO_RUNTIME") == "1":
-@@ -340,10 +351,7 @@ def build_command(
+@@ -338,10 +349,7 @@ def build_command(
          return proton, env["PROTON_VERB"], env["EXE"], *opts
  
      return (
@@ -424,7 +433,7 @@ index dc19ad8..8ff8217 100755
          shim,
          proton,
          env["PROTON_VERB"],
-@@ -740,6 +748,9 @@ def resolve_umu_version(runtimes: tuple[RuntimeVersion, ...]) -> RuntimeVersion
+@@ -714,6 +722,9 @@ def resolve_umu_version(runtimes: tuple[RuntimeVersion, ...]) -> RuntimeVersion
      path = Path(os.environ["PROTONPATH"], "toolmanifest.vdf").resolve()
      if path.is_file():
          version = get_umu_version_from_manifest(path, runtimes)
@@ -434,7 +443,7 @@ index dc19ad8..8ff8217 100755
  
      return version
  
-@@ -761,7 +772,7 @@ def get_umu_version_from_manifest(
+@@ -735,7 +746,7 @@ def get_umu_version_from_manifest(
                  break
  
      if not appid:
@@ -443,7 +452,7 @@ index dc19ad8..8ff8217 100755
  
      if appid not in appids:
          return None
-@@ -849,6 +860,12 @@ def umu_run(args: Namespace | tuple[str, list[str]]) -> int:
+@@ -823,6 +834,12 @@ def umu_run(args: Namespace | tuple[str, list[str]]) -> int:
          )
          raise RuntimeError(err)
  
@@ -456,7 +465,7 @@ index dc19ad8..8ff8217 100755
      # Resolve the runtime version for PROTONPATH
      version = resolve_umu_version(__runtime_versions__)
      if not version:
-@@ -869,23 +886,36 @@ def umu_run(args: Namespace | tuple[str, list[str]]) -> int:
+@@ -844,23 +861,36 @@ def umu_run(args: Namespace | tuple[str, list[str]]) -> int:
      # Default to a strict 5 second timeouts throughout
      timeout: Timeout = Timeout(connect=NET_TIMEOUT, read=NET_TIMEOUT)
  
@@ -473,20 +482,20 @@ index dc19ad8..8ff8217 100755
 -            setup_umu, UMU_LOCAL / version[1], version, session_pools
 -        )
 +        _, do_download = check_env(env)
++
++        if version[1] != "host":
++            UMU_LOCAL.joinpath(version[1]).mkdir(parents=True, exist_ok=True)
  
 -        if isinstance(args, Namespace):
 -            env, opts = set_env_toml(env, args)
 -        else:
 -            opts = args[1]  # Reference the executable options
 -            check_env(env, session_pools)
-+        if version[1] != "host":
-+            UMU_LOCAL.joinpath(version[1]).mkdir(parents=True, exist_ok=True)
- 
--        UMU_LOCAL.joinpath(version[1]).mkdir(parents=True, exist_ok=True)
 +            future: Future = thread_pool.submit(
 +                setup_umu, UMU_LOCAL / version[1], version, session_pools
 +            )
-+
+ 
+-        UMU_LOCAL.joinpath(version[1]).mkdir(parents=True, exist_ok=True)
 +            download_proton(do_download, env, session_pools)
 +
 +            try:
@@ -502,7 +511,7 @@ index dc19ad8..8ff8217 100755
  
          # Prepare the prefix
          with unix_flock(f"{UMU_LOCAL}/{FileLock.Prefix.value}"):
-@@ -894,23 +924,16 @@ def umu_run(args: Namespace | tuple[str, list[str]]) -> int:
+@@ -869,23 +899,16 @@ def umu_run(args: Namespace | tuple[str, list[str]]) -> int:
          # Configure the environment
          set_env(env, args)
  
@@ -530,7 +539,7 @@ index dc19ad8..8ff8217 100755
      # Exit if the winetricks verb is already installed to avoid reapplying it
      if env["EXE"].endswith("winetricks") and is_installed_verb(
          opts, Path(env["WINEPREFIX"])
-@@ -918,7 +941,7 @@ def umu_run(args: Namespace | tuple[str, list[str]]) -> int:
+@@ -893,7 +916,7 @@ def umu_run(args: Namespace | tuple[str, list[str]]) -> int:
          sys.exit(1)
  
      # Build the command
@@ -540,7 +549,7 @@ index dc19ad8..8ff8217 100755
  
      # Run the command
 diff --git a/umu/umu_runtime.py b/umu/umu_runtime.py
-index 3862f6b..273706a 100644
+index 5795597..74eb261 100644
 --- a/umu/umu_runtime.py
 +++ b/umu/umu_runtime.py
 @@ -259,8 +259,6 @@ def _install_umu(
@@ -552,7 +561,7 @@ index 3862f6b..273706a 100644
      # Validate the runtime after moving the files
      check_runtime(local, runtime_ver)
  
-@@ -375,10 +373,6 @@ def _update_umu(
+@@ -369,10 +367,6 @@ def _update_umu(
      # Update our runtime
      _update_umu_platform(local, runtime, runtime_ver, session_pools, resp)
  
@@ -564,10 +573,10 @@ index 3862f6b..273706a 100644
  
  
 diff --git a/umu/umu_test.py b/umu/umu_test.py
-index 03a3264..8e26b10 100644
+index 78e1cc5..e57f59c 100644
 --- a/umu/umu_test.py
 +++ b/umu/umu_test.py
-@@ -1559,7 +1559,8 @@ class TestGameLauncher(unittest.TestCase):
+@@ -1424,7 +1424,8 @@ class TestGameLauncher(unittest.TestCase):
              os.environ["WINEPREFIX"] = self.test_file
              os.environ["GAMEID"] = self.test_file
              os.environ["PROTONPATH"] = "GE-Proton"
@@ -577,7 +586,7 @@ index 03a3264..8e26b10 100644
              self.assertEqual(
                  self.env["PROTONPATH"],
                  self.test_compat.joinpath(
-@@ -1586,7 +1587,8 @@ class TestGameLauncher(unittest.TestCase):
+@@ -1451,7 +1452,8 @@ class TestGameLauncher(unittest.TestCase):
              os.environ["WINEPREFIX"] = self.test_file
              os.environ["GAMEID"] = self.test_file
              os.environ["PROTONPATH"] = "GE-Proton"
@@ -587,7 +596,7 @@ index 03a3264..8e26b10 100644
              self.assertFalse(os.environ.get("PROTONPATH"), "Expected empty string")
  
      def test_latest_interrupt(self):
-@@ -1883,7 +1885,7 @@ class TestGameLauncher(unittest.TestCase):
+@@ -1748,7 +1750,7 @@ class TestGameLauncher(unittest.TestCase):
              # Args
              args = __main__.parse_args()
              # Config
@@ -596,7 +605,7 @@ index 03a3264..8e26b10 100644
              # Prefix
              umu_run.setup_pfx(self.env["WINEPREFIX"])
              # Env
-@@ -1947,7 +1949,8 @@ class TestGameLauncher(unittest.TestCase):
+@@ -1812,7 +1814,8 @@ class TestGameLauncher(unittest.TestCase):
              # Args
              args = __main__.parse_args()
              # Config
@@ -606,7 +615,7 @@ index 03a3264..8e26b10 100644
              # Prefix
              umu_run.setup_pfx(self.env["WINEPREFIX"])
              # Env
-@@ -2044,7 +2047,8 @@ class TestGameLauncher(unittest.TestCase):
+@@ -1909,7 +1912,8 @@ class TestGameLauncher(unittest.TestCase):
              # Args
              args = __main__.parse_args()
              # Config
@@ -616,7 +625,7 @@ index 03a3264..8e26b10 100644
              # Prefix
              umu_run.setup_pfx(self.env["WINEPREFIX"])
              # Env
-@@ -2120,7 +2124,8 @@ class TestGameLauncher(unittest.TestCase):
+@@ -1985,7 +1989,8 @@ class TestGameLauncher(unittest.TestCase):
              # Args
              result_args = __main__.parse_args()
              # Config
@@ -626,7 +635,7 @@ index 03a3264..8e26b10 100644
              # Prefix
              umu_run.setup_pfx(self.env["WINEPREFIX"])
              # Env
-@@ -2159,7 +2164,7 @@ class TestGameLauncher(unittest.TestCase):
+@@ -2024,7 +2029,7 @@ class TestGameLauncher(unittest.TestCase):
              )
  
          # Build
@@ -635,7 +644,7 @@ index 03a3264..8e26b10 100644
          self.assertIsInstance(
              test_command, tuple, "Expected a tuple from build_command"
          )
-@@ -2207,7 +2212,8 @@ class TestGameLauncher(unittest.TestCase):
+@@ -2072,7 +2077,8 @@ class TestGameLauncher(unittest.TestCase):
              # Args
              result_args = __main__.parse_args()
              # Config
@@ -645,7 +654,7 @@ index 03a3264..8e26b10 100644
              # Prefix
              umu_run.setup_pfx(self.env["WINEPREFIX"])
              # Env
-@@ -2246,7 +2252,7 @@ class TestGameLauncher(unittest.TestCase):
+@@ -2111,7 +2117,7 @@ class TestGameLauncher(unittest.TestCase):
          os.environ |= self.env
  
          # Build
@@ -654,7 +663,7 @@ index 03a3264..8e26b10 100644
          self.assertIsInstance(
              test_command, tuple, "Expected a tuple from build_command"
          )
-@@ -2285,7 +2291,8 @@ class TestGameLauncher(unittest.TestCase):
+@@ -2150,7 +2156,8 @@ class TestGameLauncher(unittest.TestCase):
              # Args
              result_args = __main__.parse_args()
              # Config
@@ -664,7 +673,7 @@ index 03a3264..8e26b10 100644
              # Prefix
              umu_run.setup_pfx(self.env["WINEPREFIX"])
              # Env
-@@ -2300,7 +2307,7 @@ class TestGameLauncher(unittest.TestCase):
+@@ -2165,7 +2172,7 @@ class TestGameLauncher(unittest.TestCase):
  
          # Since we didn't create the proton file, an exception should be raised
          with self.assertRaises(FileNotFoundError):
@@ -673,7 +682,7 @@ index 03a3264..8e26b10 100644
  
      def test_build_command(self):
          """Test build command.
-@@ -2318,7 +2325,7 @@ class TestGameLauncher(unittest.TestCase):
+@@ -2183,7 +2190,7 @@ class TestGameLauncher(unittest.TestCase):
          Path(self.test_file, "proton").touch()
  
          # Mock the shim file
@@ -682,7 +691,7 @@ index 03a3264..8e26b10 100644
          shim_path.touch()
  
          with (
-@@ -2333,7 +2340,8 @@ class TestGameLauncher(unittest.TestCase):
+@@ -2198,7 +2205,8 @@ class TestGameLauncher(unittest.TestCase):
              # Args
              result_args = __main__.parse_args()
              # Config
@@ -692,7 +701,7 @@ index 03a3264..8e26b10 100644
              # Prefix
              umu_run.setup_pfx(self.env["WINEPREFIX"])
              # Env
-@@ -2373,7 +2381,7 @@ class TestGameLauncher(unittest.TestCase):
+@@ -2238,7 +2246,7 @@ class TestGameLauncher(unittest.TestCase):
              )
  
          # Build
@@ -701,7 +710,7 @@ index 03a3264..8e26b10 100644
          self.assertIsInstance(
              test_command, tuple, "Expected a tuple from build_command"
          )
-@@ -2425,7 +2433,8 @@ class TestGameLauncher(unittest.TestCase):
+@@ -2290,7 +2298,8 @@ class TestGameLauncher(unittest.TestCase):
              # Args
              result = __main__.parse_args()
              # Check
@@ -711,7 +720,7 @@ index 03a3264..8e26b10 100644
              # Prefix
              umu_run.setup_pfx(self.env["WINEPREFIX"])
  
-@@ -2506,7 +2515,8 @@ class TestGameLauncher(unittest.TestCase):
+@@ -2371,7 +2380,8 @@ class TestGameLauncher(unittest.TestCase):
              # Args
              result = __main__.parse_args()
              # Check
@@ -721,7 +730,7 @@ index 03a3264..8e26b10 100644
              # Prefix
              umu_run.setup_pfx(self.env["WINEPREFIX"])
              # Env
-@@ -2614,7 +2624,8 @@ class TestGameLauncher(unittest.TestCase):
+@@ -2479,7 +2489,8 @@ class TestGameLauncher(unittest.TestCase):
              # Args
              result = __main__.parse_args()
              # Check
@@ -731,7 +740,7 @@ index 03a3264..8e26b10 100644
              # Prefix
              umu_run.setup_pfx(self.env["WINEPREFIX"])
              # Env
-@@ -2730,7 +2741,8 @@ class TestGameLauncher(unittest.TestCase):
+@@ -2595,7 +2606,8 @@ class TestGameLauncher(unittest.TestCase):
              # Args
              result = __main__.parse_args()
              # Check
@@ -741,7 +750,7 @@ index 03a3264..8e26b10 100644
              # Prefix
              umu_run.setup_pfx(self.env["WINEPREFIX"])
              # Env
-@@ -2860,7 +2872,8 @@ class TestGameLauncher(unittest.TestCase):
+@@ -2725,7 +2737,8 @@ class TestGameLauncher(unittest.TestCase):
              # Args
              result = __main__.parse_args()
              # Check
@@ -751,7 +760,7 @@ index 03a3264..8e26b10 100644
              # Prefix
              umu_run.setup_pfx(self.env["WINEPREFIX"])
              # Env
-@@ -3349,12 +3362,11 @@ class TestGameLauncher(unittest.TestCase):
+@@ -3214,12 +3227,11 @@ class TestGameLauncher(unittest.TestCase):
          Expects the directory $HOME/Games/umu/$GAMEID to not be created
          when UMU_NO_PROTON=1 and GAMEID is set in the host environment.
          """
@@ -765,7 +774,7 @@ index 03a3264..8e26b10 100644
              # Mock the internal call to Path.home(). Otherwise, some of our
              # assertions may fail when running this test suite locally if
              # the user already has that dir
-@@ -3362,8 +3374,8 @@ class TestGameLauncher(unittest.TestCase):
+@@ -3227,8 +3239,8 @@ class TestGameLauncher(unittest.TestCase):
          ):
              os.environ["UMU_NO_PROTON"] = "1"
              os.environ["GAMEID"] = "foo"
@@ -776,7 +785,7 @@ index 03a3264..8e26b10 100644
              path = mock_home.joinpath("Games", "umu", os.environ["GAMEID"])
              # Ensure we did not create the target nor its parents up to $HOME
              self.assertFalse(path.exists(), f"Expected {path} to not exist")
-@@ -3382,20 +3394,17 @@ class TestGameLauncher(unittest.TestCase):
+@@ -3247,20 +3259,17 @@ class TestGameLauncher(unittest.TestCase):
          Expects the WINE prefix directory to not be created when
          UMU_NO_PROTON=1 and WINEPREFIX is set in the host environment.
          """
@@ -807,7 +816,7 @@ index 03a3264..8e26b10 100644
  
      def test_env_proton_nodir(self):
          """Test check_env when $PROTONPATH in the case we failed to set it.
-@@ -3410,7 +3419,8 @@ class TestGameLauncher(unittest.TestCase):
+@@ -3275,7 +3284,8 @@ class TestGameLauncher(unittest.TestCase):
          ):
              os.environ["WINEPREFIX"] = self.test_file
              os.environ["GAMEID"] = self.test_file
@@ -817,7 +826,7 @@ index 03a3264..8e26b10 100644
  
      def test_env_wine_empty(self):
          """Test check_env when $WINEPREFIX is empty.
-@@ -3426,7 +3436,8 @@ class TestGameLauncher(unittest.TestCase):
+@@ -3291,7 +3301,8 @@ class TestGameLauncher(unittest.TestCase):
          ):
              os.environ["WINEPREFIX"] = ""
              os.environ["GAMEID"] = self.test_file
@@ -827,7 +836,7 @@ index 03a3264..8e26b10 100644
  
      def test_env_gameid_empty(self):
          """Test check_env when $GAMEID is empty.
-@@ -3442,7 +3453,8 @@ class TestGameLauncher(unittest.TestCase):
+@@ -3307,7 +3318,8 @@ class TestGameLauncher(unittest.TestCase):
          ):
              os.environ["WINEPREFIX"] = ""
              os.environ["GAMEID"] = ""
@@ -837,7 +846,7 @@ index 03a3264..8e26b10 100644
  
      def test_env_wine_dir(self):
          """Test check_env when $WINEPREFIX is not a directory.
-@@ -3463,7 +3475,8 @@ class TestGameLauncher(unittest.TestCase):
+@@ -3328,7 +3340,8 @@ class TestGameLauncher(unittest.TestCase):
          )
  
          with ThreadPoolExecutor() as thread_pool:
@@ -847,7 +856,7 @@ index 03a3264..8e26b10 100644
  
          # After this, the WINEPREFIX and new dirs should be created
          self.assertTrue(
-@@ -3492,15 +3505,16 @@ class TestGameLauncher(unittest.TestCase):
+@@ -3357,15 +3370,16 @@ class TestGameLauncher(unittest.TestCase):
              path_to_tmp,
          )
  
@@ -867,7 +876,7 @@ index 03a3264..8e26b10 100644
          self.assertEqual(
              self.env["WINEPREFIX"],
              unexpanded_path,
-@@ -3517,15 +3531,16 @@ class TestGameLauncher(unittest.TestCase):
+@@ -3382,15 +3396,16 @@ class TestGameLauncher(unittest.TestCase):
  
      def test_env_vars(self):
          """Test check_env when setting $WINEPREFIX, $GAMEID and $PROTONPATH."""
@@ -887,7 +896,7 @@ index 03a3264..8e26b10 100644
          self.assertEqual(
              self.env["WINEPREFIX"],
              self.test_file,
-@@ -3556,8 +3571,9 @@ class TestGameLauncher(unittest.TestCase):
+@@ -3421,8 +3436,9 @@ class TestGameLauncher(unittest.TestCase):
              ):
                  os.environ["WINEPREFIX"] = self.test_file
                  os.environ["GAMEID"] = self.test_file
@@ -899,7 +908,7 @@ index 03a3264..8e26b10 100644
                  self.assertFalse(os.environ["PROTONPATH"])
  
      def test_env_vars_wine(self):
-@@ -3565,7 +3581,7 @@ class TestGameLauncher(unittest.TestCase):
+@@ -3430,7 +3446,7 @@ class TestGameLauncher(unittest.TestCase):
  
          Expects GAMEID and PROTONPATH to be set for the command line:
          """
@@ -908,7 +917,7 @@ index 03a3264..8e26b10 100644
          mock_gameid = "umu-default"
          mock_protonpath = str(self.test_proton_dir)
  
-@@ -3578,8 +3594,8 @@ class TestGameLauncher(unittest.TestCase):
+@@ -3443,8 +3459,8 @@ class TestGameLauncher(unittest.TestCase):
          # and the GAMEID is 'umu-default'
          with patch.object(umu_run, "get_umu_proton", new_callable=mock_get_umu_proton):
              os.environ["WINEPREFIX"] = self.test_file
@@ -919,7 +928,7 @@ index 03a3264..8e26b10 100644
              self.assertEqual(os.environ["GAMEID"], mock_gameid)
              self.assertEqual(os.environ["GAMEID"], self.env["GAMEID"])
              self.assertEqual(os.environ["PROTONPATH"], mock_protonpath)
-@@ -3593,7 +3609,7 @@ class TestGameLauncher(unittest.TestCase):
+@@ -3458,7 +3474,7 @@ class TestGameLauncher(unittest.TestCase):
  
          Expects PROTONPATH, GAMEID, and WINEPREFIX to be set
          """
@@ -928,7 +937,7 @@ index 03a3264..8e26b10 100644
          mock_gameid = "umu-default"
          mock_protonpath = str(self.test_proton_dir)
          mock_wineprefix = "/home/foo/Games/umu/umu-default"
-@@ -3613,8 +3629,8 @@ class TestGameLauncher(unittest.TestCase):
+@@ -3478,8 +3494,8 @@ class TestGameLauncher(unittest.TestCase):
              patch.object(umu_run, "get_umu_proton", new_callable=mock_get_umu_proton),
              patch.object(Path, "mkdir", return_value=mock_set_wineprefix()),
          ):
@@ -1058,10 +1067,10 @@ index 7230139..d3463b6 100644
              )
              self.assertEqual(
 -- 
-2.49.0
+2.50.0
 
 
-From 594c54e0c8495f13662145175f72130385ea07c0 Mon Sep 17 00:00:00 2001
+From a947194083e1ee248831f324154afc830c2ec35c Mon Sep 17 00:00:00 2001
 From: Stelios Tsampas <loathingkernel@gmail.com>
 Date: Thu, 20 Mar 2025 14:20:29 +0200
 Subject: [PATCH 07/13] umu_run: only allow no runtime tools if
@@ -1072,10 +1081,10 @@ Subject: [PATCH 07/13] umu_run: only allow no runtime tools if
  1 file changed, 4 insertions(+), 6 deletions(-)
 
 diff --git a/umu/umu_run.py b/umu/umu_run.py
-index 8ff8217..0f7026a 100755
+index 3d0c8aa..74215ef 100755
 --- a/umu/umu_run.py
 +++ b/umu/umu_run.py
-@@ -345,11 +345,6 @@ def build_command(
+@@ -343,11 +343,6 @@ def build_command(
      if env.get("UMU_NO_PROTON") == "1":
          return *entry_point, env["EXE"], *opts
  
@@ -1087,7 +1096,7 @@ index 8ff8217..0f7026a 100755
      return (
          *entry_point,
          shim,
-@@ -772,7 +767,10 @@ def get_umu_version_from_manifest(
+@@ -746,7 +741,10 @@ def get_umu_version_from_manifest(
                  break
  
      if not appid:
@@ -1100,10 +1109,10 @@ index 8ff8217..0f7026a 100755
      if appid not in appids:
          return None
 -- 
-2.49.0
+2.50.0
 
 
-From 806188d0c370d80b890e63be45afc9a6154d4356 Mon Sep 17 00:00:00 2001
+From 00c206e2885b6586b08f1bf88e2f89bf9d3d0fd3 Mon Sep 17 00:00:00 2001
 From: Stelios Tsampas <loathingkernel@gmail.com>
 Date: Thu, 20 Mar 2025 14:21:35 +0200
 Subject: [PATCH 08/13] umu_tests: add test to ensure the runtime is used even
@@ -1114,10 +1123,10 @@ Subject: [PATCH 08/13] umu_tests: add test to ensure the runtime is used even
  1 file changed, 160 insertions(+), 40 deletions(-)
 
 diff --git a/umu/umu_test.py b/umu/umu_test.py
-index 8e26b10..50be67a 100644
+index e57f59c..b0faa86 100644
 --- a/umu/umu_test.py
 +++ b/umu/umu_test.py
-@@ -97,10 +97,14 @@ class TestGameLauncher(unittest.TestCase):
+@@ -99,10 +99,14 @@ class TestGameLauncher(unittest.TestCase):
          # /usr/share/umu
          self.test_user_share = Path("./tmp.BXk2NnvW2m")
          # ~/.local/share/Steam/compatibilitytools.d
@@ -1134,7 +1143,7 @@ index 8e26b10..50be67a 100644
          )
          # Wine prefix
          self.test_winepfx = Path("./tmp.AlfLPDhDvA")
-@@ -771,7 +775,7 @@ class TestGameLauncher(unittest.TestCase):
+@@ -859,7 +863,7 @@ class TestGameLauncher(unittest.TestCase):
          # Mock a new install
          with TemporaryDirectory() as file:
              # Populate our fake $XDG_DATA_HOME/umu
@@ -1143,7 +1152,7 @@ index 8e26b10..50be67a 100644
              mock_subdir.mkdir()
              mock_subdir.joinpath("umu").touch()
              # Mock the runtime ver
-@@ -794,7 +798,7 @@ class TestGameLauncher(unittest.TestCase):
+@@ -882,7 +886,7 @@ class TestGameLauncher(unittest.TestCase):
          # Mock a new install
          with TemporaryDirectory() as file:
              # Populate our fake $XDG_DATA_HOME/umu
@@ -1152,7 +1161,7 @@ index 8e26b10..50be67a 100644
              mock_subdir.mkdir()
              mock_subdir.joinpath("umu").touch()
              # Mock the runtime ver
-@@ -815,7 +819,7 @@ class TestGameLauncher(unittest.TestCase):
+@@ -903,7 +907,7 @@ class TestGameLauncher(unittest.TestCase):
  
          # Mock a new install
          with TemporaryDirectory() as file:
@@ -1161,7 +1170,7 @@ index 8e26b10..50be67a 100644
              mock_subdir.mkdir()
              mock_subdir.joinpath("umu").touch()
              # Mock the runtime ver
-@@ -1370,7 +1374,7 @@ class TestGameLauncher(unittest.TestCase):
+@@ -1235,7 +1239,7 @@ class TestGameLauncher(unittest.TestCase):
          """
          self.test_user_share.joinpath("pressure-vessel", "bin", "pv-verify").unlink()
          result = umu_runtime.check_runtime(
@@ -1170,7 +1179,7 @@ index 8e26b10..50be67a 100644
          )
          self.assertEqual(result, 1, "Expected the exit code 1")
  
-@@ -1379,7 +1383,7 @@ class TestGameLauncher(unittest.TestCase):
+@@ -1244,7 +1248,7 @@ class TestGameLauncher(unittest.TestCase):
          mock = CompletedProcess(["foo"], 0)
          with patch.object(umu_runtime, "run", return_value=mock):
              result = umu_runtime.check_runtime(
@@ -1179,7 +1188,7 @@ index 8e26b10..50be67a 100644
              )
              self.assertEqual(result, 0, "Expected the exit code 0")
  
-@@ -1397,7 +1401,7 @@ class TestGameLauncher(unittest.TestCase):
+@@ -1262,7 +1266,7 @@ class TestGameLauncher(unittest.TestCase):
          mock = CompletedProcess(["foo"], 1)
          with patch.object(umu_runtime, "run", return_value=mock):
              result = umu_runtime.check_runtime(
@@ -1188,7 +1197,7 @@ index 8e26b10..50be67a 100644
              )
              self.assertEqual(result, 1, "Expected the exit code 1")
  
-@@ -1881,7 +1885,7 @@ class TestGameLauncher(unittest.TestCase):
+@@ -1746,7 +1750,7 @@ class TestGameLauncher(unittest.TestCase):
              os.environ["PROTONPATH"] = self.test_file
              os.environ["GAMEID"] = self.test_file
              os.environ["STORE"] = self.test_file
@@ -1197,7 +1206,7 @@ index 8e26b10..50be67a 100644
              # Args
              args = __main__.parse_args()
              # Config
-@@ -1945,7 +1949,7 @@ class TestGameLauncher(unittest.TestCase):
+@@ -1810,7 +1814,7 @@ class TestGameLauncher(unittest.TestCase):
              os.environ["PROTONPATH"] = self.test_file
              os.environ["GAMEID"] = self.test_file
              os.environ["STORE"] = self.test_file
@@ -1206,7 +1215,7 @@ index 8e26b10..50be67a 100644
              # Args
              args = __main__.parse_args()
              # Config
-@@ -2043,7 +2047,7 @@ class TestGameLauncher(unittest.TestCase):
+@@ -1908,7 +1912,7 @@ class TestGameLauncher(unittest.TestCase):
              os.environ["PROTONPATH"] = self.test_file
              os.environ["GAMEID"] = self.test_file
              os.environ["STORE"] = self.test_file
@@ -1215,7 +1224,7 @@ index 8e26b10..50be67a 100644
              # Args
              args = __main__.parse_args()
              # Config
-@@ -2120,7 +2124,7 @@ class TestGameLauncher(unittest.TestCase):
+@@ -1985,7 +1989,7 @@ class TestGameLauncher(unittest.TestCase):
              os.environ["GAMEID"] = self.test_file
              os.environ["STORE"] = self.test_file
              os.environ["UMU_NO_PROTON"] = "1"
@@ -1224,7 +1233,7 @@ index 8e26b10..50be67a 100644
              # Args
              result_args = __main__.parse_args()
              # Config
-@@ -2141,7 +2145,7 @@ class TestGameLauncher(unittest.TestCase):
+@@ -2006,7 +2010,7 @@ class TestGameLauncher(unittest.TestCase):
          ):
              umu_runtime.setup_umu(
                  self.test_local_share,
@@ -1233,7 +1242,7 @@ index 8e26b10..50be67a 100644
                  self.test_session_pools,
              )
              copytree(
-@@ -2164,7 +2168,7 @@ class TestGameLauncher(unittest.TestCase):
+@@ -2029,7 +2033,7 @@ class TestGameLauncher(unittest.TestCase):
              )
  
          # Build
@@ -1242,7 +1251,7 @@ index 8e26b10..50be67a 100644
          self.assertIsInstance(
              test_command, tuple, "Expected a tuple from build_command"
          )
-@@ -2185,19 +2189,32 @@ class TestGameLauncher(unittest.TestCase):
+@@ -2050,19 +2054,32 @@ class TestGameLauncher(unittest.TestCase):
          self.assertEqual(sep, "--", "Expected --")
          self.assertEqual(exe, self.env["EXE"], "Expected the EXE")
  
@@ -1280,7 +1289,7 @@ index 8e26b10..50be67a 100644
  
          with (
              patch("sys.argv", ["", self.test_exe]),
-@@ -2208,12 +2225,14 @@ class TestGameLauncher(unittest.TestCase):
+@@ -2073,12 +2090,14 @@ class TestGameLauncher(unittest.TestCase):
              os.environ["GAMEID"] = self.test_file
              os.environ["STORE"] = self.test_file
              os.environ["UMU_NO_RUNTIME"] = "1"
@@ -1298,7 +1307,7 @@ index 8e26b10..50be67a 100644
              # Prefix
              umu_run.setup_pfx(self.env["WINEPREFIX"])
              # Env
-@@ -2227,7 +2246,7 @@ class TestGameLauncher(unittest.TestCase):
+@@ -2092,7 +2111,7 @@ class TestGameLauncher(unittest.TestCase):
          ):
              umu_runtime.setup_umu(
                  self.test_local_share,
@@ -1307,7 +1316,7 @@ index 8e26b10..50be67a 100644
                  self.test_session_pools,
              )
              copytree(
-@@ -2252,16 +2271,16 @@ class TestGameLauncher(unittest.TestCase):
+@@ -2117,16 +2136,16 @@ class TestGameLauncher(unittest.TestCase):
          os.environ |= self.env
  
          # Build
@@ -1327,7 +1336,7 @@ index 8e26b10..50be67a 100644
          self.assertIsInstance(proton, os.PathLike, "Expected proton to be PathLike")
          self.assertEqual(
              proton,
-@@ -2271,6 +2290,107 @@ class TestGameLauncher(unittest.TestCase):
+@@ -2136,6 +2155,107 @@ class TestGameLauncher(unittest.TestCase):
          self.assertEqual(verb, "waitforexitandrun", "Expected PROTON_VERB")
          self.assertEqual(exe, self.env["EXE"], "Expected EXE")
  
@@ -1435,7 +1444,7 @@ index 8e26b10..50be67a 100644
      def test_build_command_noproton(self):
          """Test build_command when $PROTONPATH/proton is not found.
  
-@@ -2287,7 +2407,7 @@ class TestGameLauncher(unittest.TestCase):
+@@ -2152,7 +2272,7 @@ class TestGameLauncher(unittest.TestCase):
              os.environ["GAMEID"] = self.test_file
              os.environ["STORE"] = self.test_file
              os.environ["UMU_NO_RUNTIME"] = "pressure-vessel"
@@ -1444,7 +1453,7 @@ index 8e26b10..50be67a 100644
              # Args
              result_args = __main__.parse_args()
              # Config
-@@ -2307,7 +2427,7 @@ class TestGameLauncher(unittest.TestCase):
+@@ -2172,7 +2292,7 @@ class TestGameLauncher(unittest.TestCase):
  
          # Since we didn't create the proton file, an exception should be raised
          with self.assertRaises(FileNotFoundError):
@@ -1453,7 +1462,7 @@ index 8e26b10..50be67a 100644
  
      def test_build_command(self):
          """Test build command.
-@@ -2336,7 +2456,7 @@ class TestGameLauncher(unittest.TestCase):
+@@ -2201,7 +2321,7 @@ class TestGameLauncher(unittest.TestCase):
              os.environ["PROTONPATH"] = self.test_file
              os.environ["GAMEID"] = self.test_file
              os.environ["STORE"] = self.test_file
@@ -1462,7 +1471,7 @@ index 8e26b10..50be67a 100644
              # Args
              result_args = __main__.parse_args()
              # Config
-@@ -2358,7 +2478,7 @@ class TestGameLauncher(unittest.TestCase):
+@@ -2223,7 +2343,7 @@ class TestGameLauncher(unittest.TestCase):
          ):
              umu_runtime.setup_umu(
                  self.test_local_share,
@@ -1471,7 +1480,7 @@ index 8e26b10..50be67a 100644
                  self.test_session_pools,
              )
              copytree(
-@@ -2381,7 +2501,7 @@ class TestGameLauncher(unittest.TestCase):
+@@ -2246,7 +2366,7 @@ class TestGameLauncher(unittest.TestCase):
              )
  
          # Build
@@ -1480,7 +1489,7 @@ index 8e26b10..50be67a 100644
          self.assertIsInstance(
              test_command, tuple, "Expected a tuple from build_command"
          )
-@@ -2429,7 +2549,7 @@ class TestGameLauncher(unittest.TestCase):
+@@ -2294,7 +2414,7 @@ class TestGameLauncher(unittest.TestCase):
              os.environ["GAMEID"] = test_str
              os.environ["STORE"] = test_str
              os.environ["PROTON_VERB"] = self.test_verb
@@ -1489,7 +1498,7 @@ index 8e26b10..50be67a 100644
              # Args
              result = __main__.parse_args()
              # Check
-@@ -2511,7 +2631,7 @@ class TestGameLauncher(unittest.TestCase):
+@@ -2376,7 +2496,7 @@ class TestGameLauncher(unittest.TestCase):
              os.environ["GAMEID"] = umu_id
              os.environ["STORE"] = test_str
              os.environ["PROTON_VERB"] = self.test_verb
@@ -1498,7 +1507,7 @@ index 8e26b10..50be67a 100644
              # Args
              result = __main__.parse_args()
              # Check
-@@ -2589,7 +2709,7 @@ class TestGameLauncher(unittest.TestCase):
+@@ -2454,7 +2574,7 @@ class TestGameLauncher(unittest.TestCase):
                  self.env["PROTONPATH"]
                  + ":"
                  + Path.home()
@@ -1507,7 +1516,7 @@ index 8e26b10..50be67a 100644
                  .as_posix(),
                  "Expected STEAM_COMPAT_TOOL_PATHS to be set",
              )
-@@ -2620,7 +2740,7 @@ class TestGameLauncher(unittest.TestCase):
+@@ -2485,7 +2605,7 @@ class TestGameLauncher(unittest.TestCase):
              os.environ["GAMEID"] = test_str
              os.environ["STORE"] = test_str
              os.environ["PROTON_VERB"] = self.test_verb
@@ -1516,7 +1525,7 @@ index 8e26b10..50be67a 100644
              # Args
              result = __main__.parse_args()
              # Check
-@@ -2706,7 +2826,7 @@ class TestGameLauncher(unittest.TestCase):
+@@ -2571,7 +2691,7 @@ class TestGameLauncher(unittest.TestCase):
                  self.env["PROTONPATH"]
                  + ":"
                  + Path.home()
@@ -1525,10 +1534,28 @@ index 8e26b10..50be67a 100644
                  .as_posix(),
                  "Expected STEAM_COMPAT_TOOL_PATHS to be set",
              )
-@@ -2737,7 +2857,7 @@ class TestGameLauncher(unittest.TestCase):
+@@ -2602,7 +2722,7 @@ class TestGameLauncher(unittest.TestCase):
              os.environ["STORE"] = test_str
              os.environ["PROTON_VERB"] = self.test_verb
              os.environ["UMU_RUNTIME_UPDATE"] = "0"
+-            os.environ["RUNTIMEPATH"] = self.test_runtime_version[1]
++            os.environ["RUNTIMEPATH"] = self.test_runtime_default[1]
+             # Args
+             result = __main__.parse_args()
+             # Check
+@@ -2693,7 +2813,7 @@ class TestGameLauncher(unittest.TestCase):
+                 self.env["PROTONPATH"]
+                 + ":"
+                 + Path.home()
+-                .joinpath(".local", "share", "umu", self.test_runtime_version[1])
++                .joinpath(".local", "share", "umu", self.test_runtime_default[1])
+                 .as_posix(),
+                 "Expected STEAM_COMPAT_TOOL_PATHS to be set",
+             )
+@@ -2733,7 +2853,7 @@ class TestGameLauncher(unittest.TestCase):
+             os.environ["PROTONPATH"] = test_dir.as_posix()
+             os.environ["GAMEID"] = test_str
+             os.environ["PROTON_VERB"] = proton_verb
 -            os.environ["RUNTIMEPATH"] = self.test_runtime_version[1]
 +            os.environ["RUNTIMEPATH"] = self.test_runtime_default[1]
              # Args
@@ -1543,29 +1570,11 @@ index 8e26b10..50be67a 100644
                  .as_posix(),
                  "Expected STEAM_COMPAT_TOOL_PATHS to be set",
              )
-@@ -2868,7 +2988,7 @@ class TestGameLauncher(unittest.TestCase):
-             os.environ["PROTONPATH"] = test_dir.as_posix()
-             os.environ["GAMEID"] = test_str
-             os.environ["PROTON_VERB"] = proton_verb
--            os.environ["RUNTIMEPATH"] = self.test_runtime_version[1]
-+            os.environ["RUNTIMEPATH"] = self.test_runtime_default[1]
-             # Args
-             result = __main__.parse_args()
-             # Check
-@@ -2963,7 +3083,7 @@ class TestGameLauncher(unittest.TestCase):
-                 self.env["PROTONPATH"]
-                 + ":"
-                 + Path.home()
--                .joinpath(".local", "share", "umu", self.test_runtime_version[1])
-+                .joinpath(".local", "share", "umu", self.test_runtime_default[1])
-                 .as_posix(),
-                 "Expected STEAM_COMPAT_TOOL_PATHS to be set",
-             )
 -- 
-2.49.0
+2.50.0
 
 
-From f5ba175d9d8ab5aa9f3d40cd953c7acc7c4e984d Mon Sep 17 00:00:00 2001
+From d5d3a26e65509a98d102bdc57fcbabc78133693a Mon Sep 17 00:00:00 2001
 From: Stelios Tsampas <loathingkernel@gmail.com>
 Date: Fri, 21 Mar 2025 00:58:50 +0200
 Subject: [PATCH 09/13] umu_run: do not set fault runtime path if case proton
@@ -1576,12 +1585,12 @@ Subject: [PATCH 09/13] umu_run: do not set fault runtime path if case proton
  1 file changed, 14 insertions(+), 12 deletions(-)
 
 diff --git a/umu/umu_run.py b/umu/umu_run.py
-index 0f7026a..7ea3941 100755
+index 74215ef..056b67f 100755
 --- a/umu/umu_run.py
 +++ b/umu/umu_run.py
-@@ -235,14 +235,16 @@ def set_env(
-     env["SteamAppId"] = env["STEAM_COMPAT_APP_ID"]
+@@ -233,14 +233,16 @@ def set_env(
      env["SteamGameId"] = env["SteamAppId"]
+     env["UMU_INVOCATION_ID"] = token_hex(16)
  
 +    runtime_path = f"{UMU_LOCAL}/{os.environ['RUNTIMEPATH']}" if os.environ['RUNTIMEPATH'] != "host" else ""
 +
@@ -1599,7 +1608,7 @@ index 0f7026a..7ea3941 100755
      env["STEAM_COMPAT_MOUNTS"] = env["STEAM_COMPAT_TOOL_PATHS"]
  
      # Zenity
-@@ -261,7 +263,7 @@ def set_env(
+@@ -259,7 +261,7 @@ def set_env(
      env["UMU_NO_RUNTIME"] = os.environ.get("UMU_NO_RUNTIME") or ""
      env["UMU_RUNTIME_UPDATE"] = os.environ.get("UMU_RUNTIME_UPDATE") or ""
      env["UMU_NO_PROTON"] = os.environ.get("UMU_NO_PROTON") or ""
@@ -1608,7 +1617,7 @@ index 0f7026a..7ea3941 100755
  
      return env
  
-@@ -817,7 +819,7 @@ def umu_run(args: Namespace | tuple[str, list[str]]) -> int:
+@@ -791,7 +793,7 @@ def umu_run(args: Namespace | tuple[str, list[str]]) -> int:
      }
      opts: list[str] = []
      prereq: bool = False
@@ -1617,7 +1626,7 @@ index 0f7026a..7ea3941 100755
  
      log.info("umu-launcher version %s (%s)", __version__, sys.version)
  
-@@ -865,13 +867,13 @@ def umu_run(args: Namespace | tuple[str, list[str]]) -> int:
+@@ -839,13 +841,13 @@ def umu_run(args: Namespace | tuple[str, list[str]]) -> int:
          opts = args[1]  # Reference the executable options
  
      # Resolve the runtime version for PROTONPATH
@@ -1634,7 +1643,7 @@ index 0f7026a..7ea3941 100755
  
      # Opt to use the system's native CA bundle rather than certifi's
      with suppress(ModuleNotFoundError):
-@@ -895,11 +897,11 @@ def umu_run(args: Namespace | tuple[str, list[str]]) -> int:
+@@ -870,11 +872,11 @@ def umu_run(args: Namespace | tuple[str, list[str]]) -> int:
          # Setup the launcher and runtime files
          _, do_download = check_env(env)
  
@@ -1649,7 +1658,7 @@ index 0f7026a..7ea3941 100755
              )
  
              download_proton(do_download, env, session_pools)
-@@ -939,7 +941,7 @@ def umu_run(args: Namespace | tuple[str, list[str]]) -> int:
+@@ -914,7 +916,7 @@ def umu_run(args: Namespace | tuple[str, list[str]]) -> int:
          sys.exit(1)
  
      # Build the command
@@ -1659,10 +1668,10 @@ index 0f7026a..7ea3941 100755
  
      # Run the command
 -- 
-2.49.0
+2.50.0
 
 
-From c05374fd03b4ba8839b776bf30d51b479fe06759 Mon Sep 17 00:00:00 2001
+From 78c364ffdf89a46940699ffe323c8d5405ba2936 Mon Sep 17 00:00:00 2001
 From: Stelios Tsampas <loathingkernel@gmail.com>
 Date: Fri, 21 Mar 2025 01:03:08 +0200
 Subject: [PATCH 10/13] umu_run: make message clearer
@@ -1672,10 +1681,10 @@ Subject: [PATCH 10/13] umu_run: make message clearer
  1 file changed, 4 insertions(+), 1 deletion(-)
 
 diff --git a/umu/umu_run.py b/umu/umu_run.py
-index 7ea3941..2afcc15 100755
+index 056b67f..0c69266 100755
 --- a/umu/umu_run.py
 +++ b/umu/umu_run.py
-@@ -770,7 +770,10 @@ def get_umu_version_from_manifest(
+@@ -744,7 +744,10 @@ def get_umu_version_from_manifest(
  
      if not appid:
          if os.environ.get("UMU_NO_RUNTIME", None) == "1":
@@ -1688,10 +1697,10 @@ index 7ea3941..2afcc15 100755
          return None
  
 -- 
-2.49.0
+2.50.0
 
 
-From 5fe0d2d097a5b9f7d29f26a587dae1a772b6da2b Mon Sep 17 00:00:00 2001
+From 10419e25d89099664ca6f460b03e5121824303e7 Mon Sep 17 00:00:00 2001
 From: Stelios Tsampas <loathingkernel@gmail.com>
 Date: Fri, 21 Mar 2025 20:05:49 +0200
 Subject: [PATCH 11/13] doc: add documentation around UMU_NO_RUNTIME
@@ -1720,10 +1729,10 @@ index 8b89827..287c7aa 100644
  
  Building umu-launcher currently requires `bash`, `make`, and `scdoc` for distribution, as well as the following Python build tools: [build](https://github.com/pypa/build), [hatchling](https://github.com/pypa/hatch), [installer](https://github.com/pypa/installer), and [pip](https://github.com/pypa/pip).
 diff --git a/docs/umu.1.scd b/docs/umu.1.scd
-index b1f557b..9bb5475 100644
+index 40c3c69..2ab4f0e 100644
 --- a/docs/umu.1.scd
 +++ b/docs/umu.1.scd
-@@ -186,6 +186,13 @@ _UMU_NO_PROTON_
+@@ -179,6 +179,13 @@ _UMU_NO_PROTON_
  
  	Set _1_ to run the executable natively within the SLR.
  
@@ -1738,10 +1747,10 @@ index b1f557b..9bb5475 100644
  
  _umu_(5), _winetricks_(1), _zenity_(1)
 -- 
-2.49.0
+2.50.0
 
 
-From 7ababfe0d88d77d8d1258bda4c15f508ebe7bd11 Mon Sep 17 00:00:00 2001
+From 3ad0189e8b5b68c2e083a741bf01aceb21cc6da4 Mon Sep 17 00:00:00 2001
 From: Stelios Tsampas <loathingkernel@gmail.com>
 Date: Wed, 9 Apr 2025 11:22:33 +0300
 Subject: [PATCH 12/13] umu_run: unpack runtime_version tuple instead of
@@ -1752,10 +1761,10 @@ Subject: [PATCH 12/13] umu_run: unpack runtime_version tuple instead of
  1 file changed, 7 insertions(+), 5 deletions(-)
 
 diff --git a/umu/umu_run.py b/umu/umu_run.py
-index 2afcc15..1845815 100755
+index 0c69266..d661bc9 100755
 --- a/umu/umu_run.py
 +++ b/umu/umu_run.py
-@@ -876,7 +876,9 @@ def umu_run(args: Namespace | tuple[str, list[str]]) -> int:
+@@ -850,7 +850,9 @@ def umu_run(args: Namespace | tuple[str, list[str]]) -> int:
              f"Failed to match '{os.environ.get('PROTONPATH')}' with a container runtime"
          )
          raise ValueError(err)
@@ -1766,7 +1775,7 @@ index 2afcc15..1845815 100755
  
      # Opt to use the system's native CA bundle rather than certifi's
      with suppress(ModuleNotFoundError):
-@@ -900,11 +902,11 @@ def umu_run(args: Namespace | tuple[str, list[str]]) -> int:
+@@ -875,11 +877,11 @@ def umu_run(args: Namespace | tuple[str, list[str]]) -> int:
          # Setup the launcher and runtime files
          _, do_download = check_env(env)
  
@@ -1781,7 +1790,7 @@ index 2afcc15..1845815 100755
              )
  
              download_proton(do_download, env, session_pools)
-@@ -944,7 +946,7 @@ def umu_run(args: Namespace | tuple[str, list[str]]) -> int:
+@@ -919,7 +921,7 @@ def umu_run(args: Namespace | tuple[str, list[str]]) -> int:
          sys.exit(1)
  
      # Build the command
@@ -1791,10 +1800,10 @@ index 2afcc15..1845815 100755
  
      # Run the command
 -- 
-2.49.0
+2.50.0
 
 
-From df7e7b68363fc31fc01321589ed3cfaf5f7ad4d1 Mon Sep 17 00:00:00 2001
+From e52bb120d8e026d164867cc71c13aea8224cdad7 Mon Sep 17 00:00:00 2001
 From: Stelios Tsampas <loathingkernel@gmail.com>
 Date: Sat, 7 Jun 2025 03:13:48 +0300
 Subject: [PATCH 13/13] umu_run: don't require UMU_NO_RUNTIME to allow tools
@@ -1805,10 +1814,10 @@ Subject: [PATCH 13/13] umu_run: don't require UMU_NO_RUNTIME to allow tools
  1 file changed, 2 insertions(+), 7 deletions(-)
 
 diff --git a/umu/umu_run.py b/umu/umu_run.py
-index 1845815..b54e0f5 100755
+index d661bc9..7a6629d 100755
 --- a/umu/umu_run.py
 +++ b/umu/umu_run.py
-@@ -769,13 +769,8 @@ def get_umu_version_from_manifest(
+@@ -743,13 +743,8 @@ def get_umu_version_from_manifest(
                  break
  
      if not appid:
@@ -1825,5 +1834,5 @@ index 1845815..b54e0f5 100755
      if appid not in appids:
          return None
 -- 
-2.49.0
+2.50.0
 
