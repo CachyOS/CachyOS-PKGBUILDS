@@ -183,7 +183,7 @@ build() {
   local meson_options=(
     -D android-libbacktrace=disabled
     -D b_ndebug=true
-    -D gallium-drivers=r300,r600,radeonsi,nouveau,virgl,svga,llvmpipe,softpipe,iris,crocus,i915,zink,d3d12
+    -D gallium-drivers=radeonsi,swrast,iris,i915,zink
     -D gallium-extra-hud=true
     -D gallium-rusticl=true
     -D gallium-xa=disabled
@@ -194,7 +194,7 @@ build() {
     -D microsoft-clc=disabled
     -D valgrind=enabled
     -D video-codecs=all
-    -D vulkan-drivers=amd,gfxstream,intel,intel_hasvk,nouveau,swrast,virtio,microsoft-experimental
+    -D vulkan-drivers=amd,intel
     -D vulkan-layers=device-select,intel-nullhw,overlay,screenshot,vram-report-limit
   )
 
