@@ -1,0 +1,39 @@
+# Maintainer: Konstantin Rannev <konstantin.rannev@gmail.com>
+# Contributer: Ash <xash at riseup d0t net>
+
+pkgname=lsfg-vk
+pkgver=r102.45f4296
+pkgrel=1
+pkgdesc="Lossless Scaling Frame Generation on Linux via DXVK/Vulkan"
+arch=('x86_64')
+url="https://github.com/PancakeTAS/lsfg-vk"
+license=('MIT')
+depends=('vulkan-icd-loader')
+makedepends=('base-devel' 'clang' 'llvm' 'vulkan-headers' 'cmake' 'meson' 'ninja' 'git' 'sed')
+source=('git+https://github.com/PancakeTAS/lsfg-vk')
+sha256sums=('SKIP')
+
+pkgver() {
+	cd "$srcdir/${pkgname}"
+
+	# Git, no tags available
+	printf "r%s.%s" "$(git rev-list --count HEAD)" "$(git rev-parse --short HEAD)"
+}
+
+build() {
+	cd "$srcdir/${pkgname}"
+
+	cmake -B build -G Ninja \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DCMAKE_INSTALL_PREFIX=/usr \
+    -DCMAKE_INTERPROCEDURAL_OPTIMIZATION=ON \
+    -DCMAKE_CXX_CLANG_TIDY="" \
+    -DCMAKE_SHARED_LINKER_FLAGS="-Wl,-z,lazy" # fixes makepkg's default "-z,now" flag which strips out the necessary symbols
+    cmake --build build
+}
+
+package() {
+	cd "$srcdir/${pkgname}"
+
+	DESTDIR="$pkgdir/" cmake --install build --prefix=/usr
+}
