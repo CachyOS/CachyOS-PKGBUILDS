@@ -2,7 +2,7 @@
 # Contributor: Ash <xash at riseup d0t net>
 
 pkgname=lsfg-vk
-pkgver=r123.dac149c
+pkgver=r140.f998647
 pkgrel=1
 pkgdesc="Lossless Scaling Frame Generation on Linux via DXVK/Vulkan"
 arch=('x86_64')
@@ -10,18 +10,24 @@ url="https://github.com/PancakeTAS/lsfg-vk"
 license=('MIT')
 depends=('vulkan-icd-loader')
 makedepends=('clang' 'llvm' 'vulkan-headers' 'cmake' 'meson' 'ninja' 'git' 'sed' 'sdl2' 'glslang')
-source=('git+https://github.com/PancakeTAS/lsfg-vk#commit=223f4ba32a2b98d722e36dcb7201ce7df20534f9')
+source=('git+https://github.com/PancakeTAS/lsfg-vk#commit=f998647d74051467e39de9de2df2ff9a5996db5f')
 sha256sums=('SKIP')
+install=lsfg-vk.install
 
 pkgver() {
-	cd "$srcdir/${pkgname}"
+	cd "$srcdir/$pkgname"
 
 	# Git, no tags available
 	printf "r%s.%s" "$(git rev-list --count HEAD)" "$(git rev-parse --short HEAD)"
 }
 
+prepare() {
+	cd "$srcdir/$pkgname"
+	git submodule update --init --recursive
+}
+
 build() {
-	cd "$srcdir/${pkgname}"
+	cd "$srcdir/$pkgname"
 
 	cmake -B build -G Ninja \
     -DCMAKE_BUILD_TYPE=Release \
@@ -33,11 +39,11 @@ build() {
 }
 
 package() {
-	cd "$srcdir/${pkgname}"
+	cd "$srcdir/$pkgname"
 
-    install -Dm644 VkLayer_LS_frame_generation.json "$pkgdir/etc/vulkan/implicit_layer.d/VkLayer_LS_frame_generation.json"
+	install -Dm644 VkLayer_LS_frame_generation.json "$pkgdir/etc/vulkan/implicit_layer.d/VkLayer_LS_frame_generation.json"
 
-    install -Dm644 build/liblsfg-vk.so "$pkgdir/usr/lib/liblsfg-vk.so"
+	install -Dm644 build/liblsfg-vk.so "$pkgdir/usr/lib/liblsfg-vk.so"
 
-    install -Dm644 LICENSE.md "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+	install -Dm644 LICENSE.md "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
 }
