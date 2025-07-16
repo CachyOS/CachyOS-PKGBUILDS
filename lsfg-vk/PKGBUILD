@@ -8,8 +8,22 @@ pkgdesc="Lossless Scaling Frame Generation on Linux via DXVK/Vulkan"
 arch=('x86_64')
 url="https://github.com/PancakeTAS/lsfg-vk"
 license=('MIT')
-depends=('vulkan-icd-loader')
-makedepends=('clang' 'llvm' 'vulkan-headers' 'cmake' 'meson' 'ninja' 'git' 'sed' 'sdl2' 'glslang')
+depends=(
+  vulkan-icd-loader
+)
+makedepends=(
+  clang
+  llvm
+  vulkan-headers
+  cmake
+  meson
+  ninja
+  git
+  sed
+  sdl2
+  glslang
+  spirv-headers
+)
 source=('git+https://github.com/PancakeTAS/lsfg-vk#commit=cebe5e2e7a5bc671183791e880a5e70301676106')
 sha256sums=('8781e41b5ed773366d4ccba65b31d58412e3be89403ba74c4ce552fb563b463d')
 install=lsfg-vk.install
