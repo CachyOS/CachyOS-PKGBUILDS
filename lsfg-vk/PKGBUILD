@@ -10,40 +10,38 @@ url="https://github.com/PancakeTAS/lsfg-vk"
 license=('MIT')
 depends=('vulkan-icd-loader')
 makedepends=('clang' 'llvm' 'vulkan-headers' 'cmake' 'meson' 'ninja' 'git' 'sed' 'sdl2' 'glslang')
-source=('git+https://github.com/PancakeTAS/lsfg-vk#commit=f998647d74051467e39de9de2df2ff9a5996db5f')
-sha256sums=('SKIP')
+source=('git+https://github.com/PancakeTAS/lsfg-vk#commit=cebe5e2e7a5bc671183791e880a5e70301676106')
+sha256sums=('8781e41b5ed773366d4ccba65b31d58412e3be89403ba74c4ce552fb563b463d')
 install=lsfg-vk.install
 
 pkgver() {
-	cd "$srcdir/$pkgname"
+  cd "$srcdir/$pkgname"
 
-	# Git, no tags available
-	printf "r%s.%s" "$(git rev-list --count HEAD)" "$(git rev-parse --short HEAD)"
+  # Git, no tags available
+  printf "r%s.%s" "$(git rev-list --count HEAD)" "$(git rev-parse --short HEAD)"
 }
 
 prepare() {
-	cd "$srcdir/$pkgname"
-	git submodule update --init --recursive
+  cd "$srcdir/$pkgname"
+  git submodule update --init --recursive
 }
 
 build() {
-	cd "$srcdir/$pkgname"
+  cd "$srcdir/$pkgname"
 
-	cmake -B build -G Ninja \
+  cmake -B build -G Ninja \
     -DCMAKE_BUILD_TYPE=Release \
     -DCMAKE_INSTALL_PREFIX=/usr \
     -DCMAKE_INTERPROCEDURAL_OPTIMIZATION=ON \
     -DCMAKE_CXX_CLANG_TIDY="" \
     -DCMAKE_SHARED_LINKER_FLAGS="-Wl,-z,lazy" # fixes makepkg's default "-z,now" flag which strips out the necessary symbols
-    cmake --build build
+  cmake --build build
 }
 
 package() {
-	cd "$srcdir/$pkgname"
+  cd "$srcdir/$pkgname"
 
-	install -Dm644 VkLayer_LS_frame_generation.json "$pkgdir/etc/vulkan/implicit_layer.d/VkLayer_LS_frame_generation.json"
-
-	install -Dm644 build/liblsfg-vk.so "$pkgdir/usr/lib/liblsfg-vk.so"
-
-	install -Dm644 LICENSE.md "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+  install -Dm644 VkLayer_LS_frame_generation.json "$pkgdir/etc/vulkan/implicit_layer.d/VkLayer_LS_frame_generation.json"
+  install -Dm644 build/liblsfg-vk.so "$pkgdir/usr/lib/liblsfg-vk.so"
+  install -Dm644 LICENSE.md "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
 }
