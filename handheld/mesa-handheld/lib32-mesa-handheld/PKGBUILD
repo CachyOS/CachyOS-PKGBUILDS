@@ -4,16 +4,16 @@
 # Contributor: Jan de Groot <jgc@archlinux.org>
 # Contributor: Andreas Radke <andyrtr@archlinux.org>
 
-pkgbase=lib32-mesa
+pkgbase=lib32-mesa-handheld
 pkgname=(
-  lib32-mesa
-  lib32-vulkan-radeon
-  lib32-vulkan-intel
+  lib32-mesa-handheld
+  lib32-vulkan-radeon-handheld
+  lib32-vulkan-intel-handheld
 )
 pkgver=25.1.5
 pkgrel=3
 epoch=1
-pkgdesc="Open-source OpenGL drivers - 32-bit"
+pkgdesc="Open-source OpenGL drivers - 32-bit - CachyOS Handheld Patches"
 url="https://www.mesa3d.org/"
 arch=(x86_64)
 license=("MIT AND BSD-3-Clause AND SGI-B-2.0")
@@ -211,7 +211,7 @@ _pick() {
   done
 }
 
-package_lib32-mesa() {
+package_lib32-mesa-handheld() {
   depends=(
     lib32-expat
     lib32-gcc-libs
@@ -294,8 +294,8 @@ package_lib32-mesa() {
   install -Dm644 mesa-$pkgver/docs/license.rst -t "$pkgdir/usr/share/licenses/$pkgname"
 }
 
-package_lib32-vulkan-radeon() {
-  pkgdesc="Open-source Vulkan driver for AMD GPUs - 32-bit"
+package_lib32-vulkan-radeon-handheld() {
+  pkgdesc="Open-source Vulkan driver for AMD GPUs - 32-bit - Handheld"
   depends=(
     lib32-expat
     lib32-gcc-libs
@@ -327,8 +327,8 @@ package_lib32-vulkan-radeon() {
   install -Dm644 mesa-$pkgver/docs/license.rst -t "$pkgdir/usr/share/licenses/$pkgname"
 }
 
-package_lib32-vulkan-intel() {
-  pkgdesc="Open-source Vulkan driver for Intel GPUs - 32-bit"
+package_lib32-vulkan-intel-handheld() {
+  pkgdesc="Open-source Vulkan driver for Intel GPUs - 32-bit - Handheld"
   depends=(
     lib32-expat
     lib32-gcc-libs
