@@ -1,0 +1,73 @@
+# Maintainer: VolRen <VolRencs@proton.me>
+
+pkgname=github-desktop
+pkgver=3.4.14
+_gitname="release-$pkgver-linux1"
+pkgrel=1
+pkgdesc='GUI for managing Git and GitHub'
+arch=(x86_64)
+url='https://desktop.github.com'
+license=(MIT)
+depends=(
+  curl
+  git
+  libsecret
+  libxss
+  nspr
+  nss
+  unzip
+)
+optdepends=(
+  'github-cli: CLI interface for GitHub'
+  'hub: CLI interface for GitHub'
+)
+makedepends=(
+  python-setuptools
+  nodejs-lts-iron
+  npm
+  xorg-server-xvfb
+  yarn
+)
+provides=($pkgname)
+conflicts=($pkgname-bin $pkgname-git)
+source=(
+  "$pkgname::git+https://github.com/shiftkey/desktop.git#tag=$_gitname"
+  'git+https://github.com/github/gemoji.git'
+  'git+https://github.com/github/gitignore.git'
+  'git+https://github.com/github/choosealicense.com.git'
+  "$pkgname.desktop"
+)
+sha256sums=('59d9214328a9612a1e3463df69d9956c87c92fe23c97dc647ed4b063fdb12bb8'
+            'SKIP'
+            'SKIP'
+            'SKIP'
+            '932e4c456e8c6db03d27172cf0daa37806bf025bb560d8b3d758c0997d1a618c')
+
+prepare() {
+  cd "$pkgname"
+  git submodule init
+  git config submodule."gemoji".url "$srcdir/gemoji"
+  git config submodule."app/static/common/gitignore".url "$srcdir/gitignore"
+  git config submodule."app/static/common/choosealicense.com".url "$srcdir/choosealicense.com"
+  git -c protocol.file.allow=always submodule update
+  sed -e '/compile:prod/s/4096/4096 --openssl-legacy-provider/' -i package.json
+}
+
+build() {
+  cd "$pkgname"
+  xvfb-run yarn install
+  xvfb-run yarn build:prod
+}
+
+package() {
+cd "$pkgname"
+	install -d "$pkgdir/opt/$pkgname"
+	cp -r --preserve=mode dist/github-desktop-linux-x64/* "$pkgdir/opt/$pkgname/"
+	install -Dm0644 "../$pkgname.desktop" "$pkgdir/usr/share/applications/$pkgname.desktop"
+	pushd "$pkgdir/opt/$pkgname/resources/app/static/logos"
+	install -Dm0644 "1024x1024.png" "$pkgdir/usr/share/icons/hicolor/1024x1024/apps/$pkgname.png"
+	install -Dm0644 "512x512.png" "$pkgdir/usr/share/icons/hicolor/512x512/apps/$pkgname.png"
+	install -Dm0644 "256x256.png" "$pkgdir/usr/share/icons/hicolor/256x256/apps/$pkgname.png"
+	printf "#!/bin/sh\n\n/opt/$pkgname/github-desktop \"\$@\"\n" |
+	install -Dm0755 /dev/stdin "$pkgdir/usr/bin/$pkgname"
+}
