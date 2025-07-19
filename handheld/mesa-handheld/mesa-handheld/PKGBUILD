@@ -189,7 +189,6 @@ build() {
     -D gallium-xa=disabled
     -D gles1=disabled
     -D html-docs=enabled
-    -D legacy-x11=dri2
     -D libunwind=disabled
     -D microsoft-clc=disabled
     -D valgrind=enabled
@@ -271,11 +270,6 @@ package_mesa-handheld() {
 
     _pick opencl $libdir/libRusticlOpenCL*
     _pick opencl etc/OpenCL/vendors/rusticl.icd
-
-    _pick vkdzn $icddir/dzn_icd.*.json
-    _pick vkdzn $libdir/libvulkan_dzn.so
-    _pick vkdzn $libdir/libspirv_to_dxil.*
-    _pick vkdzn usr/bin/spirv2dxil
 
     _pick vkgfxstr $icddir/gfxstream_vk_icd.*.json
     _pick vkgfxstr $libdir/libvulkan_gfxstream.so
