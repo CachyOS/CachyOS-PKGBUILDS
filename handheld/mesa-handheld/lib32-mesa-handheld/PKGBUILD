@@ -8,6 +8,7 @@ pkgbase=lib32-mesa
 pkgname=(
   lib32-mesa
   lib32-vulkan-radeon
+  lib32-vulkan-intel
 )
 pkgver=25.1.5
 pkgrel=3
@@ -322,6 +323,34 @@ package_lib32-vulkan-radeon() {
   replaces=(lib32-vulkan-radeon)
 
   mv vkradeon/* "$pkgdir"
+
+  install -Dm644 mesa-$pkgver/docs/license.rst -t "$pkgdir/usr/share/licenses/$pkgname"
+}
+
+package_lib32-vulkan-intel() {
+  pkgdesc="Open-source Vulkan driver for Intel GPUs - 32-bit"
+  depends=(
+    lib32-expat
+    lib32-gcc-libs
+    lib32-glibc
+    lib32-libdrm
+    lib32-libx11
+    lib32-libxcb
+    lib32-libxshmfence
+    lib32-spirv-tools
+    lib32-systemd
+    lib32-vulkan-icd-loader
+    lib32-wayland
+    lib32-xcb-util-keysyms
+    lib32-zlib
+    lib32-zstd
+
+    vulkan-intel
+  )
+  optdepends=("lib32-vulkan-mesa-layers: additional vulkan layers")
+  provides=(lib32-vulkan-driver)
+
+  mv vkintel/* "$pkgdir"
 
   install -Dm644 mesa-$pkgver/docs/license.rst -t "$pkgdir/usr/share/licenses/$pkgname"
 }

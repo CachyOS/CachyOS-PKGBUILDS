@@ -12,6 +12,7 @@ pkgbase=mesa-handheld
 pkgname=(
   mesa-handheld
   vulkan-radeon-handheld
+  vulkan-intel
 )
 pkgver=25.1.5
 pkgrel=3
@@ -330,6 +331,32 @@ package_vulkan-radeon-handheld() {
   replaces=(vulkan-radeon)
 
   mv vkradeon/* "$pkgdir"
+
+  install -Dm644 mesa-$pkgver/docs/license.rst -t "$pkgdir/usr/share/licenses/$pkgname"
+}
+
+package_vulkan-intel-handheld() {
+  pkgdesc="Open-source Vulkan driver for Intel GPUs"
+  depends=(
+    expat
+    gcc-libs
+    glibc
+    libdrm
+    libx11
+    libxcb
+    libxshmfence
+    spirv-tools
+    systemd-libs
+    vulkan-icd-loader
+    wayland
+    xcb-util-keysyms
+    zlib
+    zstd
+  )
+  optdepends=("vulkan-mesa-layers: additional vulkan layers")
+  provides=(vulkan-driver)
+
+  mv vkintel/* "$pkgdir"
 
   install -Dm644 mesa-$pkgver/docs/license.rst -t "$pkgdir/usr/share/licenses/$pkgname"
 }
