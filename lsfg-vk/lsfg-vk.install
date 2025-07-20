@@ -4,6 +4,7 @@
 _user="${SUDO_USER:-$(logname 2>/dev/null)}"
 _home="$(getent passwd "$_user" | cut -d: -f6)"
 _data_home="${XDG_DATA_HOME:-$_home/.local/share}"
+_config_home="${XDG_CONFIG_HOME:-$_home/.config}"
 
 # search known locations prefixes for Lossless.dll
 if [[ -z "$steam_dll" ]]; then
@@ -104,7 +105,13 @@ post_install() {
     check_local_install
 
     echo "================================================================================================================================="
-    echo "==  To enable lsfg-vk, set the env vars ENABLE_LSFG=1 and LSFG_MULTIPLIER to a value between 0 and 4 before running a program  =="
+    echo "==  To enable lsfg-vk, you can either use the environment variables listed here:                                               =="
+    echo "==    https://github.com/Pahheb/lsfg-vk/wiki/Configuring-lsfg%E2%80%90vk                                                       =="
+    echo "==                                                                                                                             =="
+    echo "==  Or the new config system, located at:                                                                                      =="
+    echo "==    $_config_home/lsfg-vk/conf.toml"
+    echo "==  WARNING: The config is generated only after launching at least 1 vulkan app!                                               =="
+    echo "==                                                                                                                             =="
     echo "==  For more usage instructions, refer to the lsfg-vk wiki:                                                                    =="
     echo "==    https://github.com/PancakeTAS/lsfg-vk/wiki/Configuring-lsfg%E2%80%90vk                                                   =="
     echo "================================================================================================================================="

@@ -2,7 +2,7 @@
 # Contributor: Ash <xash at riseup d0t net>
 
 pkgname=lsfg-vk
-pkgver=r143.cebe5e2
+pkgver=r193.dd5190a
 pkgrel=1
 pkgdesc="Lossless Scaling Frame Generation on Linux via DXVK/Vulkan"
 arch=('x86_64')
@@ -10,6 +10,7 @@ url="https://github.com/PancakeTAS/lsfg-vk"
 license=('MIT')
 depends=(
   vulkan-icd-loader
+  libglvnd
 )
 makedepends=(
   clang
@@ -23,13 +24,23 @@ makedepends=(
   sdl2
   glslang
   spirv-headers
+  libxrandr
+  libxinerama
+  libxi
+  libxkbcommon
 )
-source=('git+https://github.com/PancakeTAS/lsfg-vk#commit=cebe5e2e7a5bc671183791e880a5e70301676106'
-		'git+https://github.com/PancakeTAS/dxbc.git#commit=04ca5e9ae5fef6c0c65ea72bbaa7375327f11454'
-		'git+https://github.com/trailofbits/pe-parse#commit=31ac5966503689d5693cd9fb520bd525a8710e17')
-sha256sums=('8781e41b5ed773366d4ccba65b31d58412e3be89403ba74c4ce552fb563b463d'
-            'afdd34616c8ed06c01966e04f245232346a1ea8dd5adaa7167b7225eedcf083e'
-            '0cafae771cb547b6f7e48121896dafa44990d2e7fb1fc50fcde1bba5438cd254')
+source=(
+  'git+https://github.com/PancakeTAS/lsfg-vk#commit=dd5190aa680a7543143e724a100bd5d6e9898dd7'
+  'git+https://github.com/PancakeTAS/dxbc.git#commit=8026542c3b7ad5b269795dbe63c602708503df0a'
+  'git+https://github.com/trailofbits/pe-parse#commit=31ac5966503689d5693cd9fb520bd525a8710e17'
+  'git+https://github.com/ToruNiina/toml11#commit=2a18a89008d3daac6d8f9db03ddd582173032c7a'
+  'git+https://github.com/raysan5/raylib#commit=9b6c09c32f7283e849918aef220ec4fa629af8d2'
+)
+sha256sums=('6554f18f06bc1e76c4f1ff03604baaac1c66bc7131677b5dd45851326f163cb5'
+            'f2e4fb592adf3c95c561d886452ac4bf6307ba22548b0e498f0b81f9bace765a'
+            '0cafae771cb547b6f7e48121896dafa44990d2e7fb1fc50fcde1bba5438cd254'
+            '292be2486ca0902a06c5446b3abab640b44d313c7936e2846463a507ef4b8160'
+            '145ae9a28b8c75bfe2d9f1ffa66b0f2cb59fc00987f98f98cbbb137a6ad3d9b8')
 install=lsfg-vk.install
 
 pkgver() {
@@ -46,6 +57,8 @@ prepare() {
   
   git config submodule.dxbc.url "$srcdir/dxbc"
   git config submodule.pe-parse.url "$srcdir/pe-parse"
+  git config submodule.toml11.url "$srcdir/toml11"
+  git config submodule.raylib.url "$srcdir/raylib"
   
   git -c protocol.file.allow=always submodule update
 }
@@ -53,12 +66,15 @@ prepare() {
 build() {
   cd "$srcdir/$pkgname"
 
+  # Unset certain default makepkg flags that strip out necessary symbols in the linker
+  export LDFLAGS="${LDFLAGS//-Wl,-z,now/} -Wl,-z,lazy"
+  export CFLAGS="${CFLAGS//-flto=auto/}"
+
   cmake -B build -G Ninja \
     -DCMAKE_BUILD_TYPE=Release \
     -DCMAKE_INSTALL_PREFIX=/usr \
-    -DCMAKE_INTERPROCEDURAL_OPTIMIZATION=ON \
-    -DCMAKE_CXX_CLANG_TIDY="" \
-    -DCMAKE_SHARED_LINKER_FLAGS="-Wl,-z,lazy" # fixes makepkg's default "-z,now" flag which strips out the necessary symbols
+    -DCMAKE_C_FLAGS="$CFLAGS" \
+	-DCMAKE_SHARED_LINKER_FLAGS="$LDFLAGS"
   cmake --build build
 }
 
