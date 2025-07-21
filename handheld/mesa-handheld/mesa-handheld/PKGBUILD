@@ -184,7 +184,7 @@ build() {
   local meson_options=(
     -D android-libbacktrace=disabled
     -D b_ndebug=true
-    -D gallium-drivers=radeonsi,iris,zink
+    -D gallium-drivers=radeonsi,iris,zink,virgl
     -D gallium-extra-hud=true
     -D gallium-rusticl=true
     -D gallium-xa=disabled
@@ -194,7 +194,7 @@ build() {
     -D microsoft-clc=disabled
     -D valgrind=enabled
     -D video-codecs=all
-    -D vulkan-drivers=amd,intel,swrast
+    -D vulkan-drivers=amd,intel,swrast,virtio
     -D vulkan-layers=device-select,intel-nullhw,overlay,screenshot,vram-report-limit
   )
 
@@ -272,8 +272,8 @@ package_mesa-handheld() {
     _pick opencl $libdir/libRusticlOpenCL*
     _pick opencl etc/OpenCL/vendors/rusticl.icd
 
-    _pick vkintel $icddir/intel{,_hasvk}_icd.*.json
-    _pick vkintel $libdir/libvulkan_intel{,_hasvk}.so
+    _pick vkintel $icddir/intel_icd.*.json
+    _pick vkintel $libdir/libvulkan_intel.so
 
     _pick vkradeon $icddir/radeon_icd.*.json
     _pick vkradeon $libdir/libvulkan_radeon.so
