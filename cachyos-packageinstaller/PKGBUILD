@@ -1,7 +1,7 @@
 # Maintainer: Vladislav Nepogodin <nepogodin.vlad@gmail.com>
 
 pkgname=cachyos-packageinstaller
-pkgver=1.4.0
+pkgver=1.5.0
 pkgrel=1
 pkgdesc="Simple Software Application Package Installer for CachyOS which helps setting up & installing applications"
 arch=(aarch64 x86_64)
@@ -10,14 +10,14 @@ license=(GPL-3.0-or-later)
 depends=('qt6-base' 'polkit' 'curl')
 makedepends=('cmake' 'ninja' 'git' 'polkit-qt6' 'qt6-tools' 'cargo' 'lld' 'clang' 'llvm')
 groups=('cachyos')
-source=("packageinstaller-$pkgver.tar.gz::$url/archive/v$pkgver.tar.gz")
-sha256sums=('a9cd3287002199aa7f0428b93c6a4de0ecd305c6c257243dbf9122aacf52dea6')
-provides=('cachyos-packageinstaller')
-conflicts=('cachyos-packageinstaller')
-options=(strip)
+source=("packageinstaller::git+$url.git#tag=v${pkgver}?signed")
+sha256sums=('5ec1eb29e343d6783a19e29852d6db9573697ef11d215f7ec00fd0cd4ca49288')
+validpgpkeys=(
+  'B1B70BB1CD56047DEF31DE2EB62C3D10C54D5DA9'  # Vladislav Nepogodin <nepogodin.vlad@gmail.com>
+)
 
 build() {
-  cd ${srcdir}/packageinstaller-${pkgver}
+  cd ${srcdir}/packageinstaller
 
   # we are building with llvm stack here, due to rust
   export AR=llvm-ar
@@ -37,7 +37,7 @@ build() {
 }
 
 package() {
-  cd ${srcdir}/packageinstaller-${pkgver}
+  cd ${srcdir}/packageinstaller
 
   # we are building with llvm stack here, due to rust
   export AR=llvm-ar
