@@ -5,11 +5,7 @@
 # Contributor: Andreas Radke <andyrtr@archlinux.org>
 
 pkgbase=lib32-mesa-handheld
-pkgname=(
-  lib32-mesa-handheld
-  lib32-vulkan-radeon-handheld
-  lib32-vulkan-intel-handheld
-)
+pkgname=lib32-mesa-handheld
 pkgver=25.1.6
 pkgrel=2
 epoch=1
@@ -65,6 +61,51 @@ makedepends=(
   wayland-protocols
   xorgproto
 )
+
+depends=(
+  lib32-expat
+  lib32-gcc-libs
+  lib32-glibc
+  lib32-libdrm
+  lib32-libelf
+  lib32-libglvnd
+  lib32-libx11
+  lib32-libxcb
+  lib32-libxext
+  lib32-libxshmfence
+  lib32-libxxf86vm
+  lib32-llvm-libs
+  lib32-lm_sensors
+  lib32-spirv-tools
+  lib32-wayland
+  lib32-zlib
+  lib32-zstd
+
+  #mesa-handheld
+)
+optdepends=("opengl-man-pages: for the OpenGL API man pages")
+provides=(
+  "lib32-libva-mesa-driver=$epoch:$pkgver-$pkgrel"
+  "lib32-mesa-libgl=$epoch:$pkgver-$pkgrel"
+  "lib32-mesa-vdpau=$epoch:$pkgver-$pkgrel"
+  lib32-libva-driver
+  lib32-opengl-driver
+  lib32-vdpau-driver
+  lib32-vulkan-driver
+  lib32-opencl-driver
+  lib32-mesa
+)
+conflicts=(
+  'lib32-libva-mesa-driver<1:24.2.7-1'
+  'lib32-mesa-libgl<17.0.1-2'
+  'lib32-mesa-vdpau<1:24.2.7-1'
+  'lib32-mesa'
+  lib32-vulkan-radeon
+  lib32-vulkan-intel
+  lib32-vulkan-swrast
+  lib32-opencl-mesa
+)
+
 options=(
   # GCC 14 LTO causes segfault in LLVM under si_llvm_optimize_module
   # https://gitlab.freedesktop.org/mesa/mesa/-/issues/11140
@@ -201,150 +242,10 @@ build() {
   meson compile -C build
 }
 
-_pick() {
-  local p="$1" f d; shift
-  for f; do
-    d="$srcdir/$p/${f#$pkgdir/}"
-    mkdir -p "$(dirname "$d")"
-    mv -v "$f" "$d"
-    rmdir -p --ignore-fail-on-non-empty "$(dirname "$f")"
-  done
-}
-
 package_lib32-mesa-handheld() {
-  depends=(
-    lib32-expat
-    lib32-gcc-libs
-    lib32-glibc
-    lib32-libdrm
-    lib32-libelf
-    lib32-libglvnd
-    lib32-libx11
-    lib32-libxcb
-    lib32-libxext
-    lib32-libxshmfence
-    lib32-libxxf86vm
-    lib32-llvm-libs
-    lib32-lm_sensors
-    lib32-spirv-tools
-    lib32-wayland
-    lib32-zlib
-    lib32-zstd
-
-    mesa
-  )
-  optdepends=("opengl-man-pages: for the OpenGL API man pages")
-  provides=(
-    "lib32-libva-mesa-driver=$epoch:$pkgver-$pkgrel"
-    "lib32-mesa-libgl=$epoch:$pkgver-$pkgrel"
-    "lib32-mesa-vdpau=$epoch:$pkgver-$pkgrel"
-    lib32-libva-driver
-    lib32-opengl-driver
-    lib32-vdpau-driver
-    mesa
-  )
-  conflicts=(
-    'lib32-libva-mesa-driver<1:24.2.7-1'
-    'lib32-mesa-libgl<17.0.1-2'
-    'lib32-mesa-vdpau<1:24.2.7-1'
-    'mesa'
-  )
-  replaces=(
-    'lib32-libva-mesa-driver<1:24.2.7-1'
-    'lib32-mesa-libgl<17.0.1-2'
-    'lib32-mesa-vdpau<1:24.2.7-1'
-    'mesa'
-  )
-
   meson install -C build --destdir "$pkgdir" --no-rebuild
 
-  (
-    local libdir=usr/lib32 icddir=usr/share/vulkan/icd.d
-
-    cd "$pkgdir"
-
-    _pick opencl $libdir/libRusticlOpenCL*
-
-    _pick vkintel $icddir/intel_icd.*.json
-    _pick vkintel $libdir/libvulkan_intel.so
-
-    _pick vkradeon $icddir/radeon_icd.*.json
-    _pick vkradeon $libdir/libvulkan_radeon.so
-
-    _pick vkswrast $icddir/lvp_icd.*.json
-    _pick vkswrast $libdir/libvulkan_lvp.so
-
-    _pick vkvirtio $icddir/virtio_icd.*.json
-    _pick vkvirtio $libdir/libvulkan_virtio.so
-
-    _pick vklayer $libdir/libVkLayer_*.so
-
-    rm -rv etc usr/{bin,include,share}
-
-    # indirect rendering
-    ln -sr $libdir/libGLX_{mesa,indirect}.so.0
-  )
-
-  install -Dm644 mesa-$pkgver/docs/license.rst -t "$pkgdir/usr/share/licenses/$pkgname"
-}
-
-package_lib32-vulkan-radeon-handheld() {
-  pkgdesc="Open-source Vulkan driver for AMD GPUs - 32-bit - Handheld"
-  depends=(
-    lib32-expat
-    lib32-gcc-libs
-    lib32-glibc
-    lib32-libdrm
-    lib32-libelf
-    lib32-libx11
-    lib32-libxcb
-    lib32-libxshmfence
-    lib32-llvm-libs
-    lib32-spirv-tools
-    lib32-systemd
-    lib32-vulkan-icd-loader
-    lib32-wayland
-    lib32-xcb-util-keysyms
-    lib32-zlib
-    lib32-zstd
-
-    vulkan-radeon
-  )
-  optdepends=("lib32-vulkan-mesa-layers: additional vulkan layers")
-  provides=(lib32-vulkan-driver)
-
-  conflicts=(lib32-vulkan-radeon)
-  replaces=(lib32-vulkan-radeon)
-
-  mv vkradeon/* "$pkgdir"
-
-  install -Dm644 mesa-$pkgver/docs/license.rst -t "$pkgdir/usr/share/licenses/$pkgname"
-}
-
-package_lib32-vulkan-intel-handheld() {
-  pkgdesc="Open-source Vulkan driver for Intel GPUs - 32-bit - Handheld"
-  depends=(
-    lib32-expat
-    lib32-gcc-libs
-    lib32-glibc
-    lib32-libdrm
-    lib32-libx11
-    lib32-libxcb
-    lib32-libxshmfence
-    lib32-spirv-tools
-    lib32-systemd
-    lib32-vulkan-icd-loader
-    lib32-wayland
-    lib32-xcb-util-keysyms
-    lib32-zlib
-    lib32-zstd
-
-    vulkan-intel
-  )
-  optdepends=("lib32-vulkan-mesa-layers: additional vulkan layers")
-  provides=(lib32-vulkan-driver)
-
-  mv vkintel/* "$pkgdir"
+  ln -s /usr/lib32/libGLX_mesa.so.0 "${pkgdir}/usr/lib32/libGLX_indirect.so.0"
 
   install -Dm644 mesa-$pkgver/docs/license.rst -t "$pkgdir/usr/share/licenses/$pkgname"
 }
