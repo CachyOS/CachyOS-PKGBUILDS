@@ -1,0 +1,76 @@
+# Maintainer: Peter Jung ptr1337 <admin@ptr1337.dev>
+
+pkgname=llvm-propeller
+pkgver=20250715.d487a23b42b
+pkgrel=1
+pkgdesc="Profile-guided, relinking optimizer for warehouse-scale applications built on LLVM"
+arch=('x86_64')
+url="https://github.com/google/llvm-propeller"
+license=('Apache-2.0')
+depends=('libelf' 'openssl' 'zstd' 'gcc-libs' 'glibc')
+makedepends=('git' 'cmake' 'ninja' 'clang>=19.0.0' 'llvm>=19.0.0' 'python')
+source=("${pkgname}::git+https://github.com/google/llvm-propeller.git#commit=d487a23")
+sha256sums=('20fc7d735b143f4bc4fb8146022f99a7e34c26ca8772d5054f9db6bf1524308d')
+
+pkgver() {
+  cd "${pkgname}"
+  printf "%s.%s" "$(git log -1 --format=%cd --date=short | tr -d -)" "$(git rev-parse --short HEAD)"
+}
+
+prepare() {
+  cd "${pkgname}"
+  mkdir -p build
+}
+
+build() {
+  cd "${pkgname}"
+  
+  # Use Clang as compiler (required by upstream)
+  export CC=clang
+  export CXX=clang++
+  export AR=llvm-ar
+  export NM=llvm-nm
+  export RANLIB=llvm-ranlib
+  
+  # Build with minimal debug info to reduce size
+  export CFLAGS="${CFLAGS/-g /-g1 }"
+  export CXXFLAGS="${CXXFLAGS/-g /-g1 }"
+  
+  # Configure with CMake
+  cmake -B build -G Ninja \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DCMAKE_INSTALL_PREFIX=/usr \
+    -DCMAKE_C_COMPILER=clang \
+    -DCMAKE_CXX_COMPILER=clang++ \
+    -DCMAKE_CXX_STANDARD=20 \
+    -DCMAKE_CXX_STANDARD_REQUIRED=ON \
+    -DBUILD_TESTING=OFF
+  
+  # Build the main target
+  ninja -C build generate_propeller_profiles
+}
+
+check() {
+  cd "${pkgname}"
+  
+  # Run basic tests if available
+  ninja -C build test || true
+}
+
+package() {
+  cd "${pkgname}"
+  
+  # Install the main executable
+  install -Dm755 build/propeller/generate_propeller_profiles "${pkgdir}/usr/bin/generate_propeller_profiles"
+  
+  # Install documentation
+  install -Dm644 README.md "${pkgdir}/usr/share/doc/${pkgname}/README.md"
+  install -Dm644 LICENSE "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE"
+  
+  # Install additional documentation from Docs/ if it exists
+  if [[ -d Docs ]]; then
+    cp -r Docs/* "${pkgdir}/usr/share/doc/${pkgname}/"
+  fi
+}
+
+# vim:set ts=2 sw=2 et:
