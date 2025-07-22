@@ -16,12 +16,13 @@ depends=(
     'gamescope-session-steam-git'
     'gcc-libs'
     'glibc'
+    'speech-dispatcher'
     'steamos-networking-tools' # For steamos-wifi-set-backend
     'systemd'
     'systemd-libs'
     'wireless_tools')  # For iwconfig
 optdepends=('jupiter-hw-support: jupiter support')  # Needed for jupiter-get-als-gain, jupiter-biosupdate, steamos-format-device, steamos-trim-devices
-makedepends=('git' 'cargo')
+makedepends=('git' 'cargo' 'clang')
 source=("git+https://gitlab.steamos.cloud/holo/steamos-manager.git#tag=v${pkgver}"
         "support-gamescope-session-steam.patch")
 sha256sums=('64359a249bbecfc7d47be8bf6a1764be2b95b9f65c7197a024e8f7323dc429d9'
