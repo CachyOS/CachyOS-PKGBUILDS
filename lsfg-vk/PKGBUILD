@@ -2,8 +2,8 @@
 # Contributor: Ash <xash at riseup d0t net>
 
 pkgname=lsfg-vk
-pkgver=r193.dd5190a
-pkgrel=1
+pkgver=r199.e67fcd3
+pkgrel=2
 pkgdesc="Lossless Scaling Frame Generation on Linux via DXVK/Vulkan"
 arch=('x86_64')
 url="https://github.com/PancakeTAS/lsfg-vk"
@@ -29,18 +29,8 @@ makedepends=(
   libxi
   libxkbcommon
 )
-source=(
-  'git+https://github.com/PancakeTAS/lsfg-vk#commit=dd5190aa680a7543143e724a100bd5d6e9898dd7'
-  'git+https://github.com/PancakeTAS/dxbc.git#commit=8026542c3b7ad5b269795dbe63c602708503df0a'
-  'git+https://github.com/trailofbits/pe-parse#commit=31ac5966503689d5693cd9fb520bd525a8710e17'
-  'git+https://github.com/ToruNiina/toml11#commit=2a18a89008d3daac6d8f9db03ddd582173032c7a'
-  'git+https://github.com/raysan5/raylib#commit=9b6c09c32f7283e849918aef220ec4fa629af8d2'
-)
-sha256sums=('6554f18f06bc1e76c4f1ff03604baaac1c66bc7131677b5dd45851326f163cb5'
-            'f2e4fb592adf3c95c561d886452ac4bf6307ba22548b0e498f0b81f9bace765a'
-            '0cafae771cb547b6f7e48121896dafa44990d2e7fb1fc50fcde1bba5438cd254'
-            '292be2486ca0902a06c5446b3abab640b44d313c7936e2846463a507ef4b8160'
-            '145ae9a28b8c75bfe2d9f1ffa66b0f2cb59fc00987f98f98cbbb137a6ad3d9b8')
+source=('git+https://github.com/PancakeTAS/lsfg-vk#commit=e67fcd3dd832c9d177ad2be780e5dd0e47810bdf')
+sha256sums=('baa1ec98f125d200637f6acae85db3940d7625f66c331eaf4d577859f96e0c41')
 install=lsfg-vk.install
 
 pkgver() {
@@ -53,14 +43,7 @@ pkgver() {
 prepare() {
   cd "$srcdir/$pkgname"
 
-  git submodule init
-  
-  git config submodule.dxbc.url "$srcdir/dxbc"
-  git config submodule.pe-parse.url "$srcdir/pe-parse"
-  git config submodule.toml11.url "$srcdir/toml11"
-  git config submodule.raylib.url "$srcdir/raylib"
-  
-  git -c protocol.file.allow=always submodule update
+  git submodule update --init --filter=tree:0 --recursive
 }
 
 build() {
@@ -74,7 +57,7 @@ build() {
     -DCMAKE_BUILD_TYPE=Release \
     -DCMAKE_INSTALL_PREFIX=/usr \
     -DCMAKE_C_FLAGS="$CFLAGS" \
-	-DCMAKE_SHARED_LINKER_FLAGS="$LDFLAGS"
+    -DCMAKE_SHARED_LINKER_FLAGS="$LDFLAGS"
   cmake --build build
 }
 
