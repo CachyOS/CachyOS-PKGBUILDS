@@ -3,7 +3,7 @@
 
 pkgname=power-profiles-daemon
 pkgver=0.30
-pkgrel=2
+pkgrel=3
 pkgdesc='Makes power profiles handling available over D-Bus'
 url='https://gitlab.freedesktop.org/upower/power-profiles-daemon'
 license=(GPL-3.0-only)
@@ -14,7 +14,8 @@ depends=(gcc-libs
          libgudev
          polkit
          upower)
-optdepends=('python-gobject: for powerprofilesctl')
+optdepends=('python-gobject: for powerprofilesctl'
+            'scx-scheds: for integration with scx_loader')
 makedepends=(bash-completion
              git
              glib2-devel
@@ -25,8 +26,17 @@ checkdepends=(python-dbusmock
               python-isort
               python-mccabe
               umockdev)
-source=(git+https://gitlab.freedesktop.org/upower/$pkgname#tag=$pkgver)
-sha256sums=('e955e833b01cbff9b5b00349592239e58c559d717eb49f3371f42932676e7a40')
+source=(git+https://gitlab.freedesktop.org/upower/$pkgname#tag=$pkgver
+        0001-Add-support-for-scx_loader-modes-switching.patch)
+sha256sums=('e955e833b01cbff9b5b00349592239e58c559d717eb49f3371f42932676e7a40'
+            '33c66d8736a86dd57cb4317f9a91dc108e9f550423d9761a6d1d467ef584467e')
+
+prepare() {
+  cd $pkgname
+
+  # Add scx_loader integration
+  patch -Np1 -i ../0001-Add-support-for-scx_loader-modes-switching.patch
+}
 
 build() {
   meson $pkgname build \

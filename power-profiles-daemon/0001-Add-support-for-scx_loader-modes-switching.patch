@@ -1,0 +1,201 @@
+From 44d79af8ea2b5d1d532fa2e360511d77ee409c62 Mon Sep 17 00:00:00 2001
+From: Vladislav Nepogodin <nepogodin.vlad@gmail.com>
+Date: Thu, 24 Jul 2025 20:29:44 +0400
+Subject: [PATCH] Add support for scx_loader modes switching
+
+Automatically switch currently running scheduler mode, according to the
+current power profile
+---
+ src/power-profiles-daemon.c | 122 ++++++++++++++++++++++++++++++++++++
+ 1 file changed, 122 insertions(+)
+
+diff --git a/src/power-profiles-daemon.c b/src/power-profiles-daemon.c
+index 01aac72..77c40d0 100644
+--- a/src/power-profiles-daemon.c
++++ b/src/power-profiles-daemon.c
+@@ -48,18 +48,42 @@
+ #define LOGIND_DBUS_PATH                  "/org/freedesktop/login1"
+ #define LOGIND_DBUS_INTERFACE             "org.freedesktop.login1.Manager"
+ 
++#define SCX_LOADER_DBUS_NAME              "org.scx.Loader"
++#define SCX_LOADER_DBUS_PATH              "/org/scx/Loader"
++#define SCX_LOADER_DBUS_INTERFACE         "org.scx.Loader"
++
+ #ifndef POLKIT_HAS_AUTOPOINTERS
+ /* FIXME: Remove this once we're fine to depend on polkit 0.114 */
+ G_DEFINE_AUTOPTR_CLEANUP_FUNC (PolkitAuthorizationResult, g_object_unref)
+ G_DEFINE_AUTOPTR_CLEANUP_FUNC (PolkitSubject, g_object_unref)
+ #endif
+ 
++/**
++ * ScxSchedMode:
++ * @SCX_SCHED_MODE_AUTO: Default values for the scheduler
++ * @SCX_SCHED_MODE_GAMING: Applies flags for better gaming experience
++ * @SCX_SCHED_MODE_POWER_SAVE: Applies flags for lower power usage
++ * @SCX_SCHED_MODE_LOW_LATENCY: Starts scheduler in low latency mode
++ * @SCX_SCHED_MODE_SERVER: Starts scheduler in server-oriented mode
++ *
++ * The scheduler modes for scx_loader.
++ * see https://github.com/sched-ext/scx/blob/8fe478a1a20ab43591a4f2dfbfdd99751ec09e19/rust/scx_loader/src/lib.rs#L82
++ */
++typedef enum {
++  SCX_SCHED_MODE_AUTO = 0,
++  SCX_SCHED_MODE_GAMING,
++  SCX_SCHED_MODE_POWER_SAVE,
++  SCX_SCHED_MODE_LOW_LATENCY,
++  SCX_SCHED_MODE_SERVER,
++} ScxSchedMode;
++
+ typedef struct {
+   GOptionGroup *group;
+   GLogLevelFlags log_level;
+   gboolean replace;
+   gboolean disable_upower;
+   gboolean disable_logind;
++  gboolean disable_scx_loader;
+   GStrv blocked_drivers;
+   GStrv blocked_actions;
+ } DebugOptions;
+@@ -96,6 +120,7 @@ typedef struct {
+   PpdPowerChangedReason power_changed_reason;
+ 
+   guint logind_sleep_signal_id;
++  GDBusProxy *scx_loader_proxy;
+ 
+   DebugOptions *debug_options;
+ } PpdApp;
+@@ -549,6 +574,56 @@ actions_activate_profile (GPtrArray *actions,
+   }
+ }
+ 
++static void
++switch_scx_loader_mode (PpdApp     *data,
++                        PpdProfile target_profile)
++{
++  g_autofree char *name_owner = NULL;
++  g_autoptr(GVariant) current_scheduler_variant = NULL;
++  const char *current_scheduler = NULL;
++  guint new_mode;
++
++  g_return_if_fail (data != NULL);
++
++  if (data->scx_loader_proxy == NULL)
++    return;
++
++  name_owner = g_dbus_proxy_get_name_owner (data->scx_loader_proxy);
++  if (name_owner == NULL)
++    return;
++
++  current_scheduler_variant = g_dbus_proxy_get_cached_property (data->scx_loader_proxy, "CurrentScheduler");
++  if (current_scheduler_variant != NULL)
++    current_scheduler = g_variant_get_string (current_scheduler_variant, NULL);
++
++  if (current_scheduler != NULL && g_strcmp0 (current_scheduler, "unknown") != 0) {
++    switch (target_profile) {
++    case PPD_PROFILE_POWER_SAVER:
++      new_mode = SCX_SCHED_MODE_POWER_SAVE;
++      break;
++    case PPD_PROFILE_BALANCED:
++      new_mode = SCX_SCHED_MODE_AUTO;
++      break;
++    case PPD_PROFILE_PERFORMANCE:
++      new_mode = SCX_SCHED_MODE_GAMING;
++      break;
++    default:
++      new_mode = SCX_SCHED_MODE_AUTO;
++      break;
++    }
++
++    g_info ("Switching scheduler '%s' to mode '%u'", current_scheduler, new_mode);
++    g_dbus_proxy_call (data->scx_loader_proxy,
++                       "SwitchScheduler",
++                       g_variant_new ("(su)", current_scheduler, new_mode),
++                       G_DBUS_CALL_FLAGS_NONE,
++                       -1,
++                       NULL,
++                       NULL,
++                       NULL);
++  }
++}
++
+ static gboolean
+ activate_target_profile (PpdApp                      *data,
+                          PpdProfile                   target_profile,
+@@ -602,6 +677,9 @@ activate_target_profile (PpdApp                      *data,
+ 
+   data->active_profile = target_profile;
+ 
++  /* Try to switch scx_loader scheduler mode */
++  switch_scx_loader_mode (data, target_profile);
++
+   if (reason == PPD_PROFILE_ACTIVATION_REASON_USER ||
+       reason == PPD_PROFILE_ACTIVATION_REASON_INTERNAL)
+     save_configuration (data);
+@@ -1348,6 +1426,25 @@ upower_name_owner_changed (GObject    *object,
+   upower_battery_set_power_changed_reason (data, PPD_POWER_CHANGED_REASON_UNKNOWN);
+ }
+ 
++static void
++on_scx_loader_proxy_cb (GObject *source_object,
++                        GAsyncResult *res,
++                        gpointer user_data)
++{
++  PpdApp *data = user_data;
++  g_autoptr(GError) error = NULL;
++
++  data->scx_loader_proxy = g_dbus_proxy_new_finish (res, &error);
++  if (data->scx_loader_proxy == NULL) {
++    if (g_error_matches (error, G_IO_ERROR, G_IO_ERROR_CANCELLED))
++      return;
++
++    g_warning ("failed to connect to scx-loader: %s", error->message);
++  } else {
++    g_debug ("scx-loader proxy created");
++  }
++}
++
+ static void
+ on_upower_proxy_cb (GObject *source_object,
+                     GAsyncResult *res,
+@@ -1762,6 +1859,22 @@ start_profile_drivers (PpdApp *data)
+     g_debug ("No battery state monitor required by any driver, let's skip it");
+   }
+ 
++  if (!data->debug_options->disable_scx_loader) {
++    g_debug ("Trying to connect to scx_loader...");
++    g_dbus_proxy_new (data->connection,
++                      G_DBUS_PROXY_FLAGS_DO_NOT_AUTO_START |
++                      G_DBUS_PROXY_FLAGS_DO_NOT_CONNECT_SIGNALS,
++                      NULL,
++                      SCX_LOADER_DBUS_NAME,
++                      SCX_LOADER_DBUS_PATH,
++                      SCX_LOADER_DBUS_INTERFACE,
++                      data->cancellable,
++                      on_scx_loader_proxy_cb,
++                      data);
++  } else {
++    g_debug ("scx_loader is disabled, let's skip it");
++  }
++
+   if (data->debug_options->disable_logind) {
+     g_debug ("logind is disabled, let's skip it");
+   } else if (needs_suspend_monitor) {
+@@ -2034,6 +2147,15 @@ debug_pre_parse_hook (GOptionContext *context,
+       "Disable logind integration",
+       NULL,
+     },
++    {
++      "disable-scx-loader",
++      0,
++      G_OPTION_FLAG_NONE,
++      G_OPTION_ARG_NONE,
++      &data->disable_scx_loader,
++      "Disable scx_loader integration",
++      NULL,
++    },
+     { NULL }
+   };
+   g_option_group_add_entries (group, options);
+-- 
+2.50.1
+
