@@ -6,27 +6,29 @@
 
 pkgbase=nvidia-550xx-dkms
 pkgname=('nvidia-550xx-utils' 'opencl-nvidia-550xx' 'nvidia-550xx-dkms')
-pkgver=550.144.03
-pkgrel=1
+pkgver=550.163.01
+pkgrel=2
 pkgdesc="NVIDIA drivers for Linux, 550 branch"
 arch=('x86_64')
 url="http://www.nvidia.com/"
 license=('custom')
-options=('!strip' "!debug")
+options=('!strip')
 makedepends=('patchelf')
 _pkg="NVIDIA-Linux-x86_64-${pkgver}"
 source=('nvidia-drm-outputclass.conf'
-        'nvidia-utils.sysusers'
-        'nvidia.rules'
-        'systemd-homed-override.conf'
-        'systemd-suspend-override.conf'
-        "https://us.download.nvidia.com/XFree86/Linux-x86_64/${pkgver}/${_pkg}.run")
+		'nvidia-utils.sysusers'
+		'nvidia.rules'
+		'systemd-homed-override.conf'
+		'systemd-suspend-override.conf'
+		'0002-CFLAGS-Set-std-gnu17-for-all-compilation-flags.patch'
+		"https://us.download.nvidia.com/XFree86/Linux-x86_64/${pkgver}/${_pkg}.run")
 sha512sums=('de7116c09f282a27920a1382df84aa86f559e537664bb30689605177ce37dc5067748acf9afd66a3269a6e323461356592fdfc624c86523bf105ff8fe47d3770'
             '1bcf2c6ee71686c0d32625e746ec8c0f7cf42fc63c76c3076ff2526b2661e8b9e9f76eaa2c4b213c7cc437a6f06006cc07672c4974d7f4515b2de2fd7c47a891'
             'f8f071f5a46c1a5ce5188e104b017808d752e61c0c20de1466feb5d693c0b55a5586314411e78cc2ab9c0e16e2c67afdd358da94c0c75df1f8233f54c280762c'
             'a0183adce78e40853edf7e6b73867e7a8ea5dabac8e8164e42781f64d5232fbe869f850ab0697c3718ebced5cde760d0e807c05da50a982071dfe1157c31d6b8'
             '55def6319f6abb1a4ccd28a89cd60f1933d155c10ba775b8dfa60a2dc5696b4b472c14b252dc0891f956e70264be87c3d5d4271e929a4fc4b1a68a6902814cee'
-            'b7c4638695ef3e75043fd1726f0153ff0c140475f965d88c21f46d2909e68d023ebe6aa1e758ed81ab58440ba9a789e00b9b84200c03f00d429e11938a2bed65')
+            '6814990f8046759d35f724ac9114d7fa284710fd1ad8cca7e1a861ea54a72fe4f67b5614f157a911f5ecfa0c964fa989edc61c85b1cfef6428e0cd7cdeea856e'
+            '676b1de35d21e80091528a49080c114e0870ea90b3f3721265ae8071abbc2183c851e6f11ba96a332c743fedfaf4ec9a014ad6ceed586fdbb03d94d33405e356')
 
 
 create_links() {
