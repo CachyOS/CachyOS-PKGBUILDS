@@ -1,7 +1,7 @@
 pkgbase = nvidia-535xx-utils
 	pkgdesc = NVIDIA drivers for Linux, 535 branch, dkms
-	pkgver = 535.216.03
-	pkgrel = 2
+	pkgver = 535.261.03
+	pkgrel = 1
 	url = http://www.nvidia.com/
 	arch = x86_64
 	license = custom
@@ -10,15 +10,11 @@ pkgbase = nvidia-535xx-utils
 	source = nvidia-drm-outputclass.conf
 	source = nvidia-utils.sysusers
 	source = nvidia.rules
-	source = linux-6.10.patch
-	source = 6.11-fbdev.patch
-	source = https://us.download.nvidia.com/tesla/535.216.03/NVIDIA-Linux-x86_64-535.216.03.run
+	source = https://us.download.nvidia.com/XFree86/Linux-x86_64/535.261.03/NVIDIA-Linux-x86_64-535.261.03.run
 	sha512sums = de7116c09f282a27920a1382df84aa86f559e537664bb30689605177ce37dc5067748acf9afd66a3269a6e323461356592fdfc624c86523bf105ff8fe47d3770
 	sha512sums = 1bcf2c6ee71686c0d32625e746ec8c0f7cf42fc63c76c3076ff2526b2661e8b9e9f76eaa2c4b213c7cc437a6f06006cc07672c4974d7f4515b2de2fd7c47a891
 	sha512sums = a0ceb0a6c240cf97b21a2e46c5c212250d3ee24fecef16aca3dffb04b8350c445b9f4398274abccdb745dd0ba5132a17942c9508ce165d4f97f41ece02b0b989
-	sha512sums = 29b156ee3504f11216e462d69c219f1c144a36f19b6756301e3db133c4c471d0b94483fd2809a32909c43f9cbaadd4016988b55354e77204f7d8a0033e735a8e
-	sha512sums = d37aa56ed937c596340106138a80c38ef5cc703cdc270dea6189fda20bcf369b11badd662bd0c0799ec1282428ca64d3dc137289fa1951905a10fd4cba6dd9b0
-	sha512sums = 1cb21a92cb440e1c82359a4019c02a9d852350afc938656d7d8313c91421e94a905359542fc09de13bed57bced5d7e68e59597fa244fbca1397c5cfe7b267f93
+	sha512sums = 52ac6db0a057977652f56a279c6e5482fd602d1c637b22e7bb8ae5e5f5a9fbddb8492196371c2bdcacfbd9e7c1bf3954c22254e842f413cb6af1b3c79a6e7ec2
 
 pkgname = nvidia-535xx-utils
 	pkgdesc = NVIDIA drivers utilities, 535 branch
@@ -29,12 +25,14 @@ pkgname = nvidia-535xx-utils
 	optdepends = xorg-server: Xorg support
 	optdepends = xorg-server-devel: nvidia-xconfig
 	optdepends = opencl-nvidia: OpenCL support
-	provides = nvidia-utils=535.216.03
+	provides = nvidia-utils=535.261.03
 	provides = vulkan-driver
 	provides = opengl-driver
 	provides = nvidia-libgl
+	provides = egl-gbm
 	conflicts = nvidia-utils
 	conflicts = nvidia-libgl
+	conflicts = egl-gbm
 
 pkgname = opencl-nvidia-535xx
 	pkgdesc = OpenCL implemention for NVIDIA, 535 branch
@@ -47,9 +45,9 @@ pkgname = opencl-nvidia-535xx
 pkgname = nvidia-535xx-dkms
 	pkgdesc = NVIDIA drivers - module sources, 535 branch
 	depends = dkms
-	depends = nvidia-utils=535.216.03
+	depends = nvidia-utils=535.261.03
 	depends = libglvnd
-	provides = nvidia-dkms=535.216.03
+	provides = nvidia-dkms=535.261.03
 	provides = NVIDIA-MODULE
 	provides = nvidia
 	conflicts = nvidia-dkms
