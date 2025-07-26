@@ -1,25 +1,25 @@
-name: Check Package Versions
-
-on:
-  schedule:
-    - cron: '0 */4 * * *'  # Run every 4 hours
-  workflow_dispatch:     # Also allows manual trigger
-
 jobs:
   check-versions:
-    runs-on: ubuntu-latest
-
     env:
-      GITHUB_REPO: 'CachyOS/CachyOS-PKGBUILDS'
+      GITHUB_REPO: "CachyOS/CachyOS-PKGBUILDS"
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Set up dependencies
-        run: |
-          sudo apt install -y jq nvchecker pacman-package-manager
+        run: sudo apt install -y jq nvchecker pacman-package-manager
 
       - name: Run version checker
         run: .github/scripts/checker.sh --ci
+
+name: Check Package Versions
+
+on:
+  schedule:
+    # Run every 4 hours
+    - cron: "0 */4 * * *"
+  # Also allows manual trigger
+  workflow_dispatch:
