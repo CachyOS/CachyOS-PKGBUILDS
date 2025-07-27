@@ -14,6 +14,7 @@ const pkgbuildFiles = readdirSync(pkgbuildsDir, {
 const processedPkgbuilds = await Promise.all(
   pkgbuildFiles.map(async (path) => {
     let pkgName = "";
+    let hasErrors = false;
 
     const { stdout, exitCode } = await $`namcap -i ${join(path, "PKGBUILD")}`
       .nothrow()
@@ -33,22 +34,31 @@ const processedPkgbuilds = await Promise.all(
           pkgName = detectedPkgName.replace(/\(|\)/g, "");
         }
         const type = code.shift().replace(":", "");
+        if (type === "E") {
+          hasErrors = true;
+        }
         return {
           code: code.join(" "),
           type,
         };
       });
+
     return {
+      commandError: exitCode !== 0,
       details,
-      errored: exitCode !== 0,
+      hasErrors,
       pkgName,
     };
   })
 ).then((res) => res.filter((x) => x && x.details.length > 0));
 
 if (processedPkgbuilds.length > 0) {
+  const { length: erroredCount } = processedPkgbuilds.filter(
+    (x) => x.hasErrors || x.commandError
+  );
+
   console.log(
-    `\n${processedPkgbuilds.length} PKGBUILDs (out of ${pkgbuildFiles.length}) have issues. Summary of issues:\n`
+    `\n${processedPkgbuilds.length} PKGBUILDs out of ${pkgbuildFiles.length} have issues and ${erroredCount} have errors. Summary of issues:\n`
   );
 
   processedPkgbuilds.forEach((pkg) => {
@@ -56,7 +66,7 @@ if (processedPkgbuilds.length > 0) {
     pkg.details.forEach((detail) => {
       console.log(`  [${detail.type}] ${detail.code}`);
     });
-    if (pkg.errored) {
+    if (pkg.commandError) {
       console.log(
         "  [CRITICAL] Additionally, An error occurred while processing this PKGBUILD"
       );
@@ -64,7 +74,10 @@ if (processedPkgbuilds.length > 0) {
   });
 
   console.log(
-    `\n${processedPkgbuilds.length} PKGBUILDs (out of ${pkgbuildFiles.length}) have issues.`
+    `\n${processedPkgbuilds.length} PKGBUILDs out of ${pkgbuildFiles.length} have issues and ${erroredCount} have errors.`
   );
-  process.exit(1);
+
+  if (erroredCount) {
+    process.exit(1);
+  }
 }

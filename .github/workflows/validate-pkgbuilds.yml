@@ -1,3 +1,17 @@
+jobs:
+  validate-pkgbuilds:
+    runs-on: ubuntu-latest
+    container: cachyos/cachyos:latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: pacman -Syu --noconfirm namcap bun-bin
+
+      - name: Validate PKGBUILDs
+        run: bun .github/scripts/validate-pkgbuilds.js
+
 name: Validate PKGBUILDs
 
 on:
@@ -13,20 +27,3 @@ on:
         description: "SHA to validate"
         required: true
         default: "HEAD"
-
-jobs:
-  validate-pkgbuilds:
-    runs-on: ubuntu-latest
-    container: archlinux:latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Install dependencies
-        run: pacman -Syu --noconfirm namcap curl unzip
-
-      - name: Set up Bun
-        run: curl -fsSL https://bun.sh/install | bash
-
-      - name: Validate PKGBUILDs
-        run: ~/.bun/bin/bun .github/scripts/validate-pkgbuilds.js
