@@ -34,30 +34,61 @@ fi
 function extract_package_modules() {
     local pkgname="$1"
 
-    if ! pacman -Ssq "^$pkgname\$" &>/dev/null; then
+    local tmp="$(mktemp --suffix="-extractor" -d)"
+    trap 'rm -rf -- "$tmp"' RETURN
+
+    # Import cachyos repository key
+    local gpg_dir="$tmp/gnupg"
+    local pacman_conf="$tmp/pacman.conf"
+    mkdir -p "$gpg_dir"
+
+    cat << 'EOF' >"$pacman_conf"
+[options]
+DisableDownloadTimeout
+Architecture = auto
+
+[cachyos]
+Include = /etc/pacman.d/cachyos-mirrorlist
+EOF
+
+    local -a pacman_opts=(
+       --gpgdir "$gpg_dir"
+       --config "$pacman_conf"
+    )
+
+    # Workaround for DNS issues within the mkarchiso (chroot) environment
+    # TODO: Find a better way to detect it
+    local -i is_archiso=0
+    if [ -f /etc/mkinitcpio.conf.d/archiso.conf ]; then
+        is_archiso=1
+        mv -f /etc/resolv.conf /etc/resolv.conf.bak
+        echo "nameserver 1.1.1.1" > /etc/resolv.conf
+    fi
+
+    if ! (
+        pacman-key "${pacman_opts[@]}" --init
+        pacman-key "${pacman_opts[@]}" --recv-keys F3B607488DB35A47 --keyserver keyserver.ubuntu.com
+        pacman-key "${pacman_opts[@]}" --lsign-key F3B607488DB35A47
+    ); then
+        error "Failed to import GPG key for cachyos repository"
+        return 1
+    fi
+
+    if ! pacman -S "${pacman_opts[@]}" -sq "^$pkgname\$" &>/dev/null; then
         error "Package $pkgname is not found in any repository."
         error "Make sure your pacman configuration is correct."
         return 1
     fi
 
-    local tmp="$(mktemp --suffix=extractor -d)"
-    trap 'rm -rf -- "$tmp"' RETURN
-
     echo "Downloading $pkgname package..."
 
-    # Workaround for DNS issues within the mkarchiso environment
-    local -i is_resolv_conf_not_exist=0
-    if [ ! -f /etc/resolv.conf ]; then
-        is_resolv_conf_not_exist=1
-        echo "nameserver 1.1.1.1" > /etc/resolv.conf
-    fi
-
-    local url="$(pacman -Swd --print "$pkgname")"
-    curl -SOL --output-dir "$tmp" "$url" || {
+    local url="$(pacman -Swd "${pacman_opts[@]}" --print "$pkgname")"
+    curl -SOL --retry 5 --output-dir "$tmp" "$url" || {
         error "Failed to download $pkgname package"
         return 1
     }
-    ((is_resolv_conf_not_exist)) && rm -f /etc/resolv.conf
+
+    ((is_archiso)) && mv /etc/resolv.conf.bak /etc/resolv.conf
 
     cd "$tmp"
     echo "Unpacking $pkgname package..."
