@@ -1,0 +1,455 @@
+From 2aee3e1ac9173b8a4741099e4a370d79ce107bb7 Mon Sep 17 00:00:00 2001
+From: Samuel Pitoiset <samuel.pitoiset@gmail.com>
+Date: Thu, 12 Jun 2025 10:53:35 +0200
+Subject: [PATCH 1/4] STEAMOS: radv: always consider some outputs as invariant
+
+Signed-off-by: Samuel Pitoiset <samuel.pitoiset@gmail.com>
+---
+ docs/envvars.rst                      |  3 --
+ src/amd/vulkan/radv_debug.h           | 68 +++++++++++++--------------
+ src/amd/vulkan/radv_instance.c        |  5 --
+ src/amd/vulkan/radv_physical_device.c |  1 -
+ src/amd/vulkan/radv_physical_device.h |  1 -
+ src/amd/vulkan/radv_shader.c          |  2 +-
+ src/util/00-radv-defaults.conf        |  9 ----
+ src/util/driconf.h                    |  4 --
+ 8 files changed, 35 insertions(+), 58 deletions(-)
+
+diff --git a/docs/envvars.rst b/docs/envvars.rst
+index f8118f53837..21f6989b915 100644
+--- a/docs/envvars.rst
++++ b/docs/envvars.rst
+@@ -1413,9 +1413,6 @@ RADV driver environment variables
+       Print image info
+    ``info``
+       show GPU-related information
+-   ``invariantgeom``
+-      Mark geometry-affecting outputs as invariant. This works around a common
+-      class of application bugs appearing as flickering.
+    ``metashaders``
+       dump internal meta shaders
+    ``noatocdithering``
+diff --git a/src/amd/vulkan/radv_debug.h b/src/amd/vulkan/radv_debug.h
+index 2379a1fc364..9ca3a105e6e 100644
+--- a/src/amd/vulkan/radv_debug.h
++++ b/src/amd/vulkan/radv_debug.h
+@@ -37,40 +37,40 @@ enum {
+    RADV_DEBUG_HANG = 1ull << 22,
+    RADV_DEBUG_IMG = 1ull << 23,
+    RADV_DEBUG_NO_UMR = 1ull << 24,
+-   RADV_DEBUG_INVARIANT_GEOM = 1ull << 25,
+-   RADV_DEBUG_NO_DISPLAY_DCC = 1ull << 26,
+-   RADV_DEBUG_NO_TC_COMPAT_CMASK = 1ull << 27,
+-   RADV_DEBUG_NO_VRS_FLAT_SHADING = 1ull << 28,
+-   RADV_DEBUG_NO_ATOC_DITHERING = 1ull << 29,
+-   RADV_DEBUG_NO_NGGC = 1ull << 30,
+-   RADV_DEBUG_DUMP_PROLOGS = 1ull << 31,
+-   RADV_DEBUG_NO_DMA_BLIT = 1ull << 32,
+-   RADV_DEBUG_SPLIT_FMA = 1ull << 33,
+-   RADV_DEBUG_DUMP_EPILOGS = 1ull << 34,
+-   RADV_DEBUG_NO_FMASK = 1ull << 35,
+-   RADV_DEBUG_SHADOW_REGS = 1ull << 36,
+-   RADV_DEBUG_EXTRA_MD = 1ull << 37,
+-   RADV_DEBUG_NO_GPL = 1ull << 38,
+-   RADV_DEBUG_VIDEO_ARRAY_PATH = 1ull << 39,
+-   RADV_DEBUG_NO_RT = 1ull << 40,
+-   RADV_DEBUG_NO_MESH_SHADER = 1ull << 41,
+-   RADV_DEBUG_NO_NGG_GS = 1ull << 42,
+-   RADV_DEBUG_NO_ESO = 1ull << 43,
+-   RADV_DEBUG_PSO_CACHE_STATS = 1ull << 44,
+-   RADV_DEBUG_NIR_DEBUG_INFO = 1ull << 45,
+-   RADV_DEBUG_DUMP_TRAP_HANDLER = 1ull << 46,
+-   RADV_DEBUG_DUMP_VS = 1ull << 47,
+-   RADV_DEBUG_DUMP_TCS = 1ull << 48,
+-   RADV_DEBUG_DUMP_TES = 1ull << 49,
+-   RADV_DEBUG_DUMP_GS = 1ull << 50,
+-   RADV_DEBUG_DUMP_PS = 1ull << 51,
+-   RADV_DEBUG_DUMP_TASK = 1ull << 52,
+-   RADV_DEBUG_DUMP_MESH = 1ull << 53,
+-   RADV_DEBUG_DUMP_CS = 1ull << 54,
+-   RADV_DEBUG_DUMP_NIR = 1ull << 55,
+-   RADV_DEBUG_DUMP_ASM = 1ull << 56,
+-   RADV_DEBUG_DUMP_BACKEND_IR = 1ull << 57,
+-   RADV_DEBUG_PSO_HISTORY = 1ull << 58,
++   RADV_DEBUG_NO_DISPLAY_DCC = 1ull << 25,
++   RADV_DEBUG_NO_TC_COMPAT_CMASK = 1ull << 26,
++   RADV_DEBUG_NO_VRS_FLAT_SHADING = 1ull << 27,
++   RADV_DEBUG_NO_ATOC_DITHERING = 1ull << 28,
++   RADV_DEBUG_NO_NGGC = 1ull << 29,
++   RADV_DEBUG_DUMP_PROLOGS = 1ull << 30,
++   RADV_DEBUG_NO_DMA_BLIT = 1ull << 31,
++   RADV_DEBUG_SPLIT_FMA = 1ull << 32,
++   RADV_DEBUG_DUMP_EPILOGS = 1ull << 33,
++   RADV_DEBUG_NO_FMASK = 1ull << 34,
++   RADV_DEBUG_SHADOW_REGS = 1ull << 35,
++   RADV_DEBUG_EXTRA_MD = 1ull << 36,
++   RADV_DEBUG_NO_GPL = 1ull << 37,
++   RADV_DEBUG_VIDEO_ARRAY_PATH = 1ull << 38,
++   RADV_DEBUG_NO_RT = 1ull << 39,
++   RADV_DEBUG_NO_MESH_SHADER = 1ull << 40,
++   RADV_DEBUG_NO_NGG_GS = 1ull << 41,
++   RADV_DEBUG_NO_ESO = 1ull << 42,
++   RADV_DEBUG_PSO_CACHE_STATS = 1ull << 43,
++   RADV_DEBUG_NIR_DEBUG_INFO = 1ull << 44,
++   RADV_DEBUG_DUMP_TRAP_HANDLER = 1ull << 45,
++   RADV_DEBUG_DUMP_VS = 1ull << 46,
++   RADV_DEBUG_DUMP_TCS = 1ull << 47,
++   RADV_DEBUG_DUMP_TES = 1ull << 48,
++   RADV_DEBUG_DUMP_GS = 1ull << 49,
++   RADV_DEBUG_DUMP_PS = 1ull << 50,
++   RADV_DEBUG_DUMP_TASK = 1ull << 51,
++   RADV_DEBUG_DUMP_MESH = 1ull << 52,
++   RADV_DEBUG_DUMP_CS = 1ull << 53,
++   RADV_DEBUG_DUMP_NIR = 1ull << 54,
++   RADV_DEBUG_DUMP_ASM = 1ull << 55,
++   RADV_DEBUG_DUMP_BACKEND_IR = 1ull << 56,
++   RADV_DEBUG_PSO_HISTORY = 1ull << 57,
++   RADV_DEBUG_BVH4 = 1ull << 58,
+    RADV_DEBUG_DUMP_SHADERS = RADV_DEBUG_DUMP_VS | RADV_DEBUG_DUMP_TCS | RADV_DEBUG_DUMP_TES | RADV_DEBUG_DUMP_GS |
+                              RADV_DEBUG_DUMP_PS | RADV_DEBUG_DUMP_TASK | RADV_DEBUG_DUMP_MESH | RADV_DEBUG_DUMP_CS |
+                              RADV_DEBUG_DUMP_NIR | RADV_DEBUG_DUMP_ASM | RADV_DEBUG_DUMP_BACKEND_IR,
+diff --git a/src/amd/vulkan/radv_instance.c b/src/amd/vulkan/radv_instance.c
+index d03b311fa07..613bedf6a7c 100644
+--- a/src/amd/vulkan/radv_instance.c
++++ b/src/amd/vulkan/radv_instance.c
+@@ -52,7 +52,6 @@ static const struct debug_control radv_debug_options[] = {{"nofastclears", RADV_
+                                                           {"hang", RADV_DEBUG_HANG},
+                                                           {"img", RADV_DEBUG_IMG},
+                                                           {"noumr", RADV_DEBUG_NO_UMR},
+-                                                          {"invariantgeom", RADV_DEBUG_INVARIANT_GEOM},
+                                                           {"splitfma", RADV_DEBUG_SPLIT_FMA},
+                                                           {"nodisplaydcc", RADV_DEBUG_NO_DISPLAY_DCC},
+                                                           {"notccompatcmask", RADV_DEBUG_NO_TC_COMPAT_CMASK},
+@@ -170,7 +169,6 @@ static const driOptionDescription radv_dri_options[] = {
+       DRI_CONF_VK_REQUIRE_ETC2(false)
+       DRI_CONF_VK_REQUIRE_ASTC(false)
+       DRI_CONF_RADV_ZERO_VRAM(false)
+-      DRI_CONF_RADV_INVARIANT_GEOM(false)
+       DRI_CONF_RADV_SPLIT_FMA(false)
+       DRI_CONF_RADV_DISABLE_TC_COMPAT_HTILE_GENERAL(false)
+       DRI_CONF_RADV_DISABLE_DCC(false)
+@@ -220,9 +218,6 @@ radv_init_dri_options(struct radv_instance *instance)
+    if (driQueryOptionb(&instance->drirc.options, "radv_no_dynamic_bounds"))
+       instance->debug_flags |= RADV_DEBUG_NO_DYNAMIC_BOUNDS;
+ 
+-   if (driQueryOptionb(&instance->drirc.options, "radv_invariant_geom"))
+-      instance->debug_flags |= RADV_DEBUG_INVARIANT_GEOM;
+-
+    if (driQueryOptionb(&instance->drirc.options, "radv_split_fma"))
+       instance->debug_flags |= RADV_DEBUG_SPLIT_FMA;
+ 
+diff --git a/src/amd/vulkan/radv_physical_device.c b/src/amd/vulkan/radv_physical_device.c
+index 07bf2a7717a..b3617498686 100644
+--- a/src/amd/vulkan/radv_physical_device.c
++++ b/src/amd/vulkan/radv_physical_device.c
+@@ -186,7 +186,6 @@ radv_physical_device_init_cache_key(struct radv_physical_device *pdev)
+    key->disable_trunc_coord = instance->drirc.disable_trunc_coord;
+    key->emulate_rt = radv_emulate_rt(pdev);
+    key->ge_wave32 = pdev->ge_wave_size == 32;
+-   key->invariant_geom = !!(instance->debug_flags & RADV_DEBUG_INVARIANT_GEOM);
+    key->no_fmask = !!(instance->debug_flags & RADV_DEBUG_NO_FMASK);
+    key->no_ngg_gs = !!(instance->debug_flags & RADV_DEBUG_NO_NGG_GS);
+    key->no_rt = !!(instance->debug_flags & RADV_DEBUG_NO_RT);
+diff --git a/src/amd/vulkan/radv_physical_device.h b/src/amd/vulkan/radv_physical_device.h
+index 005ec8dc2bc..f8bbea69192 100644
+--- a/src/amd/vulkan/radv_physical_device.h
++++ b/src/amd/vulkan/radv_physical_device.h
+@@ -50,7 +50,6 @@ struct radv_physical_device_cache_key {
+    uint32_t disable_trunc_coord : 1;
+    uint32_t emulate_rt : 1;
+    uint32_t ge_wave32 : 1;
+-   uint32_t invariant_geom : 1;
+    uint32_t no_fmask : 1;
+    uint32_t no_ngg_gs : 1;
+    uint32_t no_rt : 1;
+diff --git a/src/amd/vulkan/radv_shader.c b/src/amd/vulkan/radv_shader.c
+index fefe917af5c..65faae0faa2 100644
+--- a/src/amd/vulkan/radv_shader.c
++++ b/src/amd/vulkan/radv_shader.c
+@@ -471,7 +471,7 @@ radv_shader_spirv_to_nir(struct radv_device *device, const struct radv_shader_st
+ 
+       NIR_PASS(_, nir, nir_lower_vars_to_ssa);
+ 
+-      NIR_PASS(_, nir, nir_propagate_invariant, pdev->cache_key.invariant_geom);
++      NIR_PASS(_, nir, nir_propagate_invariant, true);
+ 
+       NIR_PASS(_, nir, nir_lower_clip_cull_distance_arrays);
+ 
+diff --git a/src/util/00-radv-defaults.conf b/src/util/00-radv-defaults.conf
+index e0e5b34dc87..4399233fd27 100644
+--- a/src/util/00-radv-defaults.conf
++++ b/src/util/00-radv-defaults.conf
+@@ -72,13 +72,11 @@ Application bugs worked around in this file:
+         <!-- Game workarounds -->
+         <application name="Shadow Of The Tomb Raider (Native)" application_name_match="ShadowOfTheTomb">
+             <option name="radv_report_llvm9_version_string" value="true" />
+-            <option name="radv_invariant_geom" value="true" />
+         </application>
+ 
+         <application name="Shadow Of The Tomb Raider (DX11/DX12)" application_name_match="SOTTR.exe">
+             <!-- DXVK and vkd3d-proton both enable invariant position but it's
+                  disabled for SotTR because it breaks NV more than it helps -->
+-            <option name="radv_invariant_geom" value="true" />
+             <option name="radv_split_fma" value="true" />
+         </application>
+ 
+@@ -96,7 +94,6 @@ Application bugs worked around in this file:
+         <application name="World War Z (and World War Z: Aftermath)" application_name_match="WWZ|wwz">
+             <option name="radv_override_uniform_offset_alignment" value="16" />
+             <option name="radv_disable_shrink_image_store" value="true" />
+-            <option name="radv_invariant_geom" value="true" />
+         </application>
+ 
+         <application name="DOOM VFR" application_name_match="DOOM_VFR">
+@@ -112,7 +109,6 @@ Application bugs worked around in this file:
+             <option name="radv_zero_vram" value="true" />
+             <option name="radv_disable_dedicated_sparse_queue" value="true" />
+             <option name="radv_disable_dcc_stores" value="true" />
+-            <option name="radv_invariant_geom" value="true" />
+             <option name="radv_lower_terminate_to_discard" value="true" />
+             <option name="radv_emulate_rt" value="true" />
+             <option name="radv_enable_float16_gfx8" value="true" />
+@@ -120,7 +116,6 @@ Application bugs worked around in this file:
+ 
+         <application name="DOOM (2016)" application_name_match="DOOM$">
+             <option name="radv_disable_dcc" value="true" />
+-            <option name="radv_invariant_geom" value="true" />
+         </application>
+ 
+         <application name="DOOM: The Dark Ages" application_name_match="DOOMTheDarkAges">
+@@ -164,10 +159,6 @@ Application bugs worked around in this file:
+             <option name="radv_rt_wave64" value="true" />
+         </application>
+ 
+-        <application name="War Thunder" application_name_match="WarThunder">
+-            <option name="radv_invariant_geom" value="true"/>
+-        </application>
+-
+         <application name="Crysis 2 Remastered" application_name_match="Crysis2Remastered.exe">
+             <option name="radv_ssbo_non_uniform" value="true" />
+         </application>
+diff --git a/src/util/driconf.h b/src/util/driconf.h
+index 86e00d6edd6..b9add14b429 100644
+--- a/src/util/driconf.h
++++ b/src/util/driconf.h
+@@ -731,10 +731,6 @@
+    DRI_CONF_OPT_B(radv_zero_vram, def, \
+                   "Initialize to zero all VRAM allocations")
+ 
+-#define DRI_CONF_RADV_INVARIANT_GEOM(def) \
+-   DRI_CONF_OPT_B(radv_invariant_geom, def, \
+-                  "Mark geometry-affecting outputs as invariant")
+-
+ #define DRI_CONF_RADV_SPLIT_FMA(def) \
+    DRI_CONF_OPT_B(radv_split_fma, def, \
+                   "Split application-provided fused multiply-add in geometry stages")
+-- 
+2.50.0
+
+From 33a32e7bc208c650f2657eba6f5fa0563bc5bc13 Mon Sep 17 00:00:00 2001
+From: Samuel Pitoiset <samuel.pitoiset@gmail.com>
+Date: Tue, 11 Mar 2025 17:38:12 +0100
+Subject: [PATCH 2/4] STEAMOS: radv: add radv_disable_ngg_culling and enable it
+ for No Rest for the Wicked
+
+This fixes a performance regression since 8d97c3bd064
+("radv: Increase maximum allowed PS params for enabling NGG culling.").
+
+This only changes the physical device cache key for this game, which
+implicitly disables shaders precompilation.
+
+Signed-off-by: Samuel Pitoiset <samuel.pitoiset@gmail.com>
+---
+ src/amd/vulkan/radv_instance.c | 4 ++++
+ src/util/00-radv-defaults.conf | 4 ++++
+ src/util/driconf.h             | 3 +++
+ 3 files changed, 11 insertions(+)
+
+diff --git a/src/amd/vulkan/radv_instance.c b/src/amd/vulkan/radv_instance.c
+index 613bedf6a7c..7b6702f351b 100644
+--- a/src/amd/vulkan/radv_instance.c
++++ b/src/amd/vulkan/radv_instance.c
+@@ -159,6 +159,7 @@ static const driOptionDescription radv_dri_options[] = {
+       DRI_CONF_RADV_OVERRIDE_UNIFORM_OFFSET_ALIGNMENT(0)
+       DRI_CONF_RADV_CLEAR_LDS(false)
+       DRI_CONF_RADV_DISABLE_NGG_GS(false)
++      DRI_CONF_RADV_DISABLE_NGG_CULLING(false)
+    DRI_CONF_SECTION_END
+ 
+    DRI_CONF_SECTION_DEBUG
+@@ -227,6 +228,9 @@ radv_init_dri_options(struct radv_instance *instance)
+    if (driQueryOptionb(&instance->drirc.options, "radv_disable_ngg_gs"))
+       instance->debug_flags |= RADV_DEBUG_NO_NGG_GS;
+ 
++   if (driQueryOptionb(&instance->drirc.options, "radv_disable_ngg_culling"))
++      instance->debug_flags |= RADV_DEBUG_NO_NGGC;
++
+    instance->drirc.clear_lds = driQueryOptionb(&instance->drirc.options, "radv_clear_lds");
+ 
+    instance->drirc.zero_vram = driQueryOptionb(&instance->drirc.options, "radv_zero_vram");
+diff --git a/src/util/00-radv-defaults.conf b/src/util/00-radv-defaults.conf
+index 4399233fd27..4bb16c9289b 100644
+--- a/src/util/00-radv-defaults.conf
++++ b/src/util/00-radv-defaults.conf
+@@ -183,6 +183,10 @@ Application bugs worked around in this file:
+             <option name="radv_zero_vram" value="true" />
+         </application>
+ 
++        <application name="No Rest For The Wicked" application_name_match="NoRestForTheWicked.exe">
++            <option name="radv_disable_ngg_culling" value="true" />
++        </application>
++
+         <!-- OpenGL Game workarounds (zink) -->
+         <application name="Black Geyser: Couriers of Darkness" executable="BlackGeyser.x86_64">
+             <option name="radv_zero_vram" value="true" />
+diff --git a/src/util/driconf.h b/src/util/driconf.h
+index b9add14b429..f807297faf5 100644
+--- a/src/util/driconf.h
++++ b/src/util/driconf.h
+@@ -841,6 +841,9 @@
+    DRI_CONF_OPT_B(radv_disable_hiz_his_gfx12, def, \
+                   "Disable HiZ/HiS on GFX12 (RDNA4) to workaround a hw bug that causes random GPU hangs")
+ 
++#define DRI_CONF_RADV_DISABLE_NGG_CULLING(def) \
++   DRI_CONF_OPT_B(radv_disable_ngg_culling, def, "Disable NGG culling on GFX10.3.")
++
+ /**
+  * \brief ANV specific configuration options
+  */
+-- 
+2.50.0
+
+From 765e52dbd51531d7dd92eefbda94801fc2d2f5d3 Mon Sep 17 00:00:00 2001
+From: Bas Nieuwenhuizen <bas@basnieuwenhuizen.nl>
+Date: Fri, 14 Jan 2022 15:58:45 +0100
+Subject: [PATCH 3/4] STEAMOS: radv: min image count override for FH5
+
+Otherwise in combination with the vblank time reservation in
+gamescope the game could get stuck in low power states.
+---
+ src/util/00-radv-defaults.conf | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/src/util/00-radv-defaults.conf b/src/util/00-radv-defaults.conf
+index 4bb16c9289b..2f17ffb48f0 100644
+--- a/src/util/00-radv-defaults.conf
++++ b/src/util/00-radv-defaults.conf
+@@ -233,5 +233,9 @@ Application bugs worked around in this file:
+         <application name="Total War: WARHAMMER III" application_name_match="TotalWarhammer3">
+             <option name="radv_disable_depth_storage" value="true"/>
+         </application>
++
++        <application name="Forza Horizon 5" application_name_match="ForzaHorizon5.exe">
++            <option name="vk_x11_override_min_image_count" value="4" />
++        </application>
+     </device>
+ </driconf>
+-- 
+2.50.0
+
+From fce615fbfd72d01612c18023bbde41191101fb1f Mon Sep 17 00:00:00 2001
+From: Samuel Pitoiset <samuel.pitoiset@gmail.com>
+Date: Thu, 22 Feb 2024 22:32:45 +0100
+Subject: [PATCH 4/4] STEAMOS: Dynamic swapchain override for gamescope limiter
+ for DRI3 only
+
+The original patch (from Bas) contained WSI VK support too but it's
+been removed because the Gamescope WSI layer already handles that.
+
+Signed-off-by: Samuel Pitoiset <samuel.pitoiset@gmail.com>
+---
+ .../frontends/dri/loader_dri3_helper.c        | 42 ++++++++++++++++++-
+ .../frontends/dri/loader_dri3_helper.h        |  1 +
+ 2 files changed, 41 insertions(+), 2 deletions(-)
+
+diff --git a/src/gallium/frontends/dri/loader_dri3_helper.c b/src/gallium/frontends/dri/loader_dri3_helper.c
+index 37970f4fa33..f200f2063a2 100644
+--- a/src/gallium/frontends/dri/loader_dri3_helper.c
++++ b/src/gallium/frontends/dri/loader_dri3_helper.c
+@@ -297,6 +297,30 @@ dri3_update_max_num_back(struct loader_dri3_drawable *draw)
+    }
+ }
+ 
++static unsigned
++gamescope_swapchain_override()
++{
++   const char *path = getenv("GAMESCOPE_LIMITER_FILE");
++   if (!path)
++      return 0;
++
++   static simple_mtx_t mtx = SIMPLE_MTX_INITIALIZER;
++   static int fd = -1;
++
++   simple_mtx_lock(&mtx);
++   if (fd < 0) {
++      fd = open(path, O_RDONLY);
++   }
++   simple_mtx_unlock(&mtx);
++
++   if (fd < 0)
++      return 0;
++
++   uint32_t override_value = 0;
++   pread(fd, &override_value, sizeof(override_value), 0);
++   return override_value;
++}
++
+ void
+ loader_dri3_set_swap_interval(struct loader_dri3_drawable *draw, int interval)
+ {
+@@ -311,10 +335,12 @@ loader_dri3_set_swap_interval(struct loader_dri3_drawable *draw, int interval)
+     * PS. changing from value A to B and A < B won't cause swap out of order but
+     * may still gets wrong target_msc value at the beginning.
+     */
+-   if (draw->swap_interval != interval)
++   if (draw->orig_swap_interval != interval)
+       loader_dri3_swapbuffer_barrier(draw);
+ 
+-   draw->swap_interval = interval;
++   draw->orig_swap_interval = interval;
++   if (gamescope_swapchain_override() != 1)
++      draw->swap_interval = interval;
+ }
+ 
+ static void
+@@ -443,6 +469,12 @@ loader_dri3_drawable_init(xcb_connection_t *conn,
+ 
+    draw->swap_interval = dri_get_initial_swap_interval(draw->dri_screen_render_gpu);
+ 
++   draw->orig_swap_interval = draw->swap_interval;
++
++   unsigned gamescope_override = gamescope_swapchain_override();
++   if (gamescope_override == 1)
++      draw->swap_interval = 1;
++
+    dri3_update_max_num_back(draw);
+ 
+    /* Create a new drawable */
+@@ -1085,6 +1117,12 @@ loader_dri3_swap_buffers_msc(struct loader_dri3_drawable *draw,
+    if (draw->type == LOADER_DRI3_DRAWABLE_WINDOW) {
+       dri3_fence_reset(draw->conn, back);
+ 
++      unsigned gamescope_override = gamescope_swapchain_override();
++      if (gamescope_override == 1)
++         draw->swap_interval = 1;
++      else
++         draw->swap_interval = draw->orig_swap_interval;
++
+       /* Compute when we want the frame shown by taking the last known
+        * successful MSC and adding in a swap interval for each outstanding swap
+        * request. target_msc=divisor=remainder=0 means "Use glXSwapBuffers()
+diff --git a/src/gallium/frontends/dri/loader_dri3_helper.h b/src/gallium/frontends/dri/loader_dri3_helper.h
+index 4da19d73090..819a0e548fc 100644
+--- a/src/gallium/frontends/dri/loader_dri3_helper.h
++++ b/src/gallium/frontends/dri/loader_dri3_helper.h
+@@ -170,6 +170,7 @@ struct loader_dri3_drawable {
+    bool block_on_depleted_buffers;
+    bool queries_buffer_age;
+    int swap_interval;
++   int orig_swap_interval;
+ 
+    const struct loader_dri3_vtable *vtable;
+ 
+-- 
+2.50.0
+
