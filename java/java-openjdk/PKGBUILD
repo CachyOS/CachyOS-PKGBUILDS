@@ -19,7 +19,7 @@ _securityver=2
 _updatever=12
 pkgver=${_majorver}.${_minorver}.${_securityver}.u${_updatever}
 # pkgver=${_majorver}.u${_updatever}
-pkgrel=2
+pkgrel=3
 _git_tag=jdk-${_majorver}.${_minorver}.${_securityver}+${_updatever}
 # _git_tag=jdk-${_majorver}+${_updatever}
 arch=('x86_64')
@@ -103,14 +103,9 @@ _commondeps=(
 build() {
   cd ${_jdkdir}
 
-  NUM_PROC_OPT=''
-  MAKEFLAG_J=$(echo ${MAKEFLAGS} | sed -En 's/.*-j([0-9]+).*/\1/p')
-  if [ -n "${MAKEFLAG_J}" ]; then
-    # http://hg.openjdk.java.net/jdk10/jdk10/file/85e6cb013b98/make/InitSupport.gmk#l105
-    echo "Removing '-j${MAKEFLAG_J}' from MAKEFLAGS to prevent build fail. Passing it directly to ./configure."
-    export MAKEFLAGS=${MAKEFLAGS/-j${MAKEFLAG_J}/}
-    NUM_PROC_OPT="--with-num-cores=${MAKEFLAG_J}"
-  fi
+  # remove -j from MAKEFLAGS to prevent build fail
+  local MAKEFLAG_J=$(echo ${MAKEFLAGS} | sed -En 's/.*-j([0-9]+).*/\1/p')
+  export MAKEFLAGS=${MAKEFLAGS/-j${MAKEFLAG_J}/}
 
   # Avoid optimization of HotSpot to be lowered from O3 to O2
   local _CFLAGS="${CFLAGS//-O2/-O3} ${CPPFLAGS} -fcommon"
@@ -163,9 +158,7 @@ build() {
     --with-native-debug-symbols=internal \
     --enable-unlimited-crypto \
     --disable-warnings-as-errors \
-    --with-vendor-name="Arch Linux" \
-    ${NUM_PROC_OPT}
-    #--disable-javac-server
+    --with-vendor-name="Arch Linux"
 
   make images legacy-jre-image docs
 
