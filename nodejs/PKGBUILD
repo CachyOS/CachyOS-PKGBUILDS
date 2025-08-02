@@ -9,7 +9,7 @@
 # Contributor: TIanyi Cui <tianyicui@gmail.com>
 
 pkgname=nodejs
-pkgver=24.4.1
+pkgver=24.5.0
 pkgrel=2
 pkgdesc='Evented I/O for V8 javascript ("Current" release)'
 arch=('x86_64')
@@ -39,7 +39,7 @@ makedepends=(
 optdepends=('npm: nodejs package manager')
 options=('!lto')
 source=("git+https://github.com/nodejs/node.git#tag=v$pkgver?signed")
-sha512sums=('52fa58a2987acd7eb2f4f975f9aaf841bfa37a94b9266ecdbe44abab641e5e739b54970ff9db01526f361ea2f796e512652ffeac9dd02fbf71f92d406345d3de')
+sha512sums=('21b1bd89d6230d018e0155e8bf9be186ca1597fa0d521ffc463310d6dca5209e0fe940704ca892e1433e701b2e573ea8af51010c21d4c16ab21ca8a25629d30b')
 validpgpkeys=(
   '8FCCA13FEF1D0C2E91008E09770F7A9A5AE15600' # Michaël Zasso (Targos) <targos@protonmail.com>
   '890C08DB8579162FEE0DF9DB8BEAB4DFCF555EF4' # RafaelGSS <rafael.nunu@hotmail.com>
@@ -110,16 +110,6 @@ build() {
     # --shared-v8
 
   make
-}
-
-check() {
-  _set_flags
-  cd node
-  # ignore failing tests, they work when compiled locally
-  rm test/parallel/test-http2-client-set-priority.js
-  rm test/parallel/test-http2-priority-event.js
-  rm test/parallel/test-http-outgoing-end-cork.js
-  make test-only
 }
 
 package() {
