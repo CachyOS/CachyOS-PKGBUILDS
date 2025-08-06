@@ -7,7 +7,7 @@
 pkgbase=nvidia-utils
 pkgname=('nvidia-utils' 'opencl-nvidia' 'nvidia-dkms' 'nvidia-open-dkms')
 pkgver=575.64.05
-pkgrel=2
+pkgrel=3
 arch=('x86_64')
 url="http://www.nvidia.com/"
 license=('custom')
@@ -134,11 +134,12 @@ package_nvidia-dkms() {
 
 package_nvidia-utils() {
     pkgdesc="NVIDIA drivers utilities"
-    depends=('libglvnd' 'egl-wayland' 'egl-gbm' 'egl-x11')
+    depends=('libglvnd' 'egl-wayland2' 'egl-gbm' 'egl-x11')
     optdepends=('nvidia-settings: configuration tool'
                 'xorg-server: Xorg support'
                 'xorg-server-devel: nvidia-xconfig'
-                'opencl-nvidia: OpenCL support')
+                'opencl-nvidia: OpenCL support'
+                'egl-wayland: Old version')
     conflicts=('nvidia-libgl')
     provides=('vulkan-driver' 'opengl-driver' 'nvidia-libgl')
     replaces=('nvidia-libgl')
