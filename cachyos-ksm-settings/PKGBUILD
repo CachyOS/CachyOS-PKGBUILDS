@@ -5,6 +5,7 @@ pkgrel=1
 pkgdesc="Package for easy configuration of KSM via systemd"
 arch=('any')
 license=('GPL-3.0-or-later')
+url="https://github.com/CachyOS/CachyOS-PKGBUILDS/tree/master/$pkgname"
 depends=('systemd>=256')
 makedepends=('coreutils')
 source=(
@@ -22,13 +23,11 @@ optdepends=(
     "ly: for systemd service override to work"
     "lightdm: for systemd service override to work"
 )
-sha256sums=(
-    'adab2cae71b5acb9057d87215edb8c9a079e2d16cf5a6484d1b3898503eaac75'
-    'a5a0f259d6d00228864176d6081372730ee77df9621836de4feeb9dc675390a3'
-    '6c995e28ba0c52e3adb9b68c2f5df59378b14cbedb17fec9a09848d840acd656'
-    'cd5c8aa86df5a06a268ecc21297b4cd7d8df1053c90c8bcd4e53ef9bb16194d9'
-    'd2d252577bd27fe6e2308f5503d08053dbff0c66fd2cfd8543c489769ac41fef'
-)
+sha256sums=('adab2cae71b5acb9057d87215edb8c9a079e2d16cf5a6484d1b3898503eaac75'
+            'a5a0f259d6d00228864176d6081372730ee77df9621836de4feeb9dc675390a3'
+            '6c995e28ba0c52e3adb9b68c2f5df59378b14cbedb17fec9a09848d840acd656'
+            'cd5c8aa86df5a06a268ecc21297b4cd7d8df1053c90c8bcd4e53ef9bb16194d9'
+            'd2d252577bd27fe6e2308f5503d08053dbff0c66fd2cfd8543c489769ac41fef')
 
 package() {
     install -Dm644 10-systemd-ksm.conf "${pkgdir}/usr/lib/systemd/system/gdm.service.d/10-ksm.conf"
