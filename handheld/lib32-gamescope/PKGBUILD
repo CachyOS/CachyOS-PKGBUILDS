@@ -10,16 +10,19 @@ url="https://github.com/ValveSoftware/gamescope"
 license=('BSD-2-Clause')
 depends=(
     "gamescope=${pkgver}"
-    'lib32-wayland'
     'lib32-libx11'
     'lib32-libxcb'
-    'lib32-vulkan-icd-loader')
+    'lib32-vulkan-icd-loader'
+    'lib32-wayland'
+)
 makedepends=(
     'cmake'
+    'git'
     'meson'
     'ninja'
+    'vulkan-headers'
     'wayland-protocols'
-    'vulkan-headers')
+)
 replaces=('lib32-gamescope-plus')
 source=("git+${url}#tag=${pkgver}")
 sha256sums=('e41df706604e97715a509222e3a839c7b10fd83f0746e1ab0a3a387fde091599')
