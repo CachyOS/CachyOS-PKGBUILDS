@@ -17,6 +17,7 @@ depends=(
   lib32-glibc
 )
 makedepends=(
+  git
   cmake
   ninja
   lib32-gcc-libs
@@ -36,8 +37,8 @@ build() {
   export LDFLAGS+=" -m32"
   export PKG_CONFIG_PATH='/usr/lib32/pkgconfig'
 
-	# WITH_UNALIGNED - unaligned access invokes undefined behaviour,
-	#   see https://github.com/gentoo/gentoo/pull/17167 for more info.
+  # WITH_UNALIGNED - unaligned access invokes undefined behaviour,
+  #   see https://github.com/gentoo/gentoo/pull/17167 for more info.
   local _options=(
     -G Ninja
     -DCMAKE_BUILD_TYPE=None
