@@ -7,11 +7,13 @@ _gitname=ananicy-rules
 pkgver=1.0.9
 pkgrel=1
 epoch=1
-groups=(cachyos)
-arch=('any')
-license=(GPL-1.0-only)
 pkgdesc='CachyOS - ananicy-rules'
-source=(git+https://github.com/CachyOS/ananicy-rules#tag=${pkgver})
+arch=('any')
+url='https://github.com/CachyOS/ananicy-rules'
+license=(GPL-3.0-or-later)
+makedepends=('git')
+groups=(cachyos)
+source=("${_gitname}::git+$url.git#tag=${pkgver}")
 sha256sums=('97a00d824df7d25ecf478e322aa7fad06e60afb3de3b1851c4287017498fa9ad')
 replaces=(ananicy-rules-git)
 provides=(ananicy-rules-git)
@@ -21,8 +23,11 @@ prepare() {
   cd "${_gitname}"
   rm -f README.md
 }
+
 package() {
   cd "${_gitname}"
   install -d $pkgdir/etc/ananicy.d
   cp -rf $srcdir/$_gitname/* $pkgdir/etc/ananicy.d
 }
+
+# vim:set sw=2 sts=2 et:
