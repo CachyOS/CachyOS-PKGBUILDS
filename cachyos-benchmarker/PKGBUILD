@@ -33,11 +33,12 @@ depends=(
   xz
   zlib
 )
+makedepends=('git')
 source=(git+https://github.com/cachyos/cachyos-benchmarker.git#tag=$pkgver)
 sha512sums=('7e995e3779e4dd8badfbd32402ea11973716f6af38d99d412e989e1f25a0350a14b2ef585cf793b570837ca3e08b16abca57d3900d90656b7909d35d5ce9961f')
 
 package() {
-	cd $pkgname
-	install -Dm755 $pkgname "$pkgdir/usr/bin/$pkgname"
-	install -Dm755 benchmark_scraper.py "$pkgdir/usr/bin/benchmark_scraper.py"
+    cd $pkgname
+    install -Dm755 $pkgname "$pkgdir/usr/bin/$pkgname"
+    install -Dm755 benchmark_scraper.py "$pkgdir/usr/bin/benchmark_scraper.py"
 }
