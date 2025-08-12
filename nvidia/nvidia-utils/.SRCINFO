@@ -1,5 +1,5 @@
 pkgbase = nvidia-utils
-	pkgver = 575.64.05
+	pkgver = 580.76.05
 	pkgrel = 2
 	url = http://www.nvidia.com/
 	arch = x86_64
@@ -12,22 +12,26 @@ pkgbase = nvidia-utils
 	source = systemd-homed-override.conf
 	source = systemd-suspend-override.conf
 	source = nvidia-sleep.conf
-	source = https://us.download.nvidia.com/XFree86/Linux-x86_64/575.64.05/NVIDIA-Linux-x86_64-575.64.05.run
-	source = https://download.nvidia.com/XFree86/NVIDIA-kernel-module-source/NVIDIA-kernel-module-source-575.64.05.tar.xz
+	source = https://us.download.nvidia.com/XFree86/Linux-x86_64/580.76.05/NVIDIA-Linux-x86_64-580.76.05.run
+	source = https://download.nvidia.com/XFree86/NVIDIA-kernel-module-source/NVIDIA-kernel-module-source-580.76.05.tar.xz
 	source = 0001-Enable-atomic-kernel-modesetting-by-default.patch
 	source = 0002-Add-IBT-support.patch
 	source = limit-vram-usage
+	source = 6.17.patch
+	source = gsk-renderer.sh
 	sha256sums = be99ff3def641bb900c2486cce96530394c5dc60548fc4642f19d3a4c784134d
 	sha256sums = f77a5247a3ba63e9fad3a3b2822d0fcfa51e0f79b5a90bd79bf08ea34b64ab07
 	sha256sums = 0e54249a7754b668b436f0f7aa7e95fff68edbb12a93dbee4660e09a8c695f84
 	sha256sums = c5aa7b8abe69e72bfdc6b9ee8afbfd350bcc557e894558f2e6e4087fa9aa0dd8
 	sha256sums = 1d053c5078387021338cfc3a732bed61be1a20a549775573788e9134775c8149
 	sha256sums = 12d31a5425aba66be9e9129012cde82755ad4d5b7ce9933df8fc398c4fa8d631
-	sha256sums = 85f2b50f912261c1917a0b2cf7e1f9743affd008fdc0f209f4d5563f774d502d
-	sha256sums = 21cc0e5841416d9bab974df48c5c5a2d2def4c526a9dae2add577b43b4b094fb
+	sha256sums = 219be636b60931b021b2e8c1e0eff887363c731f8a940caa87bcc054d05d97fd
+	sha256sums = 7e7b603b8b07d2281a2d2dd607bae6d2a80ed7e5b62ee2e1c3fedc8588f33325
 	sha256sums = 163c57160cc1033020680f638b44ebd94b496152dcd8951e87d5077d4d5c2009
 	sha256sums = a0088d49d46b699d1727e5944fd9aca5ede93ea3678dd5e91ca58084bc2fa0ee
 	sha256sums = cae9133d31ac7592425a25af03f734c70aa93cefc8e591f360f96b595fa4eb1d
+	sha256sums = deecc14fed9f3505be1813ca3bced09e1fa95da34a5f93a50c88a4c97ba5d566
+	sha256sums = 67eac203e7de4cf979b82c1e43439ac0e7c951d8901ebd9e4555c5d186a1b2ec
 
 pkgname = nvidia-utils
 	pkgdesc = NVIDIA drivers utilities
@@ -55,7 +59,7 @@ pkgname = opencl-nvidia
 pkgname = nvidia-dkms
 	pkgdesc = NVIDIA kernel modules - module sources
 	depends = dkms
-	depends = nvidia-utils=575.64.05
+	depends = nvidia-utils=580.76.05
 	depends = libglvnd
 	provides = NVIDIA-MODULE
 	provides = nvidia
