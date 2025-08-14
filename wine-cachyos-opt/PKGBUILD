@@ -6,7 +6,7 @@
 # Contributor: Giovanni Scafora <giovanni@archlinux.org>
 
 pkgname=wine-cachyos-opt
-_srctag=10.0-20250714
+_srctag=10.0-20250807
 pkgver=${_srctag//-/.}
 _geckover=2.47.4
 _monover=10.0.0
@@ -139,7 +139,7 @@ build() {
   # From Proton
   OPTIMIZE_FLAGS="-O2 -march=$march -mtune=$mtune -mfpmath=sse -pipe"
   OPTIMIZE_FLAGS+=" -mprefer-avx128"
-  SANITY_FLAGS="-fwrapv -fno-strict-aliasing"
+  SANITY_FLAGS="-fwrapv -fno-strict-aliasing -D_TIME_BITS=64 -D_FILE_OFFSET_BITS=64"
   DEBUG_FLAGS="-ffunction-sections -fdata-sections -fno-omit-frame-pointer"
   WARNING_FLAGS="-Wno-incompatible-pointer-types"
   STRIP_FLAGS="-s"
@@ -237,7 +237,7 @@ package() {
 }
 
 # vim:set ts=8 sts=2 sw=2 et:
-b2sums=('49ef0dc801f44738044896360cdb31b82be689cfe503f81552cc04a2252fa6dcb2c1fdec017ae3ca30b8c059af0e289925a38b19254a5ffef96b019c5675fdb1'
+b2sums=('1efe901a23d3224ca9d21ff1c23820e08ba4e139e08869469290f898a819385d7709475b4b279ff98cb62f2a8dca0b3467e2908c5b2eb5d5825e19a08e39e840'
         '2a73c12585b502ae11188482cbc9fb1f45f95bfe4383a7615011104b132f4845f9813d01fb40277e1934fab5f1b35ab40b4f4a66a9967463dd1d666a666904e9'
         '62856a88266b4757602c0646e024f832974a93f03b9df253fd4895d4f11a41b435840ad8f7003ec85a0d8087dec15f2e096dbfb4b01ebe4d365521e48fd0c5c0'
         'a7efb7e9e3c03a92f3fc2c66172a2597ab4febfbf23a98c20d9ba46c48f0b96f568b21ea61f43cfa0cbbad2557cfafd665b63f3115611f0df9dd75ab358ecf43'
