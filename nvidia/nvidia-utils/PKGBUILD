@@ -7,7 +7,7 @@
 pkgbase=nvidia-utils
 pkgname=('nvidia-utils' 'opencl-nvidia' 'nvidia-dkms' 'nvidia-open-dkms')
 pkgver=580.76.05
-pkgrel=3
+pkgrel=4
 arch=('x86_64')
 url="http://www.nvidia.com/"
 license=('custom')
@@ -323,6 +323,8 @@ END
     install -Dm644 "${srcdir}/nvidia-sleep.conf" "${pkgdir}/usr/lib/modprobe.d/nvidia-sleep.conf"
     # Vulkan GTK Renderer Crash fix
     install -Dm644 "${srcdir}/gsk-renderer.sh" "${pkgdir}/etc/profile.d/gsk-renderer.sh"
+    # Same fix but also for Gnome/GDM users
+    install -Dm644 "${srcdir}/gsk.conf" "${pkgdir}/usr/lib/environment.d/10-gsk.conf"
 
     # Lists NVIDIA driver files for container runtimes like nvidia-container-toolkit
     install -Dm644 sandboxutils-filelist.json "${pkgdir}/usr/share/nvidia/files.d/sandboxutils-filelist.json"
