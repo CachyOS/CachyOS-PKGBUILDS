@@ -9,14 +9,15 @@ pkgver=${_srctag//-/.}
 pkgrel=2
 epoch=1
 
-source=(
-  https://github.com/CachyOS/proton-cachyos/releases/download/cachyos-${_srctag}-slr/proton-cachyos-${_srctag}-slr-x86_64.tar.xz
-)
+_package_name="proton-cachyos-${_srctag}-slr-x86_64"
+sha256sums=('ebb95fa090f7b957b9640b14256ec8e0ec807d1c2a51c5d2b780cdfd79c129cf')
 if [ -n "$_optimize_v3" ]; then
-source=(
-  https://github.com/CachyOS/proton-cachyos/releases/download/cachyos-${_srctag}-slr/proton-cachyos-${_srctag}-slr-x86_64_v3.tar.xz
-)
+  _package_name="proton-cachyos-${_srctag}-slr-x86_64_v3"
+  sha256sums=('ffdb5380ca9fdd7a73f7847f31ffb1793914a327d0f683ef794dff31960c60e8')
 fi
+source=(
+  "https://github.com/CachyOS/proton-cachyos/releases/download/cachyos-${_srctag}-slr/${_package_name}.tar.xz"
+)
 
 pkgdesc="A compatibility tool for Steam Play based on Wine and additional components, experimental branch with extra CachyOS flavour (Steam Linux Runtime build)"
 url="https://github.com/CachyOS/proton-cachyos"
@@ -80,26 +81,18 @@ provides=('proton')
 install=${pkgname}.install
 
 build() {
-  _package_name="proton-cachyos-${_srctag}-slr-x86_64"
-  if [ -n "$_optimize_v3" ]; then
-    _package_name="proton-cachyos-${_srctag}-slr-x86_64_v3"
-  fi
-  cd "${_package_name}"/
+  cd "${_package_name}"
   sed -e "0,/${_package_name}/ s|${_package_name}|proton-cachyos-slr|" -i compatibilitytool.vdf
   sed -e "s|${_package_name}|proton-cachyos (steam linux runtime package)|g" -i compatibilitytool.vdf
 }
 
 package() {
-    local _compatdir="$pkgdir/usr/share/steam/compatibilitytools.d"
-    mkdir -p "$_compatdir/${pkgname}"
-    rsync --delete -arx proton-cachyos-${_srctag}-slr-x86_64/* "$_compatdir/${pkgname}"
+  local _compatdir="${pkgdir}/usr/share/steam/compatibilitytools.d"
+  mkdir -p "${_compatdir}/${pkgname}"
+  rsync --delete -arx "${_package_name}"/* "${_compatdir}/${pkgname}"
 
-    mkdir -p "$pkgdir/usr/share/licenses/${pkgname}"
-    mv "$_compatdir/${pkgname}"/{PATENTS.AV1,LICENSE{,.OFL}} \
-        "$pkgdir/usr/share/licenses/${pkgname}"
+  mkdir -p "${pkgdir}/usr/share/licenses/${pkgname}"
+  mv "${_compatdir}/${pkgname}"/{PATENTS.AV1,LICENSE{,.OFL}} \
+      "${pkgdir}/usr/share/licenses/${pkgname}"
 }
 
-sha256sums=('ebb95fa090f7b957b9640b14256ec8e0ec807d1c2a51c5d2b780cdfd79c129cf')
-if [ -n "$_optimize_v3" ]; then
-sha256sums=('ffdb5380ca9fdd7a73f7847f31ffb1793914a327d0f683ef794dff31960c60e8')
-fi
