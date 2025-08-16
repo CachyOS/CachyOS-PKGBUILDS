@@ -9,7 +9,7 @@ shopt -s extglob
 
 pkgbase=python
 pkgname=(python python-tests)
-pkgver=3.13.5
+pkgver=3.13.7
 pkgrel=2
 _pybasever=${pkgver%.*}
 pkgdesc="The Python programming language"
@@ -20,7 +20,7 @@ depends=('bzip2' 'expat' 'gdbm' 'libffi' 'libnsl' 'libxcrypt' 'openssl' 'zlib' '
 makedepends=('tk' 'sqlite' 'bluez-libs' 'llvm' 'gdb' 'xorg-server-xvfb' 'ttf-font' 'llvm-bolt')
 source=("https://www.python.org/ftp/python/${pkgver%rc*}/Python-${pkgver}.tar.xz"{,.asc}
         EXTERNALLY-MANAGED)
-sha512sums=('2a058072e87b614b204bd1321b2bfa9c4b6614dbd5ded98dc0ee51c0d6b81504f902b7c003ad14295b371a37918f6975dc37d5a9c836dd9c30f8b086e4759193'
+sha512sums=('73fa04db860e8b98c204f84d403598fcb802b19bfc8f2675df2fddb6b153b1643daf081746a043f57c8fa71b950a439581aa5204c2bfadb8cfd8864ca4f42f0d'
             'SKIP'
             '62a6fbfbaeaa3ba7c54e109d9c3b7f67e73bb21986da4c1fcc5d28cca83d71e0fcae28e1fc70ee8ddce7dea8cd0b64e18d1031dae3a2eae5eaa379c53efd53a0')
 validpgpkeys=('0D96DF4D4110E5C43FBFB17F2D347EA6AA65421D'  # Ned Deily (Python release signing key) <nad@python.org>
@@ -30,6 +30,7 @@ validpgpkeys=('0D96DF4D4110E5C43FBFB17F2D347EA6AA65421D'  # Ned Deily (Python re
 
 prepare() {
   cd Python-${pkgver}
+
   # Ensure that we are using the system copy of various libraries (expat, libffi, and libmpdec),
   # rather than copies shipped in the tarball
   rm -r Modules/expat
@@ -54,7 +55,6 @@ build() {
               --with-computed-gotos \
               --enable-optimizations \
               --with-lto \
-              --enable-bolt \
               --enable-ipv6 \
               --with-system-expat \
               --with-dbmliborder=gdbm:ndbm \
@@ -86,9 +86,14 @@ check() {
   export servernum=99
   while ! xvfb-run -a -n "$servernum" /bin/true 2>/dev/null; do servernum=$((servernum+1)); done
 
+  # Don't parallelize too hard, our build server for example has 96 cores and we
+  # don't want to debug racy parallel tests
+  local _jobs=$(nproc)
+  (( _jobs > 16 )) && _jobs=16
+
   LD_LIBRARY_PATH="${srcdir}/Python-${pkgver}":${LD_LIBRARY_PATH} \
   LC_CTYPE=en_US.UTF-8 xvfb-run -s "-screen 0 1920x1080x16 -ac +extension GLX" -a -n "$servernum" \
-    "${srcdir}/Python-${pkgver}/python" -m test.regrtest -v -uall -x test_tk -x test_ttk -x test_ttk.test_widgets \
+    "${srcdir}/Python-${pkgver}/python" -m test.regrtest -j "$_jobs" -v -uall -x test_tk -x test_ttk -x test_ttk.test_widgets \
       -x test_tkinter -x test_pyexpat -x test_socket -x test_unittest -x test_ssl
 }
 
