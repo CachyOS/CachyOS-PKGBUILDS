@@ -1,0 +1,41 @@
+# Maintainer: Vladislav Nepogodin (vnepogodin) <vnepogodin@cachyos.org>
+# Contributor: Nikita Almakov <nikita.almakov@gmail.com>
+
+pkgname=rate-mirrors
+pkgver=0.20.0
+pkgrel=3
+pkgdesc="Everyday-use client-side map-aware mirror ranking tool"
+arch=(x86_64)
+url="https://github.com/westandskif/rate-mirrors"
+license=('CC-BY-NC-SA-3.0')
+depends=('glibc' 'gcc-libs')
+makedepends=('git' 'cargo')
+options=(!lto)
+source=(
+    "${pkgname}::git+$url.git#tag=v${pkgver}"
+    https://github.com/CachyOS/rate-mirrors/commit/eb640518f354b2ea1da6e81e4550dfc61dfc9fc9.patch
+)
+sha256sums=('49fbe04120fb514660000de43634c4858930b2717f8e390396f4f0b0c243ecde'
+            '5afe2c4afaa12c4dd55e170c9289fbb5efd30a344bbfe9e9fa392ec96400b866')
+
+prepare() {
+  cd "$pkgname"
+
+  # archlinux: use cachyos proxy mirrorlist
+  patch -Np1 -i ../eb640518f354b2ea1da6e81e4550dfc61dfc9fc9.patch
+
+  cargo fetch --locked --target "$CARCH-unknown-linux-gnu"
+}
+
+build() {
+  cd "$pkgname"
+  cargo build --release --frozen
+}
+
+package() {
+  cd "$pkgname"
+
+  install -Dm755 "target/release/rate_mirrors" "$pkgdir/usr/bin/${pkgname}"
+}
+
+# vim:set sw=2 sts=2 et:
