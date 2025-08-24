@@ -36,7 +36,7 @@ build() {
     mkdir -p ${PGO_PROFILE_DIR}
     rm -f ${PGO_PROFILE_DIR}/*
 
-    # append -Cprofile-generate=/tmp/pgo-data to the rustflags
+    # append -Cprofile-generate=${PGO_PROFILE_DIR} to the rustflags
     export RUSTFLAGS+=" -Cprofile-generate=${PGO_PROFILE_DIR}"
 
     cargo build --features 'pcre2' --release --target-dir target
@@ -51,12 +51,12 @@ build() {
     cargo test
 
     # remove -Cprofile-generate=${PGO_PROFILE_DIR} from the rustflags
-    export RUSTFLAGS=$(echo $RUSTFLAGS | sed -e 's/-Cprofile-generate=\/tmp\/pgo-data//')
+    export RUSTFLAGS="${RUSTFLAGS//-Cprofile-generate=${PGO_PROFILE_DIR}/}"
 
     # merge the profile data
     llvm-profdata merge -o ${PGO_PROFILE_DIR}/merged.profdata ${PGO_PROFILE_DIR}
 
-    # append -Cprofile-use=/tmp/pgo-data to the rustflags
+    # append -Cprofile-use=${PGO_PROFILE_DIR} to the rustflags
     export RUSTFLAGS+=" -Cprofile-use=${PGO_PROFILE_DIR}/merged.profdata"
 
     cargo build --features 'pcre2' --release --target-dir target
