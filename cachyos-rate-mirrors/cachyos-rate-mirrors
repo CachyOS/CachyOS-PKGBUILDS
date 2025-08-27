@@ -19,6 +19,9 @@ set -e
 declare -r MIRRORS_DEFAULT_DIR="/etc/pacman.d"
 declare -a RATE_MIRRORS_ARCH_FLAGS=(--completion=1 --max-delay=10000)
 
+# use https only protocol for rating
+export RATE_MIRRORS_PROTOCOL=https
+
 disable_colors() {
     unset ALL_OFF BOLD BLUE GREEN RED YELLOW
 }
