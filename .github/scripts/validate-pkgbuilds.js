@@ -117,17 +117,19 @@ if (processedPkgbuilds.length > 0) {
     `\n${processedPkgbuilds.length} PKGBUILDs out of ${pkgbuildFiles.length} have issues and ${erroredCount} have errors. Summary of issues:\n`,
   );
 
-  processedPkgbuilds.forEach((pkg) => {
-    console.log(`PKGBUILD: ${pkg.pkgName}`);
-    pkg.details.forEach((detail) => {
-      console.log(`  [${detail.type}] ${detail.code}`);
+  processedPkgbuilds
+    .sort((a, b) => a.pkgName.localeCompare(b.pkgName))
+    .forEach((pkg) => {
+      console.log(`PKGBUILD: ${pkg.pkgName}`);
+      pkg.details.forEach((detail) => {
+        console.log(`  [${detail.type}] ${detail.code}`);
+      });
+      if (pkg.commandError) {
+        console.log(
+          "  [CRITICAL] Additionally, An error occurred while processing this PKGBUILD",
+        );
+      }
     });
-    if (pkg.commandError) {
-      console.log(
-        "  [CRITICAL] Additionally, An error occurred while processing this PKGBUILD",
-      );
-    }
-  });
 
   console.log(
     `\n${processedPkgbuilds.length} PKGBUILDs out of ${pkgbuildFiles.length} have issues and ${erroredCount} have errors.`,
