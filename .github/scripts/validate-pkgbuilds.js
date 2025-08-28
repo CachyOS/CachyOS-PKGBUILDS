@@ -123,9 +123,14 @@ if (processedPkgbuilds.length > 0) {
     .sort((a, b) => a.pkgName.localeCompare(b.pkgName))
     .forEach((pkg) => {
       console.log(`PKGBUILD: ${pkg.pkgName}`);
-      pkg.details.forEach((detail) => {
-        console.log(`  [${detail.type}] ${detail.code}`);
-      });
+      pkg.details
+        .sort(
+          (a, b) =>
+            a.type.localeCompare(b.type) || a.code.localeCompare(b.code),
+        )
+        .forEach((detail) => {
+          console.log(`  [${detail.type}] ${detail.code}`);
+        });
       if (pkg.commandError) {
         console.log(
           "  [CRITICAL] Additionally, An error occurred while processing this PKGBUILD",
