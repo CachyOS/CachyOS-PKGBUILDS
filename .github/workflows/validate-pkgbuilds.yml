@@ -11,6 +11,10 @@ jobs:
 
       - name: Validate PKGBUILDs
         run: bun .github/scripts/validate-pkgbuilds.js
+        env:
+          GITHUB_EVENT_NAME: ${{ github.event_name }}
+          GITHUB_REF: ${{ github.ref }}
+          GITHUB_BASE_REF: ${{ github.base_ref }}
 
 name: Validate PKGBUILDs
 

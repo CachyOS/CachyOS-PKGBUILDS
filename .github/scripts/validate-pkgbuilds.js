@@ -4,12 +4,68 @@ import { $ } from "bun";
 
 const pkgbuildsDir = join(import.meta.dir, "..", "..");
 
-const pkgbuildFiles = readdirSync(pkgbuildsDir, {
-  recursive: true,
-  withFileTypes: true,
-})
-  .filter((x) => x.isFile() && x.name === "PKGBUILD")
-  .map((x) => x.parentPath);
+async function getChangedPkgbuilds() {
+  const { stdout } =
+    await $`git diff --name-only origin/${process.env.GITHUB_BASE_REF || "master"}...HEAD`
+      .nothrow()
+      .quiet();
+
+  const changedFiles = stdout
+    .toString("utf8")
+    .trim()
+    .split("\n")
+    .filter(Boolean);
+
+  const changedPkgbuildDirs = new Set();
+
+  for (const file of changedFiles) {
+    const parts = file.split("/");
+    for (let i = 0; i < parts.length; i++) {
+      const dirPath = parts.slice(0, i + 1).join("/");
+      try {
+        const pkgbuildPath = join(pkgbuildsDir, dirPath, "PKGBUILD");
+        await $`test -f ${pkgbuildPath}`.quiet();
+        changedPkgbuildDirs.add(dirPath);
+        break;
+      } catch {
+        // Continue searching parent directories
+      }
+    }
+  }
+
+  return Array.from(changedPkgbuildDirs);
+}
+
+async function getAllPkgbuilds() {
+  return readdirSync(pkgbuildsDir, {
+    recursive: true,
+    withFileTypes: true,
+  })
+    .filter((x) => x.isFile() && x.name === "PKGBUILD")
+    .map((x) => x.parentPath);
+}
+
+const isMainBranch = process.env.GITHUB_REF === "refs/heads/master";
+const isPullRequest = process.env.GITHUB_EVENT_NAME === "pull_request";
+
+let pkgbuildFiles;
+
+if (isPullRequest) {
+  console.log("PR detected - scanning only changed PKGBUILDs...");
+  pkgbuildFiles = await getChangedPkgbuilds();
+  console.log(`Found ${pkgbuildFiles.length} changed PKGBUILD(s)`);
+} else if (isMainBranch || process.env.GITHUB_EVENT_NAME === "push") {
+  console.log("Main branch or push detected - scanning all PKGBUILDs...");
+  pkgbuildFiles = await getAllPkgbuilds();
+} else {
+  console.log("Manual trigger - scanning all PKGBUILDs...");
+  pkgbuildFiles = await getAllPkgbuilds();
+}
+
+if (pkgbuildFiles.length === 0) {
+  console.log("No PKGBUILDs to validate.");
+  process.exit(0);
+}
 
 const processedPkgbuilds = await Promise.all(
   pkgbuildFiles.map(async (path) => {
@@ -49,16 +105,16 @@ const processedPkgbuilds = await Promise.all(
       hasErrors,
       pkgName,
     };
-  })
+  }),
 ).then((res) => res.filter((x) => x && x.details.length > 0));
 
 if (processedPkgbuilds.length > 0) {
   const { length: erroredCount } = processedPkgbuilds.filter(
-    (x) => x.hasErrors || x.commandError
+    (x) => x.hasErrors || x.commandError,
   );
 
   console.log(
-    `\n${processedPkgbuilds.length} PKGBUILDs out of ${pkgbuildFiles.length} have issues and ${erroredCount} have errors. Summary of issues:\n`
+    `\n${processedPkgbuilds.length} PKGBUILDs out of ${pkgbuildFiles.length} have issues and ${erroredCount} have errors. Summary of issues:\n`,
   );
 
   processedPkgbuilds.forEach((pkg) => {
@@ -68,16 +124,18 @@ if (processedPkgbuilds.length > 0) {
     });
     if (pkg.commandError) {
       console.log(
-        "  [CRITICAL] Additionally, An error occurred while processing this PKGBUILD"
+        "  [CRITICAL] Additionally, An error occurred while processing this PKGBUILD",
       );
     }
   });
 
   console.log(
-    `\n${processedPkgbuilds.length} PKGBUILDs out of ${pkgbuildFiles.length} have issues and ${erroredCount} have errors.`
+    `\n${processedPkgbuilds.length} PKGBUILDs out of ${pkgbuildFiles.length} have issues and ${erroredCount} have errors.`,
   );
 
   if (erroredCount) {
     process.exit(1);
   }
+} else {
+  console.log("All PKGBUILDs are valid!");
 }
