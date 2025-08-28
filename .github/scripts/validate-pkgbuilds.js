@@ -2,11 +2,12 @@ import { readdirSync } from "node:fs";
 import { join } from "node:path";
 import { $ } from "bun";
 
+const mainBranch = "master";
 const pkgbuildsDir = join(import.meta.dir, "..", "..");
 
 async function getChangedPkgbuilds() {
   const { stdout } =
-    await $`git diff --name-only origin/${process.env.GITHUB_BASE_REF || "master"}...HEAD`
+    await $`git diff --name-only origin/${process.env.GITHUB_BASE_REF || mainBranch}...HEAD`
       .nothrow()
       .quiet();
 
@@ -45,8 +46,9 @@ async function getAllPkgbuilds() {
     .map((x) => x.parentPath);
 }
 
-const isMainBranch = process.env.GITHUB_REF === "refs/heads/master";
 const isPullRequest = process.env.GITHUB_EVENT_NAME === "pull_request";
+const isMainBranch = process.env.GITHUB_REF === `refs/heads/${mainBranch}`;
+const isPush = process.env.GITHUB_EVENT_NAME === "push";
 
 let pkgbuildFiles;
 
@@ -54,7 +56,7 @@ if (isPullRequest) {
   console.log("PR detected - scanning only changed PKGBUILDs...");
   pkgbuildFiles = await getChangedPkgbuilds();
   console.log(`Found ${pkgbuildFiles.length} changed PKGBUILD(s)`);
-} else if (isMainBranch) {
+} else if (isMainBranch && isPush) {
   console.log("Main branch - scanning all PKGBUILDs...");
   pkgbuildFiles = await getAllPkgbuilds();
 } else {

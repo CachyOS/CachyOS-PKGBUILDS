@@ -20,13 +20,15 @@ name: Validate PKGBUILDs
 
 on:
   push:
+    branches:
+      - master
   pull_request:
   workflow_dispatch:
     inputs:
       branch:
         description: "Branch to validate"
         required: true
-        default: "main"
+        default: "master"
       sha:
         description: "SHA to validate"
         required: true
