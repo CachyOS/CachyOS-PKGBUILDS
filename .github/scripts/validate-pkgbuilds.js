@@ -20,7 +20,7 @@ async function getChangedPkgbuilds() {
     .map((file) => join(pkgbuildsDir, file, ".."));
 }
 
-async function getAllPkgbuilds() {
+function getAllPkgbuilds() {
   return readdirSync(pkgbuildsDir, {
     recursive: true,
     withFileTypes: true,
@@ -41,10 +41,10 @@ if (isPullRequest) {
   console.log(`Found ${pkgbuildFiles.length} changed PKGBUILD(s)`);
 } else if (isMainBranch && isPush) {
   console.log("Main branch - scanning all PKGBUILDs...");
-  pkgbuildFiles = await getAllPkgbuilds();
+  pkgbuildFiles = getAllPkgbuilds();
 } else {
   console.log("Manual trigger - scanning all PKGBUILDs...");
-  pkgbuildFiles = await getAllPkgbuilds();
+  pkgbuildFiles = getAllPkgbuilds();
 }
 
 if (pkgbuildFiles.length === 0) {
