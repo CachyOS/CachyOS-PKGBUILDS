@@ -54,8 +54,8 @@ if (isPullRequest) {
   console.log("PR detected - scanning only changed PKGBUILDs...");
   pkgbuildFiles = await getChangedPkgbuilds();
   console.log(`Found ${pkgbuildFiles.length} changed PKGBUILD(s)`);
-} else if (isMainBranch || process.env.GITHUB_EVENT_NAME === "push") {
-  console.log("Main branch or push detected - scanning all PKGBUILDs...");
+} else if (isMainBranch) {
+  console.log("Main branch - scanning all PKGBUILDs...");
   pkgbuildFiles = await getAllPkgbuilds();
 } else {
   console.log("Manual trigger - scanning all PKGBUILDs...");
