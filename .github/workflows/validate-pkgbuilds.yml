@@ -4,17 +4,21 @@ jobs:
     container: cachyos/cachyos:latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
-
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      # https://github.com/actions/checkout/issues/363
+      - name: Fix Git safe directory issue
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
       - name: Install dependencies
         run: pacman -Syu --noconfirm namcap bun-bin
-
       - name: Validate PKGBUILDs
         run: bun .github/scripts/validate-pkgbuilds.js
         env:
           GITHUB_EVENT_NAME: ${{ github.event_name }}
           GITHUB_REF: ${{ github.ref }}
-          GITHUB_BASE_REF: ${{ github.base_ref }}
+          BASE_REF: origin/${{ github.base_ref }}
+          HEAD_REF: origin/${{ github.head_ref }}
 
 name: Validate PKGBUILDs
 
@@ -23,6 +27,8 @@ on:
     branches:
       - master
   pull_request:
+    paths:
+      - "**/PKGBUILD"
   workflow_dispatch:
     inputs:
       branch:

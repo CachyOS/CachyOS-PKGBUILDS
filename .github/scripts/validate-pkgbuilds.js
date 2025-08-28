@@ -7,34 +7,17 @@ const pkgbuildsDir = join(import.meta.dir, "..", "..");
 
 async function getChangedPkgbuilds() {
   const { stdout } =
-    await $`git diff --name-only origin/${process.env.GITHUB_BASE_REF || mainBranch}...HEAD`
+    await $`git diff --name-only ${process.env.BASE_REF} ${process.env.HEAD_REF}`
       .nothrow()
       .quiet();
 
-  const changedFiles = stdout
+  return stdout
     .toString("utf8")
     .trim()
     .split("\n")
-    .filter(Boolean);
-
-  const changedPkgbuildDirs = new Set();
-
-  for (const file of changedFiles) {
-    const parts = file.split("/");
-    for (let i = 0; i < parts.length; i++) {
-      const dirPath = parts.slice(0, i + 1).join("/");
-      try {
-        const pkgbuildPath = join(pkgbuildsDir, dirPath, "PKGBUILD");
-        await $`test -f ${pkgbuildPath}`.quiet();
-        changedPkgbuildDirs.add(dirPath);
-        break;
-      } catch {
-        // Continue searching parent directories
-      }
-    }
-  }
-
-  return Array.from(changedPkgbuildDirs);
+    .filter(Boolean)
+    .filter((file) => file.endsWith("/PKGBUILD"))
+    .map((file) => join(pkgbuildsDir, file, ".."));
 }
 
 async function getAllPkgbuilds() {
