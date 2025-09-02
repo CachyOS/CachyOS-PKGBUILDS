@@ -1,0 +1,19 @@
+# Maintainer: Piotr Górski <lucjan.lucjanov@gmail.com>
+
+pkgname=adiosctl
+pkgver=2025.09.01
+pkgrel=3
+pkgdesc='adiosctl - Utility to manage the ADIOS I/O scheduler parameters.'
+depends=('ruby')
+arch=('any')
+license=('GPL-2.0-only')
+url="https://github.com/firelzrd/adios/"
+source=("https://raw.githubusercontent.com/firelzrd/adios/refs/heads/main/scripts/adiosctl")
+sha512sums=('794367db3fce4deaaf7c1f6f9776370b25228312e872f7aa9330904b9621c3c154ff17e4329eec5817c70d6cdcbe140ec21d21904cf784f6a68117860d3785cd')
+
+package() {
+  depends+=(ADIOS-MODULE)
+  cd "$srcdir"
+
+  install -Dm755 adiosctl "$pkgdir/usr/bin/adiosctl"
+}
