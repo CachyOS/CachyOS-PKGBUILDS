@@ -6,8 +6,8 @@
 
 pkgbase=nvidia-utils
 pkgname=('nvidia-utils' 'opencl-nvidia' 'nvidia-dkms' 'nvidia-open-dkms')
-pkgver=580.76.05
-pkgrel=4
+pkgver=580.82.07
+pkgrel=2
 arch=('x86_64')
 url="http://www.nvidia.com/"
 license=('custom')
@@ -25,25 +25,18 @@ source=('nvidia-drm-outputclass.conf'
         "https://download.nvidia.com/XFree86/NVIDIA-kernel-module-source/${_pkg_open}.tar.xz"
         '0001-Enable-atomic-kernel-modesetting-by-default.patch'
         '0002-Add-IBT-support.patch'
-        'limit-vram-usage'
-        '6.17.patch'
-        # Fix for gtk4 freeze
-        gsk-renderer.sh
-        10-gsk.conf)
+        'limit-vram-usage')
 sha256sums=('be99ff3def641bb900c2486cce96530394c5dc60548fc4642f19d3a4c784134d'
             'f77a5247a3ba63e9fad3a3b2822d0fcfa51e0f79b5a90bd79bf08ea34b64ab07'
             '0e54249a7754b668b436f0f7aa7e95fff68edbb12a93dbee4660e09a8c695f84'
             'c5aa7b8abe69e72bfdc6b9ee8afbfd350bcc557e894558f2e6e4087fa9aa0dd8'
             '1d053c5078387021338cfc3a732bed61be1a20a549775573788e9134775c8149'
             '12d31a5425aba66be9e9129012cde82755ad4d5b7ce9933df8fc398c4fa8d631'
-            '219be636b60931b021b2e8c1e0eff887363c731f8a940caa87bcc054d05d97fd'
-            '7e7b603b8b07d2281a2d2dd607bae6d2a80ed7e5b62ee2e1c3fedc8588f33325'
+            '061e48e11fe552232095811d0b1cea9b718ba2540d605074ff227fce0628798c'
+            'cf00066781b206aa12dd1605c373d4804ff6deb38fd6cccbc3c5b1c625e48381'
             '163c57160cc1033020680f638b44ebd94b496152dcd8951e87d5077d4d5c2009'
             'a0088d49d46b699d1727e5944fd9aca5ede93ea3678dd5e91ca58084bc2fa0ee'
-            'cae9133d31ac7592425a25af03f734c70aa93cefc8e591f360f96b595fa4eb1d'
-            'deecc14fed9f3505be1813ca3bced09e1fa95da34a5f93a50c88a4c97ba5d566'
-            '67eac203e7de4cf979b82c1e43439ac0e7c951d8901ebd9e4555c5d186a1b2ec'
-            '05af96f86b7b3b40b93160fdcb702572401579f8756c0831b5de5f8e9afebeba')
+            'cae9133d31ac7592425a25af03f734c70aa93cefc8e591f360f96b595fa4eb1d')
 
 
 create_links() {
@@ -71,8 +64,6 @@ prepare() {
     # NVIDIA-open
     patch -Np1 -i "${srcdir}/0001-Enable-atomic-kernel-modesetting-by-default.patch" -d "${srcdir}/${_pkg_open}/kernel-open"
     patch -Np1 -i "${srcdir}/0002-Add-IBT-support.patch" -d "${srcdir}/${_pkg_open}/"
-    # 6.17
-    patch -Np1 -i "${srcdir}/6.17.patch" -d "${srcdir}/${_pkg_open}/"
 
     # Attempt to make builds reproducible
     sed -i "s/^  HOSTNAME.*/  HOSTNAME = echo cachyos/" "${srcdir}/${_pkg_open}/utils.mk"
@@ -323,10 +314,6 @@ END
     # Enable PreserveVideoMemoryAllocations and TemporaryFilePath
     # Fixes Wayland Sleep, when restoring the session
     install -Dm644 "${srcdir}/nvidia-sleep.conf" "${pkgdir}/usr/lib/modprobe.d/nvidia-sleep.conf"
-    # Vulkan GTK Renderer Crash fix
-    install -Dm644 "${srcdir}/gsk-renderer.sh" "${pkgdir}/etc/profile.d/gsk-renderer.sh"
-    # Same fix but also for Gnome/GDM users
-    install -Dm644 "${srcdir}/gsk.conf" "${pkgdir}/usr/lib/environment.d/10-gsk.conf"
 
     # Lists NVIDIA driver files for container runtimes like nvidia-container-toolkit
     install -Dm644 sandboxutils-filelist.json "${pkgdir}/usr/share/nvidia/files.d/sandboxutils-filelist.json"
