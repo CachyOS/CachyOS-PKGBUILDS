@@ -50,24 +50,24 @@ pkgver=0
 pkgrel=1
 arch=('x86_64')
 makedepends=('git' 'python-mako' 'python-ply' 'xorgproto' 'libxml2' 'libx11' 'libvdpau' 'libva'
-             'elfutils' 'libomxil-bellagio' 'libxrandr' 'ocl-icd' 'libgcrypt'  'wayland'
+             'elfutils' 'libomxil-bellagio' 'libxrandr' 'libdisplay-info' 'ocl-icd' 'libgcrypt'  'wayland'
              'wayland-protocols' 'meson' 'ninja' 'libdrm' 'xorgproto' 'libdrm' 'libxshmfence' 
              'libxxf86vm' 'libxdamage' 'libclc' 'libglvnd' 'libunwind' 'lm_sensors' 'libxrandr'
              'valgrind' 'glslang' 'byacc' 'wget' 'flex' 'bison' 'rust' 'rust-bindgen' 'spirv-llvm-translator'
              'cbindgen' 'python-packaging' 'python-yaml')
 
 if [ "$_lib32" == "true" ]; then
-  makedepends+=('lib32-libxml2' 'lib32-libx11' 'lib32-libdrm' 'lib32-libxshmfence' 'lib32-libxxf86vm'
-                'lib32-gcc-libs' 'lib32-libvdpau' 'lib32-libelf' 'lib32-libgcrypt'
+  makedepends+=('lib32-libdisplay-info' 'lib32-libxml2' 'lib32-libx11' 'lib32-libdrm' 'lib32-libxshmfence'
+                'lib32-libxxf86vm' 'lib32-gcc-libs' 'lib32-libvdpau' 'lib32-libelf' 'lib32-libgcrypt'
                 'lib32-lm_sensors' 'lib32-libxdamage' 'gcc-multilib' 'lib32-libunwind' 'lib32-libglvnd'
                 'lib32-libva' 'lib32-wayland' 'lib32-libvdpau' 'lib32-libxrandr' 'lib32-expat'
                 'lib32-spirv-llvm-translator' 'lib32-rust-libs' 'lib32-clang')
 fi
 
 depends=('libdrm' 'libxxf86vm' 'libxdamage' 'libxshmfence' 'libelf' 'libomxil-bellagio' 'libunwind'
-         'libglvnd' 'wayland' 'lm_sensors' 'libclc' 'glslang' 'zstd' 'vulkan-icd-loader')
+         'libglvnd' 'wayland' 'lm_sensors' 'libclc' 'glslang' 'zstd' 'vulkan-icd-loader' 'libdisplay-info')
 if [ "$_lib32" == "true" ]; then
-  depends+=('lib32-zstd' 'lib32-vulkan-icd-loader')
+  depends+=('lib32-zstd' 'lib32-vulkan-icd-loader' 'lib32-libdisplay-info')
 fi
 optdepends=('opengl-man-pages: for the OpenGL API man pages')
 
@@ -420,12 +420,18 @@ build () {
     fi
 
     # layer selector
-    if ( cd "$srcdir/$_mesa_srcdir" && git merge-base --is-ancestor 54fe5b0482df0f066384b274796d4081c2a1968c HEAD ); then
-      _layers="-D vulkan-layers=device-select,overlay,anti-lag"
-      _lib32layers="-D vulkan-layers=device-select,overlay"
+    if ( cd "$srcdir/$_mesa_srcdir" && git merge-base --is-ancestor 722ffe9a739152626894acf4b1248f8848b88b96 HEAD ) && [ "$_antilag" = "true" ]; then
+      if ( cd "$srcdir/$_mesa_srcdir" && git merge-base --is-ancestor 54fe5b0482df0f066384b274796d4081c2a1968c HEAD ); then
+        _layers="-D vulkan-layers=device-select,overlay,anti-lag"
+      else
+        _layers="-D vulkan-overlay-layer=true -D vulkan-device-select-layer=true -D anti-lag=true"
+      fi
     else
-      _layers="-D vulkan-overlay-layer=true -D vulkan-device-select-layer=true -D anti-lag=true"
-      _lib32layers="-D vulkan-overlay-layer=true -D vulkan-device-select-layer=true"
+      if ( cd "$srcdir/$_mesa_srcdir" && git merge-base --is-ancestor 54fe5b0482df0f066384b274796d4081c2a1968c HEAD ); then
+        _layers="-D vulkan-layers=device-select,overlay"
+      else
+        _layers="-D vulkan-overlay-layer=true -D vulkan-device-select-layer=true"
+      fi
     fi
 
     # intel_hasvk removal for legacy trees
@@ -454,7 +460,7 @@ build () {
     fi
 
     # intel-clc cross compile fix
-    if ( cd "$srcdir/$_mesa_srcdir" && git merge-base --is-ancestor 28c1053c07c177854520f6283fa665f17618adb5 HEAD ); then
+    if ( cd "$srcdir/$_mesa_srcdir" && git merge-base --is-ancestor 28c1053c07c177854520f6283fa665f17618adb5 HEAD && ! git merge-base --is-ancestor 2d691d7dd31463a9ec2d832a98164e0aa9225068 HEAD && ! git merge-base --is-ancestor c2cbff82971f0166563a07ca0a07907d2ac898a1 HEAD ); then
       if [[ "$_lib32" == "true" ]]; then
          _intel_clc_32="-D intel-clc=system"
         # Workaround cross compilation error by using intel_clc binary from _build64
