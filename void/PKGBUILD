@@ -53,8 +53,8 @@ build() {
   echo Replacing $(rg -m 1 '"electron":\s*"[0-9]+' package.json) with ${_elver}
   echo 'Fix if major version is wrong.'
   npm pkg set devDependencies.electron=${_elver}
-  # Install dependencies with legacy peer deps flag to handle dependency conflicts
-  npm install --legacy-peer-deps
+
+  npm install
   # Build react because it fails for some reason
   npm run buildreact
   # Bundle it
