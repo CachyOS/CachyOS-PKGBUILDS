@@ -3,7 +3,7 @@
 # Contributor: PancakeTAS <???>
 
 pkgname=lsfg-vk
-pkgver=r263.7113d7d
+pkgver=1.0.0.r55.0048283
 pkgrel=1
 pkgdesc="Lossless Scaling Frame Generation on Linux"
 arch=('x86_64')
@@ -24,19 +24,20 @@ makedepends=(
   rust
   cargo
 )
-source=('git+https://github.com/PancakeTAS/lsfg-vk#commit=7113d7d02da9fc9df5cb3b03230d1f7de86f7056')
-sha256sums=('92fb0df0afc68a0c2ed77dc23baef13849e4cd1d7ff5025ad538f19fd58e03cc')
+source=('git+https://github.com/PancakeTAS/lsfg-vk#commit=0048283a8a35e6c2f30043983bdb4ea51fac1b3e')
+sha256sums=('c01b478d49809cc7bb6a889425ccac3d294273de5000bc4753cde17cc8ab1272')
 install=lsfg-vk.install
 
 pkgver() {
-  cd "$srcdir/$pkgname"
-
-  # Git, no tags available
-  printf "r%s.%s" "$(git rev-list --count HEAD)" "$(git rev-parse --short HEAD)"
+  cd "$srcdir/${pkgname%-git}"
+  printf "%s" "$(git describe --long --tags | sed 's/^v//;s/\([^-]*-\)g/r\1/;s/-/./g')"
 }
 
 prepare() {
   cd "$srcdir/$pkgname"
+  cd ui
+  export RUSTUP_TOOLCHAIN=stable
+  cargo fetch --locked --target "$(rustc -vV | sed -n 's/host: //p')"
 
   # --filter=tree:0 minimizes network traffic
   git submodule update --init --filter=tree:0 --recursive
