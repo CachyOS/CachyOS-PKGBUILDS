@@ -2,7 +2,7 @@
 # Maintainer: loathingkernel <loathingkernel _a_ gmail _d_ com>
 
 pkgname=proton-cachyos
-_srctag=10.0-20250905
+_srctag=10.0-20250906
 _commit=
 pkgver=${_srctag//-/.}
 _geckover=2.47.4
@@ -119,6 +119,10 @@ optdepends=(
   v4l-utils             lib32-v4l-utils
   vulkan-icd-loader     lib32-vulkan-icd-loader
 )
+optdepends+=(
+  ntsync-common
+  NTSYNC-MODULE
+)
 provides=('proton')
 install=${pkgname}.install
 
@@ -197,7 +201,7 @@ build() {
 
     CFLAGS="-O2 -march=${march} -mtune=${mtune} -pipe -fno-semantic-interposition -fipa-pta"
     CXXFLAGS="-O2 -march=${march} -mtune=${mtune} -pipe -fno-semantic-interposition -fipa-pta"
-    RUSTFLAGS="-C opt-level=2 -C target-cpu=${march}"
+    RUSTFLAGS="-C opt-level=3 -C target-cpu=${march}"
     LDFLAGS="-Wl,-O1,--sort-common,--as-needed"
 
     export CFLAGS CXXFLAGS RUSTFLAGS LDFLAGS
@@ -249,7 +253,7 @@ package() {
         $(find "${_monodir}" -iname "*x86_64.dll" -or -iname "*x86_64.exe")
 }
 
-b2sums=('deb75b28c3b8ed48cdfe0bf4ab4dfda1796a38e5902eb37446a804530e81af3711532de0c1cec70221a64025eb8408a9b549f84b2811cead15927dfc0a0de90f'
+b2sums=('06338573838e62e7837fc9fa861b96f51ed3eac1998cc125ba7864ff51f23b3b69de94276d5e7d335851d0d9b23ef7cad97489319bf3c5e07b96a4a2c6a04b58'
         '2a73c12585b502ae11188482cbc9fb1f45f95bfe4383a7615011104b132f4845f9813d01fb40277e1934fab5f1b35ab40b4f4a66a9967463dd1d666a666904e9'
         '62856a88266b4757602c0646e024f832974a93f03b9df253fd4895d4f11a41b435840ad8f7003ec85a0d8087dec15f2e096dbfb4b01ebe4d365521e48fd0c5c0'
         'c0c2c063de47b484758dc315496c4c8d477273ce286ab5408fbdf8aae2cb8187160faec151c1ecfc18a90a4c6f3b36df9c78097ddc862ee6056739c556af4ff8'
