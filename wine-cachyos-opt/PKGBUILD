@@ -6,7 +6,7 @@
 # Contributor: Giovanni Scafora <giovanni@archlinux.org>
 
 pkgname=wine-cachyos-opt
-_srctag=10.0-20250905
+_srctag=10.0-20250906
 pkgver=${_srctag//-/.}
 _geckover=2.47.4
 _monover=10.2.0
@@ -108,6 +108,10 @@ optdepends=(
   unixodbc
   v4l-utils             lib32-v4l-utils
   vulkan-icd-loader     lib32-vulkan-icd-loader
+)
+optdepends+=(
+  ntsync-common
+  NTSYNC-MODULE
 )
 install=wine.install
 
@@ -237,7 +241,7 @@ package() {
 }
 
 # vim:set ts=8 sts=2 sw=2 et:
-b2sums=('20c58fe1e01ac8a66c6cfd4b2c86ae813f2fb5d46961f5b3d51daea93dcbfcb8921a07a95c8673455d29510f7558e14b6b13d3ced72aece7db8c99bb7bb9e81a'
+b2sums=('d055390ce666f17583a490e31c566992bc55a1260e633be302c1a1c4491ec0dfffedec6284739c370d667b5d059ee1f6c5330d482e005ff46d8901359c2a0a11'
         '2a73c12585b502ae11188482cbc9fb1f45f95bfe4383a7615011104b132f4845f9813d01fb40277e1934fab5f1b35ab40b4f4a66a9967463dd1d666a666904e9'
         '62856a88266b4757602c0646e024f832974a93f03b9df253fd4895d4f11a41b435840ad8f7003ec85a0d8087dec15f2e096dbfb4b01ebe4d365521e48fd0c5c0'
         'c0c2c063de47b484758dc315496c4c8d477273ce286ab5408fbdf8aae2cb8187160faec151c1ecfc18a90a4c6f3b36df9c78097ddc862ee6056739c556af4ff8'
