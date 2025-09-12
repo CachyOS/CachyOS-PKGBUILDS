@@ -1,7 +1,7 @@
 pkgbase = mesa
 	pkgdesc = Open-source OpenGL drivers
 	pkgver = 25.2.2
-	pkgrel = 3
+	pkgrel = 4
 	epoch = 1
 	url = https://www.mesa3d.org/
 	arch = x86_64
@@ -57,6 +57,8 @@ pkgbase = mesa
 	options = !lto
 	source = https://archive.mesa3d.org/mesa-25.2.2.tar.xz
 	source = https://archive.mesa3d.org/mesa-25.2.2.tar.xz.sig
+	source = https://gitlab.freedesktop.org/mesa/mesa/-/merge_requests/34242.patch
+	source = https://gitlab.freedesktop.org/mesa/mesa/-/merge_requests/37137.patch
 	source = 0001-Revert-virgl-Avoid-possible-double-free-when-destroy.patch
 	source = zerocopy-0.8.13.tar.gz::https://crates.io/api/v1/crates/zerocopy/0.8.13/download
 	source = ucd-trie-0.1.6.tar.gz::https://crates.io/api/v1/crates/ucd-trie/0.1.6/download
@@ -93,6 +95,8 @@ pkgbase = mesa
 	validpgpkeys = E3E8F480C52ADD73B278EE78E1ECBE07D7D70895
 	sha256sums = 43d7abcd4aa8049d8fd75538344a374104765e81e17b4a6314cee2c0160e4412
 	sha256sums = SKIP
+	sha256sums = 1e83a132618ebc2a2236779223ace94354f22b3372ce739ee6641e83f2d0f9e8
+	sha256sums = e2a0eaac04472050cf35d4e023320bc020cd569f67c3b0340c861531a78e7444
 	sha256sums = d917b24fcbc00776cb2b24aae2030f1cc456c6d3885392530ee508d108097aa8
 	sha256sums = 67914ab451f3bfd2e69e5e9d2ef3858484e7074d63f204fd166ec391b54de21d
 	sha256sums = ed646292ffc8188ef8ea4d1e0e0150fb15a5c2e12ad9b8fc191ae7a8a7f3c4b9
@@ -123,6 +127,8 @@ pkgbase = mesa
 	sha256sums = 25aa4ce346d03a6dcd68dd8b4010bcb74e54e62c90c573f394c46eae99aba32d
 	b2sums = bed81e32c05ebff6f2a76bb14387882eed48556737e30e2da2f5a02fbe9e9973f5fa05303e10e624bb703ef56c4fe2f48ab69f3d2806191969d73d99920b5abb
 	b2sums = SKIP
+	b2sums = 04e5b824029b66f28a9dc97a44d1b879964d3ef44214c426977cfe59e9b0d71256c13373053a204fd8fc3f9dac1f1e33070caf561738eb2344eefd8c6f8e59d7
+	b2sums = 7ed53810600d22e44dc1bbcdfd339c9569c66f8604f5af4bead4a9d4a14b11d2bd44b343e794be6cee1dabebf2d49fffebd3ec77f6ea897cd99c97cc4da8ea98
 	b2sums = 3198b6925142ee72f674a80466a057e0cbaa6beb4a09b91032e6b80da2d56363bbe51787a5a00a056bcee341dd9a9ca9a790fd35a8c5949bf8b49223c34c9a20
 	b2sums = 431439d31632d177aeb15f910b4f546efa76d54fc74fc8e140399dc5e54eca33fd606f11dbfb48fa83067c8474ee512e62751895d5948367b65ab08b984284e5
 	b2sums = a6d47c903be6094423d89b8ec3ca899d0a84df6dbd6e76632bb6c9b9f40ad9c216f8fa400310753d392f85072756b43ac3892e0a2c4d55f87ab6463002554823
@@ -171,9 +177,9 @@ pkgname = mesa
 	depends = zlib
 	depends = zstd
 	optdepends = opengl-man-pages: for the OpenGL API man pages
-	provides = libva-mesa-driver=1:25.2.2-3
-	provides = mesa-libgl=1:25.2.2-3
-	provides = mesa-vdpau=1:25.2.2-3
+	provides = libva-mesa-driver=1:25.2.2-4
+	provides = mesa-libgl=1:25.2.2-4
+	provides = mesa-vdpau=1:25.2.2-4
 	provides = libva-driver
 	provides = opengl-driver
 	provides = vdpau-driver
