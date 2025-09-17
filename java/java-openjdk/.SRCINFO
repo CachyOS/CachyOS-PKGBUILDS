@@ -1,6 +1,6 @@
 pkgbase = java-openjdk
-	pkgver = 24.0.2.u12
-	pkgrel = 3
+	pkgver = 25.u36
+	pkgrel = 2
 	url = https://openjdk.java.net/
 	arch = x86_64
 	license = LicenseRef-Java
@@ -30,17 +30,17 @@ pkgbase = java-openjdk
 	makedepends = unzip
 	makedepends = zip
 	optdepends = gvfs: open links e.g. hyperlinks
-	source = https://github.com/openjdk/jdk24u/archive/jdk-24.0.2+12.tar.gz
+	source = https://github.com/openjdk/jdk25u/archive/jdk-25+36.tar.gz
 	source = freedesktop-java.desktop
 	source = freedesktop-jconsole.desktop
 	source = freedesktop-jshell.desktop
-	sha256sums = 947087e85c4222f25e1b9a707cea89b04c00a0a9eb79ded489f0bab92ea42beb
+	sha256sums = 8722bf578a77261ffbb26011c339e91571ec0474f1bcfea40188dd5451aa1d69
 	sha256sums = ad877c65ac7e752369407f4af8fd9a20a377f2a55e62224e44df1c9a9af407a3
 	sha256sums = 3544325a47fd7f9854d2ee4a0a6eb17d729af20889b641838aceb58837fb2d58
 	sha256sums = 5d6beeeac3d097b2c85099fceeba4a5e48e07fd286ad438f57936ebcd7bfbdbb
 
 pkgname = jdk-openjdk
-	pkgdesc = OpenJDK Java 24 development kit
+	pkgdesc = OpenJDK Java 25 development kit
 	install = install_jdk-openjdk.sh
 	depends = java-runtime-common>=3
 	depends = ca-certificates-utils
@@ -75,15 +75,15 @@ pkgname = jdk-openjdk
 	optdepends = java-rhino: for some JavaScript support
 	optdepends = alsa-lib: for basic sound support
 	optdepends = gtk3: for the Gtk+ 3 look and feel - desktop usage
-	provides = java-environment=24
-	provides = java-environment-openjdk=24
-	provides = jdk24-openjdk=24.0.2.u12-3
-	provides = java-runtime=24
-	provides = java-runtime-openjdk=24
-	provides = jre24-openjdk=24.0.2.u12-3
-	provides = java-runtime-headless=24
-	provides = java-runtime-headless-openjdk=24
-	provides = jre24-openjdk-headless=24.0.2.u12-3
+	provides = java-environment=25
+	provides = java-environment-openjdk=25
+	provides = jdk25-openjdk=25.u36-2
+	provides = java-runtime=25
+	provides = java-runtime-openjdk=25
+	provides = jre25-openjdk=25.u36-2
+	provides = java-runtime-headless=25
+	provides = java-runtime-headless-openjdk=25
+	provides = jre25-openjdk-headless=25.u36-2
 	conflicts = jre-openjdk
 	conflicts = jre-openjdk-headless
 	backup = etc/java-openjdk/logging.properties
@@ -102,7 +102,7 @@ pkgname = jdk-openjdk
 	backup = etc/java-openjdk/sound.properties
 
 pkgname = jre-openjdk
-	pkgdesc = OpenJDK Java 24 full runtime environment
+	pkgdesc = OpenJDK Java 25 full runtime environment
 	install = install_jre-openjdk.sh
 	depends = java-runtime-common>=3
 	depends = ca-certificates-utils
@@ -123,12 +123,12 @@ pkgname = jre-openjdk
 	depends = libpng
 	optdepends = alsa-lib: for basic sound support
 	optdepends = gtk3: for the Gtk+ 3 look and feel - desktop usage
-	provides = java-runtime=24
-	provides = java-runtime-openjdk=24
-	provides = jre24-openjdk=24.0.2.u12-3
-	provides = java-runtime-headless=24
-	provides = java-runtime-headless-openjdk=24
-	provides = jre24-openjdk-headless=24.0.2.u12-3
+	provides = java-runtime=25
+	provides = java-runtime-openjdk=25
+	provides = jre25-openjdk=25.u36-2
+	provides = java-runtime-headless=25
+	provides = java-runtime-headless-openjdk=25
+	provides = jre25-openjdk-headless=25.u36-2
 	conflicts = jdk-openjdk
 	conflicts = jre-openjdk-headless
 	backup = etc/java-openjdk/logging.properties
@@ -147,7 +147,7 @@ pkgname = jre-openjdk
 	backup = etc/java-openjdk/sound.properties
 
 pkgname = jre-openjdk-headless
-	pkgdesc = OpenJDK Java 24 headless runtime environment
+	pkgdesc = OpenJDK Java 25 headless runtime environment
 	install = install_jre-openjdk-headless.sh
 	depends = java-runtime-common>=3
 	depends = ca-certificates-utils
@@ -164,9 +164,9 @@ pkgname = jre-openjdk-headless
 	depends = libnet
 	depends = nss
 	optdepends = java-rhino: for some JavaScript support
-	provides = java-runtime-headless=24
-	provides = java-runtime-headless-openjdk=24
-	provides = jre24-openjdk-headless=24.0.2.u12-3
+	provides = java-runtime-headless=25
+	provides = java-runtime-headless-openjdk=25
+	provides = jre25-openjdk-headless=25.u36-2
 	conflicts = jdk-openjdk
 	conflicts = jre-openjdk
 	backup = etc/java-openjdk/logging.properties
@@ -185,11 +185,11 @@ pkgname = jre-openjdk-headless
 	backup = etc/java-openjdk/sound.properties
 
 pkgname = openjdk-doc
-	pkgdesc = OpenJDK Java 24 documentation
-	depends = jdk24-openjdk=24.0.2.u12-3
-	provides = openjdk24-doc=24.0.2.u12-3
+	pkgdesc = OpenJDK Java 25 documentation
+	depends = jdk25-openjdk=25.u36-2
+	provides = openjdk25-doc=25.u36-2
 
 pkgname = openjdk-src
-	pkgdesc = OpenJDK Java 24 sources
-	depends = jdk24-openjdk=24.0.2.u12-3
-	provides = openjdk24-src=24.0.2.u12-3
+	pkgdesc = OpenJDK Java 25 sources
+	depends = jdk25-openjdk=25.u36-2
+	provides = openjdk25-src=25.u36-2
