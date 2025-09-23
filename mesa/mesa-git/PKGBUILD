@@ -61,7 +61,7 @@ if [ "$_lib32" == "true" ]; then
                 'lib32-libxxf86vm' 'lib32-gcc-libs' 'lib32-libvdpau' 'lib32-libelf' 'lib32-libgcrypt'
                 'lib32-lm_sensors' 'lib32-libxdamage' 'gcc-multilib' 'lib32-libunwind' 'lib32-libglvnd'
                 'lib32-libva' 'lib32-wayland' 'lib32-libvdpau' 'lib32-libxrandr' 'lib32-expat'
-                'lib32-spirv-llvm-translator' 'lib32-rust-libs' 'lib32-clang')
+                'lib32-spirv-llvm-translator' 'lib32-rust-libs')
 fi
 
 depends=('libdrm' 'libxxf86vm' 'libxdamage' 'libxshmfence' 'libelf' 'libomxil-bellagio' 'libunwind'
@@ -117,7 +117,7 @@ function exit_cleanup {
   rm -f "$_where"/frogminer
 
   remove_deps
-
+  
   msg2 "Cleanup done"
 }
 
@@ -684,6 +684,7 @@ package_lib32-mesa-git() {
   rm -rf "$pkgdir"/usr/share/drirc.d/
   rm -rf "$pkgdir"/usr/share/vulkan/explicit_layer.d/
   rm -rf "$pkgdir"/usr/share/vulkan/implicit_layer.d/VkLayer_MESA_device_select.json
+  rm -rf "$pkgdir"/usr/share/vulkan/implicit_layer.d/VkLayer_MESA_anti_lag.json
 
   # indirect rendering
   ln -s /usr/lib32/libGLX_mesa.so.0 "${pkgdir}/usr/lib32/libGLX_indirect.so.0"
@@ -699,5 +700,5 @@ package_lib32-mesa-git() {
 
   install -Dt "$pkgdir"/usr/share/licenses/$pkgname "$srcdir"/LICENSE
 }
-
+ 
 trap exit_cleanup EXIT
