@@ -2,7 +2,7 @@
 
 _gitname=CachyOS-Settings
 pkgname=cachyos-settings
-pkgver=1.2.10
+pkgver=1.2.11
 pkgrel=1
 epoch=1
 groups=(cachyos)
@@ -13,7 +13,7 @@ pkgdesc='CachyOS - Settings'
 url="https://github.com/CachyOS/$_gitname"
 source=("git+$url.git?signed#tag=$pkgver")
 install="$pkgname.install"
-sha256sums=('32d5ac0145d29ec76c982d40d63f8e2079aa6629732bf44cdcbff6fba36944ce')
+sha256sums=('d29d1cb0a8963bf3d846a25846874679461b37bec7f178e687b1c4c9e609840f')
 validpgpkeys=(
   E8B9AA39F054E30E8290D492C3C4820857F654FE  # Peter Jung <admin@ptr1337.dev>
   B1B70BB1CD56047DEF31DE2EB62C3D10C54D5DA9  # Vladislav Nepogodin <nepogodin.vlad@gmail.com>
@@ -28,6 +28,7 @@ depends=(
 optdepends=('libluv: for topmem'
             'lua-luv: for topmem'
             'power-profiles-daemon: For game-performance')
+provides=('ntsync-common')
 prepare() {
   cd $_gitname
 }

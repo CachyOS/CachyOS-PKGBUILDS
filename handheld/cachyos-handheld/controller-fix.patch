@@ -1,0 +1,21 @@
+From 6312d4618f2cd646b120aa011aed6da1186ec473 Mon Sep 17 00:00:00 2001
+From: Eric Naim <dnaim@cachyos.org>
+Date: Sat, 20 Sep 2025 13:23:25 +0800
+Subject: [PATCH] modules-load.d: Preload uinput module
+
+systemd update broke controller detection. The fix seems to be
+preloading uinput module.
+
+Signed-off-by: Eric Naim <dnaim@cachyos.org>
+---
+ usr/lib/modules-load.d/uinput.conf | 1 +
+ 1 file changed, 1 insertion(+)
+ create mode 100644 usr/lib/modules-load.d/uinput.conf
+
+diff --git a/usr/lib/modules-load.d/uinput.conf b/usr/lib/modules-load.d/uinput.conf
+new file mode 100644
+index 0000000..42bc005
+--- /dev/null
++++ b/usr/lib/modules-load.d/uinput.conf
+@@ -0,0 +1 @@
++uinput

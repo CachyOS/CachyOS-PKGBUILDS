@@ -2,17 +2,19 @@
 
 pkgname=cachyos-handheld
 pkgver=1.2.3
-pkgrel=1
+pkgrel=2
 arch=('any')
 license=('GPL-3.0-later')
 pkgdesc='CachyOS - Handheld!'
 url='https://github.com/CachyOS/CachyOS-Handheld'
-source=("git+$url?signed#tag=$pkgver")
+source=("git+$url?signed#tag=$pkgver"
+        "controller-fix.patch")
 install="$pkgname.install"
 options=(!strip !debug)
 provides=('cachyos-deckify')
 replaces=('cachyos-deckify')
-sha256sums=('0f426b24e93a381926737f81b10df535c85fd8c1bb50886d968bd15b1dee783e')
+sha256sums=('0f426b24e93a381926737f81b10df535c85fd8c1bb50886d968bd15b1dee783e'
+            '0d07ea5cb0ea0bf55abd3b5392d5ab38852638b5b306e5c247311a56a6c56763')
 validpgpkeys=(
   E8B9AA39F054E30E8290D492C3C4820857F654FE  # Peter Jung <admin@ptr1337.dev>
   B1B70BB1CD56047DEF31DE2EB62C3D10C54D5DA9  # Vladislav Nepogodin <nepogodin.vlad@gmail.com>
@@ -22,6 +24,10 @@ depends=('gamescope-session-git' 'mangohud' 'jq' 'dmidecode' 'glew' 'glfw' 'glxi
          'scx-scheds' 'qt5-tools' 'gamescope-session-steam-git' 'jupiter-hw-support'
          'gamescope' 'lib32-gamescope' 'cachyos-vapor' 'cachyos-alacritty-config'
          'steam' 'steam-native-runtime')
+
+prepare() {
+  patch -Np1 -i "${srcdir}/controller-fix.patch" -d "${srcdir}/CachyOS-Handheld"
+}
 
 package() {
   install -d "$pkgdir/etc"
