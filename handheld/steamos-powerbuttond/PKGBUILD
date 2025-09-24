@@ -34,7 +34,4 @@ build() {
 
 package() {
     make -C "${srcdir}/powerbuttond" install DESTDIR="${pkgdir}"
-    # Symlink for gamescope-session
-    install -dm755 "${pkgdir}/usr/bin"
-    ln -s "/usr/lib/hwsupport/steamos-powerbuttond" "${pkgdir}/usr/bin/powerbuttond"
 }
