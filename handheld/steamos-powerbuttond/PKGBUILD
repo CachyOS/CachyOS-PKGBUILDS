@@ -3,7 +3,7 @@
 
 pkgname=steamos-powerbuttond
 pkgver=3.3
-pkgrel=1
+pkgrel=2
 arch=('x86_64')
 url="https://gitlab.steamos.cloud/jupiter/powerbuttond"
 pkgdesc="Power button daemon"
@@ -13,13 +13,16 @@ makedepends=('git')
 source=("git+https://gitlab.steamos.cloud/holo/powerbuttond.git#tag=v${pkgver}"
         "support-gamescope-session-plus.patch")
 sha512sums=('fb6c473d697ebd47932157aa1d2cff96f71df64beb0133b50e92987becd651c7b555046b38d472bf565cdba5a6ccbe80290b943638661ad45cda276a3706fefb'
-            '808ef4e23b897a94296314695ad8f388d5ffcc775f22f45c8e7b2cf6a95f9d8abf726139247cf9e041be940a3abad1e699db99e900d427b2334a2c118131fa41')
+            'cefc1a0270b0a5aede1091726274cd739cc17c3a6ae5a7ff74981985298b538dc1aae475ca374169ed2afd3d7c3e8d4bae5f002df950afe50a41b5ba3b8fe69f')
 provides=("powerbuttond")
 conflicts=("powerbuttond")
 replaces=("powerbuttond")
 
 prepare() {
     cd "${srcdir}/powerbuttond"
+
+    # Fix power button not working after systemd v258
+    git cherry-pick -n 837e11b14869b1bf0ddc269c5626cd2d7a91d694
 
     # Support gamescope-session-plus
     patch -Np1 -i ../support-gamescope-session-plus.patch
