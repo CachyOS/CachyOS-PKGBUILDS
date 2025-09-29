@@ -17,8 +17,8 @@ jobs:
         env:
           GITHUB_EVENT_NAME: ${{ github.event_name }}
           GITHUB_REF: ${{ github.ref }}
-          BASE_REF: origin/${{ github.base_ref }}
-          HEAD_REF: origin/${{ github.head_ref }}
+          BASE_REF: ${{ github.event.pull_request.base.sha }}
+          HEAD_REF: ${{ github.event.pull_request.head.sha }}
 
 name: Validate PKGBUILDs
 
