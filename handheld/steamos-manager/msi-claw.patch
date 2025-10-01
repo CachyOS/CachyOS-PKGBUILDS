@@ -1,0 +1,81 @@
+From 7cc1ddd658257216a45e6afcc53b727b428621f3 Mon Sep 17 00:00:00 2001
+From: Matthew Schwartz <matthew.schwartz@linux.dev>
+Date: Mon, 22 Sep 2025 21:33:28 -0700
+Subject: [PATCH 1/2] devices: add firmware-attribute bits for MSI Claw Intel
+ handhelds
+
+---
+ data/devices/msi-claw-intel.toml | 15 +++++++++++++++
+ 1 file changed, 15 insertions(+)
+
+diff --git a/data/devices/msi-claw-intel.toml b/data/devices/msi-claw-intel.toml
+index 3b81d62cc823..d4b461e69621 100644
+--- a/data/devices/msi-claw-intel.toml
++++ b/data/devices/msi-claw-intel.toml
+@@ -16,8 +16,23 @@ dmi.product_name = "Claw 8 AI+ A2VM"
+ device = "claw"
+ variant = "Claw 8 AI+ A2VM"
+ 
++[performance_profile]
++platform_profile_name = "msi-wmi-platform"
++suggested_default = "balanced-performance"
++
+ [gpu_performance]
+ driver = "intel"
+ 
++[tdp_limit]
++method = "firmware_attribute"
++
++[tdp_limit.firmware_attribute]
++attribute = "msi-wmi-platform"
++
++[battery_charge_limit]
++suggested_minimum_limit = 10
++hwmon_name = "BAT1"
++attribute = "device/charge_control_end_threshold"
++
+ [inputplumber]
+ target_devices = ["deck-uhid", "keyboard"]
+-- 
+2.51.0
+
+
+From 168bce10b7fd4467b91eefcbd9c50682cb9194f3 Mon Sep 17 00:00:00 2001
+From: Matthew Schwartz <matthew.schwartz@linux.dev>
+Date: Mon, 22 Sep 2025 21:34:38 -0700
+Subject: [PATCH 2/2] power: gracefully handle missing FPPT
+
+---
+ steamos-manager/src/power.rs | 16 ++++++++++------
+ 1 file changed, 10 insertions(+), 6 deletions(-)
+
+diff --git a/steamos-manager/src/power.rs b/steamos-manager/src/power.rs
+index a09c06236e6d..5c1220b36a38 100644
+--- a/steamos-manager/src/power.rs
++++ b/steamos-manager/src/power.rs
+@@ -494,12 +494,16 @@ impl TdpLimitManager for FirmwareAttributeLimitManager {
+         )
+         .await
+         .inspect_err(|message| error!("Error writing to sysfs file: {message}"))?;
+-        write_synced(
+-            base.join(Self::FPPT_SUFFIX).join("current_value"),
+-            fppt_value.to_string().as_bytes(),
+-        )
+-        .await
+-        .inspect_err(|message| error!("Error writing to sysfs file: {message}"))
++
++        // Only write to FPPT if the path exists
++        let fppt_path = base.join(Self::FPPT_SUFFIX).join("current_value");
++        if try_exists(&fppt_path).await.unwrap_or(false) {
++            write_synced(fppt_path, fppt_value.to_string().as_bytes())
++                .await
++                .inspect_err(|message| error!("Error writing to sysfs file: {message}"))?;
++        }
++
++        Ok(())
+     }
+ 
+     async fn get_tdp_limit_range(&self) -> Result<RangeInclusive<u32>> {
+-- 
+2.51.0
+

@@ -1,4 +1,4 @@
-From 4ba2827496f9bc601483ad114429fc415166589d Mon Sep 17 00:00:00 2001
+From 4204cb7fc5044774d8e8ea6e642c51fde5fb6cb8 Mon Sep 17 00:00:00 2001
 From: Eric Naim <dnaim@cachyos.org>
 Date: Wed, 16 Apr 2025 08:06:48 +0800
 Subject: [PATCH] Add support for gamescope-session-steam
@@ -7,11 +7,11 @@ Signed-off-by: Eric Naim <dnaim@cachyos.org>
 ---
  data/system/steamos-manager.service | 2 --
  data/user/orca.service              | 1 -
- data/user/steamos-manager.service   | 3 +--
- 3 files changed, 1 insertion(+), 5 deletions(-)
+ data/user/steamos-manager.service   | 2 +-
+ 3 files changed, 1 insertion(+), 4 deletions(-)
 
 diff --git a/data/system/steamos-manager.service b/data/system/steamos-manager.service
-index 1e21630349f8..9201c3a09c9b 100644
+index e49ea157d6a3..f44c5725e1eb 100644
 --- a/data/system/steamos-manager.service
 +++ b/data/system/steamos-manager.service
 @@ -1,7 +1,5 @@
@@ -19,9 +19,9 @@ index 1e21630349f8..9201c3a09c9b 100644
  Description=SteamOS Manager Daemon
 -Wants=steamos-log-submitter.service
 -After=steamos-log-submitter.service
+ StartLimitIntervalSec=120
+ StartLimitBurst=5
  
- [Service]
- Type=dbus
 diff --git a/data/user/orca.service b/data/user/orca.service
 index a378a668ae80..2ee0e69151ed 100644
 --- a/data/user/orca.service
@@ -32,7 +32,7 @@ index a378a668ae80..2ee0e69151ed 100644
  Restart=on-failure
 -EnvironmentFile=%t/gamescope-environment
 diff --git a/data/user/steamos-manager.service b/data/user/steamos-manager.service
-index de25c51f3f8a..27623cc7eaf3 100644
+index d830dca213e2..73076feeb83e 100644
 --- a/data/user/steamos-manager.service
 +++ b/data/user/steamos-manager.service
 @@ -1,6 +1,6 @@
@@ -40,14 +40,9 @@ index de25c51f3f8a..27623cc7eaf3 100644
  Description=SteamOS Manager Daemon
 -After=gamescope.service
 +After=gamescope-session-plus@steam.service
+ StartLimitIntervalSec=120
+ StartLimitBurst=5
  
- [Service]
- Type=dbus
-@@ -9,4 +9,3 @@ Environment=RUST_LOG='INFO'
- ExecStart=/usr/lib/steamos-manager
- Restart=on-failure
- RestartSec=1
--EnvironmentFile=%t/gamescope-environment
 -- 
-2.50.0
+2.51.0
 
