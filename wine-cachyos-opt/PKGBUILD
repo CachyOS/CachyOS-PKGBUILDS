@@ -1,6 +1,6 @@
 # Maintainer: loathingkernel <loathingkernel _a_ gmail _d_ com>
-# Contributor: Felix Yan <felixonmars@archlinux.org>
-# Contributor: Sven-Hendrik Haase <sh@lutzhaase.com>
+# Maintainer: Peter Jung <ptr1337@archlinux.org>
+# Contributor: Sven-Hendrik Haase <svenstaro@archlinux.org>
 # Contributor: Jan "heftig" Steffens <jan.steffens@gmail.com>
 # Contributor: Eduardo Romero <eduardo@archlinux.org>
 # Contributor: Giovanni Scafora <giovanni@archlinux.org>
@@ -11,7 +11,7 @@ pkgver=${_srctag//-/.}
 _geckover=2.47.4
 _monover=10.2.0
 _xaliaver=0.4.6
-pkgrel=2
+pkgrel=5
 epoch=2
 
 _pkgbasever=${pkgver/rc/-rc}
@@ -58,7 +58,6 @@ makedepends=(
   git
   gnutls                lib32-gnutls
   gst-plugins-base-libs lib32-gst-plugins-base-libs
-  gtk3                  lib32-gtk3
   libcups               lib32-libcups
   libgphoto2
   libpulse              lib32-libpulse
@@ -94,7 +93,6 @@ optdepends=(
   gst-plugins-base-libs lib32-gst-plugins-base-libs
   gst-plugins-good      lib32-gst-plugins-good
   gst-plugins-ugly
-  gtk3                  lib32-gtk3
   libgphoto2
   libpulse              lib32-libpulse
   libva                 lib32-libva
@@ -120,7 +118,7 @@ prepare() {
   rm -rf ${pkgname//-opt}-{32,64}-build
   mkdir ${pkgname//-opt}-{32,64}-build
 
-  pushd ${pkgname//-opt}
+  cd ${pkgname//-opt}
   git config user.email "wine@cachyos.org"
   git config user.name "wine cachyos"
   git tag wine-${_srctag} --annotate -m "$pkgver" --force
@@ -129,7 +127,6 @@ prepare() {
   ./dlls/winevulkan/make_vulkan -x vk.xml -X video.xml
   autoreconf -fiv
   rm -rf autom4te.cache
-  popd
 }
 
 build() {
@@ -141,8 +138,8 @@ build() {
   local mtune="core-avx2"
 
   # From Proton
-  OPTIMIZE_FLAGS="-O2 -march=$march -mtune=$mtune -mfpmath=sse -pipe -fipa-pta"
-  OPTIMIZE_FLAGS+=" -mprefer-avx128 -fvect-cost-model=cheap"
+  OPTIMIZE_FLAGS="-O2 -march=$march -mtune=$mtune -mfpmath=sse -pipe"
+  OPTIMIZE_FLAGS+=" -mprefer-avx128 -fvect-cost-model=cheap -fipa-pta"
   SANITY_FLAGS="-fwrapv -fno-strict-aliasing -D_TIME_BITS=64 -D_FILE_OFFSET_BITS=64"
   DEBUG_FLAGS="-ffunction-sections -fdata-sections -fno-omit-frame-pointer"
   WARNING_FLAGS="-Wno-incompatible-pointer-types"
@@ -176,7 +173,6 @@ build() {
     --with-alsa \
     --with-ffmpeg \
     --without-oss \
-    --disable-winemenubuilder \
     --disable-tests \
     --enable-win64
 
@@ -199,7 +195,6 @@ build() {
     --with-alsa \
     --without-ffmpeg \
     --without-oss \
-    --disable-winemenubuilder \
     --disable-tests \
     --with-wine64="$srcdir/${pkgname//-opt}-64-build"
 

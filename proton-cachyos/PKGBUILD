@@ -2,7 +2,7 @@
 # Maintainer: loathingkernel <loathingkernel _a_ gmail _d_ com>
 
 pkgname=proton-cachyos
-_srctag=10.0-20250906
+_srctag=10.0-20250919
 _commit=
 pkgver=${_srctag//-/.}
 _geckover=2.47.4
@@ -199,8 +199,8 @@ build() {
     local march="${flags["-march"]:-nocona}"
     local mtune="core-avx2"
 
-    CFLAGS="-O2 -march=${march} -mtune=${mtune} -pipe -fno-semantic-interposition -fipa-pta"
-    CXXFLAGS="-O2 -march=${march} -mtune=${mtune} -pipe -fno-semantic-interposition -fipa-pta"
+    CFLAGS="-O2 -march=${march} -mtune=${mtune}"
+    CXXFLAGS="-O2 -march=${march} -mtune=${mtune}"
     RUSTFLAGS="-C opt-level=3 -C target-cpu=${march}"
     LDFLAGS="-Wl,-O1,--sort-common,--as-needed"
 
@@ -253,7 +253,7 @@ package() {
         $(find "${_monodir}" -iname "*x86_64.dll" -or -iname "*x86_64.exe")
 }
 
-b2sums=('4710222cbb5d58dc0483e9c2f9c9d4d11c624034b7c6c578a3a940c5c9f3907a6893f05244e357497f25539c9579bc241216c83d44da6ec7947441d66f65beeb'
+b2sums=('aa329b6bbe270c7f9e1ae7a2414cc48cf4cc8c242b41ccb83037f58b1e9be13bbde049015c17790abc2a38fa2eb6f6d6b829e527abe7bf182df927619b994abc'
         '2a73c12585b502ae11188482cbc9fb1f45f95bfe4383a7615011104b132f4845f9813d01fb40277e1934fab5f1b35ab40b4f4a66a9967463dd1d666a666904e9'
         '62856a88266b4757602c0646e024f832974a93f03b9df253fd4895d4f11a41b435840ad8f7003ec85a0d8087dec15f2e096dbfb4b01ebe4d365521e48fd0c5c0'
         'c0c2c063de47b484758dc315496c4c8d477273ce286ab5408fbdf8aae2cb8187160faec151c1ecfc18a90a4c6f3b36df9c78097ddc862ee6056739c556af4ff8'
