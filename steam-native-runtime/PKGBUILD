@@ -3,7 +3,7 @@
 
 pkgname=steam-native-runtime
 pkgver=1.0.0.75
-pkgrel=4
+pkgrel=4.1
 pkgdesc='Native replacement for the Steam runtime using system libraries'
 arch=('x86_64')
 url='https://wiki.archlinux.org/index.php/Steam/Troubleshooting#Native_runtime'
@@ -38,20 +38,13 @@ depends=(
   'vulkan-icd-loader' 'vulkan-driver' 'lib32-vulkan-driver' 'lib32-vulkan-icd-loader'
   'lib32-libappindicator-gtk2' 'lib32-libindicator-gtk2' 'lib32-libdbusmenu-glib' 'lib32-libdbusmenu-gtk2'
 )
-source=(steam-native.sh)
-sha512sums=('03e969de86a69b0d9d86508a0a0cdd13be7c0c63076f6bc77c3685839a6784e8041528f5a1e9bfcb51d27c6c9994fab591c7d70fc44cc4673a1384781433041b')
-
-prepare() {
-  cp /usr/share/applications/steam.desktop steam-native.desktop
-  sed -r 's|(Name=Steam) \(Runtime\)|\1 (Native)|' -i steam-native.desktop
-  sed -r 's|(/usr/bin/steam)-runtime|\1-native|' -i steam-native.desktop
-  sed '/^Icon=.*/i StartupWMClass=Steam' -i steam-native.desktop
-}
+source=(steam-native.sh
+        git+https://github.com/loathingKernel/Steam-Play-None.git#commit=5e06fc36d5bb3c541238e5197784c466a1a3f349
+)
+sha512sums=('03e969de86a69b0d9d86508a0a0cdd13be7c0c63076f6bc77c3685839a6784e8041528f5a1e9bfcb51d27c6c9994fab591c7d70fc44cc4673a1384781433041b'
+            '5860b1502902482ab10d54fb9ffb3ab4094ddccd4969ee9869bf55b1415a777b41a20705e99e7f8155fdc2a7affbc1575740c8c7f74d16a3a8dcd297ab005acd')
 
 package() {
-  install -Dm 644 steam-native.desktop -t "${pkgdir}/usr/share/applications"
-  install -Dm 755 steam-native.sh "${pkgdir}/usr/bin/steam-native"
-
   install -d "${pkgdir}/usr/lib/steam"
   ln -sf /usr/lib/libcurl.so.3 "${pkgdir}/usr/lib/steam/libcurl.so.3"
   ln -sf /usr/lib/libcurl.so.4.2.0 "${pkgdir}/usr/lib/steam/libcurl.so.4"
@@ -62,6 +55,10 @@ package() {
     ln -sf /usr/lib32/libcurl.so.4.2.0 "${pkgdir}/usr/lib32/steam/libcurl.so.4"
     ln -sf /usr/lib32/libcurl.so.4.2.0 "${pkgdir}/usr/lib32/steam/libcurl.so.4.2.0"
   fi
+
+  install -Dm644 Steam-Play-None/compatibilitytool.vdf "${pkgdir}/usr/share/steam/compatibilitytools.d/steam-play-none/compatibilitytool.vdf"
+  install -Dm644 Steam-Play-None/toolmanifest.vdf "${pkgdir}/usr/share/steam/compatibilitytools.d/steam-play-none/toolmanifest.vdf"
+  install -Dm755 Steam-Play-None/launch.sh "${pkgdir}/usr/share/steam/compatibilitytools.d/steam-play-none/launch.sh"
 }
 
 # vim: ts=2 sw=2 et:
