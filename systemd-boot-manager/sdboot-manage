@@ -226,8 +226,7 @@ remove_orphan_entries() {
             | uniq | sort)); do
         while read -r entry; do
             local kerneldir="${entry%.*}"
-            kerneldir="${kerneldir##*/}"
-            if [ ! -d "/usr/src/${kerneldir}" ]; then
+            if [ ! -d "/usr/src/${kerneldir##*/}" ]; then
                 remove_entry "${entry}"
             fi
         done < <(grep -l "${kernel}" "${ESP}"/loader/entries/*)
