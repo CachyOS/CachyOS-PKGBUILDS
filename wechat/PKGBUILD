@@ -1,0 +1,63 @@
+# Maintainer: luadebug <lin@sz.cn.eu.org>
+
+pkgname=wechat
+pkgver=4.1.0.10
+pkgrel=1
+pkgdesc="Messaging and calling app"
+arch=('x86_64' 'aarch64')
+url="https://www.wechat.com/en/"
+license=('custom')
+depends=('libtiff')
+makedepends=('patchelf')
+provides=('wechat')
+conflicts=()
+options=('!strip')
+
+source_x86_64=("${pkgname}-${pkgver}-x86_64.AppImage::https://web.archive.org/web/20250930121506/https://dldir1v6.qq.com/weixin/Universal/Linux/WeChatLinux_x86_64.AppImage")
+source_aarch64=("${pkgname}-${pkgver}-aarch64.AppImage::https://web.archive.org/web/20250930121708/https://dldir1v6.qq.com/weixin/Universal/Linux/WeChatLinux_arm64.AppImage")
+
+sha256sums_x86_64=('77fcdd6faf6098872000509b58b2867e60fc6457ee0e561d3b2eef509ed28977')
+sha256sums_aarch64=('aa434b03c9c82ec222d9c888cebf696f73de8e16c4bd9e5f7b81a59a3ca3ac42')
+
+prepare() {
+    cd "${srcdir}"
+    
+    if [[ "${CARCH}" == "x86_64" ]]; then
+        chmod +x "${pkgname}-${pkgver}-x86_64.AppImage"
+        "./${pkgname}-${pkgver}-x86_64.AppImage" --appimage-extract > /dev/null
+    elif [[ "${CARCH}" == "aarch64" ]]; then
+        chmod +x "${pkgname}-${pkgver}-aarch64.AppImage"
+        "./${pkgname}-${pkgver}-aarch64.AppImage" --appimage-extract > /dev/null
+    fi
+    
+    patchelf --replace-needed libtiff.so.5 libtiff.so squashfs-root/opt/wechat/wechat
+}
+
+package() {
+    cd "${srcdir}/squashfs-root"
+    
+    install -dm755 "${pkgdir}/opt"
+    cp -r opt/wechat "${pkgdir}/opt/"
+    
+    install -dm755 "${pkgdir}/usr/bin"
+    cat > "${pkgdir}/usr/bin/wechat" << 'EOF'
+#!/bin/bash
+cd /opt/wechat && exec ./wechat "$@"
+EOF
+    chmod +x "${pkgdir}/usr/bin/wechat"
+    
+    install -Dm644 wechat.desktop "${pkgdir}/usr/share/applications/wechat.desktop"
+    sed -i 's/AppRun/wechat/g' "${pkgdir}/usr/share/applications/wechat.desktop"
+    
+    install -Dm644 wechat.png "${pkgdir}/usr/share/icons/hicolor/256x256/apps/wechat.png"
+    
+    install -Dm644 /dev/stdin "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE" << 'EOF'
+WeChat for Linux
+
+This is proprietary software distributed by Tencent.
+Use of this software is subject to WeChat's Terms of Service.
+
+Homepage: https://www.wechat.com/en/
+Download: https://linux.weixin.qq.com/en
+EOF
+}
