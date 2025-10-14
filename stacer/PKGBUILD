@@ -2,7 +2,7 @@
 
 pkgname=stacer
 pkgver=1.5.0
-pkgrel=1
+pkgrel=2
 pkgdesc="Linux System Optimizer and Monitoring"
 url="https://github.com/QuentiumYT/Stacer"
 arch=('x86_64')
@@ -24,16 +24,14 @@ build() {
           -B build -S .
 
     make -C build -j$(nproc)
-
-    /usr/lib/qt6/bin/lupdate stacer/stacer.pro -no-obsolete
-    /usr/lib/qt6/bin/lrelease stacer/stacer.pro
 }
 
 package() {
     cd "Stacer-${pkgver}"
 
     install -Dm755 "build/stacer/stacer" -t "${pkgdir}/usr/share/stacer"
-    install -Dm644 "translations"/*.qm -t "${pkgdir}/usr/share/stacer/translations"
+    install -Dm755 "build/stacer-core/libstacer-core.a" -t "${pkgdir}/usr/share/stacer/lib"
+    install -Dm644 "build/stacer/translations"/*.qm -t "${pkgdir}/usr/share/stacer/translations"
 
     for i in 16 32 64 128 256; do
         install -Dm644 "icons/hicolor/${i}x${i}/apps/stacer.png" -t "${pkgdir}/usr/share/icons/hicolor/${i}x${i}/apps"
