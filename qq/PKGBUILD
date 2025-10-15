@@ -8,7 +8,7 @@ pkgdesc="Messaging app"
 arch=('x86_64' 'aarch64')
 url="https://im.qq.com/index/"
 license=('custom')
-depends=('alsa-lib' 'util-linux-libs' 'cups' 'glib2' 'gtk3' 'libdrm' 'libpulse' 'libgcrypt' 'krb5' 'mesa' 'nss' 'libvips' 'libxdamage' 'systemd' 'libayatana-appindicator' 'libnotify' 'libssh2')
+depends=('alsa-lib' 'at-spi2-core' 'cairo' 'cups' 'dbus' 'expat' 'fontconfig' 'freetype2' 'gdk-pixbuf2' 'glib2' 'gtk3' 'hicolor-icon-theme' 'libdrm' 'libx11' 'libxcomposite' 'libxdamage' 'libxext' 'libxfixes' 'libxrandr' 'mesa' 'nspr' 'nss' 'pango' 'systemd-libs')
 makedepends=('dpkg' 'patchelf')
 provides=('qq')
 options=('!strip')
@@ -36,13 +36,14 @@ package() {
     install -dm755 "$pkgdir/usr/bin"
     cat > "$pkgdir/usr/bin/qq" << 'EOF'
 #!/bin/bash
-exec /opt/QQ/qq "$@"
+cd /opt/QQ
+export LD_LIBRARY_PATH="/opt/QQ:$LD_LIBRARY_PATH"
+exec ./qq "$@"
 EOF
     chmod +x "$pkgdir/usr/bin/qq"
     install -Dm644 usr/share/applications/qq.desktop "$pkgdir/usr/share/applications/qq.desktop"
     install -Dm644 usr/share/icons/hicolor/512x512/apps/qq.png "$pkgdir/usr/share/icons/hicolor/512x512/apps/qq.png"
-    ln -sf /usr/lib/libayatana-appindicator3.so "$pkgdir/opt/QQ/libappindicator3.so"
-    ln -sf /usr/lib/libnotify.so "$pkgdir/opt/QQ/libnotify.so"
+    # Remove bundled libraries that conflict with system libraries
     rm -rf "$pkgdir/opt/QQ/resources/app/sharp-lib"
     rm -f "$pkgdir/opt/QQ/resources/app/libssh2.so.1"
     install -Dm644 /dev/stdin "$pkgdir/usr/share/licenses/$pkgname/LICENSE" << 'EOF'
