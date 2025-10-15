@@ -7,7 +7,7 @@ pkgdesc="Messaging and calling app"
 arch=('x86_64' 'aarch64')
 url="https://www.wechat.com/en/"
 license=('custom')
-depends=('libtiff')
+depends=('dbus' 'expat' 'fontconfig' 'freetype2' 'glib2' 'hicolor-icon-theme' 'krb5' 'libpng' 'libtiff' 'libx11' 'libxcomposite' 'libxdamage' 'libxext' 'libxfixes' 'libxrandr' 'libxtst' 'nspr' 'nss' 'systemd-libs' 'xcb-util-image' 'xcb-util-keysyms' 'xcb-util-renderutil' 'xcb-util-wm')
 makedepends=('patchelf')
 provides=('wechat')
 conflicts=()
@@ -42,7 +42,9 @@ package() {
     install -dm755 "${pkgdir}/usr/bin"
     cat > "${pkgdir}/usr/bin/wechat" << 'EOF'
 #!/bin/bash
-cd /opt/wechat && exec ./wechat "$@"
+cd /opt/wechat
+export LD_LIBRARY_PATH="/opt/wechat:$LD_LIBRARY_PATH"
+exec ./wechat "$@"
 EOF
     chmod +x "${pkgdir}/usr/bin/wechat"
     
