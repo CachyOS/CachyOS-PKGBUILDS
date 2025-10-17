@@ -225,7 +225,10 @@ remove_orphan_entries() {
             | uniq | sort) <(cat "${ESP}"/loader/entries/* | grep -i "^linux" | awk '{print $2}' \
             | uniq | sort)); do
         while read -r entry; do
-            remove_entry "${entry}"
+            local kerneldir="${entry%.*}"
+            if [ ! -d "/usr/src/${kerneldir##*/}" ]; then
+                remove_entry "${entry}"
+            fi
         done < <(grep -l "${kernel}" "${ESP}"/loader/entries/*)
     done
 }
