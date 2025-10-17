@@ -11,7 +11,7 @@
 pkgbase=mesa-handheld
 pkgname=mesa-handheld
 pkgver=25.2.4
-pkgrel=2
+pkgrel=1
 epoch=1
 pkgdesc="Open-source OpenGL drivers - CachyOS Handheld Patches"
 url="https://www.mesa3d.org/"
@@ -105,6 +105,8 @@ provides=(
   vulkan-driver
   opencl-driver
   mesa
+  vulkan-mesa-layers
+  vulkan-mesa-device-select
 )
 conflicts=(
   'libva-mesa-driver<1:24.2.7-1'
@@ -115,6 +117,8 @@ conflicts=(
   vulkan-intel
   vulkan-swrast
   opencl-mesa
+  vulkan-mesa-layers
+  vulkan-mesa-device-select
 )
 
 options=(
@@ -218,7 +222,7 @@ prepare() {
   # Include package release in version string so Chromium invalidates
   # its GPU cache; otherwise it can cause pages to render incorrectly.
   # https://bugs.launchpad.net/ubuntu/+source/chromium-browser/+bug/2020604
-  echo "$pkgver-cachyos$epoch.$pkgrel" >VERSION
+  echo "$pkgver-cachyos-handheld$epoch.$pkgrel" >VERSION
 }
 
 build() {

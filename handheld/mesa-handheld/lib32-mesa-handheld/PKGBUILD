@@ -81,7 +81,7 @@ depends=(
   lib32-zlib
   lib32-zstd
 
-  #mesa-handheld
+  mesa-handheld
 )
 optdepends=("opengl-man-pages: for the OpenGL API man pages")
 provides=(
@@ -247,6 +247,11 @@ package_lib32-mesa-handheld() {
   meson install -C build --destdir "$pkgdir" --no-rebuild
 
   ln -s /usr/lib32/libGLX_mesa.so.0 "${pkgdir}/usr/lib32/libGLX_indirect.so.0"
+  
+  rm -rf ${pkgdir}/usr/share/
+  rm -rf ${pkgdir}/etc/
+  rm -rf ${pkgdir}/usr/bin/
+  rm -rf ${pkgdir}/usr/include
 
   install -Dm644 mesa-$pkgver/docs/license.rst -t "$pkgdir/usr/share/licenses/$pkgname"
 }
