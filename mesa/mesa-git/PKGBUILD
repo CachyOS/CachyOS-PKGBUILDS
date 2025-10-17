@@ -51,7 +51,7 @@ pkgrel=1
 arch=('x86_64')
 makedepends=('git' 'python-mako' 'python-ply' 'xorgproto' 'libxml2' 'libx11' 'libvdpau' 'libva'
              'elfutils' 'libomxil-bellagio' 'libxrandr' 'libdisplay-info' 'ocl-icd' 'libgcrypt'  'wayland'
-             'wayland-protocols' 'meson' 'ninja' 'libdrm' 'xorgproto' 'libdrm' 'libxshmfence' 
+             'wayland-protocols' 'meson' 'ninja' 'libdrm' 'xorgproto' 'libdrm' 'libxshmfence'
              'libxxf86vm' 'libxdamage' 'libclc' 'libglvnd' 'libunwind' 'lm_sensors' 'libxrandr'
              'valgrind' 'glslang' 'byacc' 'wget' 'flex' 'bison' 'rust' 'rust-bindgen' 'spirv-llvm-translator'
              'cbindgen' 'python-packaging' 'python-yaml')
@@ -117,7 +117,7 @@ function exit_cleanup {
   rm -f "$_where"/frogminer
 
   remove_deps
-  
+
   msg2 "Cleanup done"
 }
 
@@ -176,9 +176,9 @@ user_patcher() {
 #
 # 1: llvm-minimal-git (aur) preferred value
 # 2: AUR llvm-git
-# 3: llvm-git from LordHeavy unofficial repo 
+# 3: llvm-git from LordHeavy unofficial repo
 # 4  llvm (stable from extra) Default value
-# 
+#
 
 if [[ ! $MESA_WHICH_LLVM ]] && [ ! -e "$_where"/frogminer ]; then
   plain "Which llvm package tree do you want to use to build mesa-git against ?"
@@ -549,11 +549,11 @@ build () {
        -D opengl=true \
        -D zstd=auto \
        -D valgrind=${_enabled_} $_legacy_switches $_dri3 $_omx $_dri_inc $_microsoft_clc $_osmesa $_xvmc $_layers $_optional_codecs $_android_libbacktrace $_intel_rt $_galliumnine $_galliumxa $_sharedglapi $_galliumopencl $_gallium_vdpau $_mediafoundation $_rusticladditions $_lto $_additional_meson_flags $_additional_meson_flags_64
-       
+
     meson configure _build64 --no-pager
 
     # quoted from https://www.mesa3d.org/meson.html
-    # Note: autotools automatically updated translation files (used by the DRI configuration tool) as part of the build process, Meson does not do this. 
+    # Note: autotools automatically updated translation files (used by the DRI configuration tool) as part of the build process, Meson does not do this.
     # Instead, you will need do this:
     if ( cd "$srcdir/$_mesa_srcdir" && ! git merge-base --is-ancestor 2ef983dca61b549a9242afd9008200b231a26e90 HEAD ); then
       ninja $NINJAFLAGS -C _build64 xmlpool-pot xmlpool-update-po xmlpool-gmo
@@ -619,11 +619,11 @@ build () {
           -D lmsensors=${_enabled_} \
           -D zstd=auto \
           -D valgrind=${_disabled_} $_legacy_switches $_dri3 $_omx_32 $_dri_inc $_microsoft_clc $_osmesa $_xvmc $_layers $_optional_codecs $_android_libbacktrace $_intel_rt_32 $_intel_clc_32 $_galliumnine $_galliumxa $_sharedglapi $_galliumopencl $_gallium_vdpau $_mediafoundation $_rusticladditions $_lto $_additional_meson_flags $_additional_meson_flags_32
-       
+
       meson configure _build32 --no-pager
 
       # quoted from https://www.mesa3d.org/meson.html
-      # Note: autotools automatically updated translation files (used by the DRI configuration tool) as part of the build process, Meson does not do this. 
+      # Note: autotools automatically updated translation files (used by the DRI configuration tool) as part of the build process, Meson does not do this.
       # Instead, you will need do this:
       if ( cd "$srcdir/$_mesa_srcdir" && ! git merge-base --is-ancestor 2ef983dca61b549a9242afd9008200b231a26e90 HEAD ); then
         ninja $NINJAFLAGS -C _build32 xmlpool-pot xmlpool-update-po xmlpool-gmo
@@ -672,7 +672,7 @@ package_lib32-mesa-git() {
   depends=('lib32-libdrm' 'lib32-libxxf86vm' 'lib32-libxdamage' 'lib32-libxshmfence'
            'lib32-lm_sensors' 'lib32-libelf' 'lib32-wayland'
            'lib32-libglvnd' 'lib32-libx11' 'mesa' $_lib32_llvm 'lib32-spirv-tools')
-  provides=(lib32-mesa=$pkgver-$pkgrel lib32-vulkan-intel=$pkgver-$pkgrel lib32-vulkan-radeon=$pkgver-$pkgrel lib32-vulkan-nouveau=$pkgver-$pkgrel lib32-vulkan-mesa-layers=$pkgver-$pkgrel lib32-mesa-vulkan-layers=$pkgver-$pkgrel lib32-libva-mesa-driver=$pkgver-$pkgrel lib32-mesa-vdpau=$pkgver-$pkgrel lib32-opengl-driver lib32-vulkan-driver lib32-ati-dri lib32-intel-dri lib32-nouveau-dri lib32-mesa-dri lib32-mesa-libgl lib32-vulkan-mesa-device-select lib32-vulkan-swrast)
+  provides=(lib32-mesa=$pkgver-$pkgrel lib32-opencl-mesa=$pkgver-$pkgrel lib32-vulkan-intel=$pkgver-$pkgrel lib32-vulkan-radeon=$pkgver-$pkgrel lib32-vulkan-nouveau=$pkgver-$pkgrel lib32-vulkan-mesa-layers=$pkgver-$pkgrel lib32-mesa-vulkan-layers=$pkgver-$pkgrel lib32-libva-mesa-driver=$pkgver-$pkgrel lib32-mesa-vdpau=$pkgver-$pkgrel lib32-opengl-driver lib32-vulkan-driver lib32-ati-dri lib32-intel-dri lib32-nouveau-dri lib32-mesa-dri lib32-mesa-libgl lib32-vulkan-mesa-device-select lib32-vulkan-swrast)
   conflicts=('lib32-mesa' 'lib32-opencl-mesa' 'lib32-vulkan-intel' 'lib32-vulkan-radeon' 'lib32-vulkan-nouveau' 'lib32-vulkan-mesa-device-select' 'lib32-vulkan-mesa-layers' 'lib32-mesa-vulkan-layers' 'lib32-libva-mesa-driver' 'lib32-mesa-vdpau' 'lib32-vulkan-swrast')
 
   DESTDIR="$pkgdir" ninja $NINJAFLAGS -C _build32 install
@@ -700,5 +700,5 @@ package_lib32-mesa-git() {
 
   install -Dt "$pkgdir"/usr/share/licenses/$pkgname "$srcdir"/LICENSE
 }
- 
+
 trap exit_cleanup EXIT
