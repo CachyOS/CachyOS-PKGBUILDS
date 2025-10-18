@@ -357,9 +357,10 @@ package_mesa() {
     _pick vkvirtio $libdir/libvulkan_virtio.so
 
     _pick vkdevice $libdir/libVkLayer_MESA_device_select.so
-    _pick vkdevice usr/share/vulkan/implicit_layer.d
+    _pick vkdevice usr/share/vulkan/implicit_layer.d/VkLayer_MESA_device_select.json
 
     _pick vklayer $libdir/libVkLayer_*.so
+    _pick vklayer usr/share/vulkan/implicit_layer.d/VkLayer_MESA_anti_lag.json
     _pick vklayer usr/bin/mesa-*-control.py
     _pick vklayer usr/share/vulkan/explicit_layer.d
 
