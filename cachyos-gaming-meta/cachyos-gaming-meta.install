@@ -1,0 +1,10 @@
+post_install() {
+  pacman -D --asexplicit proton-cachyos-slr
+  pacman -D --asexplicit umu-launcher
+  pacman -D --asexplicit steam
+}
+
+post_upgrade() {
+  post_install $1
+}
+
