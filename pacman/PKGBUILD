@@ -15,7 +15,7 @@ _sqlitever=$(curl -s 'https://archlinux.org/packages/search/json/?name=sqlite' |
     if (NF == 4) { printf "%02d", $4 }
     else { printf "00" }
 }')
-pkgrel=1
+pkgrel=2
 pkgdesc="A library-based package manager with dependency support. CachyOS fork."
 arch=('x86_64' 'aarch64')
 url="https://www.archlinux.org/pacman/"
@@ -75,6 +75,11 @@ source=("git+https://github.com/CachyOS/pacman.git#commit=${_commit}?signed"
         "https://www.sqlite.org/2025/sqlite-src-${_sqlitever}.zip"
         disable-always-stale.patch
         78cd453.patch # PrettyProgressBar
+        # backports
+        #https://gitlab.archlinux.org/pacman/pacman/-/commit/d2266c4ff7c90a672458e943722156da517feea9.patch
+        https://gitlab.archlinux.org/pacman/pacman/-/commit/21e31edf16787beac2f872a15ae0e28c1dafa4e4.patch
+        https://gitlab.archlinux.org/pacman/pacman/-/commit/14f00a468c8a074fe97197268f3b8e3ae8c853bf.patch
+        #https://gitlab.archlinux.org/pacman/pacman/-/commit/4569daf144c4169cc8baad3b0ad975e7d6127f6f.patch
         )
 source_aarch64=(fix-alpm-crate-for-aarch64.patch)
 sha256sums=('c436571a1d22510dd0cb9f8f49b2ce0bbb6b72587fa12fd5c85b13468c1162df'
@@ -84,9 +89,11 @@ sha256sums=('c436571a1d22510dd0cb9f8f49b2ce0bbb6b72587fa12fd5c85b13468c1162df'
             'c8760d7ebb6c9817d508c691c67084be251cd9c8811ee1ccf92c1278bad74c1c'
             'b31dc7a2789d7fb99a56cc5a9d915c3d57e01233bf258731392afe44b1bf8e40'
             'bdd8fb13c1cd8606f41347bc1897e261031ac80b33c772d310f417064332f646'
-            'af673f28f69b572b49bb1558c4f191fd66e31acb949468ad2b01b2b6ed8043a2'
+            'b7b4dc060f36053902fb65b344bbbed592e64b2291a26ac06fe77eec097850e9'
             '11e0078c5ac7cdafa625957a9da982989efe19719e4973cd77f28dc5780dccd9'
-            '843ad07d4a996ad165f20544c5df5b6deec4496ec30daa38b874bf3fa28afa54')
+            '843ad07d4a996ad165f20544c5df5b6deec4496ec30daa38b874bf3fa28afa54'
+            '27f2b34a49e7b8667bc2d74cefca6a067f97e8632c69cceef819d9c482afc70a'
+            '1b83bcf7d44173a63879f452a01fd1cc107042ad351f0b09c9c2620313a94bfa')
 sha256sums_aarch64=('98af0b680561b4430c0290d461d28a03b7178cce6b62880c7d0803473bfa543c')
 validpgpkeys=(
   'B1B70BB1CD56047DEF31DE2EB62C3D10C54D5DA9'  # Vladislav Nepogodin <nepogodin.vlad@gmail.com>
