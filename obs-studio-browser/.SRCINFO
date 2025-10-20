@@ -1,7 +1,7 @@
 pkgbase = obs-studio-browser
 	pkgdesc = Free and open source software for video recording and live streaming. With everything except service integration
 	pkgver = 32.0.1
-	pkgrel = 1
+	pkgrel = 4
 	url = https://github.com/obsproject/obs-studio
 	arch = x86_64
 	license = GPL-2.0-or-later
@@ -42,9 +42,8 @@ pkgbase = obs-studio-browser
 	depends = pciutils
 	depends = python>=3.13
 	depends = qrcodegencpp-cmake
-	depends = qt6-base>=6.6.2
-	depends = qt6-svg>=6.6.2
-	depends = qt6-wayland>=6.6.2
+	depends = qt6-base>=6.10
+	depends = qt6-svg>=6.10
 	depends = rnnoise
 	depends = simde
 	depends = sndio
@@ -91,9 +90,11 @@ pkgbase = obs-studio-browser
 	source = obs-studio::git+https://github.com/obsproject/obs-studio.git#tag=32.0.1
 	source = obs-browser::git+https://github.com/obsproject/obs-browser.git
 	source = obs-websocket::git+https://github.com/obsproject/obs-websocket.git
+	source = 12328-Cleanup_Qt_Gui_Private_linkage.patch
 	sha256sums = cc23bd441ba0135cd4ecee64a749d03d591cf9da816da25a7a7fa0c7d11b3fe6
 	sha256sums = SKIP
 	sha256sums = SKIP
+	sha256sums = 25322c692cf5cc88fc7d17cbb40a61b7e32d5ea675da647dd1a1996474ec2c8e
 	source_x86_64 = https://cdn-fastly.obsproject.com/downloads/cef_binary_6533_linux_x86_64.tar.xz
 	sha256sums_x86_64 = fab66dfc9cfd2e26fb87798f855aef30c2004edc8e19570d37af555644ae1655
 
