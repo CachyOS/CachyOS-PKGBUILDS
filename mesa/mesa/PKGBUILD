@@ -25,7 +25,7 @@ pkgname=(
   vulkan-mesa-layers
   mesa-docs
 )
-pkgver=25.2.4
+pkgver=25.2.5
 pkgrel=3
 epoch=1
 pkgdesc="Open-source OpenGL drivers"
@@ -97,9 +97,8 @@ options=(
 )
 source=(
   "https://archive.mesa3d.org/mesa-$pkgver.tar.xz"{,.sig}
-  https://gitlab.freedesktop.org/mesa/mesa/-/merge_requests/34242.patch # Anti lag
-  https://gitlab.freedesktop.org/mesa/mesa/-/merge_requests/37137.patch # Anti Lag Fix
-  https://gitlab.freedesktop.org/mesa/mesa/-/merge_requests/37509.patch # Disable anti-lag by default
+  "anti-lag.patch"
+  "gamescope-fps-limiter.patch"
 )
 validpgpkeys=(
   946D09B5E4C9845E63075FF1D961C596A7203456 # Andres Gomez <tanty@igalia.com>
@@ -155,11 +154,10 @@ for _crate in "${!_crates[@]}"; do
   )
 done
 
-sha256sums=('a370b4c549cbfbe646b319e34d73edb50ed883978f5e95133f282f0eae39ab52'
+sha256sums=('bb6243e7a6f525febfa1e6ab50827ca4d4bfdad73812377b0ca9b6c50998b03e'
             'SKIP'
-            '1e83a132618ebc2a2236779223ace94354f22b3372ce739ee6641e83f2d0f9e8'
-            '2ee4a8dcba2ac1a162ac8b7d1751d9a363d0249df06897a4cf905ec9f59d17df'
-            '0d6ac888f4401acab2f9a99cf2fd7d8a06ec2503ebf2807a8835eae6e06a4758'
+            '095efd2c5fd0979a325f5c2edc84c03315bcab1aec837bdd17a6eff1ab0f68eb'
+            '9c40bf44608a52c354c13508dec435fcd4ecccc6e34eaee9dbbba2ba0ce05ffc'
             '67914ab451f3bfd2e69e5e9d2ef3858484e7074d63f204fd166ec391b54de21d'
             'ed646292ffc8188ef8ea4d1e0e0150fb15a5c2e12ad9b8fc191ae7a8a7f3c4b9'
             '7f9f832470494906d1fca5329f8ab5791cc60beb230c74815dff541cbd2b5ca0'
@@ -187,11 +185,10 @@ sha256sums=('a370b4c549cbfbe646b319e34d73edb50ed883978f5e95133f282f0eae39ab52'
             'db7d01726be8ab66ab32f9df467ae8b1148906685bbe75c82d1e65d7f5b3f841'
             '692fcb63b64b1758029e0a96ee63e049ce8c5948587f2f7208df04625e5f6b56'
             '25aa4ce346d03a6dcd68dd8b4010bcb74e54e62c90c573f394c46eae99aba32d')
-b2sums=('5f9e89efb11977c8d86f92e705280af7dc136f4031d192571518c6fb9d73eb31c269f383ac5c008bece15ccc522a9cdcde4522f60cb8a626bbd9949a25856c76'
+b2sums=('375237d23918e09b7dab4f4abd2c3b24a046521d6e247043c5fbeb7d8a33d71471b23572d254f0ad489a2533094568ef6f067a57977a7ccc1805aa735c3f8b7d'
         'SKIP'
-        '04e5b824029b66f28a9dc97a44d1b879964d3ef44214c426977cfe59e9b0d71256c13373053a204fd8fc3f9dac1f1e33070caf561738eb2344eefd8c6f8e59d7'
-        '7d10b4f79a31feb74d8064a91f148cbf714fcdd31714076731c099e11b1b39bc0dc7f8cff5d87e311264fa9cb4c93e03f3f77be1814bbd0cb8b66b989a89d313'
-        'c65ad8486f84fb44fcd23967f19738e187fec8feb8973b54dd0a993ca3bf02b791fd3fa66831c92cf6cd325a9acd3303a7857d9c5fe8720ba737426f8703d502'
+        'd936161dd7c5ac0724303e3e98e03e4a5326e5fa994b51d344ba63b6710afa9fb6ae7809801ed0a869fa145ddaa95a78102d891fab4a782e0143e79de7eb4ba9'
+        '593511ab3028bfd00d74fc622aef8dc7cc79929f16e997228f52546aa69a3e3bf346b9702b4be4e45511e2bab8589f6fcb701062c90b2f5d5e7dd4b34d43e626'
         '431439d31632d177aeb15f910b4f546efa76d54fc74fc8e140399dc5e54eca33fd606f11dbfb48fa83067c8474ee512e62751895d5948367b65ab08b984284e5'
         'a6d47c903be6094423d89b8ec3ca899d0a84df6dbd6e76632bb6c9b9f40ad9c216f8fa400310753d392f85072756b43ac3892e0a2c4d55f87ab6463002554823'
         '9a73962e1e38b84131ab2350b69a1f5d611c549533eec73e898c394a9b9442f357bb5d5f59e1be12270dd29bdf237dc2d21786c0c2210736e224ef5d48300dcf'
@@ -363,9 +360,10 @@ package_mesa() {
     _pick vkvirtio $libdir/libvulkan_virtio.so
 
     _pick vkdevice $libdir/libVkLayer_MESA_device_select.so
-    _pick vkdevice usr/share/vulkan/implicit_layer.d
+    _pick vkdevice usr/share/vulkan/implicit_layer.d/VkLayer_MESA_device_select.json
 
     _pick vklayer $libdir/libVkLayer_*.so
+    _pick vklayer usr/share/vulkan/implicit_layer.d/VkLayer_MESA_anti_lag.json
     _pick vklayer usr/bin/mesa-*-control.py
     _pick vklayer usr/share/vulkan/explicit_layer.d
 
