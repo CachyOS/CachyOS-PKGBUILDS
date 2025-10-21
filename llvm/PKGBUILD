@@ -2,10 +2,9 @@
 # Contributor: Jan "heftig" Steffens <jan.steffens@gmail.com>
 
 pkgname=('llvm' 'llvm-libs')
-pkgver=20.1.8
-pkgrel=2
+pkgver=21.1.3
+pkgrel=4
 arch=('x86_64')
-pkgdesc="Compiler infrastructure"
 url="https://llvm.org/"
 license=('Apache-2.0 WITH LLVM-exception')
 makedepends=('cmake' 'ninja' 'zlib' 'zstd' 'curl' 'libffi' 'libedit'
@@ -16,11 +15,11 @@ _source_base=https://github.com/llvm/llvm-project/releases/download/llvmorg-$pkg
 source=($_source_base/llvm-$pkgver.src.tar.xz{,.sig}
         $_source_base/cmake-$pkgver.src.tar.xz{,.sig}
         $_source_base/third-party-$pkgver.src.tar.xz{,.sig})
-sha256sums=('e1363888216b455184dbb8a74a347bf5612f56a3f982369e1cba6c7e0726cde1'
+sha256sums=('a80f2dbfa24a0c4d81089e6245936dcd0c662c90f643d1706bb44e7bc8338ff1'
             'SKIP'
-            '3319203cfd1172bbac50f06fa68e318af84dcb5d65353310c0586354069d6634'
+            '4db6f028b6fe360f0aeae6e921b2bd2613400364985450a6d3e6749b74bf733a'
             'SKIP'
-            '9a4e452a8163732d417db067a89190fcda823cb3aa33199e834ac7c028923f4b'
+            '2bae76a7c7db4096b921589ae94c030727ee0dcb600bfe40353878937af61aa0'
             'SKIP')
 validpgpkeys=('474E22316ABF4785A88C6E8EA2C794A986419D8A'  # Tom Stellard <tstellar@redhat.com>
               'D574BD5D1D0E98895E3BF90044F2485E45D59042') # Tobias Hieta <tobias@hieta.se>
@@ -103,7 +102,7 @@ build() {
     -DLLVM_LINK_LLVM_DYLIB=ON
     -DLLVM_USE_PERF=ON
     -DSPHINX_WARNINGS_AS_ERRORS=OFF
-    -DPACKAGE_BUGREPORT=https://github.com/CachyOS/CachyOS-PKGBUILDS/issues
+    -DPACKAGE_BUGREPORT=https://gitlab.archlinux.org/archlinux/packaging/packages/llvm/-/issues
   )
 
   export AR=llvm-ar
