@@ -1,8 +1,8 @@
 # Maintainer: Evangelos Foutras <foutrelis@archlinux.org>
-# Contributor: Jan "heftig" Steffens <jan.steffens@gmail.com>
+# Contributor: Jan Alexander Steffens (heftig) <heftig@archlinux.org>
 
 pkgname=clang
-pkgver=20.1.8
+pkgver=21.1.3
 pkgrel=2
 pkgdesc="C language family frontend for LLVM"
 arch=('x86_64')
@@ -25,15 +25,15 @@ source=($_source_base/clang-$pkgver.src.tar.xz{,.sig}
         $_source_base/third-party-$pkgver.src.tar.xz{,.sig}
         0001-Revert-clang-driver-When-fveclib-ArmPL-flag-is-in-us.patch
         enable-fstack-protector-strong-by-default.patch)
-sha256sums=('b7a1b7b0af7b9c7596af6bd46e36d11321926eaa66a7a7dc957ab0a1375ee4b0'
+sha256sums=('a70518c2d4c90b8b170732e1342a9854ec2babc310b41d5556a83f4b55a63d1d'
             'SKIP'
-            '7d5ce15f84a098d79b5369d3c03857065abc3cb2f3435f08b1e4bc2a829aa2fc'
+            'e0d725dfd18390ca5db15ee85bc46fa43ff7df0590bab7a5946dc4345fe86681'
             'SKIP'
-            'e1363888216b455184dbb8a74a347bf5612f56a3f982369e1cba6c7e0726cde1'
+            'a80f2dbfa24a0c4d81089e6245936dcd0c662c90f643d1706bb44e7bc8338ff1'
             'SKIP'
-            '3319203cfd1172bbac50f06fa68e318af84dcb5d65353310c0586354069d6634'
+            '4db6f028b6fe360f0aeae6e921b2bd2613400364985450a6d3e6749b74bf733a'
             'SKIP'
-            '9a4e452a8163732d417db067a89190fcda823cb3aa33199e834ac7c028923f4b'
+            '2bae76a7c7db4096b921589ae94c030727ee0dcb600bfe40353878937af61aa0'
             'SKIP'
             'e88768730a7a46e7952758ec80f831997e30e7dbab53077decae3f71f4fc315e'
             'ef319e65f927718e1d3b1a23c480d686b1d292e2a0bf27229540964f9734117a')
@@ -60,7 +60,7 @@ _get_distribution_components() {
 }
 
 prepare() {
-  rename -v -- "-$pkgver.src" '' {cmake,third-party}-$pkgver.src
+  rename -v -- "-$pkgver.src" '' {cmake,clang-tools-extra}-$pkgver.src
   cd clang-$pkgver.src
   mkdir build
   mv "$srcdir/clang-tools-extra-$pkgver.src" tools/extra
@@ -103,12 +103,13 @@ build() {
     -DLLVM_BUILD_TESTS=ON
     -DLLVM_ENABLE_RTTI=ON
     -DLLVM_ENABLE_SPHINX=ON
+    -DLLVM_EXTERNAL_CLANG_TOOLS_EXTRA_SOURCE_DIR="$srcdir/clang-tools-extra"
     -DLLVM_EXTERNAL_LIT=/usr/bin/lit
     -DLLVM_INCLUDE_DOCS=ON
     -DLLVM_LINK_LLVM_DYLIB=ON
-    -DLLVM_MAIN_SRC_DIR="$srcdir/llvm-$pkgver.src"
+    -DLLVM_THIRD_PARTY_DIR="$srcdir/third-party-$pkgver.src"
     -DSPHINX_WARNINGS_AS_ERRORS=OFF
-    -DPACKAGE_BUGREPORT=https://gitlab.archlinux.org/archlinux/packaging/packages/clang/-/issues
+    -DLLVM_PACKAGE_BUGREPORT=https://gitlab.archlinux.org/archlinux/packaging/packages/clang/-/issues
   )
 
   # Use Clang as compiler
