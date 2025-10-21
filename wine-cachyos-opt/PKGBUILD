@@ -6,7 +6,7 @@
 # Contributor: Giovanni Scafora <giovanni@archlinux.org>
 
 pkgname=wine-cachyos-opt
-_srctag=10.0-20251015
+_srctag=10.0-20251017
 pkgver=${_srctag//-/.}
 _geckover=2.47.4
 _monover=10.2.0
@@ -134,7 +134,7 @@ build() {
   local -a split=($CFLAGS)
   local -A flags
   for opt in "${split[@]}"; do flags["${opt%%=*}"]="${opt##*=}"; done
-  local march="${flags["-march"]:-nocona}"
+  local march="nocona"
   local mtune="core-avx2"
 
   # From Proton
@@ -236,7 +236,7 @@ package() {
 }
 
 # vim:set ts=8 sts=2 sw=2 et:
-b2sums=('a06620ec28e48e9c769b9d7726fd4f3117a8e9672d2e93bfc0eccbd91de99b78fad2943380364a490a3ae4c5ce3a9dbc5429daa3674999e3e185cb0259268b58'
+b2sums=('d6fae93f14dbc3692895a0f469a0eac4ce74e0d1951f3e32f7a96df6675ccc3489f2afa7e480f1422d80d27919f984002241ede1051037ba2476d6ef3a8e3ed7'
         '2a73c12585b502ae11188482cbc9fb1f45f95bfe4383a7615011104b132f4845f9813d01fb40277e1934fab5f1b35ab40b4f4a66a9967463dd1d666a666904e9'
         '62856a88266b4757602c0646e024f832974a93f03b9df253fd4895d4f11a41b435840ad8f7003ec85a0d8087dec15f2e096dbfb4b01ebe4d365521e48fd0c5c0'
         'c0c2c063de47b484758dc315496c4c8d477273ce286ab5408fbdf8aae2cb8187160faec151c1ecfc18a90a4c6f3b36df9c78097ddc862ee6056739c556af4ff8'
