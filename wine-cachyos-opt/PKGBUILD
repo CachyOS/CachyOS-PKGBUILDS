@@ -173,6 +173,7 @@ build() {
     --with-alsa \
     --with-ffmpeg \
     --without-oss \
+    --disable-lsteamclient \
     --disable-tests \
     --enable-win64
 
@@ -195,6 +196,7 @@ build() {
     --with-alsa \
     --without-ffmpeg \
     --without-oss \
+    --disable-lsteamclient \
     --disable-tests \
     --with-wine64="$srcdir/${pkgname//-opt}-64-build"
 
