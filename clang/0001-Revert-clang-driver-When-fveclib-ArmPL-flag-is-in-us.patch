@@ -1,21 +1,21 @@
-From 5200b2728fce486870d50f388f7c89cbe39f800f Mon Sep 17 00:00:00 2001
-From: Leonidas Spyropoulos <artafinde@archlinux.org>
-Date: Sat, 31 May 2025 14:27:40 +0100
+From 3dce461bebb180514927e62d78fcfefb9fa6a19d Mon Sep 17 00:00:00 2001
+From: Sergiu Deitsch <sergiu.deitsch@gmail.com>
+Date: Sat, 13 Sep 2025 00:20:51 +0200
 Subject: [PATCH] Revert "[clang][driver] When -fveclib=ArmPL flag is in use,
  always link against libamath (#116432)"
 
 This reverts commit 03019c687f00cdd9d05fc1ace329a438c3ff6364.
 ---
- clang/lib/Driver/ToolChains/CommonArgs.cpp | 33 ----------------------
+ clang/lib/Driver/ToolChains/CommonArgs.cpp | 35 ----------------------
  clang/lib/Driver/ToolChains/MSVC.cpp       |  6 ----
- clang/test/Driver/fveclib.c                | 17 -----------
- 4 files changed, 73 deletions(-)
+ clang/test/Driver/fveclib.c                | 23 --------------
+ 3 files changed, 64 deletions(-)
 
 diff --git a/clang/lib/Driver/ToolChains/CommonArgs.cpp b/clang/lib/Driver/ToolChains/CommonArgs.cpp
-index ae635fb6a180..bcc431111ef9 100644
+index 8d3775de9be5..af3fab68a0c6 100644
 --- a/clang/lib/Driver/ToolChains/CommonArgs.cpp
 +++ b/clang/lib/Driver/ToolChains/CommonArgs.cpp
-@@ -494,39 +494,6 @@ void tools::AddLinkerInputs(const ToolChain &TC, const InputInfoList &Inputs,
+@@ -501,41 +501,6 @@ void tools::AddLinkerInputs(const ToolChain &TC, const InputInfoList &Inputs,
      else
        A.renderAsInput(Args, CmdArgs);
    }
@@ -36,7 +36,7 @@ index ae635fb6a180..bcc431111ef9 100644
 -      //
 -      // 1. On Linux, link only when actually needed.
 -      //
--      // 2. Prefer libm functions over libamath.
+-      // 2. Prefer libm functions over libamath (when no -nostdlib in use).
 -      //
 -      // 3. Link against libm to resolve libamath dependencies.
 -      //
@@ -44,9 +44,11 @@ index ae635fb6a180..bcc431111ef9 100644
 -        CmdArgs.push_back(Args.MakeArgString("--push-state"));
 -        CmdArgs.push_back(Args.MakeArgString("--as-needed"));
 -      }
--      CmdArgs.push_back(Args.MakeArgString("-lm"));
+-      if (!Args.hasArg(options::OPT_nostdlib))
+-        CmdArgs.push_back(Args.MakeArgString("-lm"));
 -      CmdArgs.push_back(Args.MakeArgString("-lamath"));
--      CmdArgs.push_back(Args.MakeArgString("-lm"));
+-      if (!Args.hasArg(options::OPT_nostdlib))
+-        CmdArgs.push_back(Args.MakeArgString("-lm"));
 -      if (Triple.isOSLinux())
 -        CmdArgs.push_back(Args.MakeArgString("--pop-state"));
 -      addArchSpecificRPath(TC, Args, CmdArgs);
@@ -54,12 +56,12 @@ index ae635fb6a180..bcc431111ef9 100644
 -  }
  }
  
- void tools::addLinkerCompressDebugSectionsOption(
+ const char *tools::getLDMOption(const llvm::Triple &T, const ArgList &Args) {
 diff --git a/clang/lib/Driver/ToolChains/MSVC.cpp b/clang/lib/Driver/ToolChains/MSVC.cpp
-index bae41fc06c03..b04587628e77 100644
+index 7d31eea60308..00525de6c037 100644
 --- a/clang/lib/Driver/ToolChains/MSVC.cpp
 +++ b/clang/lib/Driver/ToolChains/MSVC.cpp
-@@ -84,12 +84,6 @@ void visualstudio::Linker::ConstructJob(Compilation &C, const JobAction &JA,
+@@ -79,12 +79,6 @@ void visualstudio::Linker::ConstructJob(Compilation &C, const JobAction &JA,
    else if (TC.getTriple().isWindowsArm64EC())
      CmdArgs.push_back("-machine:arm64ec");
  
@@ -73,22 +75,28 @@ index bae41fc06c03..b04587628e77 100644
        !C.getDriver().IsCLMode() && !C.getDriver().IsFlangMode()) {
      CmdArgs.push_back("-defaultlib:libcmt");
 diff --git a/clang/test/Driver/fveclib.c b/clang/test/Driver/fveclib.c
-index 7d0985c4dd4f..09a12c232713 100644
+index c57e9aa7a3cc..4e278285c925 100644
 --- a/clang/test/Driver/fveclib.c
 +++ b/clang/test/Driver/fveclib.c
-@@ -112,20 +112,3 @@
+@@ -130,26 +130,3 @@
  /* Verify no warning when math-errno is re-enabled for a different veclib (that does not imply -fno-math-errno). */
- // RUN: %clang -### --target=aarch64-linux-gnu -fveclib=ArmPL -fmath-errno -fveclib=LIBMVEC %s 2>&1 | FileCheck --check-prefix=CHECK-REPEAT-VECLIB %s
+ // RUN: %clang -### --target=aarch64-linux-gnu -fveclib=ArmPL -fmath-errno -fveclib=Accelerate %s 2>&1 | FileCheck --check-prefix=CHECK-REPEAT-VECLIB %s
  // CHECK-REPEAT-VECLIB-NOT: math errno enabled
 -
 -/// Verify that vectorized routines library is being linked in.
 -// RUN: %clang -### --target=aarch64-pc-windows-msvc -fveclib=ArmPL %s 2>&1 | FileCheck --check-prefix=CHECK-LINKING-ARMPL-MSVC %s
 -// RUN: %clang -### --target=aarch64-linux-gnu -fveclib=ArmPL %s 2>&1 | FileCheck --check-prefix=CHECK-LINKING-ARMPL-LINUX %s
+-// RUN: %clang -### --target=aarch64-linux-gnu -fveclib=ArmPL %s -nostdlib 2>&1 | FileCheck --check-prefix=CHECK-LINKING-ARMPL-NOSTDLIB-LINUX %s
 -// RUN: %clang -### --target=aarch64-linux-gnu -fveclib=ArmPL %s -lamath 2>&1 | FileCheck --check-prefix=CHECK-LINKING-AMATH-BEFORE-ARMPL-LINUX %s
 -// RUN: %clang -### --target=arm64-apple-darwin -fveclib=ArmPL %s 2>&1 | FileCheck --check-prefix=CHECK-LINKING-ARMPL-DARWIN %s
+-// RUN: %clang -### --target=arm64-apple-darwin -fveclib=ArmPL -nostdlib %s 2>&1 | FileCheck --check-prefix=CHECK-LINKING-ARMPL-NOSTDLIB-DARWIN %s
 -// RUN: %clang -### --target=arm64-apple-darwin -fveclib=ArmPL %s -lamath 2>&1 | FileCheck --check-prefix=CHECK-LINKING-AMATH-BEFORE-ARMPL-DARWIN %s
 -// CHECK-LINKING-ARMPL-LINUX: "--push-state" "--as-needed" "-lm" "-lamath" "-lm" "--pop-state"
+-// CHECK-LINKING-ARMPL-NOSTDLIB-LINUX: "--push-state" "--as-needed" "-lamath" "--pop-state"
+-// CHECK-LINKING-ARMPL-NOSTDLIB-LINUX-NOT: "-lm"
 -// CHECK-LINKING-ARMPL-DARWIN: "-lm" "-lamath" "-lm"
+-// CHECK-LINKING-ARMPL-NOSTDLIB-DARWIN: "-lamath"
+-// CHECK-LINKING-ARMPL-NOSTDLIB-DARWIN-NOT: "-lm"
 -// CHECK-LINKING-ARMPL-MSVC: "--dependent-lib=amath"
 -// CHECK-LINKING-AMATH-BEFORE-ARMPL-LINUX: "-lamath" {{.*}}"--push-state" "--as-needed" "-lm" "-lamath" "-lm" "--pop-state"
 -// CHECK-LINKING-AMATH-BEFORE-ARMPL-DARWIN: "-lamath" {{.*}}"-lm" "-lamath" "-lm"
@@ -98,5 +106,5 @@ index 7d0985c4dd4f..09a12c232713 100644
 -// CHECK-RPATH-ARMPL: "--push-state" "--as-needed" "-lm" "-lamath" "-lm" "--pop-state"
 -// CHECK-RPATH-ARMPL-SAME: "-rpath"
 -- 
-2.49.0
+2.51.0
 

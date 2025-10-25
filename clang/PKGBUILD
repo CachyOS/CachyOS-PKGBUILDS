@@ -2,14 +2,14 @@
 # Contributor: Jan Alexander Steffens (heftig) <heftig@archlinux.org>
 
 pkgname=clang
-pkgver=21.1.3
+pkgver=21.1.4
 pkgrel=2
 pkgdesc="C language family frontend for LLVM"
 arch=('x86_64')
 url="https://clang.llvm.org/"
 license=('Apache-2.0 WITH LLVM-exception')
 depends=('llvm-libs' 'gcc' 'compiler-rt')
-makedepends=('llvm' 'cmake' 'ninja' 'python-sphinx' 'python-myst-parser' 'lld' 'clang' 'llvm-libs')
+makedepends=("llvm=$pkgver" 'cmake' 'ninja' 'python-sphinx' 'python-myst-parser' 'lld' 'clang' 'llvm-libs')
 optdepends=('openmp: OpenMP support in clang with -fopenmp'
             'python: for scan-view and git-clang-format'
             'llvm: referenced by some clang headers')
@@ -25,18 +25,18 @@ source=($_source_base/clang-$pkgver.src.tar.xz{,.sig}
         $_source_base/third-party-$pkgver.src.tar.xz{,.sig}
         0001-Revert-clang-driver-When-fveclib-ArmPL-flag-is-in-us.patch
         enable-fstack-protector-strong-by-default.patch)
-sha256sums=('a70518c2d4c90b8b170732e1342a9854ec2babc310b41d5556a83f4b55a63d1d'
+sha256sums=('3e8e25a7478bfb0ef510fff35d1a43bdfb62c7727bf98bb43ad33deef2f9f1a2'
             'SKIP'
-            'e0d725dfd18390ca5db15ee85bc46fa43ff7df0590bab7a5946dc4345fe86681'
+            'f645853f93bc960d04411eb1f75b7c7a72de19e7a09c0981c8eecfef1c605664'
             'SKIP'
-            'a80f2dbfa24a0c4d81089e6245936dcd0c662c90f643d1706bb44e7bc8338ff1'
+            'f311681255deb37f74bbf950a653e9434e7d8383a7b46a603a323c46cd4bf50e'
             'SKIP'
-            '4db6f028b6fe360f0aeae6e921b2bd2613400364985450a6d3e6749b74bf733a'
+            'f4316d84a862ba3023ca1d26bd9c6a995516b4fa028b6fb329d22e24cc6d235e'
             'SKIP'
-            '2bae76a7c7db4096b921589ae94c030727ee0dcb600bfe40353878937af61aa0'
+            'ae8658390504e08e464f65ecea838a0584df4734c27cecedfe7eb32780e81564'
             'SKIP'
-            'e88768730a7a46e7952758ec80f831997e30e7dbab53077decae3f71f4fc315e'
-            'ef319e65f927718e1d3b1a23c480d686b1d292e2a0bf27229540964f9734117a')
+            '6f3cc7a4847e03d16ed90341bb71fec98427763ff2351f5344b2ca2ce62a604c'
+            '65c2b77693b9380c4e9c08977bed163932fbd72eaaa4dc666bb7310d426f6887')
 validpgpkeys=('474E22316ABF4785A88C6E8EA2C794A986419D8A'  # Tom Stellard <tstellar@redhat.com>
               'D574BD5D1D0E98895E3BF90044F2485E45D59042') # Tobias Hieta <tobias@hieta.se>
 
