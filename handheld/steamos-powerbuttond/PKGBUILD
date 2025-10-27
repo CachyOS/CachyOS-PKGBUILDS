@@ -2,8 +2,8 @@
 # Maintainer: Eric Naim <dnaim@cachyos.org>
 
 pkgname=steamos-powerbuttond
-pkgver=3.3
-pkgrel=2
+pkgver=3.4
+pkgrel=1
 arch=('x86_64')
 url="https://gitlab.steamos.cloud/jupiter/powerbuttond"
 pkgdesc="Power button daemon"
@@ -12,7 +12,7 @@ depends=('glibc' 'libevdev' 'systemd-libs')
 makedepends=('git')
 source=("git+https://gitlab.steamos.cloud/holo/powerbuttond.git#tag=v${pkgver}"
         "support-gamescope-session-plus.patch")
-sha512sums=('fb6c473d697ebd47932157aa1d2cff96f71df64beb0133b50e92987becd651c7b555046b38d472bf565cdba5a6ccbe80290b943638661ad45cda276a3706fefb'
+sha512sums=('c1d3b6dd45af518d106cfae99717d6d0321e2c120494d4cfef81849fd171ff8cffd8cf26cb8eeb44704ab6d601a73c370422c573dae34befa94ea6634c98cf3f'
             'cefc1a0270b0a5aede1091726274cd739cc17c3a6ae5a7ff74981985298b538dc1aae475ca374169ed2afd3d7c3e8d4bae5f002df950afe50a41b5ba3b8fe69f')
 provides=("powerbuttond")
 conflicts=("powerbuttond")
@@ -21,8 +21,8 @@ replaces=("powerbuttond")
 prepare() {
     cd "${srcdir}/powerbuttond"
 
-    # Fix power button not working after systemd v258
-    git cherry-pick -n 837e11b14869b1bf0ddc269c5626cd2d7a91d694
+    # Fix XBOX Rog ALLY ID
+    git cherry-pick -n 396e0480d8f2774c494df5acdada3b68984c70f1
 
     # Support gamescope-session-plus
     patch -Np1 -i ../support-gamescope-session-plus.patch
