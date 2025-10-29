@@ -6,7 +6,7 @@
 
 pkgname=steamos-manager
 pkgver=25.9.0
-pkgrel=2
+pkgrel=3
 pkgdesc='SteamOS Manager daemon for running various system management tasks'
 arch=('x86_64')
 url='https://store.steampowered.com/steamos/'
@@ -35,6 +35,10 @@ install='steamos-manager.install'
 
 prepare() {
     cd "${pkgname}"
+
+    # Add support for XBOX Rog Ally/X
+    git cherry-pick -n 0500f0eb84fafefa15fbd9028c2619646845bf2d
+
     patch -Np1 -i ../support-gamescope-session-steam.patch
     patch -Np1 -i ../msi-claw.patch
     patch -Np1 -i ../no-orca-service.patch
