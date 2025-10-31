@@ -15,8 +15,8 @@ pkgname=(
 # on a majorver change, don't forget to update the misc files that come along this PKGBUILD
 _majorver=21
 _minorver=0
-_securityver=8
-_updatever=9
+_securityver=9
+_updatever=10
 pkgver=${_majorver}.${_minorver}.${_securityver}.u${_updatever}
 pkgrel=2
  _git_tag=jdk-${_majorver}.${_minorver}.${_securityver}+${_updatever}
@@ -60,7 +60,7 @@ source=(
   freedesktop-jconsole.desktop
   freedesktop-jshell.desktop
 )
-sha256sums=('7042900bbbf9c603516c9cd7d2efdbecc13e75e00ce2eb99a5af04ae894e7656'
+sha256sums=('f2f9a21fd61ab3f63dac7e3d8747e849c9e0a1f14ed617c239ef9911755c756b'
             '72111743ab6ab36854b0c85a504172983715d0798fce10bc4e35689b7d15fd93'
             '8ecdf5c1605bafa58b3f7da615e6d8d3d943e3a2d3831930d6efa7815aacce07'
             '50fc0d677489b73d549df2f08d759d5f057f200adbbab83ea5e87456152ee03e')
@@ -69,6 +69,7 @@ case "${CARCH}" in
   x86_64|x86_64_v3|x86_64_v4) _JARCH='x86_64';;
   i686)   _JARCH='x86';;
   riscv64)_JARCH='riscv64';;
+  aarch64)_JARCH='aarch64';;
 esac
 
 _jvmdir=/usr/lib/jvm/java-${_majorver}-openjdk

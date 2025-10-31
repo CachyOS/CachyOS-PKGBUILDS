@@ -16,12 +16,12 @@ pkgname=(
 _majorver=25
 _minorver=0
 _securityver=1
-_updatever=36
-# pkgver=${_majorver}.${_minorver}.${_securityver}.u${_updatever}
-pkgver=${_majorver}.u${_updatever}
+_updatever=8
+pkgver=${_majorver}.${_minorver}.${_securityver}.u${_updatever}
+# pkgver=${_majorver}.u${_updatever}
 pkgrel=1
-# _git_tag=jdk-${_majorver}.${_minorver}.${_securityver}+${_updatever}
-_git_tag=jdk-${_majorver}+${_updatever}
+_git_tag=jdk-${_majorver}.${_minorver}.${_securityver}+${_updatever}
+# _git_tag=jdk-${_majorver}+${_updatever}
 arch=('x86_64')
 url='https://openjdk.java.net/'
 license=('LicenseRef-Java')
@@ -70,6 +70,7 @@ case "${CARCH}" in
   x86_64|x86_64_v3|x86_64_v4) _JARCH='x86_64';;
   i686)   _JARCH='x86';;
   riscv64)_JARCH='riscv64';;
+  aarch64) _JARCH='aarch64';;
 esac
 
 _jvmdir=/usr/lib/jvm/java-${_majorver}-openjdk

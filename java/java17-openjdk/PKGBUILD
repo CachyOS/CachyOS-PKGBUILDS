@@ -15,8 +15,8 @@ pkgname=(
 )
 _majorver=17
 _minorver=0
-_securityver=16
-_updatever=8
+_securityver=17
+_updatever=10
 pkgver=${_majorver}.${_minorver}.${_securityver}.u${_updatever}
 pkgrel=2
  _git_tag=jdk-${_majorver}.${_minorver}.${_securityver}+${_updatever}
@@ -63,7 +63,7 @@ source=(
   freedesktop-jconsole.desktop
   freedesktop-jshell.desktop
 )
-sha256sums=('4ac26de0efdf6021c373ccef0c63363cdb35024881901180f6341097085a9b43'
+sha256sums=('6c8015923a618a3568d8ca92ec8bd263116461b1a7320f9c4176b813e3ea95a6'
             '85c4742764590783160af74587a47269e6797fbdf17ec485c7644bd239adf61d'
             'abac1ab09a33a3654378bc69be5a7cf075263ab3ae9efec1eb25cf388e711bb7'
             'e7cce0ecf868f656d8dc2eb25ab82ab665526a0a28aba20f02632dd29962dac3')
@@ -72,6 +72,7 @@ case "${CARCH}" in
   x86_64|x86_64_v3|x86_64_v4) _JARCH='x86_64';;
   i686)   _JARCH='x86';;
   riscv64)_JARCH='riscv64';;
+  aarch64)_JARCH='aarch64';;
 esac
 
 _jvmdir=/usr/lib/jvm/java-${_majorver}-openjdk
@@ -105,14 +106,9 @@ _commondeps=(
 build() {
   cd ${_jdkdir}
 
-  NUM_PROC_OPT=''
-  MAKEFLAG_J=$(echo ${MAKEFLAGS} | sed -En 's/.*-j([0-9]+).*/\1/p')
-  if [ -n "${MAKEFLAG_J}" ]; then
-    # http://hg.openjdk.java.net/jdk10/jdk10/file/85e6cb013b98/make/InitSupport.gmk#l105
-    echo "Removing '-j${MAKEFLAG_J}' from MAKEFLAGS to prevent build fail. Passing it directly to ./configure."
-    export MAKEFLAGS=${MAKEFLAGS/-j${MAKEFLAG_J}/}
-    NUM_PROC_OPT="--with-num-cores=${MAKEFLAG_J}"
-  fi
+  # remove -j from MAKEFLAGS to prevent build fail
+  local MAKEFLAG_J=$(echo ${MAKEFLAGS} | sed -En 's/.*-j([0-9]+).*/\1/p')
+  export MAKEFLAGS=${MAKEFLAGS/-j${MAKEFLAG_J}/}
 
   # Avoid optimization of HotSpot to be lowered from O3 to O2
   local _CFLAGS="${CFLAGS//-O2/-O3} ${CPPFLAGS} -fcommon"
@@ -167,9 +163,7 @@ build() {
     --with-native-debug-symbols=internal \
     --enable-unlimited-crypto \
     --disable-warnings-as-errors \
-    --with-vendor-name="Arch Linux" \
-    ${NUM_PROC_OPT}
-    #--disable-javac-server
+    --with-vendor-name="Arch Linux"
 
   make images legacy-jre-image docs
 
