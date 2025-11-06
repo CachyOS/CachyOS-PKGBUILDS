@@ -3,7 +3,7 @@
 # Contributor: Balwinder S "bsd" Dheeman (bdheeman AT gmail.com)
 
 pkgname=dkms
-pkgver=3.2.2
+pkgver=3.3.0
 pkgrel=2
 pkgdesc='Dynamic Kernel Modules System'
 arch=('any')
@@ -36,15 +36,11 @@ source=("git+https://github.com/dell/dkms.git#tag=v$pkgver"
         'hook.remove'
         'hook.upgrade'
         'hook.sh')
-sha256sums=('e7846fb655ec08f1849f64ecd7e554c59ce1b29fd7d4ec894c4560acc05a1ea7'
-            'acdc5b45cc018cea04ee1aec56fd8fc3a2de62cf7bc41acf53b3790872120998'
-            '326515cc7d00f93760beb844434ca7442caf7a9424614aa95a8f6d1ab79e15df'
-            '4f8dff7716e73a8bba885638f12e3cdc9e87daec1896f75e700b981527e43870'
+sha256sums=('27af2579e5270ab1f789d3bb6279c8d9717ed39cc67df8e7a6756a55724c1ee2'
+            'da2dd53bdb427c3ffbe793fd05f898d8a0545e6dbd346c85fad1717b0f838c62'
+            '497422e72b2f10a71caae40c44a07b215425d393acb365700e38944e09f9a554'
+            'cc04280e8eb095f4950f5e3c6b2997fbc8d5862d79c5ae29d5943b8ac204d0d4'
             'c1b4a4e2e4e0e0e59ee0887403e79d60b209f3878dbbec6612573f13b90cce01')
-
-prepare() {
-  cd $pkgname
-}
 
 package() {
   # alpm hooks
