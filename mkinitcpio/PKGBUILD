@@ -5,7 +5,7 @@
 
 pkgname=mkinitcpio
 pkgver=40
-pkgrel=2
+pkgrel=3
 pkgdesc="Modular initramfs image creation utility"
 arch=('any')
 url='https://gitlab.archlinux.org/archlinux/mkinitcpio/mkinitcpio'
@@ -22,11 +22,14 @@ optdepends=('xz: Use lzma or xz compression for the initramfs image'
             'systemd-ukify: alternative UKI generator')
 provides=('initramfs')
 backup=('etc/mkinitcpio.conf')
-source=("https://sources.archlinux.org/other/$pkgname/$pkgname-$pkgver.tar.xz"{,.sig})
+source=("https://sources.archlinux.org/other/$pkgname/$pkgname-$pkgver.tar.xz"{,.sig}
+        "badarraysubscript.patch")
 sha512sums=('f74a1cee5ea24b8f57d84952e92048548b6cba2138c19d9a05e76051f4765994cd5b1e41363d90b3a9718e0844268cc4046cd02dcecb32e38948ba90ecceb17f'
-            'SKIP')
+            'SKIP'
+            '1c2a5124d4c21a195558bdeead91922c76891ceaeb59dbec467527a17000340e136e60b20f10f5b25a3ae44ab0316d0a94b2a3dc0e29ccd8b31a6a38b74f680d')
 b2sums=('c683e795e0d058567d86905e0fe14086a675e0156d11f965cc335da9361ce1809659906b0d263c2bb368f4049fc94715cfb8981414d57cfd3f877816a75ac14d'
-        'SKIP')
+        'SKIP'
+        'b11b7e69583fb078a5332458b525e975dfe0e9fed014844aecc8a013ff072110162a71628593dd87a0b808ece1a6320aff882c2180235b89841e0d7eee3e2db3')
 validpgpkeys=('ECCAC84C1BA08A6CC8E63FBBF22FB1D78A77AEAB'    # Giancarlo Razzolini
               'C100346676634E80C940FB9E9C02FF419FECBE16')   # Morten Linderud
 
@@ -46,4 +49,8 @@ check() {
 package() {
   cd $pkgname-$pkgver
   DESTDIR="$pkgdir" meson install -C ../build
+}
+
+prepare() {
+    patch -d $pkgname-$pkgver -Np1 -i ../badarraysubscript.patch
 }
