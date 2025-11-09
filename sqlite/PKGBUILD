@@ -38,9 +38,6 @@ prepare() {
   # Support system-wide template (located at /usr/share/lemon/lempar.c) in lemon.
   patch -Np1 -i ../sqlite-lemon-system-template.patch
 
-  # Fix PGO build due
-  patch -Np1 -i ../remove-header-in-command.patch
-
   #autoreconf -vfi
 }
 
@@ -190,10 +187,6 @@ package_sqlite-tcl() {
 
   install -m755 -d "${pkgdir}"/usr/bin
   install -m755 sqlite3_checker sqltclsh "${pkgdir}"/usr/bin/
-
-  # install manpage
-  install -m755 -d "${pkgdir}"/usr/share/man/mann
-  install -m644 "${srcdir}"/sqlite-src-$_srcver/autoconf/tea/doc/sqlite3.n "${pkgdir}"/usr/share/man/mann/
 
   # license
   install -D -m644 "${srcdir}"/license.txt "${pkgdir}"/usr/share/licenses/${pkgname}/license.txt
