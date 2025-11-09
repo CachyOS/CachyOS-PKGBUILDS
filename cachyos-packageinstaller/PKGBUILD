@@ -2,7 +2,7 @@
 
 pkgname=cachyos-packageinstaller
 pkgver=1.5.1
-pkgrel=1
+pkgrel=2
 pkgdesc="Simple Software Application Package Installer for CachyOS which helps setting up & installing applications"
 arch=(aarch64 x86_64)
 url="https://github.com/cachyos/packageinstaller"
@@ -10,11 +10,20 @@ license=(GPL-3.0-or-later)
 depends=('qt6-base' 'polkit' 'curl')
 makedepends=('cmake' 'ninja' 'git' 'polkit-qt6' 'qt6-tools' 'cargo' 'lld' 'clang' 'llvm')
 groups=('cachyos')
-source=("packageinstaller::git+$url.git#tag=v${pkgver}?signed")
-sha256sums=('e48486f633bf474597f47124e1917d3e57d409466a14b5a822ca8cfda2dd2e06')
+source=("packageinstaller::git+$url.git#tag=v${pkgver}?signed"
+        https://github.com/CachyOS/packageinstaller/commit/2f28234b9c37d24256ec793371f50eeb8dae8a96.patch)
+sha256sums=('e48486f633bf474597f47124e1917d3e57d409466a14b5a822ca8cfda2dd2e06'
+            '91751c1c540f610203d1dbc03e6a5e44afaac6a0274e0cab30a9d7325a45c089')
 validpgpkeys=(
   'B1B70BB1CD56047DEF31DE2EB62C3D10C54D5DA9'  # Vladislav Nepogodin <nepogodin.vlad@gmail.com>
 )
+
+prepare() {
+  cd ${srcdir}/packageinstaller
+
+  # patch for pacman 7.1.0
+  patch -Np1 -i ../2f28234b9c37d24256ec793371f50eeb8dae8a96.patch
+}
 
 build() {
   cd ${srcdir}/packageinstaller
