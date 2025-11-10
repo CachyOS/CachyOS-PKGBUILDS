@@ -1,19 +1,29 @@
-From 1060eacc5d30cc9d7d3471d934e287c302572046 Mon Sep 17 00:00:00 2001
+From e1271142a2d1cc8484a54c3be89bcdfa9f044b8c Mon Sep 17 00:00:00 2001
 From: Vladislav Nepogodin <nepogodin.vlad@gmail.com>
-Date: Mon, 10 Nov 2025 04:10:27 +0400
+Date: Mon, 10 Nov 2025 04:14:47 +0400
 Subject: [PATCH] Add support for pacman 7.1.0
 
 ---
- lib/pacutils/config.c | 19 +++++++++++++------
+ lib/pacutils/config.c | 22 +++++++++++++++-------
  lib/pacutils/config.h |  6 ++++--
  src/pacconf.c         |  9 ++++++---
- 3 files changed, 23 insertions(+), 11 deletions(-)
+ 3 files changed, 25 insertions(+), 12 deletions(-)
 
 diff --git a/lib/pacutils/config.c b/lib/pacutils/config.c
-index 9f306a0..aaf7127 100644
+index 9f306a0..99290b0 100644
 --- a/lib/pacutils/config.c
 +++ b/lib/pacutils/config.c
-@@ -268,7 +268,8 @@ pu_config_t *pu_config_new(void) {
+@@ -56,7 +56,8 @@ struct _pu_config_setting {
+   {"DisableDownloadTimeout", PU_CONFIG_OPTION_DISABLEDOWNLOADTIMEOUT},
+   {"ParallelDownloads",      PU_CONFIG_OPTION_PARALLELDOWNLOADS},
+ 
+-  {"DisableSandbox", PU_CONFIG_OPTION_DISABLESANDBOX},
++  {"DisableSandboxFilesystem", PU_CONFIG_OPTION_DISABLESANDBOXFILESYSTEM},
++  {"DisableSandboxSyscalls", PU_CONFIG_OPTION_DISABLESANDBOXSYSCALLS},
+   {"DownloadUser",   PU_CONFIG_OPTION_DOWNLOADUSER},
+ 
+   {"SigLevel",        PU_CONFIG_OPTION_SIGLEVEL},
+@@ -268,7 +269,8 @@ pu_config_t *pu_config_new(void) {
    config->color = PU_CONFIG_BOOL_UNSET;
    config->noprogressbar = PU_CONFIG_BOOL_UNSET;
    config->disabledownloadtimeout = PU_CONFIG_BOOL_UNSET;
@@ -23,7 +33,7 @@ index 9f306a0..aaf7127 100644
    config->ilovecandy = PU_CONFIG_BOOL_UNSET;
    config->usesyslog = PU_CONFIG_BOOL_UNSET;
    config->verbosepkglists = PU_CONFIG_BOOL_UNSET;
-@@ -393,7 +394,8 @@ alpm_handle_t *pu_initialize_handle_from_config(pu_config_t *config) {
+@@ -393,7 +395,8 @@ alpm_handle_t *pu_initialize_handle_from_config(pu_config_t *config) {
    alpm_option_set_architectures(handle, config->architectures);
    alpm_option_set_disable_dl_timeout(handle, config->disabledownloadtimeout);
  
@@ -33,7 +43,7 @@ index 9f306a0..aaf7127 100644
    alpm_option_set_sandboxuser(handle, config->downloaduser);
  
    alpm_option_set_default_siglevel(handle, config->siglevel);
-@@ -526,7 +528,8 @@ int pu_config_resolve(pu_config_t *config) {
+@@ -526,7 +529,8 @@ int pu_config_resolve(pu_config_t *config) {
    SETBOOL(config->color);
    SETBOOL(config->noprogressbar);
    SETBOOL(config->disabledownloadtimeout);
@@ -43,7 +53,7 @@ index 9f306a0..aaf7127 100644
    SETBOOL(config->ilovecandy);
    SETBOOL(config->usesyslog);
    SETBOOL(config->verbosepkglists);
-@@ -571,7 +574,8 @@ void pu_config_merge(pu_config_t *dest, pu_config_t *src) {
+@@ -571,7 +575,8 @@ void pu_config_merge(pu_config_t *dest, pu_config_t *src) {
    MERGEBOOL(dest->noprogressbar, src->noprogressbar);
    MERGEBOOL(dest->ilovecandy, src->ilovecandy);
    MERGEBOOL(dest->disabledownloadtimeout, src->disabledownloadtimeout);
@@ -53,7 +63,7 @@ index 9f306a0..aaf7127 100644
  
    MERGEVAL(dest->cleanmethod, src->cleanmethod);
    MERGEVAL(dest->paralleldownloads, src->paralleldownloads);
-@@ -905,8 +909,11 @@ int pu_config_reader_next(pu_config_reader_t *reader) {
+@@ -905,8 +910,11 @@ int pu_config_reader_next(pu_config_reader_t *reader) {
          case PU_CONFIG_OPTION_DISABLEDOWNLOADTIMEOUT:
            config->disabledownloadtimeout = 1;
            break;
