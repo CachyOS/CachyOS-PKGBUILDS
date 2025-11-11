@@ -60,6 +60,16 @@ build() {
   export CFLAGS+=' -ffat-lto-objects'
   export CXXFLAGS+=' -ffat-lto-objects'
 
+  # https://github.com/facebook/zstd/issues/3819
+  # XXH64_update can be vectorized with AVX-512, but this is disabled by default
+  # due to Skylake's high latency for AVX-512 instructions. Re-enable this for
+  # Znver4, since unlike Intel u-archs, it doesn't suffer from high AVX-512 latency.
+  xxh64_vectorize=''
+
+  if  [[ "$CARCH" == "znver4" ]]; then
+    xxh64_vectorize='-DXXH_ENABLE_AUTOVECTORIZE'
+  fi
+
   # First build pass: Generate profile
   cmake -S build/cmake -B build -G Ninja \
     -DCMAKE_BUILD_TYPE=None \
@@ -71,6 +81,7 @@ build() {
       -DZSTD_BUILD_STATIC=OFF \
       -DZSTD_BUILD_TESTS=ON \
       -DZSTD_PROGRAMS_LINK_SHARED=ON \
+      ${xxh64_vectorize} \
       -DPGO_GENERATE=ON \
       -DPGO_USE=OFF
   cmake --build build
