@@ -102,18 +102,19 @@ rate_repository_mirrors() {
     fi
 }
 
-# Special check for RU region where CDN77 mirror gets timeouted due to
-# blockings that mirror is applied by default on the ISO
-check_ru_location() {
-    curl -sL --connect-timeout 5 https://cdn77.com &>/dev/null
-    return $?
-}
+# Prefer mirrors that are geographically close, especially in countries that
+# have regional blockages
+country="$(curl --connect-timeout 10 -sSL 'https://geoip.kde.org/v1/ubiquity' | grep -Po '<CountryCode>\K([A-Z]{2})')"
 
-# rate archlinux mirrors anyway
+if [ -n "$country" ]; then
+    export RATE_MIRRORS_ENTRY_COUNTRY="$country"
+fi
+
+# Rate Arch Linux mirrors anyway
 rate_repository_mirrors arch "${MIRRORS_DEFAULT_DIR}/mirrorlist"
 
 # Always insert CDN77 mirror to the start, unless RU region is detected
-if check_ru_location -ne 0; then
+if [ "$country" != "RU" ]; then
     sed -i '1iServer = https://archlinux.cachyos.org/repo/$repo/os/$arch' "${MIRRORS_DEFAULT_DIR}/mirrorlist"
 fi
 
