@@ -1,0 +1,88 @@
+# Maintainer: Peter Jung ptr1337 <admin@ptr1337.dev>
+# Maintainer: Piotr Górski <lucjan.lucjanov@gmail.com>
+
+pkgname=scx-tools
+_gitname=scx-loader
+pkgver=1.0.18
+pkgrel=1.1
+pkgdesc='scx_loader: A DBUS Interface for Managing sched_ext Schedulers'
+url='https://github.com/sched-ext/scx-loader'
+arch=('x86_64')
+license=('GPL-2.0-only')
+depends=(
+  scx-scheds
+)
+makedepends=(
+  cargo
+  clang
+  git
+  llvm
+  llvm-libs
+)
+options=(!lto)
+source=("git+https://github.com/sched-ext/scx-loader?signed#tag=v$pkgver")
+sha256sums=('8ed2ccdf694b3478be0fa8c1d6b38bddccd54c58e2c6f4477f654ac634d34f71')
+validpgpkeys=(
+  B1B70BB1CD56047DEF31DE2EB62C3D10C54D5DA9  # Vladislav Nepogodin <nepogodin.vlad@gmail.com>
+  399521CE9D6D65B35EEF0F8C79AFA05ABDB26C5A  # Piotr Gorski <lucjan.lucjanov@gmail.com>
+)
+
+_backports=(
+)
+
+_reverts=(
+)
+
+prepare() {
+  cd $_gitname
+
+  local _c _l
+   for _c in "${_backports[@]}"; do
+     if [[ "${_c}" == *..* ]]; then _l='--reverse'; else _l='--max-count=1'; fi
+     git log --oneline "${_l}" "${_c}"
+     git cherry-pick --mainline 1 --no-commit "${_c}"
+   done
+   for _c in "${_reverts[@]}"; do
+     if [[ "${_c}" == *..* ]]; then _l='--reverse'; else _l='--max-count=1'; fi
+     git log --oneline "${_l}" "${_c}"
+     git revert --mainline 1 --no-commit "${_c}"
+   done
+
+  local src
+   for src in "${source[@]}"; do
+     src="${src%%::*}"
+     src="${src##*/}"
+     [[ $src = *.patch ]] || continue
+     echo "Applying patch $src..."
+     patch -Np1 < "../$src"
+   done
+
+  export RUSTUP_TOOLCHAIN=stable
+  cargo fetch --locked --target "$(rustc -vV | sed -n 's/host: //p')"
+}
+
+build() {
+  cd $_gitname
+  export RUSTUP_TOOLCHAIN=stable
+  export CARGO_TARGET_DIR=target
+  cargo build --release --frozen --all-features --workspace
+}
+
+check() {
+  cd $_gitname
+  export RUSTUP_TOOLCHAIN=stable
+  cargo test frozen --all-features --workspace
+}
+
+package() {
+  cd $_gitname
+
+  # Install all built executables (skip .so and .d files)
+  find target/release \
+    -maxdepth 1 -type f -executable ! -name '*.so' ! -name 'xtask' \
+    -exec install -Dm755 -t "$pkgdir/usr/bin/" {} +
+
+  # Install runtime assets via xtask
+  # (systemd units, D-Bus services, configs, sample files)
+  ./target/release/xtask install --destdir "$pkgdir"
+}
