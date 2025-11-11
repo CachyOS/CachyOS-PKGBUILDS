@@ -120,6 +120,12 @@ fi
 
 rate_repository_mirrors cachyos "${MIRRORS_DEFAULT_DIR}/cachyos-mirrorlist"
 
+# Always insert local mirrors as first due to blockings in RU region
+if [ "$country" = "RU" ]; then
+    sed -i '1iServer = https://archlinux.gay/cachy/repo/$arch/$repo' "${MIRRORS_DEFAULT_DIR}/cachyos-mirrorlist"
+    sed -i '2iServer = https://mirror.yandex.ru/cachyos/repo/$arch/$repo' "${MIRRORS_DEFAULT_DIR}/cachyos-mirrorlist"
+fi
+
 cp -f --backup=simple --suffix="-backup" "${MIRRORS_DEFAULT_DIR}/cachyos-mirrorlist" \
     "${MIRRORS_DEFAULT_DIR}/cachyos-v3-mirrorlist"
 cp -f --backup=simple --suffix="-backup" "${MIRRORS_DEFAULT_DIR}/cachyos-mirrorlist" \
