@@ -6,6 +6,7 @@ pref("spellchecker.dictionary_path", "/usr/share/hunspell");
 
 // Disable default browser checking.
 pref("browser.shell.checkDefaultBrowser", false);
+pref("skipDefaultBrowserCheckOnFirstRun", false, locked);
 
 // Don't disable extensions in the application directory
 pref("extensions.autoDisableScopes", 11);
@@ -16,6 +17,8 @@ pref("media.webrtc.hw.h264.enabled", true);
 pref("media.gpu-process-decoder", true);
 
 // Performance & Graphics Tweaks
+pref("browser.cache.disk.enable", false);
+pref("browser.cache.memory.capacity", 1048576);
 pref("gfx.canvas.accelerated.cache-items", 32768);
 pref("gfx.canvas.accelerated.cache-size", 4096);
 pref("gfx.content.skia-font-cache-size", 80);
@@ -25,7 +28,6 @@ pref("gfx.webrender.program-binary-disk", true);
 pref("layers.gpu-process.enabled", true); // Use dedicated GPU process
 
 // JavaScript & Process Tweaks
-pref("dom.ipc.forkserver.enable", true); // Enable Linux fork server for new processes
 pref("javascript.options.baselinejit.threshold", 50); // Lower JIT threshold
 pref("javascript.options.ion.threshold", 500); // Lower Ion threshold
 
@@ -46,9 +48,28 @@ pref("app.normandy.enabled", false, locked);
 pref("breakpad.reportURL", "", locked);
 pref("browser.contentanalysis.default_result", 0, locked);
 pref("browser.contentanalysis.enabled", false, locked);
+pref("browser.contentblocking.report.hide_vpn_banner", true, locked);
+pref("browser.contentblocking.report.lockwise.enabled", false);
+pref("browser.contentblocking.report.mobile-android.url", "", locked);
+pref("browser.contentblocking.report.mobile-ios.url", "", locked);
+pref("browser.contentblocking.report.monitor.enabled", false);
+pref("browser.contentblocking.report.proxy.enabled", false);
+pref("browser.contentblocking.report.proxy_extension.url", "", locked);
+pref("browser.contentblocking.report.show_mobile_app", false, locked);
+pref("browser.contentblocking.report.vpn-android.url", "", locked);
+pref("browser.contentblocking.report.vpn-ios.url", "", locked);
+pref("browser.contentblocking.report.vpn-promo.url", "", locked);
+pref("browser.contentblocking.report.vpn.url", "", locked);
 pref("browser.crashReports.unsubmittedCheck.autoSubmit2", false, locked);
+pref("browser.dataFeatureRecommendations.enabled", false, locked);
 pref("browser.discovery.enabled", false, locked);
+pref("browser.ipProtection.enabled", false, locked);
+pref("browser.ipProtection.guardian.endpoint", "", locked);
+pref("browser.ipProtection.variant", "", locked);
+pref("browser.ml.chat.enabled", false, locked);
+pref("browser.ml.chat.page", false, locked);
 pref("browser.ml.enable", false, locked);
+pref("browser.ml.linkPreview.enabled", false, locked);
 pref("browser.newtabpage.activity-stream.feeds.aboutpreferences", false, locked);
 pref("browser.newtabpage.activity-stream.feeds.adsfeed", false, locked);
 pref("browser.newtabpage.activity-stream.feeds.discoverystreamfeed", false, locked);
@@ -57,6 +78,7 @@ pref("browser.newtabpage.activity-stream.feeds.recommendationprovider", false, l
 pref("browser.newtabpage.activity-stream.feeds.system.topsites", false, locked);
 pref("browser.newtabpage.activity-stream.feeds.system.topstories", false, locked);
 pref("browser.newtabpage.activity-stream.feeds.topsites", false, locked);
+pref("browser.newtabpage.activity-stream.showSponsoredCheckboxes", false, locked);
 pref("browser.newtabpage.activity-stream.system.showSponsored", false, locked);
 pref("browser.newtabpage.activity-stream.telemetry.structuredIngestion.endpoint", 0, locked);
 pref("browser.newtabpage.activity-stream.telemetry.ut.event", false, locked);
@@ -66,9 +88,19 @@ pref("browser.newtabpage.activity-stream.unifiedAds.adsFeed.tiles.enabled",	fals
 pref("browser.newtabpage.activity-stream.unifiedAds.endpoint", "", locked);
 pref("browser.newtabpage.activity-stream.unifiedAds.spocs.enabled",	false, locked);
 pref("browser.newtabpage.activity-stream.unifiedAds.tiles.enabled", false, locked);
+pref("browser.newtabpage.enabled", false, locked);
 pref("browser.places.interactions.enabled", false, locked);
+pref("browser.privatebrowsing.vpnpromourl", "", locked);
+pref("browser.promo.cookiebanners.enabled", false, locked);
+pref("browser.promo.focus.enabled", false, locked);
+pref("browser.promo.pin.enabled", false, locked);
+pref("browser.protections_panel.infoMessage.seen", true);
+pref("browser.send_to_device_locales", "");
 pref("browser.tabs.crashReporting.sendReport", false, locked);
+pref("browser.tabs.groups.smart.userEnabled", false, locked);
 pref("browser.uitour.enabled", false, locked);
+pref("browser.uitour.url", "", locked);
+pref("browser.urlbar.quicksuggest.enabled", false);
 pref("browser.urlbar.suggest.addons", false, locked);
 pref("browser.urlbar.suggest.quicksuggest.fakespot", false, locked);
 pref("browser.urlbar.suggest.quicksuggest.nonsponsored", false, locked);
@@ -76,7 +108,9 @@ pref("browser.urlbar.suggest.quicksuggest.sponsored", false, locked);
 pref("browser.urlbar.suggest.quicksuggest.topsites", false, locked);
 pref("browser.urlbar.suggest.trending", false, locked);
 pref("browser.vpn_promo.enabled", false, locked);
+pref("browser.vpn_promo.enabled", false, locked);
 pref("captivedetect.canonicalURL", "", locked);
+pref("cookiebanners.ui.desktop.showCallout", false);
 pref("devtools.debugger.remote-enabled", false, locked);
 pref("dom.private-attribution.submission.enabled", false, locked);
 pref("dom.push.enabled", false, locked);
@@ -86,14 +120,28 @@ pref("extensions.blocklist.enabled", false, locked);
 pref("extensions.getAddons.showPane", false, locked);
 pref("extensions.htmlaboutaddons.recommendations.enabled", false, locked);
 pref("extensions.pocket.enabled", false, locked);
+pref("extensions.webcompat-reporter.enabled", false ,locked);
 pref("media.gmp-gmpopenh264.autoupdate", false, locked);
+pref("signon.firefoxRelay.feature", "disabled", locked);
 
 // Reduces the CLRite base refresh period in the lack of a persistent
 // background push service
-pref("security.OCSP.enabled", 0);
+pref("security.OCSP.enabled", 0, locked);
 pref("security.pki.crlite_mode", 2, locked);
 pref("security.remote_settings.crlite_filters.enabled", true, locked);
 pref("services.settings.poll_interval", 300);
+
+// Disable DRM content support
+pref("browser.eme.ui.enabled", false);
+pref("media.eme.enabled", false);
+
+// Disable OpenH264 support
+// Reason: Mozilla uses extremely outdated and vulnerable versions
+pref("media.ffmpeg.allow-openh264", false);
+pref("media.gmp-gmpopenh264.enabled", false);
+pref("media.gmp-gmpopenh264.provider.enabled", false);
+pref("media.gmp-gmpopenh264.visible", false);
+pref("media.webrtc.hw.h264.enabled", true);
 
 // Remove telemetry
 pref("browser.contentblocking.report.lockwise.enabled", false, locked);
@@ -104,6 +152,9 @@ pref("browser.newtabpage.activity-stream.showSponsored", false, locked);
 pref("browser.newtabpage.activity-stream.showSponsoredTopSites", false, locked);
 pref("browser.newtabpage.activity-stream.telemetry", false, locked);
 pref("browser.newtabpage.activity-stream.telemetry.ut.events", false, locked);
+pref("browser.newtabpage.activity-stream.trendingSearch.blockedAds", "", locked);
+pref("browser.newtabpage.activity-stream.trendingSearch.enabled", false, locked);
+pref("browser.newtabpage.activity-stream.trendingSearch.variant", "", locked);
 pref("browser.ping-centre.telemetry", false, locked);
 pref("browser.search.serpEventTelemetryCategorization.enabled", false, locked);
 pref("browser.search.serpEventTelemetryCategorization.regionEnabled", false, locked);
@@ -119,11 +170,14 @@ pref("browser.urlbar.yelp.featureGate", false, locked);
 pref("datareporting.healthreport.uploadEnabled", false, locked);
 pref("datareporting.policy.dataSubmissionEnabled", false, locked);
 pref("datareporting.usage.uploadEnabled", false, locked);
+pref("extensions.addonAbuseReport.url", "", locked);
 pref("extensions.getAddons.cache.enabled", false, locked);
 pref("network.captive-portal-service.enabled", false, locked);
 pref("network.connectivity-service.enabled", false, locked);
+pref("network.traffic_analyzer.enabled", false, locked);
 pref("network.trr.confirmation_telemetry_enabled", false, locked);
 pref("security.certerrors.recordEventTelemetry", false, locked);
+pref("toolkit.contentRelevancy.enabled", false, locked);
 pref("toolkit.coverage.endpoint.base", "", locked);
 pref("toolkit.coverage.opt-out", true, locked);
 pref("toolkit.telemetry.archive.enabled", false, locked);
@@ -196,9 +250,12 @@ pref("network.http.pacing.requests.enabled", false); //Disable pacing requests
 
 // Privacy hardening
 pref("browser.contentblocking.category", "strict"); // https://blog.mozilla.org/security/2021/02/23/total-cookie-protection/
-pref("browser.download.autohideButton", false, locked); //do not hide download button automatically
 pref("browser.download.start_downloads_in_tmp_dir", true, locked); //start downloads in temp
+pref("browser.formfill.enable", false);
 pref("dom.security.https_only_mode", true, locked); // only allow https in all windows, including private browsing
+pref("media.autoplay.default", 5);
+pref("network.cookie.cookieBehavior.optInPartitioning", true);
+pref("network.cookie.cookieBehavior.optInPartitioning.pbmode", true);
 pref("network.predictor.enable-prefetch", false); // Disable speculative website loading
 pref("network.predictor.enabled", false); // Disable speculative website loading
 pref("network.prefetch-next", false); // https://developer.mozilla.org/en-US/docs/Glossary/Prefetch
