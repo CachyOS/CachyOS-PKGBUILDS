@@ -6,8 +6,8 @@
 # toolchain build order: linux-api-headers->glibc->binutils->gcc->glibc->binutils->gcc
 
 pkgname=binutils
-pkgver=2.45+r29+g2b2e51a31ec7
-_commit=2b2e51a31ec7c48ef830f7e8415b42d4b95e335a
+pkgver=2.45.1
+_commit=48324fde1e284293dd3d570dba597cb644921c92
 pkgrel=2
 pkgdesc='A set of programs to assemble and manipulate binary and object files'
 arch=(x86_64)
@@ -57,7 +57,7 @@ source=(
   revert-strip-2.patch
   0001-strip-Don-t-treat-fat-IR-objects-as-plugin-object.patch
 )
-sha256sums=('2ff220ec18e2dd9462b5fdb788f46283cc51de4f028d9137eab5a5dd5b7edc36'
+sha256sums=('3e2351760a32f1739f0683da1d4b43e74b42e117867225b88c41c07af6aeec9e'
             '2d430b66f84a19c154725ec535280c493be1d34f1a90f95208dce02fecd0e4e4'
             'c783401be72ebfc954efe5c3e5f151ec2c6083757562cd43b3af10638008defa'
             'b91a57731c699b415f477a3a4f0ec0fdab68e6caee6f8e57e8b4d0877dc1580d'
@@ -66,7 +66,7 @@ validpgpkeys=(3A24BC1E8FB409FA9F14371813FCEF89DD9E3C4F)
 
 pkgver() {
   cd binutils-gdb
-  git describe --abbrev=12 --tags | sed 's/[^-]*-//;s/[^-]*-/&r/;s/-/+/g;s/_/./'
+  git describe --abbrev=12 --tags | sed 's/[^-]*-//;s/[^-]*-/&r/;s/-/+/g;s/_/./g'
 }
 
 prepare() {
@@ -83,9 +83,6 @@ prepare() {
   # unsupported targets.  This allows the binutils to be built with
   # BPF support enabled.
   patch -Np1 < ../gold-warn-unsupported.patch
-
-  # fix https://sourceware.org/bugzilla/show_bug.cgi?id=33246
-  patch -Np1 < ../0001-strip-Don-t-treat-fat-IR-objects-as-plugin-object.patch
 
   # AutoFDO packaging is currently broken, since strip is failing
   # Rever the commit and wait till upstream fixes this
