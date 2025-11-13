@@ -108,7 +108,6 @@ pref("browser.urlbar.suggest.quicksuggest.sponsored", false, locked);
 pref("browser.urlbar.suggest.quicksuggest.topsites", false, locked);
 pref("browser.urlbar.suggest.trending", false, locked);
 pref("browser.vpn_promo.enabled", false, locked);
-pref("browser.vpn_promo.enabled", false, locked);
 pref("captivedetect.canonicalURL", "", locked);
 pref("cookiebanners.ui.desktop.showCallout", false);
 pref("devtools.debugger.remote-enabled", false, locked);
