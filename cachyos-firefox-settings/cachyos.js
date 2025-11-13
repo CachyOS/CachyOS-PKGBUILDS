@@ -130,18 +130,6 @@ pref("security.pki.crlite_mode", 2, locked);
 pref("security.remote_settings.crlite_filters.enabled", true, locked);
 pref("services.settings.poll_interval", 300);
 
-// Disable DRM content support
-pref("browser.eme.ui.enabled", false);
-pref("media.eme.enabled", false);
-
-// Disable OpenH264 support
-// Reason: Mozilla uses extremely outdated and vulnerable versions
-pref("media.ffmpeg.allow-openh264", false);
-pref("media.gmp-gmpopenh264.enabled", false);
-pref("media.gmp-gmpopenh264.provider.enabled", false);
-pref("media.gmp-gmpopenh264.visible", false);
-pref("media.webrtc.hw.h264.enabled", true);
-
 // Remove telemetry
 pref("browser.contentblocking.report.lockwise.enabled", false, locked);
 pref("browser.contentblocking.report.monitor.enabled", false, locked);
