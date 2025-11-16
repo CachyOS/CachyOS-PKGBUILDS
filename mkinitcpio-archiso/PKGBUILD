@@ -1,0 +1,53 @@
+# Maintainer: David Runge <dvzrv@archlinux.org>
+# Contributor: Vladislav Nepogodin (vnepogodin) <vnepogodin@cachyos.org>
+
+pkgname=mkinitcpio-archiso
+pkgver=72
+pkgrel=2
+pkgdesc='Initcpio scripts used by archiso'
+arch=(any)
+url='https://gitlab.archlinux.org/archlinux/mkinitcpio/mkinitcpio-archiso'
+license=(GPL-3.0-or-later)
+depends=(
+  bash
+  device-mapper
+  mkinitcpio
+)
+makedepends=(git)
+checkdepends=(
+  shellcheck
+  shfmt
+)
+optdepends=(
+  'curl: for PXE over HTTP'
+  'gnupg: for PGP signature verification of rootfs over PXE'
+  'mkinitcpio-nfs-utils: for PXE over NFS'
+  'nbd: for PXE over NBD'
+  'openssl: for CMS signature verification of rootfs over PXE'
+  'pv: for status display during copy to RAM'
+)
+source=(git+$url.git?signed#tag=v$pkgver
+        https://gitlab.archlinux.org/archlinux/mkinitcpio/mkinitcpio-archiso/-/commit/fd439b4a47766a629a87607821d99fa6f9652e67.patch)
+sha512sums=('a7a639623f56111d1792520754c69f5e63641934cae7c46ad3cf9412333b3060bb0d6cddfba32be149a26a13a2adcff972bc90b0b6bca36b7be2ea5663bd35c6'
+            'a8e87c2bf96e65fe0021e7b12c3e29679d3c3b0bab84a9268fb55f3bc3c645bb3404a659b98c2c4b4ffc19f764ea1fda377caba1f78f0ce074cd893a9c59d6ac')
+b2sums=('eb0412bfebc6fa4fe4fa4626b8ddeaa4d492cf6bef50862d095a43462eb7f8fbdea5161b1154505dcece7b4525cd55e36938df3714305a969ca9c4d0b6489881'
+        'f095470596427827f642ae783d12627976bcfd1598859389fd660da9dba74ee3d6e2ebe6726129c7a951e336d2723c83efa1cebdee3f76223257e94d0a95cf99')
+validpgpkeys=(
+  '991F6E3F0765CF6295888586139B09DA5BF0D338'  # David Runge <dvzrv@archlinux.org>
+  'BB8E6F1B81CF0BB301D74D1CBF425A01E68B38EF'  # nl6720 <nl6720@archlinux.org>
+)
+
+prepare() {
+  cd $pkgname
+
+  # Drop udev rule that does no longer exist, changes were made in mkinitcpio 40-1 & lvm2 2.03.36-2.
+  patch -Np1 -i ../fd439b4a47766a629a87607821d99fa6f9652e67.patch
+}
+
+check() {
+  make -k check -C $pkgname
+}
+
+package() {
+  make DESTDIR="$pkgdir/" PREFIX=/usr install -C $pkgname
+}
