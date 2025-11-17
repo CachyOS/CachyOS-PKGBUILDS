@@ -1,0 +1,70 @@
+From 12de3ff5b39b58a2ac8996b8b745a20396137541 Mon Sep 17 00:00:00 2001
+From: Vladislav Nepogodin <nepogodin.vlad@gmail.com>
+Date: Tue, 18 Nov 2025 02:23:59 +0400
+Subject: [PATCH] deps: use latest alpm crate commit
+
+---
+ Cargo.lock | 9 +++------
+ Cargo.toml | 8 ++++++--
+ 2 files changed, 9 insertions(+), 8 deletions(-)
+
+diff --git a/Cargo.lock b/Cargo.lock
+index 8fe4c52..93df5da 100644
+--- a/Cargo.lock
++++ b/Cargo.lock
+@@ -14,8 +14,7 @@ dependencies = [
+ [[package]]
+ name = "alpm"
+ version = "4.0.3"
+-source = "registry+https://github.com/rust-lang/crates.io-index"
+-checksum = "e7af97d07874ead330d0d636e0953bfdb05973010bbf0ed996a600c283bcd05c"
++source = "git+https://github.com/archlinux/alpm.rs?rev=54b8bdcdce2b04d12a180f1fd4b304cc8cf4cc1a#54b8bdcdce2b04d12a180f1fd4b304cc8cf4cc1a"
+ dependencies = [
+  "alpm-sys",
+  "bitflags",
+@@ -24,8 +23,7 @@ dependencies = [
+ [[package]]
+ name = "alpm-sys"
+ version = "4.0.3"
+-source = "registry+https://github.com/rust-lang/crates.io-index"
+-checksum = "b380d61cb56db2db0fc88072b77e760a107691521ac83012379d97d6d6e6f7ac"
++source = "git+https://github.com/archlinux/alpm.rs?rev=54b8bdcdce2b04d12a180f1fd4b304cc8cf4cc1a#54b8bdcdce2b04d12a180f1fd4b304cc8cf4cc1a"
+ dependencies = [
+  "pkg-config",
+ ]
+@@ -33,8 +31,7 @@ dependencies = [
+ [[package]]
+ name = "alpm-utils"
+ version = "4.0.1"
+-source = "registry+https://github.com/rust-lang/crates.io-index"
+-checksum = "7a56cf9221faa08b5a59a9f429cc5338d8e77e22e1d7fe7d3179fc5c3acf7fc3"
++source = "git+https://github.com/archlinux/alpm.rs?rev=54b8bdcdce2b04d12a180f1fd4b304cc8cf4cc1a#54b8bdcdce2b04d12a180f1fd4b304cc8cf4cc1a"
+ dependencies = [
+  "alpm",
+  "pacmanconf",
+diff --git a/Cargo.toml b/Cargo.toml
+index cf093d2..9bbde07 100644
+--- a/Cargo.toml
++++ b/Cargo.toml
+@@ -6,8 +6,8 @@ license = "GPLv3"
+ edition = "2021"
+ 
+ [dependencies]
+-alpm = { default-features = false, version = "4" }
+-alpm-utils = { features = ["conf"], default-features = false, version = "4" }
++alpm = { features = ["git"], default-features = false, version = "4" }
++alpm-utils = { features = ["git", "conf"], default-features = false, version = "4" }
+ pacmanconf = "3"
+ 
+ subprocess = "0.2"
+@@ -46,3 +46,7 @@ panic = "abort"
+ lto = true
+ opt-level = 3
+ codegen-units = 1
++
++[patch.crates-io]
++alpm = { git = "https://github.com/archlinux/alpm.rs", rev = "54b8bdcdce2b04d12a180f1fd4b304cc8cf4cc1a" }
++alpm-utils = { git = "https://github.com/archlinux/alpm.rs", rev = "54b8bdcdce2b04d12a180f1fd4b304cc8cf4cc1a" }
+-- 
+2.51.2
+
