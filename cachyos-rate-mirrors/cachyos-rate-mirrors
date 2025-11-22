@@ -120,7 +120,7 @@ rate_repository_mirrors arch "${MIRRORS_DEFAULT_DIR}/mirrorlist" \
     RATE_MIRRORS_ARCH_FLAGS
 
 # Always insert CDN77 mirror to the start, unless RU region is detected
-if ! check_ru_location; then
+if check_ru_location -ne 0; then
     sed -i '1iServer = https://archlinux.cachyos.org/repo/$repo/os/$arch' "${MIRRORS_DEFAULT_DIR}/mirrorlist"
 fi
 
