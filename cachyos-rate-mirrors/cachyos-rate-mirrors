@@ -17,10 +17,12 @@
 set -e
 
 declare -r MIRRORS_DEFAULT_DIR="/etc/pacman.d"
-declare -a RATE_MIRRORS_ARCH_FLAGS=(--completion=1 --max-delay=10000)
 
-# use https only protocol for rating
+# Use https only protocol for rating
 export RATE_MIRRORS_PROTOCOL=https
+export RATE_MIRRORS_FETCH_MIRRORS_TIMEOUT="${RATE_MIRRORS_FETCH_MIRRORS_TIMEOUT:-30000}"
+export RATE_MIRRORS_ALLOW_ROOT=true
+export RATE_MIRRORS_MAX_DELAY="${RATE_MIRRORS_MAX_DELAY:-10000}"
 
 disable_colors() {
     unset ALL_OFF BOLD BLUE GREEN RED YELLOW
@@ -86,18 +88,10 @@ trap 'rm -f -- "$TMPFILE"' EXIT
 rate_repository_mirrors() {
     local repo="$1"
     local path="$2"
-    [[ -n "$3" ]] && local -n repo_flags="$3"
-    local -a rate_mirrors_flags=(
-        --save "$TMPFILE"
-        --allow-root
-        "$repo"
-        --fetch-mirrors-timeout=300000
-        "${repo_flags[@]}"
-    )
 
     info "Ranking mirrors for ${repo} repository in ${path}..."
 
-    if rate-mirrors "${rate_mirrors_flags[@]}"; then
+    if rate-mirrors --save "$TMPFILE" "$repo"; then
         if [ ! -f "${path}" ]; then
             die "${path} doesn't exist! You must install package $(pacman -Fq "$path" 2>/dev/null || echo "that contains $path")"
         fi
@@ -108,23 +102,28 @@ rate_repository_mirrors() {
     fi
 }
 
-# Special check for RU region where CDN77 mirror gets timeouted due to
-# blockings that mirror is applied by default on the ISO
-check_ru_location() {
-    curl -sL --connect-timeout 5 https://cdn77.com &>/dev/null
-    return $?
-}
+# Prefer mirrors that are geographically close, especially in countries that
+# have regional blockages
+country="$(curl -sSL 'https://geoip.kde.org/v1/ubiquity' | grep -Po '<CountryCode>\K([A-Z]+)')"
 
-# rate archlinux mirrors anyway
-rate_repository_mirrors arch "${MIRRORS_DEFAULT_DIR}/mirrorlist" \
-    RATE_MIRRORS_ARCH_FLAGS
+if [ -n "$country" ]; then
+    export RATE_MIRRORS_ENTRY_COUNTRY="$country"
+fi
+
+# Rate Arch Linux mirrors anyway
+rate_repository_mirrors arch "${MIRRORS_DEFAULT_DIR}/mirrorlist"
 
 # Always insert CDN77 mirror to the start, unless RU region is detected
-if check_ru_location -ne 0; then
+if [ "$country" != "RU" ]; then
     sed -i '1iServer = https://archlinux.cachyos.org/repo/$repo/os/$arch' "${MIRRORS_DEFAULT_DIR}/mirrorlist"
 fi
 
 rate_repository_mirrors cachyos "${MIRRORS_DEFAULT_DIR}/cachyos-mirrorlist"
+
+# Always insert Yandex mirror as first due to blockings in RU region
+if [ "$country" = "RU" ]; then
+    sed -i '1iServer = https://mirror.yandex.ru/cachyos/repo/$arch/$repo' "${MIRRORS_DEFAULT_DIR}/cachyos-mirrorlist"
+fi
 
 cp -f --backup=simple --suffix="-backup" "${MIRRORS_DEFAULT_DIR}/cachyos-mirrorlist" \
     "${MIRRORS_DEFAULT_DIR}/cachyos-v3-mirrorlist"
