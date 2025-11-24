@@ -108,6 +108,17 @@ rate_repository_mirrors() {
     fi
 }
 
+# Checks whether a pacman repository is enabled.
+# If enabled, runs rate_repository_mirrors on the provided mirrorlist file.
+rate_if_repo_enabled() {
+    local repo="$1"
+    local mirrorfile="$2"
+
+    if pacman -Sl "$repo" >/dev/null 2>&1; then
+        rate_repository_mirrors "$repo" "$mirrorfile"
+    fi
+}
+
 # Special check for RU region where CDN77 mirror gets timeouted due to
 # blockings that mirror is applied by default on the ISO
 check_ru_location() {
@@ -133,6 +144,8 @@ cp -f --backup=simple --suffix="-backup" "${MIRRORS_DEFAULT_DIR}/cachyos-mirrorl
 
 sed -i 's|/$arch/|/$arch_v3/|g' "${MIRRORS_DEFAULT_DIR}/cachyos-v3-mirrorlist"
 sed -i 's|/$arch/|/$arch_v4/|g' "${MIRRORS_DEFAULT_DIR}/cachyos-v4-mirrorlist"
+
+rate_if_repo_enabled "chaotic-aur" "${MIRRORS_DEFAULT_DIR}/chaotic-mirrorlist"
 
 # In the case of a more restrictive umask setting ( 0077 for example ), give read-permissions back to 'Group/Other'.
 # This fixes a case where the third party package wrapper Aura ( https://github.com/fosskers/aura ) tries to parse
