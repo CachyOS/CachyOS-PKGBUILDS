@@ -15,7 +15,7 @@ _sqlitever=$(curl -s 'https://archlinux.org/packages/search/json/?name=sqlite' |
     if (NF == 4) { printf "%02d", $4 }
     else { printf "00" }
 }')
-pkgrel=4
+pkgrel=5
 pkgdesc="A library-based package manager with dependency support. CachyOS fork."
 arch=('x86_64' 'aarch64')
 url="https://www.archlinux.org/pacman/"
@@ -63,7 +63,7 @@ backup=(etc/pacman.conf
 #options=('!lto') -- should we put no lto here??
 #validpgpkeys=('6645B0A8C7005E78DB1D7864F99FFE0FEAE999BD'  # Allan McRae <allan@archlinux.org>
 #              'B8151B117037781095514CA7BBDFFC92306B1121') # Andrew Gregory (pacman) <andrew@archlinux.org>
-_commit="da157024cda1a1cafba19dd4acc1af8390b2e77a"
+_commit="bb2600918aaf232dbbeaf26a5c4fe1165a1818d8"
 _libmakepkg_commit="10e168c3b365b8548396e95a23fb464cd87827ad"
 source=("git+https://github.com/CachyOS/pacman.git#commit=${_commit}?signed"
         "git+https://gitlab.archlinux.org/pacman/libmakepkg-dropins.git#commit=${_libmakepkg_commit}"
@@ -77,7 +77,7 @@ source=("git+https://github.com/CachyOS/pacman.git#commit=${_commit}?signed"
         78cd453.patch # PrettyProgressBar
         )
 source_aarch64=(fix-alpm-crate-for-aarch64.patch)
-sha256sums=('a4320c108a82336509b022123e8bd03fd57d251a4d300c042de7106c9ee7547f'
+sha256sums=('f0aa969b8822de0b1ed33fc3c887326a4de36d4d71b878ccc97e1afd6736a795'
             '3c99b6674afb573beeeda8d5783c5b7a1bfdc30f4a9a095857e5f2fdf89a2f62'
             '7ba46605de8dcb1ffa2a580e386c471a370955f0e62530ddfaf29168551047e1'
             'ce794bf0d8a9b1cb2637188516ce39e3559b2b027c47e94ea388991d33461d89'
