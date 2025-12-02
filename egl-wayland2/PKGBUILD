@@ -2,7 +2,7 @@
 
 pkgname=egl-wayland2
 pkgver=1.0.0
-pkgrel=0.1
+pkgrel=1
 pkgdesc="new EGLStream-based Wayland external platform"
 url="https://github.com/NVIDIA/egl-wayland2"
 arch=(x86_64)
@@ -20,11 +20,12 @@ makedepends=(
   wayland-protocols
 )
 provides=(libnvidia-egl-wayland2.so)
-source=("git+$url")
-b2sums=('SKIP')
+source=("git+$url#commit=3e5b643542708cbb9c67d18fe19b5fa4151d7d8f")
+b2sums=('5ce301220b520a93880a3cb7e5c185840de49b9f47ae951dac464c43a9195810c3e5c6297e6f80b3ac797c15acca03a1fa8b596e151eea7eebc1192e73c1dfd4')
 
 prepare() {
   cd $pkgname
+  git revert -n 4b95dc9879a812a812f1e77d31f63220e378b5a7
 }
 
 build() {
