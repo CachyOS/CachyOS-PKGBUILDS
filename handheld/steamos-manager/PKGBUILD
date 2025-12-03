@@ -5,7 +5,7 @@
 # Maintainer: Eric Naim <dnaim@cachyos.org>
 
 pkgname=steamos-manager
-pkgver=25.9.0
+pkgver=25.11.0
 pkgrel=3
 pkgdesc='SteamOS Manager daemon for running various system management tasks'
 arch=('x86_64')
@@ -25,23 +25,17 @@ optdepends=('jupiter-hw-support: jupiter support')  # Needed for jupiter-get-als
 makedepends=('git' 'cargo' 'clang')
 source=("git+https://gitlab.steamos.cloud/holo/steamos-manager.git#tag=v${pkgver}"
         "support-gamescope-session-steam.patch"
-        "msi-claw.patch"
-        "no-orca-service.patch")
-sha256sums=('a2a7927ad72ac68ef16ead076798e852071f6437a85ac0c588d81a0d39d0c5e9'
-            '712b59fe077f03f623537de93494aafca20d76fb1227f86438188c82b9d49e83'
-            'bb7175aa993f486069808127ecf49a71b18ed07ed4e1dac89239e2ae5f51acaf'
-            '10a36852b2cddf2ecc4f76df0cbabd9dd1f53c507590ecb0e58e6524511ba38f')
+        "msi-claw.patch")
+sha256sums=('1929b793fe97a46203e5ee95ed0eaf5e6712b2e7a1b46dca6812ffa2e93008f7'
+            '44be95baeb7d020f5b630191c50e6ff421afc7f122e5279f35f297613bfa281e'
+            'bb7175aa993f486069808127ecf49a71b18ed07ed4e1dac89239e2ae5f51acaf')
 install='steamos-manager.install'
 
 prepare() {
     cd "${pkgname}"
 
-    # Add support for XBOX Rog Ally/X
-    git cherry-pick -n 0500f0eb84fafefa15fbd9028c2619646845bf2d
-
     patch -Np1 -i ../support-gamescope-session-steam.patch
     patch -Np1 -i ../msi-claw.patch
-    patch -Np1 -i ../no-orca-service.patch
 
     cargo fetch --locked --target "x86_64-unknown-linux-gnu"
 }

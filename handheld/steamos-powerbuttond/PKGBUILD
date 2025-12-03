@@ -2,7 +2,7 @@
 # Maintainer: Eric Naim <dnaim@cachyos.org>
 
 pkgname=steamos-powerbuttond
-pkgver=3.4
+pkgver=3.5
 pkgrel=1
 arch=('x86_64')
 url="https://gitlab.steamos.cloud/jupiter/powerbuttond"
@@ -12,7 +12,7 @@ depends=('glibc' 'libevdev' 'systemd-libs')
 makedepends=('git')
 source=("git+https://gitlab.steamos.cloud/holo/powerbuttond.git#tag=v${pkgver}"
         "support-gamescope-session-plus.patch")
-sha512sums=('c1d3b6dd45af518d106cfae99717d6d0321e2c120494d4cfef81849fd171ff8cffd8cf26cb8eeb44704ab6d601a73c370422c573dae34befa94ea6634c98cf3f'
+sha512sums=('f2f272696fa97ff3da969bef8c5c04e053393b50e014fa888d5b72285196bd32e2319d97bfc1df758d291933c81dc87fb1bf0874dd0fda4516025aaed4e0afe6'
             'cefc1a0270b0a5aede1091726274cd739cc17c3a6ae5a7ff74981985298b538dc1aae475ca374169ed2afd3d7c3e8d4bae5f002df950afe50a41b5ba3b8fe69f')
 provides=("powerbuttond")
 conflicts=("powerbuttond")
@@ -20,9 +20,6 @@ replaces=("powerbuttond")
 
 prepare() {
     cd "${srcdir}/powerbuttond"
-
-    # Fix XBOX Rog ALLY ID
-    git cherry-pick -n 396e0480d8f2774c494df5acdada3b68984c70f1
 
     # Support gamescope-session-plus
     patch -Np1 -i ../support-gamescope-session-plus.patch

@@ -2,9 +2,9 @@
 # Maintainer: VolRen <VolRencs@proton.me>
 
 pkgname=plasma-login-manager
-pkgver=6.4.git20251020
-pkgrel=2
-_commit=bbdfab263c60181c23a8552bc4ff2af88758b5dc
+pkgver=6.5.git20251201
+pkgrel=1
+_commit=9a22d9c310ec46b73bcfb3aeff672d8a14b4e151
 arch=(x86_64)
 pkgdesc='Plasma Login Manager'
 url='https://kde.org/plasma-desktop/'
@@ -34,19 +34,8 @@ depends=(gcc-libs
 makedepends=(extra-cmake-modules
              git
              qt6-tools)
-source=(git+https://invent.kde.org/plasma/plasma-login-manager#commit=$_commit
-        plasmalogin{,-greeter,-autologin}
-        plasma6.5-fix.patch)
-sha256sums=('954fa7aefad282fbe816a6df295f764587576ace5da8556743f4dd2d2ba15b61'
-            'd7394292a65ae463926c2c3d2cb4e67bbfeb20995450c8e4c92fe5a28e7c4254'
-            '3406bce46be8450e28ddbccfbcd0e1f8fa585d57da8833ff7294cf3aee84bb46'
-            '1a84cf752782b03b53f66188013bf7e4af4f5e6feb7266bfe58c3faaa20777b4'
-            '86e86be2c6727f0a9962c26b09faa0b3157d46ddb28284f33ab106914166fcf4')
-# https://invent.kde.org/plasma/plasma-login-manager/-/merge_requests/26
-prepare() {
-  cd $pkgname
-  git apply -v ../plasma6.5-fix.patch
-}
+source=(git+https://invent.kde.org/plasma/plasma-login-manager#commit=$_commit)
+sha256sums=('efe8066ad99019361dbdc983ab3e8e25cb4ed365a9ebd5771e2c35f00e7e7f8d')
 
 build() {
   cmake -B build -S $pkgname \
@@ -58,5 +47,4 @@ build() {
 
 package() {
   DESTDIR="$pkgdir" cmake --install build
-  install -Dm644 plasmalogin* -t "$pkgdir"/etc/pam.d
 }

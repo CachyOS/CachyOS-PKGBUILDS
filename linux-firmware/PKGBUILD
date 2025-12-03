@@ -25,8 +25,8 @@ pkgname=(
   linux-firmware-radeon
   linux-firmware-realtek
 )
-pkgver=20251021
-pkgrel=1
+pkgver=20251125
+pkgrel=2
 epoch=1
 pkgdesc="Firmware files for Linux"
 url="https://gitlab.com/kernel-firmware/linux-firmware"
@@ -43,17 +43,17 @@ options=(
   !strip
 )
 source=("git+$url.git?signed#tag=${pkgver}")
-b2sums=('c493c331e886cd51142a33139d49ecb0a9cce0641cd43bf6a8a86b54f4bf4d972b9591b1ca45114777673ede0edd363d997930b1dd10d1c92d56f3b8d92c818c')
+b2sums=('690a2580d5f4fc8bafb1664c2ae39818a152a2dcdc34f345f8a1abe69ef473769da4556e80dfb50bbba05bc6a0b4186f2577b52020d1ad1bc1f4bcd1ae048453')
 validpgpkeys=(
   4CDE8575E547BF835FE15807A31B6BD72486CFD6 # Josh Boyer <jwboyer@fedoraproject.org>
 )
 
 _backports=(
+baf6c2f67a247eba7f298ed74bc471de43ad632d
+c092c7487eb7c3d58697f490ff605bc38f4cc947
 )
 
 _reverts=(
-  # https://gitlab.archlinux.org/archlinux/packaging/packages/linux-firmware/-/issues/29
-  ba41835c21ebbbba92fce71d30f747490313eaf6
 )
 
 prepare() {

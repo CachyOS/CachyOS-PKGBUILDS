@@ -14,10 +14,10 @@ license=('GPL-2.0-or-later AND LGPL-2.1-or-later')
 url='https://mpv.io/'
 depends=('alsa-lib' 'desktop-file-utils' 'ffmpeg' 'glibc' 'hicolor-icon-theme'
          'jack' 'lcms2' 'libarchive' 'libass' 'libbluray' 'libcdio'
-         'libcdio-paranoia' 'libdrm' 'libdvdnav' 'libdvdread' 'libegl' 'libgl'
-         'libglvnd' 'libjpeg' 'libplacebo' 'libpulse' 'libsixel' 'libva'
+         'libcdio-paranoia' 'libdisplay-info' 'libdrm' 'libdvdnav' 'libdvdread' 'libegl' 'libgl'
+         'libglvnd' 'libjpeg-turbo' 'libplacebo' 'libpulse' 'libsixel' 'libva'
          'libvdpau' 'libx11' 'libxext' 'libxkbcommon' 'libxpresent' 'libxrandr'
-         'libxss' 'libxv' 'luajit' 'mesa' 'mujs' 'libpipewire' 'rubberband'
+         'libxss' 'libxv' 'luajit' 'mesa' 'mujs' 'libpipewire' 'rubberband' 'sdl2'
          'openal' 'uchardet' 'vapoursynth' 'vulkan-icd-loader' 'wayland' 'zlib')
 makedepends=('git' 'meson' 'python-docutils' 'ladspa' 'wayland-protocols'
              'ffnvcodec-headers' 'vulkan-headers')
@@ -41,10 +41,14 @@ build() {
     -Dgl-x11=enabled
     -Dcaca=disabled
     -Dcdda=enabled
+    -Ddrm=enabled
     -Ddvbin=enabled
     -Ddvdnav=enabled
     -Dlibarchive=enabled
     -Dopenal=enabled
+    -Dsdl2-audio=enabled
+    -Dsdl2-video=enabled
+    -Dsdl2-gamepad=enabled
   )
 
   arch-meson "${gitname}" build "${_meson_options[@]}"
@@ -58,7 +62,7 @@ check() {
 
 package() {
   depends+=('libasound.so' 'libavcodec.so' 'libavdevice.so' 'libavfilter.so'
-            'libavformat.so' 'libavutil.so' 'libswresample.so' 'libswscale.so'
+            'libavformat.so' 'libavutil.so' 'libdisplay-info.so' 'libswresample.so' 'libswscale.so'
             'libjack.so' 'liblcms2.so' 'libarchive.so' 'libass.so' 'libbluray.so'
             'libjpeg.so' 'libplacebo.so' 'libpulse.so' 'libva.so' 'libva-drm.so'
             'libva-wayland.so' 'libva-x11.so' 'libxkbcommon.so' 'librubberband.so')

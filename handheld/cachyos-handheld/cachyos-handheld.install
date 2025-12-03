@@ -1,4 +1,4 @@
-SERVICES=("bluetooth" "scx")
+SERVICES=("bluetooth" "scx_loader")
 
 update_user() {
   # edit user name for sddm autologin and decky environment variables
@@ -18,7 +18,13 @@ update_user() {
 }
 
 scx_lavd_default() {
-  sed -i 's/SCX_SCHEDULER=.*/SCX_SCHEDULER=scx_lavd/' /etc/default/scx
+  # migrate all users to scx_loader
+  local config_path="/etc/scx_loader.toml"
+  if [[ ! -f "$config_path" ]]; then
+     cat <<'EOF' > "$config_path"
+default_sched = "scx_lavd"
+EOF
+  fi
 }
 
 steamos_steam() {
@@ -70,6 +76,9 @@ post_install() {
 }
 
 post_upgrade() {
+  # Use scx_lavd as default scheduler
+  scx_lavd_default
+
   # Update files to reflect the changes
   echo "Updating Handheld Configs."
   update_user
