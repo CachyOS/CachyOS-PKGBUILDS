@@ -1,0 +1,62 @@
+# Maintainer: Johannes Löthberg <johannes@kyriasis.com>
+# Maintainer: Daniel M. Capella <polyzen@archlinux.org>
+
+pkgname=pacman-contrib
+pkgver=1.13.0
+pkgrel=2.1
+pkgdesc='Contributed scripts and tools for pacman systems'
+arch=(x86_64)
+url=https://gitlab.archlinux.org/pacman/pacman-contrib
+license=(GPL-2.0-or-later)
+depends=(pacman)
+makedepends=(
+  asciidoc
+  git
+)
+optdepends=(
+  'diffutils: for pacdiff'
+  'fakeroot: for checkupdates'
+  'findutils: for pacdiff --find'
+  'mlocate: for pacdiff --locate'
+  'plocate: faster mlocate alternative'
+  'perl: for pacsearch'
+  'sudo: privilege elevation for several scripts'
+  'vim: default diff program for pacdiff'
+  'neovim: default diff program for pacdiff if EDITOR=nvim'
+)
+source=("git+$url.git#tag=v$pkgver"
+        0001-checkupdates-fix-downloading-in-fakeroot-with-sandbo.patch)
+b2sums=('9082d473deb2eef42132ea6c2817cc56704b41d6cdba378dc3d7ea4dbe7cee629012c8f3249c1a613094490f186b1c1e883281da88e86871982ccce71f89679a'
+        '56403aa61034e39d5678852e2d22ba15944a23700a4321dfdd3ac99ed3641d0d375b16a50b3842e72b1a9737c113e2db04c2b8223bfd95a337b6bedf7308d0d8')
+validpgpkeys=(04DC3FB1445FECA813C27EFAEA4F7B321A906AD9 44A62127789A949F2F082ED429C71CE612B57264) # Daniel M. Capella <polyzen@archlinux.org>
+#             5134EF9EAF65F95B6BB1608E50FB9B273A9D0BB5)  # Johannes Löthberg <johannes@kyriasis.com>
+
+prepare() {
+  cd $pkgname
+
+  # checkupdates: fix downloading in fakeroot with sandbox
+  patch -Np1 -i ../0001-checkupdates-fix-downloading-in-fakeroot-with-sandbo.patch
+
+  ./autogen.sh
+}
+
+build() {
+  cd $pkgname
+  ./configure \
+    --prefix=/usr \
+    --sysconfdir=/etc \
+    --localstatedir=/var
+  make
+}
+
+check() {
+  cd $pkgname
+  make check
+}
+
+package() {
+  cd $pkgname
+  make DESTDIR="$pkgdir" install
+}
+
+# vim:set ts=2 sw=2 et:

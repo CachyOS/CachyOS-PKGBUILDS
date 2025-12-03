@@ -1,0 +1,25 @@
+From 6404a9d9f7b9ffd8642580fcd693a47fab9bc827 Mon Sep 17 00:00:00 2001
+From: Vladislav Nepogodin <nepogodin.vlad@gmail.com>
+Date: Thu, 4 Dec 2025 03:14:04 +0400
+Subject: [PATCH] checkupdates: fix downloading in fakeroot with sandbox
+
+---
+ src/checkupdates.sh.in | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/checkupdates.sh.in b/src/checkupdates.sh.in
+index 6e8b806..547ca05 100644
+--- a/src/checkupdates.sh.in
++++ b/src/checkupdates.sh.in
+@@ -147,7 +147,7 @@ fi
+ if (( SYNC )); then
+ 	mkdir -p "$CHECKUPDATES_DB"
+ 	ln -s "${DBPath}/local" "$CHECKUPDATES_DB" &> /dev/null
+-	if ! fakeroot -- pacman -Sy --dbpath "$CHECKUPDATES_DB" --logfile /dev/null &> /dev/null; then
++	if ! fakeroot -- pacman -Sy --disable-sandbox-filesystem --dbpath "$CHECKUPDATES_DB" --logfile /dev/null &> /dev/null; then
+ 		die 'Cannot fetch updates'
+ 	fi
+ fi
+-- 
+2.52.0
+
