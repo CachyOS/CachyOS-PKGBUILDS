@@ -11,7 +11,7 @@ pkgname=(
   zlib-ng
   zlib-ng-compat
 )
-pkgver=2.3.1
+pkgver=2.3.2
 pkgrel=2
 pkgdesc='zlib replacement with optimizations for next generation systems'
 url='https://github.com/zlib-ng/zlib-ng'
@@ -26,8 +26,8 @@ makedepends=(
   ninja
 )
 source=(git+https://github.com/zlib-ng/zlib-ng#tag=${pkgver})
-sha256sums=('00a9045fbfe68d032f37c834ee3afbe7be09984567bbf80bdff188ddf0f4c714')
-b2sums=('6da200f1773c68b35302e6123d6542922bb55b43f5f5d1e6a9cb35aae5415b0ebc1d8b98143ff90017bc7b5247ef6570f060dbb2d7f37796178c1b1738369078')
+sha256sums=('92fed158513bb54d0843fffdb161105f8e360bf45d80a2a53a87e911b29fd076')
+b2sums=('4ca48eadf9f625c681c44699764053d5851fcd1a1b2a1f69c519853ff3a55e1a1588200cb7d08b7842316a8c4a240bf449d709b380b907243203de7cb71baee2')
 
 
 build() {
@@ -44,9 +44,6 @@ build() {
     -Wno-dev
     -DWITH_GTEST=OFF
     -DBUILD_SHARED_LIBS=ON
-
-    # https://github.com/zlib-ng/zlib-ng/issues/2029
-    -DWITH_CRC32_CHORBA=OFF
   )
 
   echo "Building zlib-ng"
