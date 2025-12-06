@@ -2,11 +2,11 @@
 # Contributor: Thomas Baechler <thomas@archlinux.org>
 # Contributor: James Rayner <iphitus@gmail.com>
 
-_pkgbasename=nvidia-utils
+_pkgbasename=nvidia-580xx-utils
 pkgbase=lib32-$_pkgbasename
-pkgname=('lib32-nvidia-utils' 'lib32-opencl-nvidia')
-pkgver=590.44.01
-pkgrel=0
+pkgname=('lib32-nvidia-580xx-utils' 'lib32-opencl-nvidia-580xx')
+pkgver=580.105.08
+pkgrel=2
 arch=('x86_64')
 url="http://www.nvidia.com/"
 #makedepends=('nvidia-libgl')  # To avoid conflict during installation in the build chroot
@@ -14,7 +14,7 @@ license=('custom')
 options=('!strip')
 _pkg="NVIDIA-Linux-x86_64-${pkgver}"
 source=("https://us.download.nvidia.com/XFree86/Linux-x86_64/${pkgver}/${_pkg}.run")
-sha512sums=('8fb0cd0b09b3b997029e97314fb8b4f63a5b567c17d99b63321e72b3e002c5e912694c5049babae80e7eafdbcc966d46e50bb942ddefe3e9da28623b5b119005')
+sha512sums=('4aa4e456801507d161fbefc66338a0289e2fc1e501bb17772adca721f02772b2ad7e2ac1b7da7aafc2496c96a64de9f057df7c5b562056c18805589c411b5837')
 
 create_links() {
     # create soname links
@@ -30,11 +30,12 @@ build() {
     sh ${_pkg}.run --extract-only
 }
 
-package_lib32-opencl-nvidia() {
+package_lib32-opencl-nvidia-580xx() {
     pkgdesc="OpenCL implemention for NVIDIA (32-bit)"
     depends=('lib32-zlib' 'lib32-gcc-libs')
     optdepends=('opencl-headers: headers necessary for OpenCL development')
-    provides=('lib32-opencl-driver')
+    conflicts=('lib32-opencl-nvidia')
+    provides=('lib32-opencl-nvidia' 'lib32-opencl-driver')
 
     cd "${_pkg}"/32
 
@@ -47,12 +48,12 @@ package_lib32-opencl-nvidia() {
     ln -s $_pkgbasename "${pkgdir}/usr/share/licenses/lib32-opencl-nvidia"
 }
 
-package_lib32-nvidia-utils() {
+package_lib32-nvidia-580xx-utils() {
     pkgdesc="NVIDIA drivers utilities (32-bit)"
     depends=('lib32-zlib' 'lib32-gcc-libs' 'lib32-libglvnd' "nvidia-utils=${pkgver}")
     optdepends=('lib32-opencl-nvidia')
-    conflicts=('lib32-nvidia-libgl')
-    provides=('lib32-vulkan-driver' 'lib32-opengl-driver' 'lib32-nvidia-libgl')
+    conflicts=('lib32-nvidia-libgl' 'lib32-nvidia-utils')
+    provides=("lib32-nvidia-utils=${pkgver}"  'lib32-vulkan-driver' 'lib32-opengl-driver' 'lib32-nvidia-libgl')
     replaces=('lib32-nvidia-libgl')
 
     cd "${_pkg}"/32
@@ -80,7 +81,6 @@ package_lib32-nvidia-utils() {
     install -D -m755 "libnvidia-glvkspirv.so.${pkgver}" "${pkgdir}/usr/lib32/libnvidia-glvkspirv.so.${pkgver}"
     install -D -m755 "libnvidia-allocator.so.${pkgver}" "${pkgdir}/usr/lib32/libnvidia-allocator.so.${pkgver}"
     install -D -m755 "libnvidia-gpucomp.so.${pkgver}" "${pkgdir}/usr/lib32/libnvidia-gpucomp.so.${pkgver}"
-    install -D -m755 "libnvidia-tileiras.so.${pkgver}" "${pkgdir}/usr/lib32/libnvidia-tileiras.so.${pkgver}"
 
     # VDPAU
     install -D -m755 "libvdpau_nvidia.so.${pkgver}" "${pkgdir}/usr/lib32/vdpau/libvdpau_nvidia.so.${pkgver}"
