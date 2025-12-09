@@ -45,6 +45,11 @@ depends=(
   upower
   yaml-cpp
 )
+
+if [[ "$_bootloader" = limine ]]; then
+  depends+=(kdialog)
+fi
+
 makedepends=(
   boost
   cmake
