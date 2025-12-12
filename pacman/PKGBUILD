@@ -9,13 +9,13 @@
 
 _staging=false
 pkgname=pacman
-pkgver=7.1.0.r1.g2df7c40
+pkgver=7.1.0.r7.gb9f7d4a
 _sqlitever=$(curl -s 'https://archlinux.org/packages/search/json/?name=sqlite' | grep -oP '"pkgver":\s*"\K[^"]+' | head -n 1 | awk -F. '{
     printf "%d%02d%02d", $1, $2, $3;
     if (NF == 4) { printf "%02d", $4 }
     else { printf "00" }
 }')
-pkgrel=6
+pkgrel=2
 pkgdesc="A library-based package manager with dependency support. CachyOS fork."
 arch=('x86_64' 'aarch64')
 url="https://www.archlinux.org/pacman/"
@@ -63,7 +63,7 @@ backup=(etc/pacman.conf
 #options=('!lto') -- should we put no lto here??
 #validpgpkeys=('6645B0A8C7005E78DB1D7864F99FFE0FEAE999BD'  # Allan McRae <allan@archlinux.org>
 #              'B8151B117037781095514CA7BBDFFC92306B1121') # Andrew Gregory (pacman) <andrew@archlinux.org>
-_commit="8f7c5a389cc8599ca804fa5510de7aa6d1bab845"
+_commit="4f010655f678bfa607b9876a5b5bcdc764f3fc8d"
 _libmakepkg_commit="10e168c3b365b8548396e95a23fb464cd87827ad"
 source=("git+https://github.com/CachyOS/pacman.git#commit=${_commit}?signed"
         "git+https://gitlab.archlinux.org/pacman/libmakepkg-dropins.git#commit=${_libmakepkg_commit}"
@@ -77,10 +77,10 @@ source=("git+https://github.com/CachyOS/pacman.git#commit=${_commit}?signed"
         78cd453.patch # PrettyProgressBar
         )
 source_aarch64=(fix-alpm-crate-for-aarch64.patch)
-sha256sums=('e75b9d22b3f807a265cd2e48d0e35240056df936651861c129f4c7fd6ef0eaa1'
+sha256sums=('63aed2c4e8a93d3bbf743bdebd12ad72a17a1a828acd2090650d17ddd99c7828'
             '3c99b6674afb573beeeda8d5783c5b7a1bfdc30f4a9a095857e5f2fdf89a2f62'
-            '7ba46605de8dcb1ffa2a580e386c471a370955f0e62530ddfaf29168551047e1'
-            'ce794bf0d8a9b1cb2637188516ce39e3559b2b027c47e94ea388991d33461d89'
+            '8d7c13c377a38567f48a3c81dcb5f95695288c314ee423ba03416ca232dd2fe0'
+            '96c43d32fff6401fa1c843b2690e5d094ed71c0b89d1e0a5dcaf56178b9d3abd'
             'c8760d7ebb6c9817d508c691c67084be251cd9c8811ee1ccf92c1278bad74c1c'
             'b31dc7a2789d7fb99a56cc5a9d915c3d57e01233bf258731392afe44b1bf8e40'
             'bdd8fb13c1cd8606f41347bc1897e261031ac80b33c772d310f417064332f646'
