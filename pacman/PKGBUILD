@@ -15,7 +15,7 @@ _sqlitever=$(curl -s 'https://archlinux.org/packages/search/json/?name=sqlite' |
     if (NF == 4) { printf "%02d", $4 }
     else { printf "00" }
 }')
-pkgrel=2
+pkgrel=3
 pkgdesc="A library-based package manager with dependency support. CachyOS fork."
 arch=('x86_64' 'aarch64')
 url="https://www.archlinux.org/pacman/"
@@ -34,6 +34,7 @@ depends=(
   openssl libcrypto.so
   pacman-mirrorlist
   systemd
+  libmakepkg-dropins
 )
 makedepends=(
   asciidoc
@@ -64,9 +65,7 @@ backup=(etc/pacman.conf
 #validpgpkeys=('6645B0A8C7005E78DB1D7864F99FFE0FEAE999BD'  # Allan McRae <allan@archlinux.org>
 #              'B8151B117037781095514CA7BBDFFC92306B1121') # Andrew Gregory (pacman) <andrew@archlinux.org>
 _commit="4f010655f678bfa607b9876a5b5bcdc764f3fc8d"
-_libmakepkg_commit="10e168c3b365b8548396e95a23fb464cd87827ad"
 source=("git+https://github.com/CachyOS/pacman.git#commit=${_commit}?signed"
-        "git+https://gitlab.archlinux.org/pacman/libmakepkg-dropins.git#commit=${_libmakepkg_commit}"
         pacman.conf
         makepkg.conf
         alpm.sysusers
@@ -78,7 +77,6 @@ source=("git+https://github.com/CachyOS/pacman.git#commit=${_commit}?signed"
         )
 source_aarch64=(fix-alpm-crate-for-aarch64.patch)
 sha256sums=('63aed2c4e8a93d3bbf743bdebd12ad72a17a1a828acd2090650d17ddd99c7828'
-            '3c99b6674afb573beeeda8d5783c5b7a1bfdc30f4a9a095857e5f2fdf89a2f62'
             '8d7c13c377a38567f48a3c81dcb5f95695288c314ee423ba03416ca232dd2fe0'
             '96c43d32fff6401fa1c843b2690e5d094ed71c0b89d1e0a5dcaf56178b9d3abd'
             'c8760d7ebb6c9817d508c691c67084be251cd9c8811ee1ccf92c1278bad74c1c'
@@ -231,10 +229,4 @@ package() {
   for unit in dirmngr gpg-agent gpg-agent-{browser,extra,ssh} keyboxd; do
     ln -s "../${unit}@.socket" "$wantsdir/${unit}@etc-pacman.d-gnupg.socket"
   done
-
-  # makepkg dropins
-  cd "$srcdir/libmakepkg-dropins"
-  cp -r autodep/* "$pkgdir/usr/share/makepkg/autodep/"
-  cp -r reproducible/* "$pkgdir/usr/share/makepkg/reproducible/"
-  cp -r tidy/* "$pkgdir/usr/share/makepkg/tidy/"
 }
