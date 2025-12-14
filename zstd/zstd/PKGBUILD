@@ -3,6 +3,8 @@
 # Contributor: Andrzej Giniewicz <gginiu@gmail.com>
 # Contributor: Johan Förberg <johan@forberg.se>
 
+_optimize_znver4=${_optimize_znver4-}
+
 pkgname=zstd
 pkgver=1.5.7
 pkgrel=2
@@ -51,8 +53,8 @@ build() {
   # Znver4, since unlike Intel u-archs, it doesn't suffer from high AVX-512 latency.
   xxh64_vectorize=''
 
-  if  [[ "$CARCH" == "znver4" ]]; then
-    xxh64_vectorize='-DXXH_ENABLE_AUTOVECTORIZE'
+  if [ -n "$_optimize_znver4" ]; then
+    xxh64_vectorize="-DXXH64_UPDATE_VECTORIZE=ON"
   fi
 
   cmake -S build/cmake -B build -G Ninja \
