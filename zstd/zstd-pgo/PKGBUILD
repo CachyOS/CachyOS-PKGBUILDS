@@ -59,8 +59,6 @@ prepare() {
 
 build() {
   cd ${pkgname}-${pkgver}
-  export CFLAGS+=' -ffat-lto-objects'
-  export CXXFLAGS+=' -ffat-lto-objects'
 
   # https://github.com/facebook/zstd/issues/3819
   # XXH64_update can be vectorized with AVX-512, but this is disabled by default
@@ -69,8 +67,11 @@ build() {
   xxh64_vectorize=''
 
   if [ -n "$_optimize_znver4" ]; then
-    xxh64_vectorize="-DXXH64_UPDATE_VECTORIZE=ON"
+    xxh64_vectorize="-DXXH_ENABLE_AUTOVECTORIZE=ON"
   fi
+
+  export CFLAGS+=" -ffat-lto-objects ${xxh64_vectorize}"
+  export CXXFLAGS+=" -ffat-lto-objects ${xxh64_vectorize}"
 
   # First build pass: Generate profile
   cmake -S build/cmake -B build -G Ninja \
@@ -83,7 +84,6 @@ build() {
       -DZSTD_BUILD_STATIC=OFF \
       -DZSTD_BUILD_TESTS=ON \
       -DZSTD_PROGRAMS_LINK_SHARED=ON \
-      ${xxh64_vectorize} \
       -DPGO_GENERATE=ON \
       -DPGO_USE=OFF
   cmake --build build
