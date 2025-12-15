@@ -3,6 +3,8 @@
 # Contributor: Andrzej Giniewicz <gginiu@gmail.com>
 # Contributor: Johan Förberg <johan@forberg.se>
 
+_optimize_znver4=${_optimize_znver4-}
+
 _pkgname=zstd
 pkgname=lib32-zstd
 pkgver=1.5.7
@@ -48,6 +50,16 @@ build() {
   export CFLAGS+=' -ffat-lto-objects'
   export CXXFLAGS+=' -ffat-lto-objects'
 
+  # https://github.com/facebook/zstd/issues/3819
+  # XXH64_update can be vectorized with AVX-512, but this is disabled by default
+  # due to Skylake's high latency for AVX-512 instructions. Re-enable this for
+  # Znver4, since unlike Intel u-archs, it doesn't suffer from high AVX-512 latency.
+  xxh64_vectorize=''
+
+  if [ -n "$_optimize_znver4" ]; then
+    xxh64_vectorize="-DXXH64_UPDATE_VECTORIZE=ON"
+  fi
+
   cmake -S build/cmake -B build -G Ninja \
     -DCMAKE_BUILD_TYPE=None \
     -DCMAKE_INSTALL_PREFIX=/usr \
@@ -55,7 +67,8 @@ build() {
     -DZSTD_BUILD_CONTRIB=ON \
     -DZSTD_BUILD_STATIC=OFF \
     -DZSTD_BUILD_TESTS=ON \
-    -DZSTD_PROGRAMS_LINK_SHARED=ON
+    -DZSTD_PROGRAMS_LINK_SHARED=ON \
+    ${xxh64_vectorize}
   cmake --build build
 }
 
