@@ -18,7 +18,7 @@ pkgname=('php'
          'php-sqlite'
          'php-tidy'
          'php-xsl')
-pkgver=8.4.15
+pkgver=8.5.1
 pkgrel=2
 arch=('x86_64')
 license=('PHP-3.01')
@@ -31,13 +31,13 @@ checkdepends=('procps-ng')
 source=("https://php.net/distributions/${pkgbase}-${pkgver}.tar.xz"
         'apache.patch' 'apache.conf' 'php-fpm.patch' 'disable-deepbind.patch' 'php-fpm.tmpfiles' 'php.ini.patch' 'php-cachy.patch' '0005-Enable-hugepages.patch'
         'https://raw.githubusercontent.com/SergiX44/php-benchmark-script/master/bench.php')
-sha256sums=('a060684f614b8344f9b34c334b6ba8db1177555997edb5b1aceab0a4b807da7e'
+sha256sums=('3f5bf99ce81201f526d25e288eddb2cfa111d068950d1e9a869530054ff98815'
             '74d33ad3e9fa2f0aaf6ceeddd59ec78d35e66673db74b1053cc3e6105478ba8a'
             '4a2add00d93fa991ccdf6356090264c1059c79935642afff6e8d4a2107fa037e'
             '78b8074461cdfc5d4e0ba428a8387f308d60720c8ad35c6176801e5088f02090'
             'a57e4f2e7b12f745472ab7ca242e4f2f310d32a2bcaf304a4e98020c335e2ec2'
             '640dba0d960bfeaae9ad38d2826d3f6b5d6c175a4d3e16664eefff29141faad5'
-            '52a045005f8b241b54f447c22b5d573f3e994481cfc21c2fc111c4a38df55430'
+            '3cb032e719fe40963258616dcfe4937a6043042a31faef417c05dcb6e7295094'
             '40de67e43a972159c54d948ef1bf4e94e2d0e96da1f21efc9002ba71f39b80ae'
             'faee19fff5f554638b28d3277388d6f3604738e8a2670f3e55562947e5678bbc'
             'b3210ff1b679f03a3bac409b9da491def692254f8354e4d09515cd2409fea23f')
@@ -56,8 +56,8 @@ prepare() {
     patch -p0 -i "${srcdir}/php.ini.patch"
 
        # Cachy Patches
-    patch -p0 -i "${srcdir}/php-cachy.patch"
-    patch -Np1 -i "${srcdir}/disable-deepbind.patch"
+#    patch -p0 -i "${srcdir}/php-cachy.patch"
+#    patch -Np1 -i "${srcdir}/disable-deepbind.patch"
     patch -Np1 -i "${srcdir}/0005-Enable-hugepages.patch"
     autoconf
 
@@ -70,6 +70,7 @@ build() {
 
 export CFLAGS+=" -fno-semantic-interposition"
 export CXXLAGS+=" -fno-semantic-interposition"
+
     local _phpconfig="--srcdir=../${pkgbase}-${pkgver} \
         --config-cache \
         --prefix=/usr \
@@ -83,56 +84,57 @@ export CXXLAGS+=" -fno-semantic-interposition"
         --mandir=/usr/share/man \
         "
 
-    local _phpextensions="\
-        --enable-bcmath=shared \
-        --enable-calendar=shared \
-        --enable-dba=shared \
-        --enable-exif=shared \
-        --enable-ftp=shared \
-        --enable-gd=shared \
-        --enable-intl=shared \
-        --enable-mbstring \
-        --enable-pcntl \
-        --enable-shmop=shared \
-        --enable-soap=shared \
-        --enable-sockets=shared \
-        --enable-sysvmsg=shared \
-        --enable-sysvsem=shared \
-        --enable-sysvshm=shared \
-        --with-bz2=shared \
-        --with-curl=shared \
-        --with-enchant=shared \
-        --with-external-gd \
-        --with-external-pcre \
-        --with-ffi=shared \
-        --with-gdbm \
-        --with-gettext=shared \
-        --with-gmp=shared \
-        --with-iconv=shared \
-        --with-ldap=shared \
-        --with-ldap-sasl \
-        --with-mhash \
-        --with-mysql-sock=/run/mysqld/mysqld.sock \
-        --with-mysqli=shared \
-        --with-openssl \
-        --with-openssl-argon2 \
-        --with-password-argon2 \
-        --with-pdo-dblib=shared,/usr \
-        --with-pdo-mysql=shared \
-        --with-pdo-odbc=shared,unixODBC,/usr \
-        --with-pdo-pgsql=shared \
-        --with-pdo-sqlite=shared \
-        --with-pgsql=shared \
-        --with-readline \
-        --with-snmp=shared \
-        --with-sodium=shared \
-        --with-sqlite3=shared \
-        --with-tidy=shared \
-        --with-unixODBC=shared \
-        --with-xsl=shared \
-        --with-zip=shared \
-        --with-zlib \
-        "
+        local _phpextensions="\
+                --enable-bcmath=shared \
+                --enable-calendar=shared \
+                --enable-dba=shared \
+                --enable-exif=shared \
+                --enable-ftp=shared \
+                --enable-gd=shared \
+                --enable-intl=shared \
+                --enable-mbstring \
+                --enable-pcntl \
+                --enable-shmop=shared \
+                --enable-soap=shared \
+                --enable-sockets=shared \
+                --enable-sysvmsg=shared \
+                --enable-sysvsem=shared \
+                --enable-sysvshm=shared \
+                --with-bz2=shared \
+                --with-curl=shared \
+                --with-enchant=shared \
+                --with-external-gd \
+                --with-external-pcre \
+                --with-ffi=shared \
+                --with-gdbm \
+                --with-gettext=shared \
+                --with-gmp=shared \
+                --with-iconv=shared \
+                --with-ldap=shared \
+                --with-ldap-sasl \
+                --with-mhash \
+                --with-mysql-sock=/run/mysqld/mysqld.sock \
+                --with-mysqli=shared \
+                --with-openssl \
+                --with-openssl-argon2 \
+                --with-password-argon2 \
+                --with-pdo-dblib=shared,/usr \
+                --with-pdo-mysql=shared \
+                --with-pdo-odbc=shared,unixODBC,/usr \
+                --with-pdo-pgsql=shared \
+                --with-pdo-sqlite=shared \
+                --with-pgsql=shared \
+                --with-readline \
+                --with-snmp=shared \
+                --with-sodium=shared \
+                --with-sqlite3=shared \
+                --with-tidy=shared \
+                --with-unixODBC=shared \
+                --with-xsl=shared \
+                --with-zip=shared \
+                --with-zlib \
+                "
+
 
     EXTENSION_DIR=/usr/lib/php/modules
     export EXTENSION_DIR
@@ -200,155 +202,155 @@ export CXXLAGS+=" -fno-semantic-interposition"
 #}
 
 package_php() {
-    pkgdesc='A general-purpose scripting language that is especially suited to web development'
-    depends=('libxml2' 'curl' 'libzip' 'pcre2' 'argon2' 'oniguruma')
-    provides=("php-interpreter=${_interpreter}" "php-intl=${pkgver}")
-    replaces=('php-intl')
-    conflicts=('php-intl')
-    backup=('etc/php/php.ini')
+	pkgdesc='A general-purpose scripting language that is especially suited to web development'
+	depends=('libxml2' 'curl' 'libzip' 'pcre2' 'argon2' 'oniguruma')
+	provides=("php-interpreter=${_interpreter}" "php-intl=${pkgver}")
+	replaces=('php-intl')
+	conflicts=('php-intl')
+	backup=('etc/php/php.ini')
 
-    cd "${srcdir}/build"
-    make -j1 INSTALL_ROOT="${pkgdir}" install-{modules,cli,build,headers,programs,pharcmd}
-    install -D -m644 "${srcdir}/${pkgbase}-${pkgver}/php.ini-production" "${pkgdir}/etc/php/php.ini"
-    install -d -m755 "${pkgdir}/etc/php/conf.d/"
+	cd "${srcdir}/build"
+	make -j1 INSTALL_ROOT="${pkgdir}" install-{modules,cli,build,headers,programs,pharcmd}
+	install -D -m644 "${srcdir}/${pkgbase}-${pkgver}/php.ini-production" "${pkgdir}/etc/php/php.ini"
+	install -d -m755 "${pkgdir}/etc/php/conf.d/"
 
-    # remove static modules
-    rm -f "${pkgdir}/usr/lib/php/modules/"*.a
-    # remove modules provided by sub packages
-    rm -f "${pkgdir}/usr/lib/php/modules/"{enchant,gd,sodium,odbc,pdo_dblib,pdo_odbc,pgsql,pdo_pgsql,snmp,sqlite3,pdo_sqlite,tidy,xsl}.so
+	# remove static modules
+	rm -f "${pkgdir}/usr/lib/php/modules/"*.a
+	# remove modules provided by sub packages
+	rm -f "${pkgdir}/usr/lib/php/modules/"{enchant,gd,sodium,odbc,pdo_dblib,pdo_odbc,pgsql,pdo_pgsql,snmp,sqlite3,pdo_sqlite,tidy,xsl}.so
 }
 
 package_php-cgi() {
-    pkgdesc='CGI and FCGI SAPI for PHP'
-    depends=('php')
-    provides=("php-cgi-interpreter=${_interpreter}")
+	pkgdesc='CGI and FCGI SAPI for PHP'
+	depends=('php')
+	provides=("php-cgi-interpreter=${_interpreter}")
 
-    cd "${srcdir}/build"
-    make -j1 INSTALL_ROOT="${pkgdir}" install-cgi
+	cd "${srcdir}/build"
+	make -j1 INSTALL_ROOT="${pkgdir}" install-cgi
 }
 
 package_php-apache() {
-    pkgdesc='Apache SAPI for PHP'
-    depends=('php' 'apache')
-    backup=('etc/httpd/conf/extra/php_module.conf')
-    provides=("php-apache-interpreter=${_interpreter}")
+	pkgdesc='Apache SAPI for PHP'
+	depends=('php' 'apache')
+	backup=('etc/httpd/conf/extra/php_module.conf')
+	provides=("php-apache-interpreter=${_interpreter}")
 
-    install -D -m755 "${srcdir}/build-apache/libs/libphp.so" "${pkgdir}/usr/lib/httpd/modules/libphp.so"
-    install -D -m644 "${srcdir}/apache.conf" "${pkgdir}/etc/httpd/conf/extra/php_module.conf"
+	install -D -m755 "${srcdir}/build-apache/libs/libphp.so" "${pkgdir}/usr/lib/httpd/modules/libphp.so"
+	install -D -m644 "${srcdir}/apache.conf" "${pkgdir}/etc/httpd/conf/extra/php_module.conf"
 }
 
 package_php-fpm() {
-    pkgdesc='FastCGI Process Manager for PHP'
-    depends=('php' 'systemd')
-    backup=('etc/php/php-fpm.conf' 'etc/php/php-fpm.d/www.conf')
-    provides=("php-fpm-interpreter=${_interpreter}")
-    options=('!emptydirs')
+	pkgdesc='FastCGI Process Manager for PHP'
+	depends=('php' 'systemd')
+	backup=('etc/php/php-fpm.conf' 'etc/php/php-fpm.d/www.conf')
+	provides=("php-fpm-interpreter=${_interpreter}")
+	options=('!emptydirs')
 
-    cd "${srcdir}/build"
-    make -j1 INSTALL_ROOT="${pkgdir}" install-fpm
-    install -D -m644 sapi/fpm/php-fpm.service "${pkgdir}/usr/lib/systemd/system/php-fpm.service"
-    install -D -m644 "${srcdir}/php-fpm.tmpfiles" "${pkgdir}/usr/lib/tmpfiles.d/php-fpm.conf"
+	cd "${srcdir}/build"
+	make -j1 INSTALL_ROOT="${pkgdir}" install-fpm
+	install -D -m644 sapi/fpm/php-fpm.service "${pkgdir}/usr/lib/systemd/system/php-fpm.service"
+	install -D -m644 "${srcdir}/php-fpm.tmpfiles" "${pkgdir}/usr/lib/tmpfiles.d/php-fpm.conf"
 }
 
 package_php-embed() {
-    pkgdesc='Embedded PHP SAPI library'
-    depends=('php')
-    provides=("php-embed-interpreter=${_interpreter}")
-    options=('!emptydirs')
+	pkgdesc='Embedded PHP SAPI library'
+	depends=('php')
+	provides=("php-embed-interpreter=${_interpreter}")
+	options=('!emptydirs')
 
-    cd "${srcdir}/build"
-    make -j1 INSTALL_ROOT="${pkgdir}" PHP_SAPI=embed install-sapi
+	cd "${srcdir}/build"
+	make -j1 INSTALL_ROOT="${pkgdir}" PHP_SAPI=embed install-sapi
 }
 
 package_php-phpdbg() {
-    pkgdesc='Interactive PHP debugger'
-    depends=('php')
-    provides=("php-phpdbg-interpreter=${_interpreter}")
-    options=('!emptydirs')
+	pkgdesc='Interactive PHP debugger'
+	depends=('php')
+	provides=("php-phpdbg-interpreter=${_interpreter}")
+	options=('!emptydirs')
 
-    cd "${srcdir}/build-phpdbg"
-    make -j1 INSTALL_ROOT="${pkgdir}" install-phpdbg
+	cd "${srcdir}/build-phpdbg"
+	make -j1 INSTALL_ROOT="${pkgdir}" install-phpdbg
 }
 
 package_php-dblib() {
-    pkgdesc='dblib module for PHP'
-    depends=('php' 'freetds')
-    provides=("php-dblib-interpreter=${_interpreter}")
+	pkgdesc='dblib module for PHP'
+	depends=('php' 'freetds')
+	provides=("php-dblib-interpreter=${_interpreter}")
 
-    install -D -m755 "${srcdir}/build/modules/pdo_dblib.so" "${pkgdir}/usr/lib/php/modules/pdo_dblib.so"
+	install -D -m755 "${srcdir}/build/modules/pdo_dblib.so" "${pkgdir}/usr/lib/php/modules/pdo_dblib.so"
 }
 
 package_php-enchant() {
-    pkgdesc='enchant module for PHP'
-    depends=('php' 'enchant')
-    provides=("php-enchant-interpreter=${_interpreter}")
+	pkgdesc='enchant module for PHP'
+	depends=('php' 'enchant')
+	provides=("php-enchant-interpreter=${_interpreter}")
 
-    install -D -m755 "${srcdir}/build/modules/enchant.so" "${pkgdir}/usr/lib/php/modules/enchant.so"
+	install -D -m755 "${srcdir}/build/modules/enchant.so" "${pkgdir}/usr/lib/php/modules/enchant.so"
 }
 
 package_php-gd() {
-    pkgdesc='gd module for PHP'
-    depends=('php' 'gd')
-    provides=("php-gd-interpreter=${_interpreter}")
+	pkgdesc='gd module for PHP'
+	depends=('php' 'gd')
+	provides=("php-gd-interpreter=${_interpreter}")
 
-    install -D -m755 "${srcdir}/build/modules/gd.so" "${pkgdir}/usr/lib/php/modules/gd.so"
+	install -D -m755 "${srcdir}/build/modules/gd.so" "${pkgdir}/usr/lib/php/modules/gd.so"
 }
 
 package_php-sodium() {
-    pkgdesc='sodium module for PHP'
-    depends=('php' 'libsodium')
-    provides=("php-sodium-interpreter=${_interpreter}")
+	pkgdesc='sodium module for PHP'
+	depends=('php' 'libsodium')
+	provides=("php-sodium-interpreter=${_interpreter}")
 
-    install -D -m755 "${srcdir}/build/modules/sodium.so" "${pkgdir}/usr/lib/php/modules/sodium.so"
+	install -D -m755 "${srcdir}/build/modules/sodium.so" "${pkgdir}/usr/lib/php/modules/sodium.so"
 }
 
 package_php-odbc() {
-    pkgdesc='ODBC modules for PHP'
-    depends=('php' 'unixodbc')
-    provides=("php-odbc-interpreter=${_interpreter}")
+	pkgdesc='ODBC modules for PHP'
+	depends=('php' 'unixodbc')
+	provides=("php-odbc-interpreter=${_interpreter}")
 
-    install -D -m755 "${srcdir}/build/modules/odbc.so" "${pkgdir}/usr/lib/php/modules/odbc.so"
-    install -D -m755 "${srcdir}/build/modules/pdo_odbc.so" "${pkgdir}/usr/lib/php/modules/pdo_odbc.so"
+	install -D -m755 "${srcdir}/build/modules/odbc.so" "${pkgdir}/usr/lib/php/modules/odbc.so"
+	install -D -m755 "${srcdir}/build/modules/pdo_odbc.so" "${pkgdir}/usr/lib/php/modules/pdo_odbc.so"
 }
 
 package_php-pgsql() {
-    pkgdesc='PostgreSQL modules for PHP'
-    depends=('php' 'postgresql-libs')
-    provides=("php-pgsql-interpreter=${_interpreter}")
+	pkgdesc='PostgreSQL modules for PHP'
+	depends=('php' 'postgresql-libs')
+	provides=("php-pgsql-interpreter=${_interpreter}")
 
-    install -D -m755 "${srcdir}/build/modules/pgsql.so" "${pkgdir}/usr/lib/php/modules/pgsql.so"
-    install -D -m755 "${srcdir}/build/modules/pdo_pgsql.so" "${pkgdir}/usr/lib/php/modules/pdo_pgsql.so"
+	install -D -m755 "${srcdir}/build/modules/pgsql.so" "${pkgdir}/usr/lib/php/modules/pgsql.so"
+	install -D -m755 "${srcdir}/build/modules/pdo_pgsql.so" "${pkgdir}/usr/lib/php/modules/pdo_pgsql.so"
 }
 
 package_php-snmp() {
-    pkgdesc='snmp module for PHP'
-    depends=('php' 'net-snmp')
-    provides=("php-snmp-interpreter=${_interpreter}")
+	pkgdesc='snmp module for PHP'
+	depends=('php' 'net-snmp')
+	provides=("php-snmp-interpreter=${_interpreter}")
 
-    install -D -m755 "${srcdir}/build/modules/snmp.so" "${pkgdir}/usr/lib/php/modules/snmp.so"
+	install -D -m755 "${srcdir}/build/modules/snmp.so" "${pkgdir}/usr/lib/php/modules/snmp.so"
 }
 
 package_php-sqlite() {
-    pkgdesc='sqlite module for PHP'
-    depends=('php' 'sqlite')
-    provides=("php-sqlite-interpreter=${_interpreter}")
+	pkgdesc='sqlite module for PHP'
+	depends=('php' 'sqlite')
+	provides=("php-sqlite-interpreter=${_interpreter}")
 
-    install -D -m755 "${srcdir}/build/modules/sqlite3.so" "${pkgdir}/usr/lib/php/modules/sqlite3.so"
-    install -D -m755 "${srcdir}/build/modules/pdo_sqlite.so" "${pkgdir}/usr/lib/php/modules/pdo_sqlite.so"
+	install -D -m755 "${srcdir}/build/modules/sqlite3.so" "${pkgdir}/usr/lib/php/modules/sqlite3.so"
+	install -D -m755 "${srcdir}/build/modules/pdo_sqlite.so" "${pkgdir}/usr/lib/php/modules/pdo_sqlite.so"
 }
 
 package_php-tidy() {
-    pkgdesc='tidy module for PHP'
-    depends=('php' 'tidy')
-    provides=("php-tidy-interpreter=${_interpreter}")
+	pkgdesc='tidy module for PHP'
+	depends=('php' 'tidy')
+	provides=("php-tidy-interpreter=${_interpreter}")
 
-    install -D -m755 "${srcdir}/build/modules/tidy.so" "${pkgdir}/usr/lib/php/modules/tidy.so"
+	install -D -m755 "${srcdir}/build/modules/tidy.so" "${pkgdir}/usr/lib/php/modules/tidy.so"
 }
 
 package_php-xsl() {
-    pkgdesc='xsl module for PHP'
-    depends=('php' 'libxslt')
-    provides=("php-xsl-interpreter=${_interpreter}")
+	pkgdesc='xsl module for PHP'
+	depends=('php' 'libxslt')
+	provides=("php-xsl-interpreter=${_interpreter}")
 
-    install -D -m755 "${srcdir}/build/modules/xsl.so" "${pkgdir}/usr/lib/php/modules/xsl.so"
+	install -D -m755 "${srcdir}/build/modules/xsl.so" "${pkgdir}/usr/lib/php/modules/xsl.so"
 }
