@@ -5,8 +5,8 @@
 # Contributor: Thomas Baechler <thomas@archlinux.org>
 
 pkgbase=nvidia-utils
-pkgname=('nvidia-utils' 'opencl-nvidia' 'nvidia-dkms' 'nvidia-open-dkms')
-pkgver=580.119.02
+pkgname=('nvidia-utils' 'opencl-nvidia' 'nvidia-open-dkms')
+pkgver=590.48.01
 pkgrel=2
 arch=('x86_64')
 url="http://www.nvidia.com/"
@@ -32,8 +32,8 @@ sha256sums=('be99ff3def641bb900c2486cce96530394c5dc60548fc4642f19d3a4c784134d'
             'c5aa7b8abe69e72bfdc6b9ee8afbfd350bcc557e894558f2e6e4087fa9aa0dd8'
             '1d053c5078387021338cfc3a732bed61be1a20a549775573788e9134775c8149'
             '12d31a5425aba66be9e9129012cde82755ad4d5b7ce9933df8fc398c4fa8d631'
-            '8020f5dfd3ee88aee7a38990d0c3d2afe54751e9a170ba9eadd7ea670138ecd7'
-            'ea06941cf2b095c2a9a6f1d0640a447d1c33baefbff9d95fd9726955dd210692'
+            'b9e2f80693781431cc87f4cd29109e133dcecb50a50d6b68d4b3bf2d696bd689'
+            'ffcd948cfe32bb0655fc911b8204ae6df086346025dd644d559a9b148297a80d'
             '163c57160cc1033020680f638b44ebd94b496152dcd8951e87d5077d4d5c2009'
             'a0088d49d46b699d1727e5944fd9aca5ede93ea3678dd5e91ca58084bc2fa0ee'
             'b14f7a65359c05c373ddfc750cd4cf086a48e815489d93ad5cbe1dbf84bf8f5a')
@@ -118,23 +118,9 @@ package_opencl-nvidia() {
     ln -s nvidia-utils "${pkgdir}/usr/share/licenses/opencl-nvidia"
 }
 
-package_nvidia-dkms() {
-    pkgdesc="NVIDIA kernel modules - module sources"
-    depends=('dkms' "nvidia-utils=$pkgver" 'libglvnd')
-    provides=('NVIDIA-MODULE' 'nvidia')
-    conflicts=('NVIDIA-MODULE' 'nvidia')
-
-    cd ${_pkg}
-
-    install -dm 755 "${pkgdir}/usr/src"
-    cp -dr --no-preserve='ownership' kernel "${pkgdir}/usr/src/nvidia-${pkgver}"
-
-    install -Dm644 "${srcdir}/${_pkg}/LICENSE" "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE"
-}
-
 package_nvidia-utils() {
     pkgdesc="NVIDIA drivers utilities"
-    depends=('libglvnd' 'egl-wayland' 'egl-gbm' 'egl-x11')
+    depends=('libglvnd' 'egl-wayland' 'egl-wayland2' 'egl-gbm' 'egl-x11')
     optdepends=('nvidia-settings: configuration tool'
                 'xorg-server: Xorg support'
                 'xorg-server-devel: nvidia-xconfig'
@@ -242,6 +228,9 @@ package_nvidia-utils() {
     # Present Helper
     install -Dm755 "libnvidia-present.so.${pkgver}" "${pkgdir}/usr/lib/libnvidia-present.so.${pkgver}"
 
+    # https://github.com/microsoft/TileIR
+    install -Dm755 "libnvidia-tileiras.so.${pkgver}" "${pkgdir}/usr/lib/libnvidia-tileiras.so.${pkgver}"
+
     # Debug
     install -Dm755 nvidia-debugdump "${pkgdir}/usr/bin/nvidia-debugdump"
 
@@ -325,7 +314,7 @@ package_nvidia-open-dkms() {
   pkgdesc="NVIDIA open kernel modules - module sources"
   depends+=('dkms')
   license=('MIT AND GPL-2.0-only')
-  conflicts=('nvidia-open' 'NVIDIA-MODULE')
+  conflicts=('nvidia-open' 'NVIDIA-MODULE' 'nvidia-dkms')
   provides=('nvidia-open' 'NVIDIA-MODULE')
 
   install -dm 755 "${pkgdir}/usr/src"

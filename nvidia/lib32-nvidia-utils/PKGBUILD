@@ -5,7 +5,7 @@
 _pkgbasename=nvidia-utils
 pkgbase=lib32-$_pkgbasename
 pkgname=('lib32-nvidia-utils' 'lib32-opencl-nvidia')
-pkgver=580.119.02
+pkgver=590.48.01
 pkgrel=2
 arch=('x86_64')
 url="http://www.nvidia.com/"
@@ -14,7 +14,7 @@ license=('custom')
 options=('!strip')
 _pkg="NVIDIA-Linux-x86_64-${pkgver}"
 source=("https://us.download.nvidia.com/XFree86/Linux-x86_64/${pkgver}/${_pkg}.run")
-sha512sums=('b773deaa58823d3907488527507df6831959c1b8215ad34e1fdf7025d318d9ca7610d0b103252252c4e4097ec97d4224f99a3e9701327dc15eadc66e906af250')
+sha512sums=('31fd82af707dbe9a6d3848766925386f5e91c5fae0a605819450eb8e5a5a52eaab3ae5cff50b4dd36bc5c32fe1aabc29a6a79438d6614988c7b08f509ef0da6d')
 
 create_links() {
     # create soname links
@@ -80,6 +80,7 @@ package_lib32-nvidia-utils() {
     install -D -m755 "libnvidia-glvkspirv.so.${pkgver}" "${pkgdir}/usr/lib32/libnvidia-glvkspirv.so.${pkgver}"
     install -D -m755 "libnvidia-allocator.so.${pkgver}" "${pkgdir}/usr/lib32/libnvidia-allocator.so.${pkgver}"
     install -D -m755 "libnvidia-gpucomp.so.${pkgver}" "${pkgdir}/usr/lib32/libnvidia-gpucomp.so.${pkgver}"
+    install -D -m755 "libnvidia-tileiras.so.${pkgver}" "${pkgdir}/usr/lib32/libnvidia-tileiras.so.${pkgver}"
 
     # VDPAU
     install -D -m755 "libvdpau_nvidia.so.${pkgver}" "${pkgdir}/usr/lib32/vdpau/libvdpau_nvidia.so.${pkgver}"
