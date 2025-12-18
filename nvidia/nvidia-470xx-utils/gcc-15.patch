@@ -1,25 +1,32 @@
-From c36d6d913e805107134a74bbca7aa185c3903669 Mon Sep 17 00:00:00 2001
-From: Vasiliy Stelmachenok <ventureo@cachyos.org>
-Date: Wed, 28 May 2025 16:15:08 +0300
-Subject: [PATCH] Fix compilation with GCC 15
+From 3d51f7abf1c591dfd47d0070e2b6942ef91301af Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Joan=20Bruguera=20Mic=C3=B3?= <joanbrugueram@gmail.com>
+Date: Sun, 1 Jun 2025 22:14:13 +0000
+Subject: [PATCH] Fix for NVIDIA 470.256.02 driver for GCC 15
 
-Signed-off-by: Vasiliy Stelmachenok <ventureo@cachyos.org>
+conftest.sh invokes GCC on its own, without going through the usual
+kernel Makefile that would add the proper CFLAGS (e.g. -std=gnu11).
+
+This means that it builds with the default of GCC, which in GCC 15
+has changed to -std=gnu23 which and has backwards incompatible changes
+that the kernel does not support. Force it to -std=gnu17 instead.
 ---
- kernel/Kbuild | 1 +
- 1 file changed, 1 insertion(+)
+ conftest.sh | 3 +++
+ 1 file changed, 3 insertions(+)
 
-diff --git a/kernel/Kbuild b/kernel/Kbuild
-index 84a9d43..eecc1a0 100644
---- a/kernel/Kbuild
-+++ b/kernel/Kbuild
-@@ -66,6 +66,7 @@ ccflags-y += -D__KERNEL__ -DMODULE -DNVRM -DNV_VERSION_STRING=\"470.256.02\" -Wn
- ccflags-y += $(call cc-option,-Werror=undef,)
- ccflags-y += -DNV_SPECTRE_V2=$(NV_SPECTRE_V2)
- ccflags-y += -DNV_KERNEL_INTERFACE_LAYER
-+ccflags-y += -std=gnu17
+diff --git a/conftest.sh b/conftest.sh
+index 70c91e5..dc40d3a 100755
+--- a/conftest.sh
++++ b/conftest.sh
+@@ -205,6 +205,9 @@ build_cflags() {
+             CFLAGS="$CFLAGS -mfentry -DCC_USING_FENTRY"
+         fi
+     fi
++
++    # Specify the C standard, instead of defaulting to the compiler's
++    CFLAGS="$CFLAGS -std=gnu17"
+ }
  
- #
- # Detect SGI UV systems and apply system-specific optimizations.
+ CONFTEST_PREAMBLE="#include \"conftest/headers.h\"
 -- 
 2.49.0
 
