@@ -75,6 +75,10 @@ post_install() {
   #echo "If you are installing this without the CachyOS Installation, please update your username in the /etc/sddm.conf.d/*"
 }
 
+pre_upgrade() {
+  rm -f /etc/limine-entry-tool.d/20-chwd.conf
+}
+
 post_upgrade() {
   # Use scx_lavd as default scheduler
   scx_lavd_default
