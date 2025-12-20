@@ -3,7 +3,7 @@
 
 pkgname=rate-mirrors
 pkgver=0.23.0
-pkgrel=2
+pkgrel=3
 pkgdesc="Everyday-use client-side map-aware mirror ranking tool"
 arch=(x86_64)
 url="https://github.com/westandskif/rate-mirrors"
@@ -14,15 +14,20 @@ options=(!lto)
 source=(
     "${pkgname}::git+$url.git#tag=v${pkgver}"
     https://github.com/CachyOS/rate-mirrors/commit/eb640518f354b2ea1da6e81e4550dfc61dfc9fc9.patch
+    https://github.com/CachyOS/rate-mirrors/commit/1fcc102934bf5e8570f406c4bb87937f3e4d3dd0.patch
 )
 sha256sums=('3244b2b40e00a0e31f95ca60bdfae8976cbbd96d080158d0c0ef279dcaf92164'
-            '5afe2c4afaa12c4dd55e170c9289fbb5efd30a344bbfe9e9fa392ec96400b866')
+            '5afe2c4afaa12c4dd55e170c9289fbb5efd30a344bbfe9e9fa392ec96400b866'
+            '7d142c842a31faaa3b2fed4a20961c014e983fdc97caee3b2194c3c50a4e42e7')
 
 prepare() {
   cd "$pkgname"
 
   # archlinux: use cachyos proxy mirrorlist
   patch -Np1 -i ../eb640518f354b2ea1da6e81e4550dfc61dfc9fc9.patch
+
+  # cachyos: add proxy mirrorlist as primary
+  patch -Np1 -i ../1fcc102934bf5e8570f406c4bb87937f3e4d3dd0.patch
 
   cargo fetch --locked --target "$CARCH-unknown-linux-gnu"
 }
