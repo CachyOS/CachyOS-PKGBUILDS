@@ -1,0 +1,46 @@
+# Maintainer: Vladislav Nepogodin <nepogodin.vlad@gmail.com>
+# Contributor: SoulHarsh007 <admin@soulharsh007.dev>
+# Contributor: Shendisx <aarrayyzuelo@protonmail.com>
+
+pkgname=cachyos-niri-noctalia
+pkgdesc='CachyOS Niri (+Noctalia) settings'
+pkgver=1.0.0
+pkgrel=1
+arch=('any')
+url="https://github.com/cachyos/$pkgname"
+license=(GPL-3.0-only)
+makedepends=('coreutils')
+source=(git+$url#commit=f674c6b358bf0fa8c69a9692caa01ca8db96f3cb)
+sha512sums=('186e2f786716405d27da76c8b1ecb748c2f483add62f6c0cf662221874995c36669172884873b373b32fdf62d02487ceff98d7e33d34805f242ee34ac7b13d83')
+depends=(
+  cachyos-alacritty-config
+  ttf-fantasque-nerd
+  ttf-font-awesome
+  otf-font-awesome
+  awesome-terminal-fonts
+  noto-fonts
+  noto-fonts-emoji
+  ttf-fira-sans
+  ttf-hack
+  kvantum
+  qt5ct
+  niri
+  xdg-desktop-portal-gnome
+  xwayland-satellite
+  pamixer
+  wl-clipboard
+  polkit-kde-agent
+  xorg-xwayland
+  capitaine-cursors
+  cachyos-wallpapers
+  kvantum-theme-nordic-git
+  brightnessctl
+  cachyos-nord-gtk-theme-git
+)
+provides=('cachyos-desktop-settings')
+conflicts=('cachyos-desktop-settings')
+
+package() {
+  install -d $pkgdir/etc
+  cp -rf $srcdir/$pkgname/etc $pkgdir
+}
