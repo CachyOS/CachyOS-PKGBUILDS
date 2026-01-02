@@ -1,8 +1,8 @@
 # Maintainer: VolRen <VolRencs@proton.me>
 
 pkgname=stacer
-pkgver=1.5.0
-pkgrel=2
+pkgver=1.6.0
+pkgrel=1
 pkgdesc="Linux System Optimizer and Monitoring"
 url="https://github.com/QuentiumYT/Stacer"
 arch=('x86_64')
@@ -12,7 +12,7 @@ makedepends=('cmake' 'qt6-tools')
 provides=('stacer')
 conflicts=('stacer-git' 'stacer-bin')
 source=("https://github.com/QuentiumYT/Stacer/archive/refs/tags/v${pkgver}.tar.gz")
-sha256sums=('35f92898dd605b81307b3fd2be8999ed8b72c63e60706dd07f0f247964ea8b26')
+sha256sums=('5aea4fe7b27a1f5d2531f9fdfc001c452b76fd80f586d7b0fd95f7b197dd0547')
 
 build() {
     cd "Stacer-${pkgver}"
@@ -33,9 +33,7 @@ package() {
     install -Dm755 "build/stacer-core/libstacer-core.a" -t "${pkgdir}/usr/share/stacer/lib"
     install -Dm644 "build/stacer/translations"/*.qm -t "${pkgdir}/usr/share/stacer/translations"
 
-    for i in 16 32 64 128 256; do
-        install -Dm644 "icons/hicolor/${i}x${i}/apps/stacer.png" -t "${pkgdir}/usr/share/icons/hicolor/${i}x${i}/apps"
-    done
+    install -Dm644 "icons/hicolor/scalable/apps/stacer.svg" -t "${pkgdir}/usr/share/icons/hicolor/scalable/apps"
 
     install -Dm644 "desktop/stacer.desktop" -t "${pkgdir}/usr/share/applications"
     install -Dm644 "LICENSE" -t "${pkgdir}/usr/share/licenses/${pkgname}"
