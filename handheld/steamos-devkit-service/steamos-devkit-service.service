@@ -1,0 +1,12 @@
+[Unit]
+Description="SteamOS Devkit Service"
+
+[Service]
+User=deck
+ExecStart=/usr/bin/python /usr/share/steamos-devkit/steamos-devkit-service.py
+KillSignal=SIGUSR1
+Restart=always
+RestartSec=5s
+
+[Install]
+WantedBy=multi-user.target

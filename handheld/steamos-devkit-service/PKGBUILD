@@ -1,0 +1,31 @@
+# Maintainer: Eric Naim <dnaim@cachyos.org>
+
+pkgname=steamos-devkit-service
+pkgdesc="SteamOS Devkit Service"
+pkgver=0.20250916.0
+pkgrel=1
+arch=('any')
+url="https://gitlab.steamos.cloud/devkit/steamos-devkit-service"
+license=('LGPL-2.1')
+source=(
+    git+https://gitlab.steamos.cloud/devkit/steamos-devkit-service.git#tag=v"$pkgver"
+    steamos-devkit-service.service
+    10-steamos-devkit-service-dns-sd.rules
+)
+sha512sums=('88f7748183e017aa16ef97d0dca8e174e18ef86b4f0dc7d0ed972dd73090c29389227e9d956f5a9b57e622d8622fa995fd7adcfe97574a5ddd87db8a3d0a5dc0'
+            'b028654e3a1e4a59d6ff62bf3d82bca7a6c3009507bb7b60d2abad7a37d442f0988d832b1d64bacfebc1363581bf2c78c806f9fae3f7a5c90dae9fa9d7c797e4'
+            '406ae6abe9858f6a42569d1631da9c264de7a9b001ee4ff5757c80bc0ec41ffecf0ffef9987aa6bf1978827ab030f75d2c13205cefeb8e881fd470208f0215e0')
+depends=('dbus-python' 'systemd')
+makedepends=('git')
+
+package() {
+    install -Dm644 "steamos-devkit-service.service" \
+        "${pkgdir}/usr/lib/systemd/system/steamos-devkit-service.service"
+    install -Dm644 "10-steamos-devkit-service-dns-sd.rules" \
+        "${pkgdir}/usr/share/polkit-1/rules.d/10-steamos-devkit-service-dns-sd.rules"
+
+    install -Dm755 "${pkgname}/src/steamos-devkit-service.py" \
+        "${pkgdir}/usr/share/steamos-devkit/steamos-devkit-service.py"
+    cp -r "${pkgname}/hooks" "${pkgdir}/usr/share/steamos-devkit"
+}
+

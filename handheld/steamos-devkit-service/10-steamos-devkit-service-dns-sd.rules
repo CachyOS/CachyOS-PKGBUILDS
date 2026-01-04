@@ -1,0 +1,18 @@
+polkit.addRule(function(action, subject) {
+    var allowed = { "org.freedesktop.resolve1.register-service":  true,
+                    "org.freedesktop.resolve1.unregister-service": true };
+
+    if (allowed[action.id]) {
+        var cgroup_re = /\/system\.slice\/steamos-devkit-service\.service\b/;
+        var cgroup =
+            polkit.spawn(["/bin/cat", "/proc/" + subject.pid + "/cgroup"]);
+        if (cgroup.match(cgroup_re)) {
+            polkit.log("cgroup " + cgroup + " OK");
+            return polkit.Result.YES;
+        } else {
+            polkit.log("cgroup " + cgroup + " NOT OK");
+        }
+    }
+
+    return polkit.Result.NOT_HANDLED;
+});
