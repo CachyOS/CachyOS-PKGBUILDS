@@ -5,7 +5,7 @@
 
 pkgname=gamescope
 pkgver=3.16.19
-pkgrel=2
+pkgrel=3
 pkgdesc='SteamOS session compositing window manager'
 arch=(x86_64)
 url=https://github.com/ValveSoftware/gamescope
@@ -90,6 +90,8 @@ prepare() {
     git config submodule.${submodule}.url ../${submodule##*/}
   done
   git -c protocol.file.allow=always submodule update
+
+  git cherry-pick -n c2fecc58da0e64d22bc86cacf01cbd7aec2c5324
 }
 
 build() {
