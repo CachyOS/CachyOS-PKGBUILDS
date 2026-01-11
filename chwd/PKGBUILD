@@ -3,7 +3,7 @@
 
 pkgname=chwd
 pkgver=1.17.1
-pkgrel=1
+pkgrel=2
 pkgdesc="CachyOS Hardware Detection Tool"
 arch=(x86_64)
 url="https://github.com/cachyos/chwd"
@@ -14,14 +14,17 @@ provides=('chwd-db')
 replaces=('chwd-db')
 conflicts=('chwd-db')
 groups=('cachyos')
-source=("chwd::git+$url.git#tag=${pkgver}?signed")
-sha256sums=('7887be01c8ebdfcc7d745914be73cd713377c92d2cbaa733340f4abb96440e6a')
+source=("chwd::git+$url.git#tag=${pkgver}?signed"
+        "legion-go-inputplumber.patch")
+sha256sums=('7887be01c8ebdfcc7d745914be73cd713377c92d2cbaa733340f4abb96440e6a'
+            '61597302f847335428c8f46e773ea67796a3c5defafd592b4ba642ca2336e9e7')
 validpgpkeys=(
   'B1B70BB1CD56047DEF31DE2EB62C3D10C54D5DA9'  # Vladislav Nepogodin <nepogodin.vlad@gmail.com>
 )
 
 prepare() {
   cd "$srcdir/$pkgname"
+  patch -Np1 -i "${srcdir}/legion-go-inputplumber.patch"
 
   cargo fetch --locked --target "$CARCH-unknown-linux-gnu"
 
