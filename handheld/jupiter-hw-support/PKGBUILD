@@ -1,7 +1,7 @@
 # Maintainer: Peter Jung <admin@ptr1337.dev>
 
 pkgname=jupiter-hw-support
-pkgver=20250728.1
+pkgver=20251111.1
 pkgrel=1
 arch=('any')
 license=('MIT')
@@ -19,21 +19,21 @@ optdepends=('grub-steamos')
 makedepends=('rsync' 'git' 'openssh' 'xorg-xcursorgen')
 pkgdesc='CachyOS - Deckify Steam Deck HW Support'
 source=("git+https://github.com/evlaV/jupiter-hw-support.git#tag=jupiter-${pkgver}"
+        "steamos-firmware-update.in"
         "steamos-btrfs-automount.patch"
         "cachyos-automount.patch"
         "udev-automount-rules.patch"
         "priv-write.patch")
 #install="$pkgname.install"
 options=(!strip !debug)
-sha256sums=('06c352d9394aea20f291c332bf23b632768728ca915e4a4cf02724279bbc43b4'
+sha256sums=('d92d1e4a69f9fa5591530f0e3506a218c9c65ab74c6c919da476b9a9122b3207'
+            '33290e9c498f7a01b2512da5e3303cfb316bc483b92ab6bf0af65535c9c7415d'
             'fe064240bf77dabfa4d161b10c33c82385a0ca22a49350e70ab9301b0e98dc7b'
             'c7db0e977fb0c3a1526b8482e349f73304fc6397d7337c48fe0c990bde64412c'
             'd6b5636eb09d2190b10eb665238c30960babba96424fc9768e36966495fa795e'
             'd3098f26eaa26d9eccfedeac792e47a03317bdd16b17ba03be0fbd1ed6621c5d')
 prepare() {
   cd "${pkgname}"
-  git revert -n c97d8aa369b4c377a17919eba7ae62fbf6b035ae
-  git revert -n 7d74ae6dd3ab70e5cd0808e57e31aeb270eb9a3f
 
   patch --forward --strip=1 --input=../steamos-btrfs-automount.patch
   patch --forward --strip=1 --input=../cachyos-automount.patch
@@ -42,15 +42,9 @@ prepare() {
 }
 
 package() {
-  rm -rf "$srcdir"/jupiter-hw-support/usr/bin/jupiter-biosupdate
-  rm -rf "$srcdir"/jupiter-hw-support/usr/bin/steam-http-loader
-  rm -rf "$srcdir"/jupiter-hw-support/usr/bin/steamos-select-branch
-  rm -rf "$srcdir"/jupiter-hw-support/usr/bin/steamos-session-select
-  rm -rf "$srcdir"/jupiter-hw-support/usr/bin/steamos-update
-  rm -rf "$srcdir"/jupiter-hw-support/usr/bin/steamos-polkit-helpers/jupiter-biosupdate
-  rm -rf "$srcdir"/jupiter-hw-support/usr/bin/steamos-polkit-helpers/steamos-select-branch
-  rm -rf "$srcdir"/jupiter-hw-support/usr/bin/steamos-polkit-helpers/steamos-update
   rsync -a "$srcdir"/jupiter-hw-support/* "$pkgdir"
+  install -Dm755 "${srcdir}/steamos-firmware-update.in" \
+      "${pkgdir}/usr/bin/steamos-firmware-update"
 
   cd $pkgdir/usr/share/steamos/
   xcursorgen $pkgdir/usr/share/steamos/steamos-cursor-config $pkgdir/usr/share/icons/steam/cursors/default

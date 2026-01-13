@@ -1,0 +1,112 @@
+#!/bin/bash
+
+set -euo pipefail
+
+# shellcheck source=../libexec/steamos-shellutil.sh.in
+source @libexecdir@/steamos/steamos-shellutil.sh
+
+# Currently only the Legion Go S BIOS/System Firmware is handled.
+# We may loosen this to any system-firmware level updates in the future.
+GUID_WHITELIST=(3a30c6b4-208f-2382-2481-8a7b5fa77f7e  # Legion Go S BIOS - 8APU1
+                36a4e61a-b574-4c07-b1e1-761f40d358ce  # Legion Go S BIOS - 8ARP1
+                65619675-fec6-5035-801d-7f5e59fd9749  # Legion Go S HID - USB\VID_1A86&PID_E310
+                b585990a-003e-5270-89d5-3705a17f9a43) # fwupd Test device, via `fwupdtool enable-test-devices`
+
+# For galileo/jupiter units, we will chain to `jupiter-biosupdate` which is a superset of our arguments.
+board_name="$(cat /sys/class/dmi/id/board_name || true)"
+board_vendor="$(cat /sys/class/dmi/id/board_vendor || true)"
+if [[ $board_vendor = "Valve" && ( $board_name = "Jupiter" || $board_name = "Galileo" ) ]]; then
+   estat "$board_vendor $board_name unit, using jupiter-biosupdate backend"
+   exec jupiter-biosupdate "$@" || die "Failed to find jupiter-biosupdate"
+fi
+
+# Our whitelist is only Lenovo devices presently
+# TODO: implement a smarter/more-comprehensive filter
+# mechanism for known-good firmware updates.
+sys_vendor="$(cat /sys/class/dmi/id/sys_vendor || true)"
+if [[ $sys_vendor != "LENOVO" ]]; then
+  estat "No updates configured for this vendor"
+  exit 0
+fi
+
+# Commandline. Should retain compatibility with the `jupiter-biosupdate` tool until this is handled through
+# steamos-manager
+checkmode=
+while [[ ${#@} -gt 0 ]]; do
+  arg="$1"
+  if [[ $arg = "check" && -z $checkmode ]]; then
+    checkmode=1
+  else
+    die "!! Usage: $0 [check]"
+  fi
+  shift
+done
+
+check_needs_reboot() {
+  # WHEW
+  local pending
+  pending=$(dofwupd get-devices --json \
+                    | jq '.Devices[] | select(.Problems | contains(["update-in-progress"]))? | select(.Flags | contains(["needs-reboot"]))?')
+  if [[ -n $pending ]]; then
+    ewarn "Some updates require a device reboot to complete"
+  fi
+}
+
+# Take care to either swallow output or direct to stderr, since steam consumes the output of this script
+dofwupd() {
+  cmd fwupdmgr --json "$@"
+}
+
+bad_power_state=
+# TODO fwupd will not install BIOS updates when AC isn't present (and always returns 0 on `update` if they are skipped
+#      for that reason, but it's kinda pertenant).  For now we'll pretend there are no updates when not on AC, and
+#      refuse to proceed This may unfortunately not match fwupd's internal logic but is hopefully a superset.
+# TODO In a mix of updates that require AC and not, we should filter down and apply the ones that do?
+# TODO Shouldn't fwupd also be checking battery level?  We do here because 1% + AC is not a good idea.  But we hard-code
+#      BAT0, which will need to change for non-lenovo devices.
+if [[ -f /sys/class/power_supply/ACAD/online && $(cat /sys/class/power_supply/ACAD/online) -ne 1 ]] || \
+   [[ -f /sys/class/power_supply/BAT0/capacity && $(cat /sys/class/power_supply/BAT0/capacity) -lt 20 ]]; then
+  bad_power_state=1
+fi
+
+# Trigger a refresh.  exitcode 2 means no refresh needed.
+dofwupd >&2 refresh || [[ $? -eq 2 ]] || die "Failed to refresh from lvfs"
+
+# Get updates and intersect them with the whitelist
+updatejson="$(dofwupd get-updates)"
+guids=$(jq -r '[.Devices[]?.Guid.[]] as $updates | $updates - ($updates - $ARGS.positional) | .[]' \
+           --args "${GUID_WHITELIST[@]}" <<< "$updatejson")
+# Also select formatted Name - Version notes for the same set
+notes=$(jq -r '.Devices[]? | select(.Guid - (.Guid - $ARGS.positional) | length > 0)? | "\(.Name) \(.Version)"?' \
+        --args "${GUID_WHITELIST[@]}" <<< "$updatejson")
+
+# No updates?
+if [[ -z "$guids" ]]; then
+  estat "No updates for supported devices available"
+  check_needs_reboot
+  exit 0
+fi
+
+# If there's updates but we're not on AC, stop after refreshing.  This behavior likely needs to move to the
+# steamos-manager interface for further polish.
+if [[ -n $bad_power_state ]]; then
+  ewarn "Updates available, but cannot be applied without at least 20% battery and connected AC"
+  exit 3
+fi
+
+estat "Updates available for devices:"
+einfo "$guids"
+# To stdout, consumed by steam as the available updates
+echo "$notes"
+
+# Check mode?
+if [[ -n $checkmode ]]; then
+  exit 7 # Signal to steam that we did not apply an update, but could have
+fi
+
+# Send it
+estat "Performing updates"
+# shellcheck disable=SC2086 # Splitting intentional. There's no globs in these. Shh.
+dofwupd >&2 update $guids || die "One or more updates failed :("
+estat "All updates successful"
+check_needs_reboot
