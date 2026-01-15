@@ -1,0 +1,125 @@
+# Maintainer: Peter Jung ptr1337 <admin@ptr1337.dev>
+# Maintainer: Piotr Górski <lucjan.lucjanov@gmail.com>
+
+pkgname=scx-scheds-git
+_gitname=scx
+pkgver=1.0.19.r242.g0f47655f
+pkgrel=1
+pkgdesc='sched_ext schedulers and tools'
+url='https://github.com/sched-ext/scx'
+arch=('x86_64' 'aarch64')
+license=('GPL-2.0-only')
+depends=(
+  bash
+  bpf
+  gcc-libs
+  glibc
+  jq
+  libseccomp
+  libbpf
+  libelf
+  protobuf
+  scx-tools
+  zlib
+)
+makedepends=(
+  clang
+  git
+  llvm
+  llvm-libs
+  python
+  rust
+)
+source=("git+https://github.com/sched-ext/scx")
+sha256sums=('SKIP')
+options=(!lto)
+provides=("scx-scheds=$pkgver")
+conflicts=("scx-scheds")
+replaces=('scx-cake')
+
+_backports=(
+482184846ff170c72b413fc56f1056a9d75996a9 # Add scx_cake scheduler to workspace
+30df24f2df2257d0149bf725386ad7fe70e376bc # Add scx_cake scheduler to workspace
+b6b9da8e4e1edf0a2cd3cbb491e81e1d395b77ff # scx_cake: Use local path dependencies instead of git
+f39e069cf40c95faebc318415a148e640b667d10 # Update Cargo.lock for scx_cake
+8877fdf70d03a60dcff93e9ff234d22bd735c574 # scx_cake: Run cargo fmt
+4dce4768d59d1ab787dbbbbec69a3b73420d3d94 # scx_cake: add kernel 6.16+ compatibility for scx_bpf_cpu_curr
+8ae09ef52dbc15224c0e7fcb043753eebd36cddc # scx_cake: Implement Check & Skip Optimizations and SMT Fix
+9c990bfc3feabca5d2b3d995bcf30102bbe0ce83 # perf sched map optimization
+ada5f8d94ee8f0148de48166ad915ad17b80a3cd # feat(scx_cake): implement state-based per-cpu direct dispatch
+a63c72f64528e53ba7e8ddbde2184f550403fcb1 # Ghost Scheduler Optimizations: Store coalescing and bit testing
+403b856951f79ae12ee784cd92ec17e142b6203a # bug fixes, floor for runtime, healthy IPC
+25a298ad2c3397a5757212736019f2e6150a91c2 # Great benchmarks - need to review jitter
+e1e32d9e93aac740a4bd1dcba7449f948120efa8 # scx_cake: Implement Zero-Math Locality Arbiter
+952d58e46956ac998553d131ac7750162d6f49f6 # scx_cake: warning removed from build
+9c4627f2349d39a90cfd0a0bad6773ff49ba10d4 # struct alignment 4 byte for clang 19+
+e4505d83a5489a885ab7fb2b30a58c43359f8572 # BPF compat: Use semantic macros for 32-bit atomics to fix Clang 19 crash
+7a487e05196928fcfe887b861e056c5e71119063 # BPF: Optimize MLP by migrating volatile loads to relaxed semantic macros
+969cee61a59943ce56ad66d66709e31ada3d71d5 # BPF: Bulletproof compat layer with inline ASM for Clang < 21
+977e0eec6cdb011db7ecf20af59e42f0d5bb79f1 # Checkpoint: Immediate Consumption pattern - baseline 53 spills restored
+9c3fad0a544f8fba04f48d862ae9075e01a061be # Absolute Zero Spill: Eliminate remaining BPF spills in cake_select_cpu (53 -> 0). Verified with llvm-objdump.
+02f5d2e616a540d3a64e86c9a76a2a7e7a02d98e # Optimize: Implement more aggressive warmth seeking (Stubborn Warmth)
+)
+
+_reverts=(
+)
+
+pkgver() {
+  cd $_gitname
+  git describe --long --tags | sed 's/^v//;s/\([^-]*-g\)/r\1/;s/-/./g'
+}
+
+prepare() {
+  cd $_gitname
+
+  local _c _l
+   for _c in "${_backports[@]}"; do
+     if [[ "${_c}" == *..* ]]; then _l='--reverse'; else _l='--max-count=1'; fi
+     git log --oneline "${_l}" "${_c}"
+     git cherry-pick --mainline 1 --no-commit "${_c}"
+   done
+   for _c in "${_reverts[@]}"; do
+     if [[ "${_c}" == *..* ]]; then _l='--reverse'; else _l='--max-count=1'; fi
+     git log --oneline "${_l}" "${_c}"
+     git revert --mainline 1 --no-commit "${_c}"
+   done
+
+  local src
+   for src in "${source[@]}"; do
+     src="${src%%::*}"
+     src="${src##*/}"
+     [[ $src = *.patch ]] || continue
+     echo "Applying patch $src..."
+     patch -Np1 < "../$src"
+   done
+
+  export RUSTUP_TOOLCHAIN=stable
+  cargo fetch --locked --target "$(rustc -vV | sed -n 's/host: //p')"
+}
+
+build() {
+  cd $_gitname
+  export RUSTUP_TOOLCHAIN=stable
+  export CARGO_TARGET_DIR=target
+  cargo build \
+     --release \
+     --frozen \
+     --all-features \
+     --workspace \
+     --exclude scx_rlfifo \
+     --exclude scx_wd40 \
+     --exclude scx_mitosis \
+     --exclude scxcash \
+     --exclude xtask \
+     --exclude vmlinux_docify \
+     --exclude scx_arena_selftests
+}
+
+package() {
+  cd $_gitname
+
+  # Install all built executables (skip .so and .d files)
+  find target/release \
+    -maxdepth 1 -type f -executable ! -name '*.so' \
+    -exec install -Dm755 -t "$pkgdir/usr/bin/" {} +
+}
