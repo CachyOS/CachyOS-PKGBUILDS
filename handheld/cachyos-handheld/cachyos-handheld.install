@@ -8,10 +8,10 @@ update_user() {
   elif usr=$(id -nu 1001) && [[ ! -z ${usr} ]]; then
      echo "Setting ${usr} as name for autologin and decky environment variables."
   else
-     echo "Get user name failed, setting 'User=' in /etc/sddm.conf.d/steam-deckify.conf"
+     echo "Get user name failed, setting 'User=' in /etc/plasmalogin.conf.d/steam-deckify.conf"
   fi
   # Autologin
-  sed -ri "s|^(User=).*|User=${usr}|" /etc/sddm.conf.d/steam-deckify.conf
+  sed -ri "s|^(User=).*|User=${usr}|" /etc/plasmalogin.conf.d/steam-deckify.conf
   # Decky loader
   sed -ri "s|^(DECKY_USER=).*|DECKY_USER=${usr}|" /etc/environment.d/handheld.conf
   sed -ri "s|^(DECKY_USER_HOME=).*|DECK_USER_HOME=/home/${usr}|" /etc/environment.d/handheld.conf
@@ -70,12 +70,16 @@ post_install() {
     systemctl enable "$service" --now
   done
 
+  # Enable Plasma Login Manager
+  ln -sf /usr/lib/systemd/system/plasmalogin.service /etc/systemd/system/display-manager.service
+
+  # First boot setup
   steamos_steam
 
-  # Update users sddm config to reflect the changes
+  # Update users plasmalogin config to reflect the changes
   echo "Updating Handheld Configs."
   update_user
-  # echo "If you are installing this without the CachyOS Installation, please update your username in the /etc/sddm.conf.d/*"
+  # echo "If you are installing this without the CachyOS Installation, please update your username in the /etc/plasmalogin.conf.d/*"
 }
 
 pre_upgrade() {
@@ -85,6 +89,9 @@ pre_upgrade() {
 post_upgrade() {
   # Use scx_lavd as default scheduler
   scx_lavd_default
+
+  # Enable Plasma Login Manager
+  ln -sf /usr/lib/systemd/system/plasmalogin.service /etc/systemd/system/display-manager.service
 
   # Update files to reflect the changes
   echo "Updating Handheld Configs."
