@@ -3,7 +3,7 @@
 
 pkgname=scx-scheds-git
 _gitname=scx
-pkgver=1.0.19.r242.g0f47655f
+pkgver=1.0.19.r251.g2901e11f
 pkgrel=1
 pkgdesc='sched_ext schedulers and tools'
 url='https://github.com/sched-ext/scx'
@@ -38,27 +38,30 @@ conflicts=("scx-scheds")
 replaces=('scx-cake')
 
 _backports=(
-482184846ff170c72b413fc56f1056a9d75996a9 # Add scx_cake scheduler to workspace
-30df24f2df2257d0149bf725386ad7fe70e376bc # Add scx_cake scheduler to workspace
-b6b9da8e4e1edf0a2cd3cbb491e81e1d395b77ff # scx_cake: Use local path dependencies instead of git
-f39e069cf40c95faebc318415a148e640b667d10 # Update Cargo.lock for scx_cake
-8877fdf70d03a60dcff93e9ff234d22bd735c574 # scx_cake: Run cargo fmt
-4dce4768d59d1ab787dbbbbec69a3b73420d3d94 # scx_cake: add kernel 6.16+ compatibility for scx_bpf_cpu_curr
-8ae09ef52dbc15224c0e7fcb043753eebd36cddc # scx_cake: Implement Check & Skip Optimizations and SMT Fix
-9c990bfc3feabca5d2b3d995bcf30102bbe0ce83 # perf sched map optimization
-ada5f8d94ee8f0148de48166ad915ad17b80a3cd # feat(scx_cake): implement state-based per-cpu direct dispatch
-a63c72f64528e53ba7e8ddbde2184f550403fcb1 # Ghost Scheduler Optimizations: Store coalescing and bit testing
-403b856951f79ae12ee784cd92ec17e142b6203a # bug fixes, floor for runtime, healthy IPC
-25a298ad2c3397a5757212736019f2e6150a91c2 # Great benchmarks - need to review jitter
-e1e32d9e93aac740a4bd1dcba7449f948120efa8 # scx_cake: Implement Zero-Math Locality Arbiter
-952d58e46956ac998553d131ac7750162d6f49f6 # scx_cake: warning removed from build
-9c4627f2349d39a90cfd0a0bad6773ff49ba10d4 # struct alignment 4 byte for clang 19+
-e4505d83a5489a885ab7fb2b30a58c43359f8572 # BPF compat: Use semantic macros for 32-bit atomics to fix Clang 19 crash
-7a487e05196928fcfe887b861e056c5e71119063 # BPF: Optimize MLP by migrating volatile loads to relaxed semantic macros
-969cee61a59943ce56ad66d66709e31ada3d71d5 # BPF: Bulletproof compat layer with inline ASM for Clang < 21
-977e0eec6cdb011db7ecf20af59e42f0d5bb79f1 # Checkpoint: Immediate Consumption pattern - baseline 53 spills restored
-9c3fad0a544f8fba04f48d862ae9075e01a061be # Absolute Zero Spill: Eliminate remaining BPF spills in cake_select_cpu (53 -> 0). Verified with llvm-objdump.
-02f5d2e616a540d3a64e86c9a76a2a7e7a02d98e # Optimize: Implement more aggressive warmth seeking (Stubborn Warmth)
+73df445316ca5c6a2d4c30faef2e4abb075d4faf # Add scx_cake scheduler to workspace
+f90749fe1c23d9875e936981bf8a6fd446cec24f # Add scx_cake scheduler to workspace
+1c8ca0830a8203d65c45f725978fcb0c7bacacc9 # scx_cake: Use local path dependencies instead of git
+69f1dd77e59e70b7dbe41faee5a5c79af58d9325 # Update Cargo.lock for scx_cake
+7dde3814bd77cc7f8441937125eb0f0b6b22527a # scx_cake: Run cargo fmt
+9148a7f5d78206494ae9d90f793deb56d421626a # scx_cake: add kernel 6.16+ compatibility for scx_bpf_cpu_curr
+200152a1c130ad35602e48f2c0aa3e1f46c53b3b # scx_cake: Implement Check & Skip Optimizations and SMT Fix
+9af5ab247b2a6aa914d6c3ea4732b65705b18854 # perf sched map optimization
+67ceada647f411ec05403c8a7c5520e34825c37e # feat(scx_cake): implement state-based per-cpu direct dispatch
+b0dc868970cc7c1ba9ceda0906d9b65a8ed3be09 # Ghost Scheduler Optimizations: Store coalescing and bit testing
+35acb69a097ad71a009318f8cf8414a5a2ca1e32 # bug fixes, floor for runtime, healthy IPC
+c8967401694dba2babee8ac16f308de6feae902e # Great benchmarks - need to review jitter
+c390499d43c82f03010133cdb88fbe6f57ccb234 # scx_cake: Implement Zero-Math Locality Arbiter
+112538b2892d98d22b1724586040ef3a8ae279d8 # scx_cake: warning removed from build
+74c63f321bcd17871422510ff226bd77224ec494 # struct alignment 4 byte for clang 19+
+7a3b602605837b5745ea614e0c9f03358ac048c8 # BPF compat: Use semantic macros for 32-bit atomics to fix Clang 19 crash
+9b586373c1402acc34e7a65249005e4c132cad36 # BPF: Optimize MLP by migrating volatile loads to relaxed semantic macros
+62349a05cf419aa4bdc7dc753ada00b5c230f980 # BPF: Bulletproof compat layer with inline ASM for Clang < 21
+85b6e24cd6e73d071c75e092f615418497495e80 # Checkpoint: Immediate Consumption pattern - baseline 53 spills restored
+f835ccca28f0535e9b7746255580b2a02c760a6f # Absolute Zero Spill: Eliminate remaining BPF spills in cake_select_cpu (53 -> 0). Verified with llvm-objdump.
+96a8ad40a93ad4f9f31d32900951f320f86a024e # Optimize: Implement more aggressive warmth seeking (Stubborn Warmth)
+b10f3d0911948748f46910890d2ee31e975d8b35 # perf(cake): remove volatile from 15 rodata declarations for JIT constant folding
+b00ba1359822a1eb491612ab261e3a2beee884e4 # feat(cake): v1.01 with clean ANSI startup splash
+e54b0811092487becbfbd9b808f57c3f9549a4ad # chore(cake): bump version to 1.0.1
 )
 
 _reverts=(
