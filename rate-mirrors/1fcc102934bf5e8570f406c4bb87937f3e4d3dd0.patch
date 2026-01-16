@@ -1,0 +1,85 @@
+From 1fcc102934bf5e8570f406c4bb87937f3e4d3dd0 Mon Sep 17 00:00:00 2001
+From: Vladislav Nepogodin <nepogodin.vlad@gmail.com>
+Date: Sun, 21 Dec 2025 01:10:48 +0400
+Subject: [PATCH] cachyos: add proxy mirrorlist as primary
+
+---
+ src/targets/cachyos.rs | 54 +++++++++++++++++++++++++++++++-----------
+ 1 file changed, 40 insertions(+), 14 deletions(-)
+
+diff --git a/src/targets/cachyos.rs b/src/targets/cachyos.rs
+index 6271f1b..77d3041 100644
+--- a/src/targets/cachyos.rs
++++ b/src/targets/cachyos.rs
+@@ -3,7 +3,7 @@ use crate::mirror::Mirror;
+ use crate::target_configs::cachyos::CachyOSTarget;
+ use reqwest;
+ use std::fmt::Display;
+-use std::sync::{mpsc, Arc};
++use std::sync::{Arc, mpsc};
+ use std::time::Duration;
+ use tokio::runtime::Runtime;
+ use url::Url;
+@@ -30,19 +30,9 @@ impl FetchMirrors for CachyOSTarget {
+         config: Arc<Config>,
+         _tx_progress: mpsc::Sender<String>,
+     ) -> Result<Vec<Mirror>, AppError> {
+-        let url = "https://raw.githubusercontent.com/CachyOS/CachyOS-PKGBUILDS/master/cachyos-mirrorlist/cachyos-mirrorlist";
+-
+-        let output = Runtime::new().unwrap().block_on(async {
+-            Ok::<_, AppError>(
+-                reqwest::Client::new()
+-                    .get(url)
+-                    .timeout(Duration::from_millis(self.fetch_mirrors_timeout))
+-                    .send()
+-                    .await?
+-                    .text_with_charset("utf-8")
+-                    .await?,
+-            )
+-        })?;
++        let output = Runtime::new()
++            .unwrap()
++            .block_on(async { fetch_mirrors_data(self.fetch_mirrors_timeout).await })?;
+ 
+         let urls = output
+             .lines()
+@@ -68,3 +58,39 @@ impl FetchMirrors for CachyOSTarget {
+         Ok(result)
+     }
+ }
++
++async fn fetch_mirrors_from_url(
++    client: &reqwest::Client,
++    url: &str,
++    timeout: Duration,
++) -> Result<String, reqwest::Error> {
++    client
++        .get(url)
++        .timeout(timeout)
++        .send()
++        .await?
++        .text_with_charset("utf-8")
++        .await
++}
++
++async fn fetch_mirrors_data(fetch_mirrors_timeout: u64) -> Result<String, AppError> {
++    let (primary_url, fallback_url) = {
++        (
++            "https://cachyos.org/archlinuxmirrorlist/api/cachyos-mirrorlist",
++            "https://raw.githubusercontent.com/CachyOS/CachyOS-PKGBUILDS/master/cachyos-mirrorlist/cachyos-mirrorlist",
++        )
++    };
++
++    let client = reqwest::Client::new();
++    let timeout = Duration::from_millis(fetch_mirrors_timeout);
++
++    // try to use cachyos proxy first, and then fallback to github one
++    let primary_res = fetch_mirrors_from_url(&client, primary_url, timeout).await;
++    if let Err(_err) = primary_res {
++        println!("# Falling back mirrorlist url");
++        Ok(fetch_mirrors_from_url(&client, fallback_url, timeout).await?)
++    } else {
++        // result is already checked
++        Ok(primary_res.unwrap())
++    }
++}
