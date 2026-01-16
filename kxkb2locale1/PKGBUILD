@@ -1,0 +1,31 @@
+# Maintainer: Peter Jung <https://cachyos.org>
+# Contributor: Alessandro Astone <aleasto@kde.org>
+
+pkgname=kxkb2locale1-git
+pkgver=v0.1.r1.g5ccdb2d
+pkgrel=1
+pkgdesc="Daemon that watches the KDE keyboard configuration and applies it to org.freedesktop.locale1"
+arch=('x86_64')
+url="https://invent.kde.org/aleasto/kxkb2locale1"
+license=('MIT')
+depends=('qt6-base' 'kconfig')
+makedepends=('git' 'cmake' 'extra-cmake-modules')
+source=("git+https://invent.kde.org/aleasto/kxkb2locale1.git")
+sha256sums=('SKIP')
+
+pkgver() {
+  cd "${pkgname%-git}"
+  git describe --long --tags | sed 's/\([^-]*-g\)/r\1/;s/-/./g'
+}
+
+build() {
+  cmake -B build -S "${pkgname%-git}" \
+    -DCMAKE_BUILD_TYPE='None' \
+    -DCMAKE_INSTALL_PREFIX='/usr' \
+    -Wno-dev
+  cmake --build build
+}
+
+package() {
+  DESTDIR="$pkgdir" cmake --install build
+}
