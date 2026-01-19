@@ -14,8 +14,10 @@ provides=('chwd-db')
 replaces=('chwd-db')
 conflicts=('chwd-db')
 groups=('cachyos')
-source=("chwd::git+$url.git#tag=${pkgver}?signed")
-sha256sums=('302dd6194cfaaed03e6c9751606e6c0e85adbbf35ae5e76d135cd799232c018e')
+source=("chwd::git+$url.git#tag=${pkgver}?signed"
+        "legion-go-inputplumber.patch")
+sha256sums=('302dd6194cfaaed03e6c9751606e6c0e85adbbf35ae5e76d135cd799232c018e'
+            '77269a0d73ddfa4965cdf69c60d4d2d5f30a920a4ea33f2eb1202f3913a3cb73')
 validpgpkeys=(
   'B1B70BB1CD56047DEF31DE2EB62C3D10C54D5DA9'  # Vladislav Nepogodin <nepogodin.vlad@gmail.com>
 )
@@ -24,6 +26,7 @@ prepare() {
   cd "$srcdir/$pkgname"
 
   git revert -n 399c20fd858e023a5e930e8510293230be98ccda
+  patch -Np1 -i "${srcdir}/legion-go-inputplumber.patch"
 
   cargo fetch --locked --target "$CARCH-unknown-linux-gnu"
 

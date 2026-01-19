@@ -1,0 +1,31 @@
+diff --git a/profiles/pci/handhelds/profiles.toml b/profiles/pci/handhelds/profiles.toml
+index cac1deca0c6d..097cf2d8094b 100644
+--- a/profiles/pci/handhelds/profiles.toml
++++ b/profiles/pci/handhelds/profiles.toml
+@@ -68,25 +68,7 @@ vendor_ids = "1002"
+ device_ids = "15bf"
+ hwd_product_name_pattern = '(83E1)'
+ priority = 6
+-packages = 'hhd hhd-ui adjustor cachyos-handheld mesa lib32-mesa vulkan-radeon lib32-vulkan-radeon opencl-mesa lib32-opencl-mesa'
+-post_install = """
+-    echo "Legion go chwd installing..."
+-    username=$(id -nu 1000)
+-    services=("hhd@${username}")
+-    echo "Enabling services..."
+-    for service in ${services[@]}; do
+-        systemctl enable --now "${service}.service"
+-    done
+-"""
+-post_remove = """
+-    echo "Legion go chwd removing..."
+-    username=$(id -nu 1000)
+-    services=("hhd@${username}")
+-    echo "Disabling services..."
+-    for service in ${services[@]}; do
+-        systemctl disable "${service}.service"
+-    done
+-"""
++packages = 'inputplumber steamos-manager steamos-powerbuttond cachyos-handheld mesa lib32-mesa vulkan-radeon lib32-vulkan-radeon opencl-mesa lib32-opencl-mesa'
+ 
+ [amd-legion-go-s]
+ desc = 'Lenovo Legion Go S'
