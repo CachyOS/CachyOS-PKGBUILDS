@@ -3,7 +3,7 @@
 
 pkgname=chwd
 pkgver=1.18.0
-pkgrel=1
+pkgrel=2
 pkgdesc="CachyOS Hardware Detection Tool"
 arch=(x86_64)
 url="https://github.com/cachyos/chwd"
@@ -22,6 +22,8 @@ validpgpkeys=(
 
 prepare() {
   cd "$srcdir/$pkgname"
+
+  git cherry-pick -n 6bb6246d6fd02f48511e45ad52e37b759ee4904c
 
   cargo fetch --locked --target "$CARCH-unknown-linux-gnu"
 
