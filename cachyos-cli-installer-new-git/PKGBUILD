@@ -1,0 +1,54 @@
+# Maintainer: Vladislav Nepogodin <nepogodin.vlad@gmail.com>
+
+pkgname=cachyos-cli-installer-new-git
+_pkgname=New-Cli-Installer
+pkgver=0.9.4.r49.g354b329
+pkgrel=1
+pkgdesc='New CLI installer for CachyOS'
+arch=('x86_64')
+license=(GPL-3.0-or-later)
+url="https://github.com/cachyos/new-cli-installer"
+license=(GPL-3.0-or-later)
+depends=('fzf' 'gawk' 'chwd' 'cachyos-rate-mirrors' 'curl' 'util-linux')
+makedepends=('cmake' 'ninja' 'git' 'lld' 'clang' 'llvm')
+source=("${pkgname}::git+$url.git")
+sha256sums=('SKIP')
+provides=('cachyos-cli-installer-new')
+conflicts=('cachyos-cli-installer-new')
+
+pkgver() {
+  cd "${srcdir}/${pkgname}"
+  git describe --long --tags | sed 's/^v//;s/\([^-]*-g\)/r\1/;s/-/./g'
+}
+
+build() {
+  cd "${srcdir}/${pkgname}"
+
+  CFLAGS=${CFLAGS/-Wp,-D_GLIBCXX_ASSERTIONS}
+  CXXFLAGS=${CXXFLAGS/-Wp,-D_GLIBCXX_ASSERTIONS}
+
+  # we are building with llvm stack here
+  export AR=llvm-ar
+  export CC=clang
+  export CXX=clang++
+  export NM=llvm-nm
+  export RANLIB=llvm-ranlib
+
+  cmake -S . -Bbuild \
+        -GNinja \
+        -DCMAKE_BUILD_TYPE=Release \
+        -DCMAKE_INSTALL_PREFIX=/usr \
+        -DCMAKE_INSTALL_LIBDIR=lib \
+        -DENABLE_DEVENV=OFF \
+        -DCOS_BUILD_STATIC=ON
+  cmake --build build
+}
+
+package() {
+  cd "${srcdir}/${pkgname}"
+  DESTDIR="${pkgdir}" cmake --build build --target install
+
+  install -Dm644 net-profiles.toml "${pkgdir}/var/lib/cachyos-installer/net-profiles.toml"
+}
+
+# vim:set sw=2 sts=2 et:
