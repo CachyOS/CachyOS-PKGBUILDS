@@ -1,18 +1,3 @@
-# This is a collection of cherry picked clearlinux patches from https://github.com/clearlinux-pkgs/glibc
-# Following will be used in this patch:
-# https://github.com/clearlinux-pkgs/glibc/blob/main/tune_adaptive_spin.patch
-# https://github.com/clearlinux-pkgs/glibc/blob/main/0001-Set-vector-width-and-alignment-to-fix-GCC-AVX-issue.patch
-# https://github.com/clearlinux-pkgs/glibc/blob/main/disable-vectorization-even-more.patch
-
---- glibc-2.37/sysdeps/generic/adaptive_spin_count.h~	2023-02-01 03:27:45.000000000 +0000
-+++ glibc-2.37/sysdeps/generic/adaptive_spin_count.h	2023-04-20 16:24:07.132939021 +0000
-@@ -19,4 +19,4 @@
- /* The choice of 100 spins for the default spin count for an adaptive spin
-    is a completely arbitrary choice that has not been evaluated thoroughly
-    using modern hardware.  */
--#define DEFAULT_ADAPTIVE_COUNT 100
-+#define DEFAULT_ADAPTIVE_COUNT 5000
-
 From 0c62c38deb339d973ac5eaf3476441f304473938 Mon Sep 17 00:00:00 2001
 From: Guobing Chen <guobing.chen@intel.com>
 Date: Tue, 21 May 2019 15:53:18 +0800

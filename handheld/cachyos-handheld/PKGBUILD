@@ -3,7 +3,7 @@
 
 pkgname=cachyos-handheld
 pkgver=1.2.5
-pkgrel=1
+pkgrel=2
 arch=('any')
 license=('GPL-3.0-later')
 pkgdesc='CachyOS - Handheld!'
@@ -22,9 +22,8 @@ validpgpkeys=(
 )
 makedepends=('git')
 depends=('gamescope-session-git' 'mangohud' 'jq' 'dmidecode' 'glew' 'glfw' 'glxinfo' 'curl' 'tar'
-         'scx-scheds' 'scx-tools' 'qt5-tools' 'gamescope-session-steam-git' 'jupiter-hw-support'
-         'gamescope' 'lib32-gamescope' 'cachyos-vapor' 'cachyos-alacritty-config'
-         'steam')
+         'scx-scheds' 'scx-tools' 'qt6-tools' 'gamescope-session-steam-git' 'jupiter-hw-support'
+         'gamescope' 'lib32-gamescope' 'cachyos-vapor' 'cachyos-alacritty-config' 'steam')
 
 prepare() {
   patch -Np1 -i "${srcdir}/controller-fix.patch" -d "${srcdir}/CachyOS-Handheld"

@@ -2,9 +2,9 @@
 # Maintainer: VolRen <VolRencs@proton.me>
 
 pkgname=plasma-login-manager
-pkgver=6.5.git20251201
+pkgver=6.5.90
+_dirver=$(echo $pkgver | cut -d. -f1-3)
 pkgrel=1
-_commit=8eb571ba6a063394dd4310bb3c39c1b68ed8839d
 arch=(x86_64)
 pkgdesc='Plasma Login Manager'
 url='https://kde.org/plasma-desktop/'
@@ -27,6 +27,7 @@ depends=(gcc-libs
          libxau
          pam
          plasma-workspace
+         qt6-5compat
          qt6-base
          qt6-declarative
          sh
@@ -34,12 +35,16 @@ depends=(gcc-libs
 makedepends=(extra-cmake-modules
              git
              qt6-tools)
-source=(git+https://invent.kde.org/plasma/plasma-login-manager#commit=$_commit)
-sha256sums=('11b4efc059e21fda46c5bd8d5afd4a753b71ebab2bd67d4ddbe8157078c3747d')
+source=(https://download.kde.org/unstable/plasma/$_dirver/$pkgname-$pkgver.tar.xz{,.sig})
+sha256sums=('a2b188264c6447a69c48ede53260c8e0910fbc68290deddbae1e13489fdd628d'
+            'SKIP')
+validpgpkeys=('E0A3EB202F8E57528E13E72FD7574483BB57B18D'  # Jonathan Esk-Riddell <jr@jriddell.org>
+              '0AAC775BB6437A8D9AF7A3ACFE0784117FBCE11D'  # Bhushan Shah <bshah@kde.org>
+              'D07BD8662C56CB291B316EB2F5675605C74E02CF'  # David Edmundson <davidedmundson@kde.org>
+              '1FA881591C26B276D7A5518EEAAF29B42A678C20') # Marco Martin <notmart@gmail.com>
 
 build() {
-  cmake -B build -S $pkgname \
-    -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+  cmake -B build -S $pkgname-$pkgver \
     -DCMAKE_INSTALL_LIBEXECDIR=lib \
     -DDBUS_CONFIG_FILENAME=plasma_org.freedesktop.DisplayManager.conf
   cmake --build build

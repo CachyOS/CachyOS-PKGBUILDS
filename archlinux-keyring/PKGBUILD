@@ -1,31 +1,31 @@
-# Maintainer: Pierre Schmitz <pierre@archlinux.de>
-# Maintainer: Bartłomiej Piotrowski <bpiotrowski@archlinux.org>
+# Maintainer: Christian Hesse <eworm@archlinux.org>
+# Contributor: Pierre Schmitz <pierre@archlinux.de>
+# Contributor: Bartłomiej Piotrowski <bpiotrowski@archlinux.org>
 
-pkgname=archlinux-keyring
-pkgver=20251116
-pkgrel=2
+pkgbase=archlinux-keyring
+pkgname=(archlinux-keyring
+         voa-verifiers-arch)
+pkgver=20260107
+pkgrel=3
 pkgdesc='Arch Linux PGP keyring'
 arch=('any')
 url='https://gitlab.archlinux.org/archlinux/archlinux-keyring/'
 license=('GPL-3.0-or-later')
-install=$pkgname.install
-depends=('pacman')
-makedepends=('git' 'python' 'sequoia-sq' 'pkgconf' 'systemd')
+makedepends=('git' 'python' 'sequoia-sq' 'pkgconf' 'systemd' 'voa')
 checkdepends=('python-coverage' 'python-pytest')
-source=("archlinux-keyring::git+https://gitlab.archlinux.org/archlinux/archlinux-keyring.git#tag=${pkgver}?signed")
-sha256sums=('559df2321040d2f08345c5327168fdf56352147a049c0b4c88d033814dcf23c9')
+source=("archlinux-keyring::git+https://gitlab.archlinux.org/archlinux/archlinux-keyring.git?signed#tag=${pkgver}")
+sha256sums=('0d2a7ef2a865fd51f1549656f482fa4970019a4a16f6543f767091fb7e2fdf11')
 validpgpkeys=('02FD1C7A934E614545849F19A6234074498E9CEE'  # Christian Hesse <eworm@archlinux.org>
-              'C7E7849466FE2358343588377258734B41C31549'  # David Runge <dvzrv@archlinux.org>
-              '4AA4767BBC9C4B1D18AE28B77F2D434B9741E8AC'  # Pierre Schmitz <pierre@archlinux.org>
-              'CFA6AF15E5C74149FC1D8C086D1655C14CE1C13E'  # Florian Pritz <bluewind@archlinux.org>
-              'ECCAC84C1BA08A6CC8E63FBBF22FB1D78A77AEAB'  # Giancarlo Razzolini <grazzolini@archlinux.org>
+              '991F6E3F0765CF6295888586139B09DA5BF0D338'  # David Runge <dvzrv@archlinux.org>
+              '5134EF9EAF65F95B6BB1608E50FB9B273A9D0BB5'  # Johannes Löthberg <demize@archlinux.org>
+              'B4B759625D4633430B74877059E43E106B247368'  # Leonidas Spyropoulos <artafinde@archlinux.org>
               'E240B57E2C4630BA768E2F26FC1B547C8D8172C8'  # Levente Polyak <anthraxx@archlinux.org>
               'C100346676634E80C940FB9E9C02FF419FECBE16') # Morten Linderud <foxboron@archlinux.org>
 
 build() {
   cd archlinux-keyring/
 
-  make build
+  make build build-voa
 }
 
 check() {
@@ -34,8 +34,19 @@ check() {
   make check
 }
 
-package() {
+package_archlinux-keyring() {
+  install=$pkgname.install
+  depends=('pacman')
+
   cd archlinux-keyring/
 
   make PREFIX='/usr' DESTDIR="${pkgdir}" install
+}
+
+package_voa-verifiers-arch() {
+  pkgdesc='Arch Linux verifiers for the Hierarchy for the Verification of OS Artifacts (VOA)'
+
+  cd archlinux-keyring/
+
+  make PREFIX='/usr' DESTDIR="${pkgdir}" install-voa
 }

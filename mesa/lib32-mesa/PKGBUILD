@@ -9,11 +9,14 @@ pkgname=(
   lib32-mesa
   lib32-opencl-mesa
   lib32-vulkan-asahi
+  lib32-vulkan-broadcom
   lib32-vulkan-dzn
   lib32-vulkan-freedreno
   lib32-vulkan-gfxstream
   lib32-vulkan-intel
   lib32-vulkan-nouveau
+  lib32-vulkan-panfrost
+  lib32-vulkan-powervr
   lib32-vulkan-radeon
   lib32-vulkan-swrast
   lib32-vulkan-virtio
@@ -22,7 +25,7 @@ pkgname=(
 )
 pkgver=25.3.3
 _pkgver=${pkgver/[a-z]/-&}
-pkgrel=2
+pkgrel=4
 epoch=1
 pkgdesc="Open-source OpenGL drivers - 32-bit"
 url="https://www.mesa3d.org/"
@@ -71,6 +74,7 @@ makedepends=(
   python-mako
   python-packaging
   python-ply
+  python-pycparser
   python-yaml
   rust-bindgen
   wayland-protocols
@@ -228,7 +232,7 @@ build() {
     --cross-file lib32
     -D android-libbacktrace=disabled
     -D b_ndebug=true
-    -D gallium-drivers=asahi,crocus,d3d12,freedreno,i915,iris,llvmpipe,nouveau,r300,r600,radeonsi,softpipe,svga,virgl,zink
+    -D gallium-drivers=all
     -D gallium-extra-hud=true
     -D gallium-mediafoundation=disabled
     -D gallium-rusticl-enable-drivers=asahi,freedreno,radeonsi
@@ -241,7 +245,7 @@ build() {
     -D sysprof=false
     -D valgrind=disabled
     -D video-codecs=all
-    -D vulkan-drivers=amd,freedreno,intel,intel_hasvk,swrast,virtio,microsoft-experimental,nouveau,asahi,gfxstream
+    -D vulkan-drivers=all
     -D vulkan-layers=device-select,intel-nullhw,overlay,screenshot,anti-lag,vram-report-limit
   )
 
@@ -316,6 +320,9 @@ package_lib32-mesa() {
     _pick vkasahi $icddir/asahi_icd.*.json
     _pick vkasahi $libdir/libvulkan_asahi.so
 
+    _pick vkbrcom $icddir/broadcom_icd.*.json
+    _pick vkbrcom $libdir/libvulkan_broadcom.so
+
     _pick vkd3d12 $icddir/dzn_icd.*.json
     _pick vkd3d12 $libdir/libvulkan_dzn.so
     _pick vkd3d12 $libdir/libspirv_to_dxil.*
@@ -331,6 +338,12 @@ package_lib32-mesa() {
 
     _pick vknvidia $icddir/nouveau_icd.*.json
     _pick vknvidia $libdir/libvulkan_nouveau.so
+
+    _pick vkpfrost $icddir/panfrost_icd.*.json
+    _pick vkpfrost $libdir/libvulkan_panfrost.so
+
+    _pick vkpowrvr $icddir/powervr_mesa_icd.*.json
+    _pick vkpowrvr $libdir/libvulkan_powervr_mesa.so
 
     _pick vkradeon $icddir/radeon_icd.*.json
     _pick vkradeon $libdir/libvulkan_radeon.so
@@ -414,6 +427,36 @@ package_lib32-vulkan-asahi() {
   provides=(lib32-vulkan-driver)
 
   mv vkasahi/* "$pkgdir"
+
+  install -Dm644 mesa-$_pkgver/docs/license.rst -t "$pkgdir/usr/share/licenses/$pkgname"
+}
+
+package_lib32-vulkan-broadcom() {
+  pkgdesc="Open-source Vulkan driver for VideoCore GPUs - 32-bit"
+  depends=(
+    lib32-expat
+    lib32-gcc-libs
+    lib32-glibc
+    lib32-libdisplay-info
+    lib32-libdrm
+    lib32-libx11
+    lib32-libxcb
+    lib32-libxshmfence
+    lib32-spirv-tools
+    lib32-systemd
+    lib32-vulkan-icd-loader
+    lib32-vulkan-mesa-implicit-layers
+    lib32-wayland
+    lib32-xcb-util-keysyms
+    lib32-zlib
+    lib32-zstd
+
+    vulkan-broadcom
+  )
+  optdepends=("lib32-vulkan-mesa-layers: additional vulkan layers")
+  provides=(lib32-vulkan-driver)
+
+  mv vkbrcom/* "$pkgdir"
 
   install -Dm644 mesa-$_pkgver/docs/license.rst -t "$pkgdir/usr/share/licenses/$pkgname"
 }
@@ -561,6 +604,66 @@ package_lib32-vulkan-nouveau() {
   provides=(lib32-vulkan-driver)
 
   mv vknvidia/* "$pkgdir"
+
+  install -Dm644 mesa-$_pkgver/docs/license.rst -t "$pkgdir/usr/share/licenses/$pkgname"
+}
+
+package_lib32-vulkan-panfrost() {
+  pkgdesc="Open-source Vulkan driver for Mali GPUs - 32-bit"
+  depends=(
+    lib32-expat
+    lib32-gcc-libs
+    lib32-glibc
+    lib32-libdisplay-info
+    lib32-libdrm
+    lib32-libx11
+    lib32-libxcb
+    lib32-libxshmfence
+    lib32-spirv-tools
+    lib32-systemd
+    lib32-vulkan-icd-loader
+    lib32-vulkan-mesa-implicit-layers
+    lib32-wayland
+    lib32-xcb-util-keysyms
+    lib32-zlib
+    lib32-zstd
+
+    vulkan-panfrost
+  )
+  optdepends=("lib32-vulkan-mesa-layers: additional vulkan layers")
+  provides=(lib32-vulkan-driver)
+
+  mv vkpfrost/* "$pkgdir"
+
+  install -Dm644 mesa-$_pkgver/docs/license.rst -t "$pkgdir/usr/share/licenses/$pkgname"
+}
+
+package_lib32-vulkan-powervr() {
+  pkgdesc="Open-source Vulkan driver for PowerVR GPUs - 32-bit"
+  depends=(
+    lib32-expat
+    lib32-gcc-libs
+    lib32-glibc
+    lib32-libdisplay-info
+    lib32-libdrm
+    lib32-libx11
+    lib32-libxcb
+    lib32-libxshmfence
+    lib32-spirv-tools
+    lib32-systemd
+    lib32-vulkan-icd-loader
+    lib32-vulkan-mesa-implicit-layers
+    lib32-wayland
+    lib32-xcb-util-keysyms
+    lib32-zlib
+    lib32-zstd
+
+    vulkan-powervr
+  )
+  optdepends=("lib32-vulkan-mesa-layers: additional vulkan layers")
+  provides=(lib32-vulkan-driver)
+
+  mv vkpowrvr/* "$pkgdir"
 
   install -Dm644 mesa-$_pkgver/docs/license.rst -t "$pkgdir/usr/share/licenses/$pkgname"
 }

@@ -1,7 +1,7 @@
 pkgbase = lib32-mesa
 	pkgdesc = Open-source OpenGL drivers - 32-bit
 	pkgver = 25.3.3
-	pkgrel = 2
+	pkgrel = 4
 	epoch = 1
 	url = https://www.mesa3d.org/
 	arch = x86_64
@@ -46,6 +46,7 @@ pkgbase = lib32-mesa
 	makedepends = python-mako
 	makedepends = python-packaging
 	makedepends = python-ply
+	makedepends = python-pycparser
 	makedepends = python-yaml
 	makedepends = rust-bindgen
 	makedepends = wayland-protocols
@@ -168,8 +169,8 @@ pkgname = lib32-mesa
 	depends = lib32-zstd
 	depends = mesa
 	optdepends = opengl-man-pages: for the OpenGL API man pages
-	provides = lib32-libva-mesa-driver=1:25.3.3-2
-	provides = lib32-mesa-libgl=1:25.3.3-2
+	provides = lib32-libva-mesa-driver=1:25.3.3-4
+	provides = lib32-mesa-libgl=1:25.3.3-4
 	provides = lib32-libva-driver
 	provides = lib32-opengl-driver
 	conflicts = lib32-libva-mesa-driver<1:24.2.7-1
@@ -217,6 +218,28 @@ pkgname = lib32-vulkan-asahi
 	depends = lib32-zlib
 	depends = lib32-zstd
 	depends = vulkan-asahi
+	optdepends = lib32-vulkan-mesa-layers: additional vulkan layers
+	provides = lib32-vulkan-driver
+
+pkgname = lib32-vulkan-broadcom
+	pkgdesc = Open-source Vulkan driver for VideoCore GPUs - 32-bit
+	depends = lib32-expat
+	depends = lib32-gcc-libs
+	depends = lib32-glibc
+	depends = lib32-libdisplay-info
+	depends = lib32-libdrm
+	depends = lib32-libx11
+	depends = lib32-libxcb
+	depends = lib32-libxshmfence
+	depends = lib32-spirv-tools
+	depends = lib32-systemd
+	depends = lib32-vulkan-icd-loader
+	depends = lib32-vulkan-mesa-implicit-layers
+	depends = lib32-wayland
+	depends = lib32-xcb-util-keysyms
+	depends = lib32-zlib
+	depends = lib32-zstd
+	depends = vulkan-broadcom
 	optdepends = lib32-vulkan-mesa-layers: additional vulkan layers
 	provides = lib32-vulkan-driver
 
@@ -324,6 +347,50 @@ pkgname = lib32-vulkan-nouveau
 	depends = lib32-zlib
 	depends = lib32-zstd
 	depends = vulkan-nouveau
+	optdepends = lib32-vulkan-mesa-layers: additional vulkan layers
+	provides = lib32-vulkan-driver
+
+pkgname = lib32-vulkan-panfrost
+	pkgdesc = Open-source Vulkan driver for Mali GPUs - 32-bit
+	depends = lib32-expat
+	depends = lib32-gcc-libs
+	depends = lib32-glibc
+	depends = lib32-libdisplay-info
+	depends = lib32-libdrm
+	depends = lib32-libx11
+	depends = lib32-libxcb
+	depends = lib32-libxshmfence
+	depends = lib32-spirv-tools
+	depends = lib32-systemd
+	depends = lib32-vulkan-icd-loader
+	depends = lib32-vulkan-mesa-implicit-layers
+	depends = lib32-wayland
+	depends = lib32-xcb-util-keysyms
+	depends = lib32-zlib
+	depends = lib32-zstd
+	depends = vulkan-panfrost
+	optdepends = lib32-vulkan-mesa-layers: additional vulkan layers
+	provides = lib32-vulkan-driver
+
+pkgname = lib32-vulkan-powervr
+	pkgdesc = Open-source Vulkan driver for PowerVR GPUs - 32-bit
+	depends = lib32-expat
+	depends = lib32-gcc-libs
+	depends = lib32-glibc
+	depends = lib32-libdisplay-info
+	depends = lib32-libdrm
+	depends = lib32-libx11
+	depends = lib32-libxcb
+	depends = lib32-libxshmfence
+	depends = lib32-spirv-tools
+	depends = lib32-systemd
+	depends = lib32-vulkan-icd-loader
+	depends = lib32-vulkan-mesa-implicit-layers
+	depends = lib32-wayland
+	depends = lib32-xcb-util-keysyms
+	depends = lib32-zlib
+	depends = lib32-zstd
+	depends = vulkan-powervr
 	optdepends = lib32-vulkan-mesa-layers: additional vulkan layers
 	provides = lib32-vulkan-driver
 

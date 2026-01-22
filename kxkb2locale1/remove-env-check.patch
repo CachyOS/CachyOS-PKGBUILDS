@@ -1,0 +1,20 @@
+diff --git a/main.cpp b/main.cpp
+index 6b8b896..a8e1016 100644
+--- a/main.cpp
++++ b/main.cpp
+@@ -8,15 +8,6 @@ int main(int argc, char *argv[])
+ {
+     QCoreApplication a(argc, argv);
+ 
+-    {
+-        KConfig welcomeConfig(QStringLiteral("plasma-welcomerc"), KConfig::NoGlobals);
+-        bool live = welcomeConfig.group(QStringLiteral("General")).readEntry("LiveEnvironment", false);
+-
+-        if (!live) {
+-            qInfo() << "This does not appear to be a live environment;" << a.applicationName() << "will not run.";
+-            return EXIT_SUCCESS;
+-        }
+-    }
+ 
+     {
+         KConfig kwinConfig(QStringLiteral("kwinrc"), KConfig::NoGlobals);
