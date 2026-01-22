@@ -1,0 +1,116 @@
+# Maintainer: Levente Polyak <anthraxx[at]archlinux[dot]org>
+# Maintainer: Giancarlo Razzolini <grazzolini@archlinux.org>
+# Maintainer: Christian Heusel <gromit@archlinux.org>
+# Contributor: Daniel Wallace <danielwallace at gtmanfred dot com>
+# Contributor: K900 <k0009000@gmail.com>
+
+pkgbase=steam
+pkgname=(steam steam-devices)
+pkgver=1.0.0.85
+pkgrel=3.1
+pkgdesc="Valve's digital software delivery system"
+url='https://steampowered.com/'
+arch=('x86_64')
+license=('LicenseRef-steam-subscriber-agreement')
+# the beta directory is a superset of stable and also contains the stable releases
+source=(
+  https://repo.steampowered.com/${pkgbase}/archive/stable/${pkgbase}_${pkgver}{.tar.gz,.dsc}
+  steam.sh
+  git+https://github.com/ValveSoftware/steam-devices#commit=daf01bc7e1e3d65987ab0f6e2c93707170a686b3
+)
+sha512sums=('81d404fcbd516fa1d984a991be3530855c0ded826ea8aca68c8cb5492e95d3d430cd7c556a9997a7c0780055a810239322181b1785e78f8d8fabe01c39fee2f7'
+            'e3722d006485249fc91113feee0df018d341dc8d7327199a9161022c84b04ca5faa2be36268d50ae0bc29b6fd6063fe2b69a29a354adb32dd6b75d78dc7f9702'
+            '5e75c019e9fe8c67d686c4e3343dac1180a69a4bdb7d39b333415c63201eef9b98da5619dbf6fd8daa6884e65bc7f8afc9e52778682425e5a75987d527eae6f0'
+            '5d6dd450373761b6ddf0278170f52a93b242d6b0bb383eb381e125df5a67093f412f8de343e1acc781a5af7b22711c1e851ffc9b2199fe3bdce2ade1db5f9a09')
+b2sums=('6cc699e7b740693529845ef76d39570a977716735da46e21b681629aebf3e5ee80b09a3b47b1c84debb066ca43456f1c78509de7ddfe8e35df21903cceebde4f'
+        '833edc4b6b8aa32861fb6caccdc4f7441a0462600315b68eae0bbbebf7c94cc64a8be61ce2e30842ea2f354ac0630898b7829d0d9eafd97eb7b621a72befb897'
+        'c6bac99336b7c30fec7cdbaf9e949555c687dd9dff50bcae136134d6314f4b841f5fc66ddb2caac1b003690b926fd4afbdc11da143b4674db4b75f27709fdd23'
+        'cb80489e6379efe52900313e4b8c2b7bd499f62f3bec6bea5eaebebad5b12c73ccdad758183d75b89eb87d82905cd9e1072fd3d54b55e913d561d287c256dfb4')
+validpgpkeys=('BA1816EF8E75005FCF5E27A1F24AEA9FB05498B7') # linux@steampowered.com
+
+package_steam() {
+  depends=(
+    bash
+    coreutils
+    curl
+    dbus
+    desktop-file-utils
+    diffutils
+    freetype2
+    gcc-libs
+    gdk-pixbuf2
+    glibc
+    hicolor-icon-theme
+    libxcrypt
+    libxcrypt-compat
+    libxkbcommon-x11
+    lsb-release
+    lsof
+    nss
+    python
+    ttf-font
+    usbutils
+    vulkan-driver
+    vulkan-icd-loader
+    xdg-user-dirs
+    xorg-xrandr
+    xz
+    zenity
+  )
+  depends_x86_64=(
+    lib32-alsa-plugins
+    lib32-fontconfig
+    lib32-gcc-libs
+    lib32-glibc
+    lib32-libgl
+    lib32-libgpg-error
+    lib32-libnm
+    lib32-libva
+    lib32-libx11
+    lib32-libxcrypt
+    lib32-libxcrypt-compat
+    lib32-libxinerama
+    lib32-libxss
+    lib32-nss
+    lib32-pipewire
+    lib32-systemd
+    lib32-vulkan-driver
+    lib32-vulkan-icd-loader
+  )
+  optdepends=(
+    'polkit: to setup SteamVR without root access'
+    'xdg-desktop-portal-impl: file & folder picker'
+  )
+  depends+=(steam-devices)
+
+  cd ${pkgname}-launcher
+  make DESTDIR="${pkgdir}" install
+
+  mv "${pkgdir}/usr/bin/steam" "${pkgdir}/usr/lib/steam/steam"
+  install -Dm 755 "${srcdir}/steam.sh" "${pkgdir}/usr/bin/steam"
+
+  install -d "${pkgdir}/usr/share/licenses/${pkgname}"
+  ln -s "../../doc/${pkgname}/steam_subscriber_agreement.txt" "${pkgdir}/usr/share/licenses/${pkgname}/"
+  install -Dm 644 debian/changelog -t "${pkgdir}/usr/share/doc/${pkgname}"
+
+  # blank steamdeps because apt-get
+  ln -sf true "${pkgdir}/usr/bin/steamdeps"
+}
+
+package_steam-devices() {
+  pkgdesc="List of devices Steam and SteamVR will want read/write permissions on"
+  license=(MIT)
+  depends=(udev)
+
+  cd "$srcdir/steam-devices"
+
+  install -Dm 644 LICENSE \
+    "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE"
+
+  install -Dm 644 60-steam-input.rules \
+    "${pkgdir}/usr/lib/udev/rules.d/60-steam-input.rules"
+  install -Dm 644 60-steam-vr.rules \
+    "${pkgdir}/usr/lib/udev/rules.d/60-steam-vr.rules"
+}
+
+# vim: ts=2 sw=2 et:
