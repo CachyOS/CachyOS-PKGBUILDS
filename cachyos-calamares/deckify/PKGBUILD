@@ -1,0 +1,119 @@
+# Maintainer: Peter Jung ptr1337 <admin@ptr1337.dev>
+# Maintainer: Vladislav Nepogodin <nepogodin.vlad@gmail.com>
+# Contributor: Philip Müller <philm[at]manjaro[dog]org>
+
+# Bootloader to select
+# possible options:
+_bootloader=${_bootloader-'deckify'}
+_branch_name="cachyos-${_bootloader}-qt6"
+
+pkgname=cachyos-calamares-qt6-${_bootloader}
+pkgver=3.4.0
+pkgrel=1
+pkgdesc='Distribution-independent installer framework'
+arch=('x86_64')
+license=(GPL-3.0-or-later)
+url="https://github.com/cachyos/cachyos-calamares"
+conflicts=('calamares')
+provides=('calamares')
+depends=(
+  boost-libs
+  ckbcomp
+  cryptsetup
+  dmidecode
+  gptfdisk
+  hwinfo
+  kconfig
+  kcoreaddons
+  kcrash
+  ki18n
+  kparts
+  kpmcore
+  kservice
+  kwidgetsaddons
+  libpwquality
+  mkinitcpio-openswap
+  networkmanager
+  polkit-qt6
+  python
+  qt6-declarative
+  qt6-svg
+  rsync
+  solid
+  squashfs-tools
+  upower
+  yaml-cpp
+)
+makedepends=(
+  boost
+  cmake
+  doxygen
+  extra-cmake-modules
+  git
+  ninja
+  python-jsonschema
+  python-pyaml
+  python-unidecode
+  qt6-tools
+)
+sha256sums=('SKIP')
+# Bootloader
+source=(calamares::git+${url}.git#branch=${_branch_name}-dev)
+options=('!emptydirs')
+
+prepare() {
+    cd ${srcdir}/calamares
+    # change version
+    _ver="$(cat CMakeLists.txt | grep -m3 -e "  VERSION" | grep -o "[[:digit:]]*" | xargs | sed s'/ /./g')"
+    _ver="$pkgver"
+    printf 'Version: %s-%s\n' "${_ver}" "${pkgrel}"
+    sed -i -e "s|\${CALAMARES_VERSION_MAJOR}.\${CALAMARES_VERSION_MINOR}.\${CALAMARES_VERSION_PATCH}|${_ver}-${pkgrel}|g" CMakeLists.txt
+    sed -i -e "s|CALAMARES_VERSION_RC 1|CALAMARES_VERSION_RC 0|g" CMakeLists.txt
+}
+
+
+
+build() {
+    cd ${srcdir}/calamares
+
+    export CXXFLAGS+=" -fPIC"
+
+    cmake -S . -Bbuild \
+        -GNinja \
+        -DCMAKE_BUILD_TYPE=Release \
+        -DCMAKE_INSTALL_PREFIX=/usr \
+        -DCMAKE_INSTALL_LIBDIR=lib \
+        -DWITH_APPSTREAM=OFF \
+        -DWITH_PYBIND11=OFF \
+        -DWITH_QT6=ON \
+        -DSKIP_MODULES="dracut dracutlukscfg \
+        dummycpp dummyprocess dummypython dummypythonqt \
+        finishedq keyboardq license localeq notesqml oemid \
+        openrcdmcryptcfg packagechooserq fsresizer \
+        rawfs mkinitfs contextualprocess interactiveterminal \
+        plasmalnf services-openrc \
+        summaryq tracking usersq webview welcomeq"
+
+    cmake --build build
+}
+
+package() {
+    cd ${srcdir}/calamares/build
+    DESTDIR="${pkgdir}" cmake --build . --target install
+
+    cp ${srcdir}/calamares/settings_offline.conf "$pkgdir/usr/share/calamares/settings_offline.conf"
+    cp ${srcdir}/calamares/settings_online.conf "$pkgdir/usr/share/calamares/settings_online.conf"
+    cp ${srcdir}/calamares/settings_online.conf "$pkgdir/usr/share/calamares/settings.conf"
+    local _destdir=etc/calamares
+    install -dm755 $pkgdir/$_destdir
+    install -dm755 $pkgdir/$_destdir/modules
+    cp -rf ${srcdir}/calamares/src/modules/*/*.conf "$pkgdir/etc/calamares/modules"
+    cp -rf ${srcdir}/calamares/src/scripts "$pkgdir/etc/calamares"
+    cp -rf ${srcdir}/calamares/src/images "$pkgdir/etc/calamares"
+
+    # Workaround netinstall.yaml not being installed by cmake
+    cp ${srcdir}/calamares/src/modules/netinstall/netinstall.yaml "$pkgdir/etc/calamares/modules/netinstall.yaml"
+
+    # Delete Desktop Entry to avoid confusion for users
+    rm -rf "$pkgdir/usr/share/applications"
+}
