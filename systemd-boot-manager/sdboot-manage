@@ -238,7 +238,7 @@ if [ "$EUID" -ne 0 ]; then
     die "sdboot-manage must be run as root"
 fi
 
-if ! bootctl status &>/dev/null && [ "$1" != "setup" ]; then
+if ! bootctl is-installed &>/dev/null && [ "$1" != "setup" ]; then
     die "systemd-boot not installed\nTry sdboot-manage setup to install"
 fi
 
