@@ -3,7 +3,7 @@
 
 pkgname=scx-scheds-git
 _gitname=scx
-pkgver=1.0.19.r286.g1ec4903c
+pkgver=1.0.19.r288.g7a190025
 pkgrel=1
 pkgdesc='sched_ext schedulers and tools'
 url='https://github.com/sched-ext/scx'
@@ -38,60 +38,63 @@ conflicts=("scx-scheds")
 replaces=('scx-cake')
 
 _backports=(
-1b88265b5ba2a90a7e6e5b626efd341136de27dc # Add scx_cake scheduler to workspace
-d8cd00f6a3c68ba91680b8f045f40776006c6938 # Add scx_cake scheduler to workspace
-ebb71b707e59a1db9874b0a9a1e25a1ea519340a # scx_cake: Use local path dependencies instead of git
-eb4a157dee42df10f8b35ebe80f012f7bdfe6562 # Update Cargo.lock for scx_cake
-4fc8b20e503b425b4aa96d5ca32ba28ef5e06c5f # scx_cake: Run cargo fmt
-c1277d578f78f2da27ad660e0e8fb7e5545b333a # scx_cake: add kernel 6.16+ compatibility for scx_bpf_cpu_curr
-305c14e9d5be10ec3006781d510e0e1188c4fa0b # scx_cake: Implement Check & Skip Optimizations and SMT Fix
-df1ff8e0de18dca080818f16d8860646398c4008 # perf sched map optimization
-c2878f61ad8754029805ecf0140207a93cc76e2f # feat(scx_cake): implement state-based per-cpu direct dispatch
-061231b68bbdb27595c1c21be2c1616d739e2530 # Ghost Scheduler Optimizations: Store coalescing and bit testing
-01b8941d819e37c5993095e5ce122cf09f383ce1 # bug fixes, floor for runtime, healthy IPC
-ef7781b6fa0123dffd6a30a9ca1e48e00dbcc171 # Great benchmarks - need to review jitter
-452098ad135a02d602c312860da42b2c2d38a307 # scx_cake: Implement Zero-Math Locality Arbiter
-b5cff382ae73a915957eae849ee348bc1d163743 # scx_cake: warning removed from build
-5b5c27a4fd2fae2215f5d5eade8e4b9d0f70c5f2 # struct alignment 4 byte for clang 19+
-f11c333f96ace8cdf629564ae37b659f2c26ec6d # BPF compat: Use semantic macros for 32-bit atomics to fix Clang 19 crash
-50b4b52bdf6069f09135655cc13295bf35491ae2 # BPF: Optimize MLP by migrating volatile loads to relaxed semantic macros
-4767fdecc6d9bccd5ef74b25e9565a2b08494d5b # BPF: Bulletproof compat layer with inline ASM for Clang < 21
-ab8a81cd380561405ed1d2436d5a20e5896fa301 # Checkpoint: Immediate Consumption pattern - baseline 53 spills restored
-a626e117dcc02b047505620b60943ffd8893938a # Absolute Zero Spill: Eliminate remaining BPF spills in cake_select_cpu (53 -> 0). Verified with llvm-objdump.
-c93231df295652b907b80eb05689f9b8569915c2 # Optimize: Implement more aggressive warmth seeking (Stubborn Warmth)
-5a011aec896d8266353efe871cd178405aa2bada # perf(cake): remove volatile from 15 rodata declarations for JIT constant folding
-03e1e96b05d4ce3dfce5bc7cfb26f2371422469e # feat(cake): v1.01 with clean ANSI startup splash
-8a0f9b071f8551b623da1225f3a527d259c3a400 # chore(cake): bump version to 1.0.1
-3b3dc89b7aab10595ca00666413a18eb7e51c9df # scx_cake: Remove LOCK prefixes from victim_mask ops (5 atomics → 2)
-a043260964f7a42189e7218e82b9204d6dccef63 # scx_cake: Phase 2 tiered masks - 40-60% reduced atomic hit rate
-9dd560c0f599b0b826b16eb867fb4b67c65e4ce1 # scx_cake: cake_update_idle zero-spill optimization
-3e0ecb6994df5556b4f9080c85660da8cf6a27f4 # scx_cake: eliminate all BPF register spills via cold path optimization
-efb61ee39efa741e9f377a960f7cdeb44bc39aa7 # scx_cake: add cache-line padding to cold_scratch
-8ba0f141bcc99df3e419ab9bd537fb94c157a8ad # scx_cake: Empirical Topology Discovery (ETD) System Review
-8751e8d33e0c40bc01267b50cc84bb8438f33a28 # spill fixes
-87758a2d19ad0524d2598731db3f99268e8dc93a # fix(cake): prioritize cache warmth over ETD to reduce jitter
-ad94026f4354dfee88fd4010c3cc43f7aea52661 # cold path optimizations
-4d9dc4e3120e170e32185b75c6c5565ba4074cfe # optimization leading to better fps, lower latency and better 50% frame distribution
-566807e63f8c39b44dfae2e7e65bda2e83091683 # fuse optimization round 1 passed
-17c8a4125aeca1605002c3a4db3bdf55f4b177aa # fuse round 2 pass
-3c2eda5f09913a099dd8519eca627ecae6b837ab # MESI-friendly warm-tier updates: skip-if-unchanged optimization
-dad7b6d794dbe976434808867a0089da12c321b2 # skip-if-unchanged optimization for packed_info in cake_stopping
-7e7c5d9e418b37c195497fec00288ca289a431c7 # cache line separation for tiered_idle_mask to eliminate false sharing
-c3346a32e74f885588d7d666bd1439e62e24cd1a # branchless clamp in compute_sparse_score using nested ternary
-153971b6c53646314bd76b2094edb375aed47a6f # scx_cake: fix build errors in calibrate test and improve signal handling consistency
-99377d725bfbd38f23ff4535db34d54a006e8e1f # Refactor: Topology-Agnostic 'Physical-First' isolation and Zero-Math Arbiter implementation
-074d5dd1e0c63a1972605f6beaa45f1889693609 # Perf: BPF atomic optimizations (TTAS) and build.rs flag adjustments
-ae766b8a6c208b7896a4243f07aa8ab71aa24294 # scx_cake: resolved clippy warnings and applied cargo fmt
-02d2b2a6af251225efe936bc5dde9885bf57a80c # spill fixes and jitter optimizations, new highscore benchmark arc raiders
-24ea4d292f66915b3bdf487ca11a63c2c30036e3 # schbernch improvements round 1 passed
-f6a65fbd134b3144ebd3ad4419cc27cf9552059d # Phase 1: Memory load hoisting in cake_running
-df6544b4034b218c1fe4123876fa8706480df591 # Phase 2: ANDN bit-clearing patterns in cake.bpf.c
-d0cba23422a511e478ab6e64301439897a425434 # Phase 3: BEXTR Bitfield Extraction in cake.bpf.c
-49b7a908b6b62c84636b7183c16579d295479af2 # Phase 4: TZCNT Enforcement in cake.bpf.c
-c5414644539a5d0630af0b5a1fbe4a42f8c094d5 # Phase 5: CMOV Cascade in cake_select_cpu
-8a0ef00414bbf762084899f6e19e953cb809a89b # Phase 6: Constant Hoisting & Snapshotting in cake_select_cpu
-e1450beaeb0d28eddcfcb728cec205d3d2a54426 # experimental optimization via assembly
-6872411b4981ee3020983d71973456477a6f1327 # scx_cake: Implement Phase 1-3 Zen 5 micro-architectural optimizations
+6c8b9fd2b9436b66cf85abcbc7d0c8f9e6c8ab8a # Add scx_cake scheduler to workspace
+a61f4a9931da52fe797744f8764ea1f46aa24d8a # Add scx_cake scheduler to workspace
+34d73e6fd1dc96243e9d9c2082dcaf66a2c7bcf7 # scx_cake: Use local path dependencies instead of git
+1f8acdb8c30e76ba81a6600f47c02224a33e3569 # Update Cargo.lock for scx_cake
+93ef844ead99a0e10cc97979edd9f143042829eb # scx_cake: Run cargo fmt
+d870ee6955baaa5f07130ff7f52b70eeeee60d3a # scx_cake: add kernel 6.16+ compatibility for scx_bpf_cpu_curr
+dc1c50e04f129e10d5f827b416a139473726090f # scx_cake: Implement Check & Skip Optimizations and SMT Fix
+0d3b906982496247e8878573df3e3a10ad00d97b # perf sched map optimization
+086cfa034f225d135afbd3e29052fbf69dff9870 # feat(scx_cake): implement state-based per-cpu direct dispatch
+84a51fbdcbf738b305db0b15255224b420ddfe77 # Ghost Scheduler Optimizations: Store coalescing and bit testing
+8bb1a7422f4e6b17711dc67f8548d843ceb396b8 # bug fixes, floor for runtime, healthy IPC
+6f68814227e98d24b2096c24316a39fbd5016ed0 # Great benchmarks - need to review jitter
+696b4b51b7d2a8a531e908e99a668d39fa84b5d5 # scx_cake: Implement Zero-Math Locality Arbiter
+64fca7ac7ed2c250cc2629cda60dfd77debb1239 # scx_cake: warning removed from build
+9f9ef1fb7588943949b7c0ab635046ef4267e30a # struct alignment 4 byte for clang 19+
+08728a7fed72b995b798ece9b475206a52a3a687 # BPF compat: Use semantic macros for 32-bit atomics to fix Clang 19 crash
+c26b2468300715f5dd5844098c5f28e341bbfa60 # BPF: Optimize MLP by migrating volatile loads to relaxed semantic macros
+2da5a1acb3a1ea3a6645991f5bc2d1ed92d09d27 # BPF: Bulletproof compat layer with inline ASM for Clang < 21
+294f723b042da18f930b690fad4a38945fb88c58 # Checkpoint: Immediate Consumption pattern - baseline 53 spills restored
+f35b46db691c376babe77c50c75b372f56c7fa31 # Absolute Zero Spill: Eliminate remaining BPF spills in cake_select_cpu (53 -> 0). Verified with llvm-objdump.
+8cece32d005948d23cb912f5b00e1da1582c0e30 # Optimize: Implement more aggressive warmth seeking (Stubborn Warmth)
+e619f758d43113d05dff206b6e77dfdf1b3b56e9 # perf(cake): remove volatile from 15 rodata declarations for JIT constant folding
+372872233bdd3133fdd3d7df4272364629abd157 # feat(cake): v1.01 with clean ANSI startup splash
+7230094a97fb90bad5de1f68b8015c0d5b028014 # chore(cake): bump version to 1.0.1
+c617aca4d478dec1ebaf70aecb01119834e74992 # scx_cake: Remove LOCK prefixes from victim_mask ops (5 atomics → 2)
+97411729661d81fc3e062ee55d7bff23a565c487 # scx_cake: Phase 2 tiered masks - 40-60% reduced atomic hit rate
+87678b2ef0b7b970f1ab11e5f36d92aa20984484 # scx_cake: cake_update_idle zero-spill optimization
+63005c94cc389981eada95034c7497d27d849916 # scx_cake: eliminate all BPF register spills via cold path optimization
+03c22aa80106646b1d7aff70a34cebab3c35d7d3 # scx_cake: add cache-line padding to cold_scratch
+faac2f59095e3d23d2718e96034796eb6d3d4581 # scx_cake: Empirical Topology Discovery (ETD) System Review
+bc242f75cc0b1bc3bbfb74f81065944acb0f5257 # spill fixes
+474b8c95d340c60423171e2d090b29c4c327dfeb # fix(cake): prioritize cache warmth over ETD to reduce jitter
+ebf72230c8001bc071235d98412eb1db91a79b33 # cold path optimizations
+ef70aa4285e9e80f54e589cccabb3ea7cd3c965f # optimization leading to better fps, lower latency and better 50% frame distribution
+0c37bef75dbcb1bfeb687ccffeed7ece55871bff # fuse optimization round 1 passed
+eb11e2c5a9dada28ef137b9426439e151499ebd5 # fuse round 2 pass
+1e2519a0dcde36ed061ea67eac8dbcb3ec41ddf4 # MESI-friendly warm-tier updates: skip-if-unchanged optimization
+3aef7fa778923c10a7240f0211f7ecf8fd480903 # skip-if-unchanged optimization for packed_info in cake_stopping
+d898e70c1e4959e3f8ec8225d6b2b2a7a6bf4de2 # cache line separation for tiered_idle_mask to eliminate false sharing
+ca19eda8cb467f763b1e487ba87870828d65bcf5 # branchless clamp in compute_sparse_score using nested ternary
+fd8303e5f93dbd05d720bf6b53cc3d86bf6518dd # scx_cake: fix build errors in calibrate test and improve signal handling consistency
+37ebf7bf7a3af58155e16a683d56af93c70971a4 # Refactor: Topology-Agnostic 'Physical-First' isolation and Zero-Math Arbiter implementation
+f036b1ae68bc13419dbda3c6504911caedc3cfd3 # Perf: BPF atomic optimizations (TTAS) and build.rs flag adjustments
+1007963f00b9c06f4d14f675ca83a766a6b00412 # scx_cake: resolved clippy warnings and applied cargo fmt
+cab15f4e78ded627bd003ecf6aab41ef930f4712 # spill fixes and jitter optimizations, new highscore benchmark arc raiders
+ceac3a0c19be791afc8a240cf877d1a5a8c1c9c4 # schbernch improvements round 1 passed
+b7f53a59c1263771e11e2ab44a4a6897b644f4e1 # Phase 1: Memory load hoisting in cake_running
+51c371f63afacc499845963c722fda345f540afc # Phase 2: ANDN bit-clearing patterns in cake.bpf.c
+09efa5827c54edda3b932ff1b66213b443486eab # Phase 3: BEXTR Bitfield Extraction in cake.bpf.c
+b2ff797064d2e77cfbaec805bc012bb1a4b222da # Phase 4: TZCNT Enforcement in cake.bpf.c
+ecaf36275b8fb4005ceab9c665eb6d2c796f0766 # Phase 5: CMOV Cascade in cake_select_cpu
+805f9a6a1ff2bbe49b073ac6b18b9f5f3dbc214e # Phase 6: Constant Hoisting & Snapshotting in cake_select_cpu
+012c15c0216a42802a15c3936314e48006828d3c # experimental optimization via assembly
+d0a4eb044bbbdf68a03787d77d5efb727c51e5f5 # scx_cake: Implement Phase 1-3 Zen 5 micro-architectural optimizations
+b053bdbd3555cb10c39eb686528711359daf9f1b # checkpoint: BPF callback optimization (4 trampolines)
+75f95913f5a1d72c491ea8ca9d2bf59c920d7d44 # scx_cake: Implement Symphony of 2 bypass and resolve build/runtime conflicts
+9c69fcf9734654f9b16db85e92280ce548784bff # bpf trampoline reduction + dark arts
 )
 
 _reverts=(
