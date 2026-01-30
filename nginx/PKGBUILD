@@ -1,0 +1,437 @@
+# Maintainer: Levente Polyak <anthraxx[at]archlinux[dot]org>
+# Maintainer: Massimiliano Torromeo <massimiliano.torromeo@gmail.com>
+# Contributor: Bartłomiej Piotrowski <bpiotrowski@archlinux.org>
+# Contributor: Sébastien Luttringer
+# Contributor: Sergej Pupykin <pupykin.s+arch@gmail.com>
+# Contributor: Miroslaw Szot <mss@czlug.icis.pcz.pl>
+# Contributor: Daniel Micay <danielmicay@gmail.com>
+
+pkgbase=nginx
+pkgname=(
+  nginx
+  nginx-mod-geoip
+  nginx-mod-image-filter
+  nginx-mod-mail
+  nginx-mod-perl
+  nginx-mod-stream
+  nginx-mod-xslt
+  nginx-src
+)
+pkgver=1.28.1
+pkgrel=1.2
+_tests_commit=17c6a06e7b692351f4af53ca6511b919e9e510b8
+arch=(x86_64)
+pkgdesc='Lightweight HTTP server and IMAP/POP3 proxy server'
+url='https://nginx.org'
+license=(BSD-2-Clause)
+makedepends=(
+  clang
+  findutils
+  gd
+  geoip
+  git
+  glibc
+  libxcrypt
+  libxml2
+  libxslt
+  llvm
+  mailcap
+  openssl
+  pcre2
+  perl
+  rsync
+  zlib
+)
+options=(
+  !lto
+)
+checkdepends=(
+  coreutils
+  ffmpeg
+  memcached
+  perl
+  perl-cache-memcached
+  perl-cryptx
+  perl-fcgi
+  perl-gd
+  perl-io-socket-ssl
+)
+source=(
+  "git+https://github.com/nginx/nginx.git#tag=release-${pkgver}"
+  "git+https://github.com/nginx/nginx-tests.git#commit=${_tests_commit}"
+  nginx.service
+  logrotate
+)
+# https://nginx.org/en/pgp_keys.html
+validpgpkeys=(
+  'B0F4253373F8F6F510D42178520A9993A1C052F8'  # Maxim Dounin <mdounin@mdounin.ru>
+  '43387825DDB1BB97EC36BA5D007C8D7C15D87369'  # Roman Arutyunyan <r.arutyunyan@f5.com>
+  'D6786CE303D9A9022998DC6CC8464D549AF75C0A'  # Sergey Kandaurov <s.kandaurov@f5.com>
+  '13C82A63B603576156E30A4EA0EA981B66B0D967'  # Konstantin Pavlov <thresh@nginx.com>
+)
+sha512sums=('7d6ca544a89e3290b13774d7786520370969b68672cf28e1212959aaf972029a984618ade18fc9ad6b398c8d3ba837ef324880e0cc0228df33bec00c2f2ffa4d'
+            '5a3b2673e485f7e40094ee11e3f80319f8555f6cac05ea4a40139faa1b218f6124d67f8715e56d894a4f4f5c9bc89987e175b7a5772938207861d9f9a57cacf1'
+            'f469b3b14def666e955abf6f2d3c68a47631cad7bee90c92039ffe5bf629aa7e32bb4250844d52c0f963740fb07bf7fea5f8887cc1d5199403f07be6214fcb8d'
+            '2f4dfcfa711b8bcbc5918ba635f5e430ef7132e66276261ade62bb1cba016967432c8dce7f84352cb8b07dc7c6b18f09177aa3eb92c8e358b2a106c8ca142fe9')
+
+prepare() {
+  cp -r $pkgbase{,-src}
+}
+
+_configure_nginx() {
+  local _extra_cc_opt="${1:-}"
+  local _extra_ld_opt="${2:-}"
+
+  auto/configure \
+    --with-cc=clang \
+    --prefix=/etc/nginx \
+    --conf-path=/etc/nginx/nginx.conf \
+    --sbin-path=/usr/bin/nginx \
+    --modules-path=/usr/lib/nginx/modules \
+    --pid-path=/run/nginx.pid \
+    --lock-path=/run/lock/nginx.lock \
+    --user=http \
+    --group=http \
+    --http-log-path=/var/log/nginx/access.log \
+    --error-log-path=stderr \
+    --http-client-body-temp-path=/var/lib/nginx/client-body \
+    --http-proxy-temp-path=/var/lib/nginx/proxy \
+    --http-fastcgi-temp-path=/var/lib/nginx/fastcgi \
+    --http-scgi-temp-path=/var/lib/nginx/scgi \
+    --http-uwsgi-temp-path=/var/lib/nginx/uwsgi \
+    --with-cc-opt="$CFLAGS $CPPFLAGS $_extra_cc_opt" \
+    --with-ld-opt="$LDFLAGS $_extra_ld_opt" \
+    --with-compat \
+    --with-debug \
+    --with-file-aio \
+    --with-http_addition_module \
+    --with-http_auth_request_module \
+    --with-http_dav_module \
+    --with-http_degradation_module \
+    --with-http_flv_module \
+    --with-http_geoip_module=dynamic \
+    --with-http_gunzip_module \
+    --with-http_gzip_static_module \
+    --with-http_image_filter_module=dynamic \
+    --with-http_mp4_module \
+    --with-http_perl_module=dynamic \
+    --with-http_random_index_module \
+    --with-http_realip_module \
+    --with-http_secure_link_module \
+    --with-http_slice_module \
+    --with-http_ssl_module \
+    --with-http_stub_status_module \
+    --with-http_sub_module \
+    --with-http_v2_module \
+    --with-http_v3_module \
+    --with-http_xslt_module=dynamic \
+    --with-mail=dynamic \
+    --with-mail_ssl_module \
+    --with-pcre-jit \
+    --with-stream=dynamic \
+    --with-stream_geoip_module=dynamic \
+    --with-stream_realip_module \
+    --with-stream_ssl_module \
+    --with-stream_ssl_preread_module \
+    --with-threads
+}
+
+_pgo_train() {
+  local _pgo_dir="$srcdir/pgo-workdir"
+  local _pgo_port=8190
+
+  # Create working directories for nginx
+  mkdir -p "$_pgo_dir"/{logs,client-body,proxy,fastcgi,scgi,uwsgi,html}
+  echo "PGO Training Page" > "$_pgo_dir/html/index.html"
+
+  # Create a minimal nginx config for PGO training
+  cat > "$_pgo_dir/nginx.conf" <<EOF
+worker_processes auto;
+daemon off;
+master_process on;
+pid $_pgo_dir/nginx.pid;
+error_log $_pgo_dir/logs/error.log;
+
+events {
+    worker_connections 1024;
+    multi_accept on;
+}
+
+http {
+    access_log $_pgo_dir/logs/access.log;
+    client_body_temp_path $_pgo_dir/client-body;
+    proxy_temp_path $_pgo_dir/proxy;
+    fastcgi_temp_path $_pgo_dir/fastcgi;
+    scgi_temp_path $_pgo_dir/scgi;
+    uwsgi_temp_path $_pgo_dir/uwsgi;
+
+    server {
+        listen 127.0.0.1:$_pgo_port;
+        server_name localhost;
+        root $_pgo_dir/html;
+
+        location / {
+            index index.html;
+        }
+
+        location /stub_status {
+            stub_status;
+        }
+    }
+}
+EOF
+
+  echo "Starting nginx for PGO training..."
+  "$srcdir/$pkgbase/objs/nginx" -c "$_pgo_dir/nginx.conf" &
+  local _nginx_pid=$!
+
+  # Wait for nginx to start
+  sleep 2
+
+  echo "Running PGO training workload..."
+  # Use perl for HTTP requests (available in makedepends, works in chroot)
+  perl -e '
+    use IO::Socket::INET;
+    my $iterations = 10000;
+    for my $i (1..$iterations) {
+      my $sock = IO::Socket::INET->new(
+        PeerAddr => "127.0.0.1",
+        PeerPort => '$_pgo_port',
+        Proto    => "tcp",
+        Timeout  => 5
+      ) or next;
+      print $sock "GET / HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n";
+      while (<$sock>) { }
+      close($sock);
+
+      # Also hit stub_status for variety
+      $sock = IO::Socket::INET->new(
+        PeerAddr => "127.0.0.1",
+        PeerPort => '$_pgo_port',
+        Proto    => "tcp",
+        Timeout  => 5
+      ) or next;
+      print $sock "GET /stub_status HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n";
+      while (<$sock>) { }
+      close($sock);
+    }
+    print "Completed $iterations iterations\n";
+  '
+
+  echo "Stopping nginx..."
+  kill -QUIT $_nginx_pid 2>/dev/null || true
+  wait $_nginx_pid 2>/dev/null || true
+
+  echo "PGO training complete"
+}
+
+build() {
+  cd $pkgbase
+
+  export CC=clang
+  export CXX=clang++
+
+  local _pgo_profile_dir="$srcdir/pgo-profile"
+  local _pgo_profdata="$srcdir/nginx.profdata"
+  mkdir -p "$_pgo_profile_dir"
+
+  # Phase 1: Build with profiling instrumentation
+  echo "=== PGO Phase 1: Building with instrumentation ==="
+  _configure_nginx "-fprofile-generate=$_pgo_profile_dir" "-fprofile-generate=$_pgo_profile_dir"
+  make
+
+  # Phase 2: Run training workload to generate profile data
+  echo "=== PGO Phase 2: Running training workload ==="
+  export LLVM_PROFILE_FILE="$_pgo_profile_dir/nginx_%m_%p.profraw"
+  _pgo_train
+  unset LLVM_PROFILE_FILE
+
+  # Merge profile data
+  echo "=== PGO Phase 2.5: Merging profile data ==="
+  llvm-profdata merge -output="$_pgo_profdata" "$_pgo_profile_dir"/*.profraw
+
+  # Phase 3: Rebuild with profile data
+  echo "=== PGO Phase 3: Rebuilding with profile data ==="
+  make clean
+  _configure_nginx "-fprofile-use=$_pgo_profdata" "-fprofile-use=$_pgo_profdata"
+  make
+
+  make DESTDIR="$srcdir/install" install
+
+  rsync -am \
+    --remove-source-files \
+    --include="usr/lib/nginx/modules/ngx_*geoip*.so" \
+    --include='*/' \
+    --exclude='*' \
+    "$srcdir/install/" "$srcdir/install-geoip/"
+
+  rsync -am \
+    --remove-source-files \
+    --include="usr/lib/nginx/modules/ngx_*image*.so" \
+    --include='*/' \
+    --exclude='*' \
+    "$srcdir/install/" "$srcdir/install-image-filter/"
+
+  rsync -am \
+    --remove-source-files \
+    --include="usr/lib/nginx/modules/ngx_*mail*.so" \
+    --include='*/' \
+    --exclude='*' \
+    "$srcdir/install/" "$srcdir/install-mail/"
+
+  rsync -am \
+    --remove-source-files \
+    --include='*.3pm' \
+    --include="usr/lib/perl*/***" \
+    --include="usr/lib/nginx/modules/ngx_*perl*.so" \
+    --include='*/' \
+    --exclude='*' \
+    "$srcdir/install/" "$srcdir/install-perl/"
+
+  rsync -am \
+    --remove-source-files \
+    --include="usr/lib/nginx/modules/ngx_*stream*.so" \
+    --include='*/' \
+    --exclude='*' \
+    "$srcdir/install/" "$srcdir/install-stream/"
+
+  rsync -am \
+    --remove-source-files \
+    --include="usr/lib/nginx/modules/ngx_*xslt*.so" \
+    --include='*/' \
+    --exclude='*' \
+    "$srcdir/install/" "$srcdir/install-xslt/"
+
+  find "$srcdir/install/usr" -type d -empty -delete
+}
+
+check() {
+  cd nginx-tests
+  local _jobs=$(nproc)
+  (( _jobs > 16 )) && _jobs=16
+  TEST_NGINX_BINARY="$srcdir/$pkgbase/objs/nginx" prove -j "$_jobs" .
+}
+
+package_nginx() {
+  depends=('glibc' 'pcre2' 'zlib' 'openssl' 'mailcap' 'libxcrypt')
+  optdepends=(
+    'nginx-mod-geoip: GeoIP support'
+    'nginx-mod-image-filter: transform images'
+    'nginx-mod-mail: proxy IMAP, POP and SMTP protocols'
+    'nginx-mod-perl: perl variables and location handlers'
+    'nginx-mod-stream: proxy TCP/UDP data streams'
+    'nginx-mod-xslt: transform XML responses'
+  )
+  backup=('etc/nginx/fastcgi.conf'
+          'etc/nginx/fastcgi_params'
+          'etc/nginx/koi-win'
+          'etc/nginx/koi-utf'
+          'etc/nginx/nginx.conf'
+          'etc/nginx/scgi_params'
+          'etc/nginx/uwsgi_params'
+          'etc/nginx/win-utf'
+          'etc/logrotate.d/nginx')
+
+  cd $pkgbase
+  mv "$srcdir"/install/* "$pkgdir/"
+
+  sed -e 's|\<user\s\+\w\+;|user http;|g' \
+    -e '44s|html|/usr/share/nginx/html|' \
+    -e '54s|html|/usr/share/nginx/html|' \
+    -e '/^events {/ i # Load all installed modules\ninclude modules.d/*.conf;\n' \
+    -i "$pkgdir"/etc/nginx/nginx.conf
+
+  rm "$pkgdir"/etc/nginx/*.default
+  rm "$pkgdir"/etc/nginx/mime.types  # in mailcap
+
+  install -dm0755 "$pkgdir"/etc/nginx/modules.d
+
+  install -d "$pkgdir"/var/lib/nginx
+  install -dm700 "$pkgdir"/var/lib/nginx/proxy
+
+  chmod 755 "$pkgdir"/var/log/nginx
+  chown root:root "$pkgdir"/var/log/nginx
+
+  install -d "$pkgdir"/usr/share/nginx
+  mv "$pkgdir"/etc/nginx/html/ "$pkgdir"/usr/share/nginx
+
+  install -Dm644 ../logrotate "$pkgdir"/etc/logrotate.d/nginx
+  install -Dm644 ../nginx.service "$pkgdir"/usr/lib/systemd/system/nginx.service
+  install -Dm644 LICENSE "$pkgdir"/usr/share/licenses/$pkgname/LICENSE
+
+  rmdir "$pkgdir"/run
+
+  install -Dm0644 objs/nginx.8 "$pkgdir"/usr/share/man/man8/nginx.8
+
+  for i in ftdetect ftplugin indent syntax; do
+    install -Dm644 contrib/vim/$i/nginx.vim \
+      "$pkgdir/usr/share/vim/vimfiles/$i/nginx.vim"
+  done
+}
+
+package_nginx-src() {
+  pkgdesc="Source code of nginx $pkgver, useful for building modules"
+  depends=(bash perl)
+
+  install -d "$pkgdir/usr/src"
+  cp -r $pkgbase-src "$pkgdir/usr/src/nginx"
+  rm -rf "$pkgdir/usr/src/nginx/".git*
+  ln -s auto/configure "$pkgdir/usr/src/nginx/configure"
+  install -Dm644 $pkgbase/LICENSE "$pkgdir"/usr/share/licenses/$pkgname/LICENSE
+}
+
+_package_module() {
+  modname="$1"
+  priority="${2:-20}"
+
+  mv "$srcdir/install-$modname"/* "$pkgdir/"
+  install -Dm644 $pkgbase/LICENSE "$pkgdir"/usr/share/licenses/$pkgname/LICENSE
+
+  install -dm0755 "$pkgdir"/etc/nginx/modules.d
+  cd $pkgdir
+  for mod in usr/lib/nginx/modules/*.so; do
+    printf 'load_module "/%s";\n' "${mod}" >> "$pkgdir/etc/nginx/modules.d/$priority-$modname.conf"
+  done
+}
+
+package_nginx-mod-geoip() {
+  pkgdesc="GeoIP module for nginx"
+  depends=($pkgbase=${pkgver} glibc geoip)
+  backup=(etc/nginx/modules.d/20-geoip.conf)
+  _package_module geoip
+}
+
+package_nginx-mod-image-filter() {
+  pkgdesc="Module for nginx that transforms images in JPEG, GIF, PNG, and WebP formats"
+  depends=($pkgbase=${pkgver} glibc gd)
+  backup=(etc/nginx/modules.d/20-image-filter.conf)
+  _package_module image-filter
+}
+
+package_nginx-mod-mail() {
+  pkgdesc="Mail module for nginx to proxy IMAP, POP3 and SMTP protocols"
+  depends=($pkgbase=${pkgver} glibc)
+  backup=(etc/nginx/modules.d/20-mail.conf)
+  _package_module mail
+}
+
+package_nginx-mod-perl() {
+  pkgdesc="Module for nginx to implement location and variable handlers in Perl"
+  depends=($pkgbase=${pkgver} glibc perl)
+  backup=(etc/nginx/modules.d/20-perl.conf)
+  _package_module perl
+}
+
+package_nginx-mod-stream() {
+  pkgdesc="Module for nginx to proxy TCP and UDP data streams"
+  depends=($pkgbase=${pkgver} glibc)
+  backup=(etc/nginx/modules.d/10-stream.conf)
+  _package_module stream 10
+}
+
+package_nginx-mod-xslt() {
+  pkgdesc="Module for nginx to transform XML responses with XSLT stylesheets"
+  depends=($pkgbase=${pkgver} glibc libxml2 libxslt)
+  backup=(etc/nginx/modules.d/20-xslt.conf)
+  _package_module xslt
+}
