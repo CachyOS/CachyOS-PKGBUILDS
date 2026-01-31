@@ -190,6 +190,7 @@ generate_entries() {
         title="$(echo -e "$entry" | sed -e 's/-/ /g' -e 's/\b\(.\)/\u\1/g')"
         title="${title/\//}"
         title="${title//Rt/(Realtime)}"
+        title="${title//Cachyos/CachyOS}"
 
         # get the kernel location so the initrd can be written to the same location as the kernel
         [[ $(dirname "$kernel") == "/" ]] && kernelpath="" || kernelpath="$(dirname "$kernel")"
