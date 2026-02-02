@@ -3,7 +3,7 @@
 # Contributor: Thomas Schneider <maxmusterm@gmail.com>
 
 pkgname=svt-av1
-pkgver=3.1.2
+pkgver=4.0.1
 pkgrel=2
 pkgdesc='Scalable Video Technology AV1 encoder and decoder'
 arch=(x86_64)
@@ -26,11 +26,6 @@ prepare() {
    # to build with PGO we need to remove that
 #  sed '/CMAKE_BUILD_TYPE Release/d' -i SVT-AV1/CMakeLists.txt
   cd "$srcdir"
-}
-
-pkgver() {
-  cd SVT-AV1
-  git describe --tags | sed 's/^v//'
 }
 
 build() {
