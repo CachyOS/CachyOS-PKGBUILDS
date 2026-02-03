@@ -146,6 +146,41 @@ generate_entries() {
         btrfs)
             sdoptions+=" rootflags=subvol=${srcdev_fsroot}"
             ;;
+        bcachefs)
+            bch_member="${srcdev%%:*}"
+            if [ -z "${bch_member}" ]; then
+                echo "Failed to get a bcachefs root filesystem member device"
+                return 1
+            fi
+            if ! [ -b "${bch_member:-}" ]; then
+                echo "Failed to get a valid bcachefs root filesystem member device: not a block device."
+                return 1
+            fi
+            bch_uuid="$(
+                blkid --match-types=bcachefs --output export "${bch_member}" |
+                sed -ne '/^UUID=/s///p'
+            )"
+            if [ -z "${bch_uuid}" ]; then
+                echo "Failed to get bcachefs root filesystem UUID"
+                return 1
+            fi
+            # Confirm that the device blkid reports matching the UUID is in the
+            # list of bcachefs root filesystem members.
+            bch_check="$(
+                set +e +o pipefail
+                blkid --output export --uuid="${bch_uuid}" |
+                    sed -ne '/^UUID=/s///p'
+            )"
+            case "${srcdev}" in
+                *${bch_check}*) : ;;
+                *)
+                    echo "Failed to confirm correct UUID and member devices for bcachefs root filesystem."
+                    return 1
+                ;;
+            esac
+            sdoptions="root=UUID=${bch_uuid} rw"
+            ;;
+
     esac
 
     # Search for a crypt device
