@@ -5,18 +5,19 @@ pkgver=20260122.1
 pkgrel=1
 arch=('any')
 license=('MIT')
-depends=('python-evdev'
-         'dmidecode' # for jupiter-biosupdate
-         'python-crcmod' 'python-click' 'python-progressbar' 'python-hid'
-         'jq' # for jupiter-controller-update, jupiter-biosupdate
-         'alsa-utils' # for the sound workarounds
-         'parted' 'e2fsprogs' # for sdcard formatting
-         'udisks2>=2.9.4-1.1' # for mounting external drives with the 'as-user' option
-         'ntfs-3g' #To make sure NTFS-3G is installed on CachyOS
-         'f3' #Used by format to check for bogus sdcards
-        )
+depends=(
+    'python-evdev'
+    'python>=3.13'
+    'dmidecode' # for jupiter-biosupdate
+    'python-crcmod' 'python-click' 'python-progressbar'
+    'python-hid>=1.0.6-2' # for jupiter-controller-update
+    'jq' # for jupiter-controller-update, jupiter-biosupdate
+    'alsa-utils' # for the sound workarounds
+    'parted' 'e2fsprogs' # for sdcard formatting
+    'udisks2>=2.9.4-1.1' # for mounting external drives with the 'as-user' option
+)
 optdepends=('grub-steamos')
-makedepends=('rsync' 'git' 'openssh' 'xorg-xcursorgen')
+makedepends=('rsync' 'git' 'xorg-xcursorgen')
 pkgdesc='CachyOS - Deckify Steam Deck HW Support'
 source=("git+https://github.com/evlaV/jupiter-hw-support.git#tag=jupiter-${pkgver}"
         "steamos-btrfs-automount.patch"
