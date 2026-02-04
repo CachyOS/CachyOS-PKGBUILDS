@@ -1,0 +1,48 @@
+# Maintainer: Piotr Górski <lucjan.lucjanov@gmail.com>
+
+pkgname=poc-selector-benchmark-git
+_gitname='poc-selector/benchmark/rust'
+pkgver=r14.gd5acca2
+pkgrel=1
+pkgdesc='Piece-Of-Cake (POC) CPU Selector benchmark'
+url='https://github.com/firelzrd/poc-selector'
+arch=('x86_64')
+license=('GPL-2.0-only')
+makedepends=(
+  cargo
+  git
+)
+options=(!lto)
+source=("git+https://github.com/firelzrd/poc-selector")
+sha256sums=('SKIP')
+
+pkgver() {
+  cd $_gitname
+  printf "r$(git rev-list --count HEAD).g$(git rev-parse --short HEAD)"
+}
+
+prepare() {
+  cd $_gitname
+  export RUSTUP_TOOLCHAIN=stable
+  cargo fetch --locked --target "$(rustc -vV | sed -n 's/host: //p')"
+}
+
+build() {
+  cd $_gitname
+  export RUSTUP_TOOLCHAIN=stable
+  export CARGO_TARGET_DIR=target
+  cargo build \
+     --release \
+     --frozen \
+     --all-features \
+     --workspace
+}
+
+package() {
+  cd $_gitname
+
+  # Install all built executables (skip .so and .d files)
+  find target/release \
+    -maxdepth 1 -type f -executable ! -name '*.so' \
+    -exec install -Dm755 -t "$pkgdir/usr/bin/" {} +
+}
