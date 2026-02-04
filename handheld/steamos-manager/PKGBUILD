@@ -6,14 +6,13 @@
 
 pkgname=steamos-manager
 pkgver=25.12.0
-pkgrel=1
+pkgrel=2
 pkgdesc='SteamOS Manager daemon for running various system management tasks'
 arch=('x86_64')
 url='https://store.steampowered.com/steamos/'
 license=('MIT')
 depends=(
     'dbus'
-    'gamescope-session-steam-git'
     'gcc-libs'
     'glibc'
     'speech-dispatcher'
@@ -48,7 +47,4 @@ build() {
 package () {
     cd "${pkgname}"
     make install DESTDIR="${pkgdir}"
-
-    install -d -m0755 "$pkgdir/usr/lib/systemd/user/gamescope-session-plus@steam.service.wants/"
-    ln -s ../steamos-manager.service "$pkgdir/usr/lib/systemd/user/gamescope-session-plus@steam.service.wants/"
 }
