@@ -2,37 +2,34 @@
 # Maintainer: Vladislav Nepogodin (vnepogodin) <vnepogodin@cachyos.org>
 
 pkgname=cachyos-handheld
-pkgver=1.2.5
-pkgrel=2
+pkgver=1.3.0
+pkgrel=1
 arch=('any')
 license=('GPL-3.0-later')
 pkgdesc='CachyOS - Handheld!'
 url='https://github.com/CachyOS/CachyOS-Handheld'
-source=("git+$url?signed#tag=$pkgver"
-        "controller-fix.patch")
+source=("git+$url?signed#tag=$pkgver")
 install="$pkgname.install"
 options=(!strip !debug)
 provides=('cachyos-deckify')
 replaces=('cachyos-deckify')
-sha256sums=('851eb160ed7dfbffc163480e5028b28c0e4d7dca9da6064307c62d685a3d373c'
-            '0d07ea5cb0ea0bf55abd3b5392d5ab38852638b5b306e5c247311a56a6c56763')
+sha256sums=('b0da4ff04cf09b1b70c6f023c7fbb666c50efb0534e576a487634fb728494a88')
 validpgpkeys=(
   E8B9AA39F054E30E8290D492C3C4820857F654FE  # Peter Jung <admin@ptr1337.dev>
   B1B70BB1CD56047DEF31DE2EB62C3D10C54D5DA9  # Vladislav Nepogodin <nepogodin.vlad@gmail.com>
 )
 makedepends=('git')
-depends=('gamescope-session-git' 'mangohud' 'jq' 'dmidecode' 'glew' 'glfw' 'glxinfo' 'curl' 'tar'
-         'scx-scheds' 'scx-tools' 'qt6-tools' 'gamescope-session-steam-git' 'jupiter-hw-support'
-         'gamescope' 'lib32-gamescope' 'cachyos-vapor' 'cachyos-alacritty-config' 'steam'
+depends=('gamescope-session-cachyos' 'mangohud' 'jq' 'dmidecode' 'glew' 'glfw' 'glxinfo' 'curl' 'tar'
+         'scx-scheds' 'scx-tools' 'qt6-tools' 'jupiter-hw-support'
+         'lib32-gamescope' 'cachyos-vapor' 'cachyos-alacritty-config' 'steam'
          'plasma-login-manager')
-
-prepare() {
-  patch -Np1 -i "${srcdir}/controller-fix.patch" -d "${srcdir}/CachyOS-Handheld"
-}
 
 package() {
   install -d "$pkgdir/etc"
   cp -rf "${srcdir}/CachyOS-Handheld/etc" "$pkgdir"
   install -d "$pkgdir/usr"
   cp -rf "${srcdir}/CachyOS-Handheld/usr" "$pkgdir"
+
+  install -d "$pkgdir/usr/lib/firmware/ath11k/QCA206X"
+  ln -s ../QCA2066 "$pkgdir/usr/lib/firmware/ath11k/QCA206X"
 }
