@@ -1,0 +1,142 @@
+# Maintainer: Andrew Crerar <crerar@archlinux.org>
+# Maintainer: Frederik Schwan <freswa at archlinux dot org>
+# Contributor: Sergej Pupykin <pupykin.s+arch@gmail.com>
+# Contributor: Bartłomiej Piotrowski <bpiotrowski@archlinux.org>
+# Contributor: Jan-Erik Rediger <badboy at archlinux dot us>
+# Contributor: nofxx <x@<nick>.com>
+
+pkgname=valkey
+pkgver=8.1.4
+pkgrel=1
+pkgdesc='An in-memory database that persists on disk'
+arch=('x86_64')
+url='https://valkey.io/'
+license=(
+  BSD-2-Clause
+  BSD-3-Clause
+)
+depends=(
+  glibc
+  jemalloc
+  openssl
+  systemd-libs
+)
+# pkg-config fails to detect systemd libraries if systemd is not installed
+makedepends=(
+  clang
+  git
+  lld
+  llvm
+  systemd
+)
+checkdepends=(
+  procps-ng
+  tcl
+)
+conflicts=(
+  redis
+)
+provides=(
+  redis
+)
+backup=(
+  etc/valkey/valkey.conf
+  etc/valkey/sentinel.conf
+)
+install=valkey.install
+source=(
+  git+https://github.com/valkey-io/valkey.git#tag=${pkgver}
+  valkey.service
+  valkey-sentinel.service
+  valkey.sysusers
+  valkey.tmpfiles
+  valkey.conf-sane-defaults.patch
+  valkey-5.0-use-system-jemalloc.patch
+  remove-deprecated-use-of-je_calloc.patch
+)
+sha512sums=('31c9e393e4192b11c15b9f4b6fe69b954d5e7121d9c4f696c0e4b084c387aff72b70dae35c2e8e2b3b02e9234eb73bc82c5b2bee49817e766d63832b02c6f4c7'
+            '8bfd088935615ee5fc192dea2d9efac970eb4d6b0147182da2ab59bfaca13a6109705db3941cb5c6fc071d093e33728f7a91680c3bc13d5a9242d6ce479f87e7'
+            'e8064a16aa65e313583bc45389d53a546c367e7b74c23ad7754dd7d92e58474d64759f1cbc0d5b6a169bf215346c1eadc71e71c8a4b6e9601f2d01dcde632bb8'
+            'd47185f700293304b5c23caf59999fecda2d1485a28a5eeff3a2922906f0184794d3eeeeeaac2ca415b865d7c4b5d74f88e694d34eeb6d1ee3a6bedbcd6edfdd'
+            '11cf6d6999329af7a9fa4bcbbcf22242b461cec0c16ad949cc6b0383703f19417092782569bf6224f94167a560de0b4ba53ec0d8522683736a14f01bc5986b28'
+            '032b19af22dd96c7898aa3dcae76d63fd8566c1d35ccb069e22fd0b76612d3285cd318f26ad5994b4f761f44a23c091d5322dec975b9a5a8cc65455399576045'
+            'c6972be1a89bb19d8bae4a92b6549dfb16f1779bd9e3d8f018d62fa388f52022adf347665080879745e5a9571db5461fd59d4383857031ecd74937f3d20566d4'
+            'c656904ade64b2498766a420dab8e72795bb96bf23cb04e408e011197c755648a3c155e699821347f4ca9e207031493df50b4474c41534e50ec4fb0d4817c45c')
+
+prepare() {
+  # extract licenses
+  sed -n '7,16p' $pkgname/COPYING > BSD-3-Clause.txt
+  sed -n '22,31p' $pkgname/COPYING > BSD-2-Clause.txt
+
+  cd $pkgname
+  # disable defrag test since defrag is currently disabled as long as the bundled jmalloc is not used
+  sed -i '/defragtest.so/d' tests/modules/Makefile
+  rm tests/unit/memefficiency.tcl
+
+  patch -Np1 < ../valkey.conf-sane-defaults.patch
+  patch -Np1 < ../valkey-5.0-use-system-jemalloc.patch
+  patch -Np1 < ../remove-deprecated-use-of-je_calloc.patch
+}
+
+build() {
+  local _common_make_flags=(
+    BUILD_TLS=yes
+    USE_SYSTEMD=yes
+    CC=clang
+    LDFLAGS="-fuse-ld=lld"
+    -C $pkgname
+  )
+
+  # PGO Stage 1: Build with instrumentation
+  make "${_common_make_flags[@]}" \
+       SERVER_CFLAGS="-fprofile-instr-generate" \
+       SERVER_LDFLAGS="-fprofile-instr-generate"
+
+  # PGO Stage 2: Generate profile data via benchmark
+  local _pgo_sock="$srcdir/valkey-pgo.sock"
+  LLVM_PROFILE_FILE="$srcdir/valkey-%p.profraw" \
+    $pkgname/src/valkey-server --port 0 --save "" --appendonly no \
+      --unixsocket "$_pgo_sock" --daemonize no &
+  local _server_pid=$!
+
+  # Wait for server to become ready
+  while ! $pkgname/src/valkey-cli -s "$_pgo_sock" PING &>/dev/null; do
+    sleep 0.1
+  done
+
+  # Run benchmark workload to generate representative profiles
+  $pkgname/src/valkey-benchmark -s "$_pgo_sock" \
+    -t set,get,lpush,lpop,sadd,spop,hset -n 500000 -c 50 -q
+
+  # Gracefully stop the server
+  $pkgname/src/valkey-cli -s "$_pgo_sock" SHUTDOWN NOSAVE || kill $_server_pid 2>/dev/null
+  wait $_server_pid 2>/dev/null || true
+
+  # PGO Stage 3: Merge profile data
+  llvm-profdata merge -o "$srcdir/merged.profdata" "$srcdir"/valkey-*.profraw
+
+  # PGO Stage 4: Rebuild with profile data (clean only server objects, keep deps)
+  make clean -C $pkgname
+  make "${_common_make_flags[@]}" \
+       SERVER_CFLAGS="-fprofile-instr-use=$srcdir/merged.profdata" \
+       SERVER_LDFLAGS="-fprofile-instr-use=$srcdir/merged.profdata"
+}
+
+check() {
+  make test -C $pkgname
+}
+
+package() {
+  cd $pkgname
+  make PREFIX="$pkgdir"/usr install
+
+  install -vDm 644 ../BSD-{2,3}-Clause.txt -t "$pkgdir"/usr/share/licenses/$pkgname/
+  install -Dm644 -t "$pkgdir"/etc/valkey valkey.conf sentinel.conf
+  install -Dm644 "$srcdir"/valkey.sysusers "$pkgdir"/usr/lib/sysusers.d/valkey.conf
+  install -Dm644 "$srcdir"/valkey.tmpfiles "$pkgdir"/usr/lib/tmpfiles.d/valkey.conf
+
+  install -Dm644 -t "$pkgdir"/usr/lib/systemd/system/ ../valkey.service ../valkey-sentinel.service
+  cd "$pkgdir"/usr/lib/systemd/system/
+  ln -s {valkey,redis}.service
+  ln -s {valkey,redis}-sentinel.service
+}

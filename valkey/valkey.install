@@ -1,0 +1,7 @@
+post_upgrade() {
+  if (( $(vercmp $2 6.2.1-2) < 0 )); then
+    echo ""
+    echo "Note: The valkey config has been moved from /etc/valkey.conf to /etc/valkey/valkey.conf"
+    echo ""
+  fi
+}

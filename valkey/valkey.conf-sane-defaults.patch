@@ -1,0 +1,34 @@
+From ba4cae6d4c5aea6ffe0653f5f0b879740fb4c887 Mon Sep 17 00:00:00 2001
+From: Frederik Schwan <frederik@tty42.de>
+Date: Thu, 3 Apr 2025 15:02:03 +0200
+Subject: [PATCH] adapt valkey.conf to ArchLinux
+
+---
+ valkey.conf | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/valkey.conf b/valkey.conf
+index df12b72d2..d61b42d35 100644
+--- a/valkey.conf
++++ b/valkey.conf
+@@ -385,7 +385,7 @@ daemonize no
+ #
+ # Note that on modern Linux systems "/run/valkey.pid" is more conforming
+ # and should be used instead.
+-pidfile /var/run/valkey_6379.pid
++# pidfile /var/run/valkey_6379.pid
+ 
+ # Specify the server verbosity level.
+ # This can be one of:
+@@ -606,7 +606,7 @@ rdb-del-sync-files no
+ # Note that modifying 'dir' during runtime may have unexpected behavior,
+ # for example when a child process is running, related file operations may
+ # have unexpected effects.
+-dir ./
++dir /var/lib/valkey/
+ 
+ ################################# REPLICATION #################################
+ 
+-- 
+2.49.0
+

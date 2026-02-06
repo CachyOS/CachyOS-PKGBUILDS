@@ -1,0 +1,28 @@
+From 26e7f05f725ebb16330053b107e0113b4f1731cb Mon Sep 17 00:00:00 2001
+From: Frederik Schwan <frederik@tty42.de>
+Date: Thu, 3 Apr 2025 16:12:07 +0200
+Subject: [PATCH] remove deprecated use of je_calloc
+
+---
+ src/allocator_defrag.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/src/allocator_defrag.c b/src/allocator_defrag.c
+index b9dedb3b0..88caadb74 100644
+--- a/src/allocator_defrag.c
++++ b/src/allocator_defrag.c
+@@ -279,9 +279,9 @@ int allocatorDefragInit(void) {
+     je_res = je_mallctl("arenas.nbins", &je_cb.nbins, &sz, NULL, 0);
+     assert(je_res == 0 && je_cb.nbins != 0);
+ 
+-    je_cb.bin_info = je_calloc(je_cb.nbins, sizeof(jeBinInfo));
++    je_cb.bin_info = zcalloc_num(je_cb.nbins, sizeof(jeBinInfo));
+     assert(je_cb.bin_info != NULL);
+-    je_usage_info = je_calloc(je_cb.nbins, sizeof(jemallocBinUsageData));
++    je_usage_info = zcalloc_num(je_cb.nbins, sizeof(jemallocBinUsageData));
+     assert(je_usage_info != NULL);
+ 
+     for (unsigned j = 0; j < je_cb.nbins; j++) {
+-- 
+2.49.0
+
