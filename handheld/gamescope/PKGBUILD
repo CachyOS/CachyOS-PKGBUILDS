@@ -90,6 +90,12 @@ prepare() {
     git config submodule.${submodule}.url ../${submodule##*/}
   done
   git -c protocol.file.allow=always submodule update
+
+  # Lock wlserver while initializing wayland
+  git cherry-pick -n a7329246d8cdc452f631b804fe680b8ef6e07cf7
+
+  # edid: rotate non-HDR displays with bRotate as well
+  git cherry-pick -n a5d5c64acbf6df822ed9d4e2dc85927617f4c445
 }
 
 build() {
