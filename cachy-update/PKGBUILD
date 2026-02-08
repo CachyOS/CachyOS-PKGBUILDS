@@ -1,7 +1,7 @@
 # Maintainer: Robin Candau <antiz@archlinux.org>
 
 pkgname=cachy-update
-pkgver=3.17.9
+pkgver=3.17.10
 pkgrel=1
 pkgdesc="An update notifier & applier that assists you with important pre / post update tasks"
 url="https://github.com/CachyOS/cachy-update"
@@ -22,8 +22,8 @@ optdepends=('paru: AUR Packages support'
             'sudo: Privilege elevation'
             'sudo-rs: Privilege elevation'
             'opendoas: Privilege elavation')
-source=("git+https://github.com/CachyOS/cachy-update#commit=f95de28d1975b881c2cc5b6bc3495da1c6d1616a")
-sha256sums=('2d4bf3a6457a0382abfde3bcc25a8625403f35bfb4f365c082a6bd47d9b8a8b3')
+source=("git+https://github.com/CachyOS/cachy-update#commit=501b05aa92fd747f477b79990dbff555af42662e")
+sha256sums=('27c1188f9f130434cca0346d346ababe224b430bf0a13f4be54dadae4f010a64')
 
 prepare() {
 	cd "${pkgname}"
@@ -43,4 +43,6 @@ check() {
 package() {
 	cd "${pkgname}"
 	make PREFIX=/usr DESTDIR="${pkgdir}" install
+
+	ln -s arch-update "${pkgdir}/usr/bin/${pkgname}"
 }
