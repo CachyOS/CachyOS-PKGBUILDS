@@ -2,7 +2,7 @@
 # Contributor: Nikita Almakov <nikita.almakov@gmail.com>
 
 pkgname=rate-mirrors
-pkgver=0.25.0
+pkgver=0.27.0
 pkgrel=2
 pkgdesc="Everyday-use client-side map-aware mirror ranking tool"
 arch=(x86_64)
@@ -13,21 +13,21 @@ makedepends=('git' 'cargo')
 options=(!lto)
 source=(
     "${pkgname}::git+$url.git#tag=v${pkgver}"
-    https://github.com/CachyOS/rate-mirrors/commit/573da0780d009d5a9a996c1e0d214fc6603c3512.patch
-    https://github.com/CachyOS/rate-mirrors/commit/b549c72c8c55f7eecb9413e344699f7d392409da.patch
+    https://github.com/CachyOS/rate-mirrors/commit/29d2f3beb572187d0ece1e81e78b4e5612b563b2.patch
+    https://github.com/CachyOS/rate-mirrors/commit/c221115b27bf98285c84fc07caa00b72146e2ce8.patch
 )
-sha256sums=('12d16b8bc9ca55c1d0d1acee22dd8e802c65695ea2fff5857e41983b4756f0aa'
-            '25541ab94d7fa38b505caa90a861f3cff28a37563d699c4ef1f1289177669dd2'
-            '6ae345e1998c6870ae6bbc77703dc42349aeaf4f9941efa18de5d58ec0be1142')
+sha256sums=('d0d92ac481cb27285b34a41408deb4d831c500cee7f71deb20cc7f4d5cff187e'
+            '10ffe2092e2f7bd19ad3e842d82734817276e3bca19344c778504b812c357b21'
+            '416a4fe6d0e49dcea0189a9e965328e4402827eec16038b9647983768a001eca')
 
 prepare() {
   cd "$pkgname"
 
   # archlinux: use cachyos proxy mirrorlist
-  patch -Np1 -i ../eb640518f354b2ea1da6e81e4550dfc61dfc9fc9.patch
+  patch -Np1 -i ../29d2f3beb572187d0ece1e81e78b4e5612b563b2.patch
 
   # cachyos: add proxy mirrorlist as primary
-  patch -Np1 -i ../1fcc102934bf5e8570f406c4bb87937f3e4d3dd0.patch
+  patch -Np1 -i ../c221115b27bf98285c84fc07caa00b72146e2ce8.patch
 
   cargo fetch --locked --target "$CARCH-unknown-linux-gnu"
 }
