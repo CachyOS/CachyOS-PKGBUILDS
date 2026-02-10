@@ -6,14 +6,15 @@
 # toolchain build order: linux-api-headers->glibc->binutils->gcc->glibc->binutils->gcc
 
 pkgname=binutils
-pkgver=2.45.1+r35+g12d0a1dbc1b9
-_commit=12d0a1dbc1b9ecc3a3ae7361bccb70ab32c16cf1
+pkgver=2.46
+_commit=49d4d3fafa4ec4ff5a3460d91d5b1ed5286487db
 pkgrel=2
 pkgdesc='A set of programs to assemble and manipulate binary and object files'
 arch=(x86_64)
 url='https://www.gnu.org/software/binutils/'
 license=(GPL-2.0-or-later GPL-3.0-or-later LGPL-2.0-or-later LGPL-3.0-or-later GFDL-1.3 FSFAP)
 depends=(
+  gcc-libs
   glibc
   jansson
   libelf
@@ -30,6 +31,7 @@ checkdepends=(
 )
 optdepends=(
   'debuginfod: for debuginfod server/client functionality'
+  'perl: for gprofng-display-html'
 )
 conflicts=(
   binutils-multilib
@@ -57,7 +59,7 @@ source=(
   revert-strip-2.patch
   0001-strip-Don-t-treat-fat-IR-objects-as-plugin-object.patch
 )
-sha256sums=('405ddddcb0f0eff2c71c126185351b4284abe7cf8ccb1a32d95eac06c58aacaf'
+sha256sums=('0a4d90af84c0c310048fa80352178fc16bfb98de6dbf7c7efeb1d7f6276ed011'
             '2d430b66f84a19c154725ec535280c493be1d34f1a90f95208dce02fecd0e4e4'
             'c783401be72ebfc954efe5c3e5f151ec2c6083757562cd43b3af10638008defa'
             'b91a57731c699b415f477a3a4f0ec0fdab68e6caee6f8e57e8b4d0877dc1580d'
