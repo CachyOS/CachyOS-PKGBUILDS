@@ -102,6 +102,27 @@ rate_repository_mirrors() {
     fi
 }
 
+force_ru_mirrors() {
+    local mirror domain index
+    local -a ru_mirrors=(
+        'https://archlinux.gay/cachy/repo/$arch/$repo'
+        'https://mirror.yandex.ru/cachyos/repo/$arch/$repo'
+    )
+
+    local -i line=1
+    for ((index=0; index < ${#ru_mirrors[@]}; index++)); do
+        mirror="${ru_mirrors[$index]}"
+        domain="${mirror##*://}"
+        domain="${domain%%/*}"
+        if curl -sL --connect-timeout 5 "https://${domain}" &>/dev/null; then
+            sed -i "$((line))iServer = ${mirror}" "${MIRRORS_DEFAULT_DIR}/cachyos-mirrorlist"
+            ((line++))
+        else
+            error "Failed to connect with ${domain} mirror"
+        fi
+    done
+}
+
 # Prefer mirrors that are geographically close, especially in countries that
 # have regional blockages
 country="$(curl --connect-timeout 10 -sSL 'https://geoip.kde.org/v1/ubiquity' | grep -Po '<CountryCode>\K([A-Z]{2})')"
@@ -122,8 +143,7 @@ rate_repository_mirrors cachyos "${MIRRORS_DEFAULT_DIR}/cachyos-mirrorlist"
 
 # Always insert local mirrors as first due to blockings in RU region
 if [ "$country" = "RU" ]; then
-    sed -i '1iServer = https://archlinux.gay/cachy/repo/$arch/$repo' "${MIRRORS_DEFAULT_DIR}/cachyos-mirrorlist"
-    sed -i '2iServer = https://mirror.yandex.ru/cachyos/repo/$arch/$repo' "${MIRRORS_DEFAULT_DIR}/cachyos-mirrorlist"
+    force_ru_mirrors
 fi
 
 cp -f --backup=simple --suffix="-backup" "${MIRRORS_DEFAULT_DIR}/cachyos-mirrorlist" \
