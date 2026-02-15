@@ -1,0 +1,13 @@
+diff --git a/usr/bin/jupiter-biosupdate b/usr/bin/jupiter-biosupdate
+index f6e5f69822bc..d7d097f09d6b 100755
+--- a/usr/bin/jupiter-biosupdate
++++ b/usr/bin/jupiter-biosupdate
+@@ -319,6 +319,8 @@ ret=0
+ if [[ $ret = 0 ]]; then
+   finish 0 yes "Applied bios update to version $desiredversion"
+ elif [[ $ret = 194 ]]; then
++  ESP="$(bootctl -p)"
++  mv "$ESP/EFI/EFI/Insyde" "$ESP/EFI/Insyde"
+   finish 0 yes "Will apply bios update to version $desiredversion after reboot"
+ else
+   die "Attempted to flash bios but failed"

@@ -2,7 +2,7 @@
 
 pkgname=jupiter-hw-support
 pkgver=20260211.1
-pkgrel=1
+pkgrel=2
 arch=('any')
 license=('MIT')
 depends=(
@@ -23,14 +23,16 @@ source=("git+https://github.com/evlaV/jupiter-hw-support.git#tag=jupiter-${pkgve
         "steamos-btrfs-automount.patch"
         "cachyos-automount.patch"
         "udev-automount-rules.patch"
-        "priv-write.patch")
+        "priv-write.patch"
+        "cachyos-bios.patch")
 #install="$pkgname.install"
 options=(!strip !debug)
 sha256sums=('f31be3945132f3966da89dbe3f583ce9a3f8343da2ade6c464a51cddf684f174'
             'fe064240bf77dabfa4d161b10c33c82385a0ca22a49350e70ab9301b0e98dc7b'
             'c7db0e977fb0c3a1526b8482e349f73304fc6397d7337c48fe0c990bde64412c'
             'd6b5636eb09d2190b10eb665238c30960babba96424fc9768e36966495fa795e'
-            'd3098f26eaa26d9eccfedeac792e47a03317bdd16b17ba03be0fbd1ed6621c5d')
+            'd3098f26eaa26d9eccfedeac792e47a03317bdd16b17ba03be0fbd1ed6621c5d'
+            '0d4660622887a360bef8f913e7bbd47ac262632acff503a3ca8cecbb6f4a943d')
 prepare() {
   cd "${pkgname}"
 
@@ -38,6 +40,7 @@ prepare() {
   patch --forward --strip=1 --input=../cachyos-automount.patch
   patch --forward --strip=1 --input=../udev-automount-rules.patch
   patch --forward --strip=1 --input=../priv-write.patch
+  patch --forward --strip=1 --input=../cachyos-bios.patch
 }
 
 package() {
