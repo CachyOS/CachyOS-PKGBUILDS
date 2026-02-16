@@ -33,7 +33,6 @@ source=(
   lib32-glibc.conf
   sdt.h
   sdt-config.h
-  clearlinux.patch
 )
 validpgpkeys=(7273542B39962DF7B299931416792B4EA25340F8 # Carlos O'Donell
               BC7C7372637EC10C57D7AA6579C43DFBF1CF2187) # Siddhesh Poyarekar
@@ -55,9 +54,7 @@ prepare() {
 
   [[ -d glibc-$pkgver ]] && ln -s glibc-$pkgver glibc
   cd glibc
-  if [ -n "$_optimize_v3" ] || [ -n "$_optimize_v4" ]; then
-    patch -Np1 < ../clearlinux.patch
-  fi
+
 }
 
 build() {
