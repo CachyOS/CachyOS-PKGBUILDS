@@ -1,0 +1,70 @@
+# Maintainer: Peter Jung && Lysec
+# Contributor: Entailz <entail-wraps0r at icloud dot com>
+
+_pkgname=quickshell
+pkgname="$_pkgname-git"
+pkgver=0.2.0.r1.g783b971
+pkgrel=1
+pkgdesc='Flexible toolkit for making desktop shells with QtQuick'
+arch=(x86_64 aarch64)
+url='https://git.outfoxxed.me/quickshell/quickshell'
+license=('LGPL-3.0-only')
+depends=(gcc-libs #libgcc_s.so libstdc++.so
+         glibc # libc.so libm.so
+         hicolor-icon-theme
+         jemalloc libjemalloc.so
+         libdrm # libdrm.so
+         libglvnd libEGL.so libOpenGL.so
+         libpipewire libpipewire-0.3.so
+         libxcb # libxcb.so
+         mesa # libgbm.so
+         pam libpam.so
+         polkit
+         qt6-base # libQt6Core.so libQt6DBus.so libQt6Gui.so libQt6Network.so libQt6Widgets.so
+         qt6-declarative # libQt6Qml.so libQt6Quick.so
+         qt6-svg
+         qt6-wayland # libQt6WaylandClient.so
+         wayland libwayland-client.so)
+makedepends=(cli11
+             cmake
+             git
+             ninja
+             qt6-shadertools
+             spirv-tools
+             wayland-protocols)
+provides=("$_pkgname")
+conflicts=("$_pkgname")
+
+_pkgsrc="$_pkgname"
+source=("$_pkgsrc"::"git+$url.git"
+  quickshell-check.hook)
+sha256sums=('SKIP'
+            '8543e21aeaaa5441b73a679160e7601a957f16c433e8d6bd9257e80bd0e94083')
+
+
+pkgver() {
+  cd "$_pkgsrc"
+  git describe --long --tags --abbrev=7 --exclude='*[a-zA-Z][a-zA-Z]*' \
+    | sed -E 's/^[^0-9]*//;s/([^-]*-g)/r\1/;s/-/./g'
+}
+
+build() {
+  cd "$_pkgname"
+  local cmake_options=(
+    -D CMAKE_BUILD_TYPE=RelWithDebInfo
+    -D DISTRIBUTOR='CachyOS Linux'
+    -D DISTRIBUTOR_DEBUGINFO_AVAILABLE=Yes
+    -D CRASH_REPORTER=Off
+    -D CMAKE_INSTALL_PREFIX=/usr
+    -D INSTALL_QML_PREFIX=lib/qt6/qml
+  )
+  cmake -G Ninja -B build -W no-dev "${cmake_options[@]}"
+  cmake --build build
+}
+
+package() {
+  install -Dm644 "quickshell-check.hook" -t "$pkgdir/usr/share/libalpm/hooks"
+  cd "$_pkgname"
+  DESTDIR="$pkgdir" cmake --install build
+  install -Dm0644 -t "$pkgdir/usr/share/licenses/$_pkgname/" LICENSE
+}
