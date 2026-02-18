@@ -3,7 +3,7 @@
 
 pkgname=scx-scheds-git
 _gitname=scx
-pkgver=1.0.20.r60.gb1f19b35
+pkgver=1.0.20.r79.gf82cefc3
 pkgrel=1
 pkgdesc='sched_ext schedulers and tools'
 url='https://github.com/sched-ext/scx'
@@ -38,26 +38,30 @@ conflicts=("scx-scheds")
 replaces=('scx-cake')
 
 _backports=(
-2a01ed97471f6a126aec129517eed5693283f221 # scx_cake: dead code cleanup + p->scx.slice locality promotion
-c88146063d447dfc51bd2b220f9e6e6045fd4aa1 # scx_cake: eliminate bpf_task_storage_get from enqueue via dsq_vtime staging
-5863e39337b1fcbb2377a8cf6d22ac434c2957ff # scx_cake: eliminate bpf_task_storage_get from running and tick via mailbox staging
-1cc18cf1d54acfc99a38ba730b4f3aab4bb130b2 # scx_cake: confidence-gated stopping eliminates kfunc for stable tasks
-ce85e257cccc0f29b4541522cc7dc11e882c6505 # scx_cake: benchmark-driven pattern optimizations for 9800X3D
-fac1af316cfa7d1e1c037f482a2da314dab03595 # cake: branchless arithmetic optimizations (M6+M8+R1)
-9b0628b8b2948b2d2e1a83461979700b3d2c6116 # fix(cake): eliminate Elden Ring tier oscillation + core migration
-8922639da081069ab15b0e4b12a44f1692ab7134 # chore: add mangohud/ to gitignore
-72f4e9e52395d7c51de209703dbd5be48bbef70b # cake: S2 CPU placement + A4 tick-assembled tier snapshot
-795baaa42cc465b94dab63a9169867b4eb9ca020 # cake: fix CPU affinity crash in Gate 2 + optimize check
-04dcee1919838739fe35bb0d0dee2471b2f37c4f # cake: upgrade to scx_bpf_locked_rq with __weak fallback
-24e54881db3e3a3c1fc9447d87dacdd70e750337 # cake: HFT microarch optimizations (write coalescing + cold-path deferral)
-6f23a6f06923e70510b1fb35a49da08a586f3951 # scx_cake: MONSTER optimization + select_cpu affinity fix
-0cc0db3b45bbac96077dfba6d4fd519b5522ac5f # fix(cake): eliminate u16 counter overflow cascades
-c9309805bd6b5a16fedd9594270a66201d4b6a30 # fix(cake): correct mega_mailbox struct alignment
-41a2082075e598b644b935ae7189c7f0fea75e40 # OPT2+OPT6: eliminate kfuncs from cake_stopping
-1ad6a2248b0db2989df9328350d8220b90cbfa6d # OPT2/OPT6: inline cold classification + slice-delta runtime
-ffddc9a20156125a7fc79ce5d309dd8736c4261c # cake: Gate 4 lazy preempt — T0/T1 dispatch to worst-tier CPU via LOCAL_ON
-762256cc1fa1e371bf879ad694be8fec84e732d4 # cake: R2 3-slot cache, R4 WSC hint, C1 interleaved u16, C2 deferred promotion
-5878f9813e3801881b7391925e568d6f80280f54 # cake: Gate 1c migration cooldown (NEAR_PREF) + DUAL_PHASE bimodal slice boost
+3f38a6b5080d2af5413dceb59ad4e870664cc0fa # scx_cake: dead code cleanup + p->scx.slice locality promotion
+daa4467ab12a5a92cd4711aa467d86de79d0aff2 # scx_cake: eliminate bpf_task_storage_get from enqueue via dsq_vtime staging
+62626b9b9ff435e9f70c1e63b72f505059cf25ef # scx_cake: eliminate bpf_task_storage_get from running and tick via mailbox staging
+ff00f64dac2da063364b1e9bf4cfd469531d93c5 # scx_cake: confidence-gated stopping eliminates kfunc for stable tasks
+b82ad16129bc38103a3d53f45a0da9fe9ba07c40 # scx_cake: benchmark-driven pattern optimizations for 9800X3D
+deb3e3b45fcc32604d06ccaed6f72f3795e9f221 # cake: branchless arithmetic optimizations (M6+M8+R1)
+ad895c1f2109a9356b0fade31c47310622aeff52 # fix(cake): eliminate Elden Ring tier oscillation + core migration
+cd8133682608c917c57aedb7d05a42118368296e # chore: add mangohud/ to gitignore
+a74a37f57eb98bf36072ed431ed9527fd1dac2d7 # cake: S2 CPU placement + A4 tick-assembled tier snapshot
+abad120527976bd56074b0599c53b31b43e7c49e # cake: fix CPU affinity crash in Gate 2 + optimize check
+f736f1cc3f817db3ca9bc8ab9253f79945a335bf # cake: upgrade to scx_bpf_locked_rq with __weak fallback
+ea405d3c8ed57d05baf3c023884d57b160faf47d # cake: HFT microarch optimizations (write coalescing + cold-path deferral)
+21fce551265cb8d80b64fefc524e2df81cd071e6 # scx_cake: MONSTER optimization + select_cpu affinity fix
+ecbc0b0f439b830e222954ad70e88424d6c9f5c6 # fix(cake): eliminate u16 counter overflow cascades
+c0ff7f4136f44f25674a52191182bf4cf6326c36 # fix(cake): correct mega_mailbox struct alignment
+9e7c0b65bf0ec111ff3b212927074ed19eedeaa2 # OPT2+OPT6: eliminate kfuncs from cake_stopping
+4c93ae054a5bd45b2de227ae7222bac292ead67a # OPT2/OPT6: inline cold classification + slice-delta runtime
+e78967f6b207eac389f4fa69f2573c61f8f0b367 # cake: Gate 4 lazy preempt — T0/T1 dispatch to worst-tier CPU via LOCAL_ON
+2f9c1bbbd4c32575eef0d7b1b5fc2444e4ed2702 # cake: R2 3-slot cache, R4 WSC hint, C1 interleaved u16, C2 deferred promotion
+c20c49048e96733ca051b2beaf0eacd1f2a16db1 # cake: Gate 1c migration cooldown (NEAR_PREF) + DUAL_PHASE bimodal slice boost
+b5559504520336036c84114fd944018851c647a3 # scx_cake: detect headless terminal and skip TUI/splash
+43bfedaba54f7caca9729206ba2d71d658936f85 # scx_cake: eliminate 4 sources of false sharing
+b6ee8d3ad9564e4c07ce2598e720874e60dbf7a0 # perf(cake): trampoline latency hiding — defer kfunc + pre-load + MLP
+07cca695e2e39e56b992963b407ce779d89d3f1c # perf(cake): revert spilled pre-loads per cod
 )
 
 _reverts=(
