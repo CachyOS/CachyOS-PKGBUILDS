@@ -131,6 +131,13 @@ if [ -n "$country" ]; then
     export RATE_MIRRORS_ENTRY_COUNTRY="$country"
 fi
 
+# China only tests its own mirrors, so disable neighbors 
+# and increase the number of tested mirrors to get more results
+if [ "$country" = "CN" ]; then
+    export RATE_MIRRORS_COUNTRY_NEIGHBORS_PER_COUNTRY=0
+    export RATE_MIRRORS_COUNTRY_TEST_MIRRORS_PER_COUNTRY=50
+fi
+
 # Rate Arch Linux mirrors anyway
 rate_repository_mirrors arch "${MIRRORS_DEFAULT_DIR}/mirrorlist"
 
