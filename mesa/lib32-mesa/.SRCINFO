@@ -1,7 +1,7 @@
 pkgbase = lib32-mesa
 	pkgdesc = Open-source OpenGL drivers - 32-bit
-	pkgver = 25.3.5
-	pkgrel = 2
+	pkgver = 26.0.0
+	pkgrel = 1
 	epoch = 1
 	url = https://www.mesa3d.org/
 	arch = x86_64
@@ -52,9 +52,10 @@ pkgbase = lib32-mesa
 	makedepends = wayland-protocols
 	makedepends = xorgproto
 	options = !lto
-	source = https://archive.mesa3d.org/mesa-25.3.5.tar.xz
-	source = https://archive.mesa3d.org/mesa-25.3.5.tar.xz.sig
+	source = https://archive.mesa3d.org/mesa-26.0.0.tar.xz
+	source = https://archive.mesa3d.org/mesa-26.0.0.tar.xz.sig
 	source = gamescope-fps-limiter.patch
+	source = fix-kosmicomp-format-specifier.patch
 	source = zerocopy-0.8.13.tar.gz::https://crates.io/api/v1/crates/zerocopy/0.8.13/download
 	source = ucd-trie-0.1.6.tar.gz::https://crates.io/api/v1/crates/ucd-trie/0.1.6/download
 	source = pest_meta-2.8.0.tar.gz::https://crates.io/api/v1/crates/pest_meta/2.8.0/download
@@ -88,9 +89,10 @@ pkgbase = lib32-mesa
 	validpgpkeys = 57551DE15B968F6341C248F68D8E31AFC32428A6
 	validpgpkeys = A5CC9FEC93F2F837CB044912336909B6B25FADFA
 	validpgpkeys = E3E8F480C52ADD73B278EE78E1ECBE07D7D70895
-	sha256sums = be472413475082df945e0f9be34f5af008baa03eb357e067ce5a611a2d44c44b
+	sha256sums = 2a44e98e64d5c36cec64633de2d0ec7eff64703ee25b35364ba8fcaa84f33f72
 	sha256sums = SKIP
 	sha256sums = 9c40bf44608a52c354c13508dec435fcd4ecccc6e34eaee9dbbba2ba0ce05ffc
+	sha256sums = a7370931fec9887eb86755e21bf515e4141606949c8194a222dda1105a998898
 	sha256sums = 67914ab451f3bfd2e69e5e9d2ef3858484e7074d63f204fd166ec391b54de21d
 	sha256sums = ed646292ffc8188ef8ea4d1e0e0150fb15a5c2e12ad9b8fc191ae7a8a7f3c4b9
 	sha256sums = 7f9f832470494906d1fca5329f8ab5791cc60beb230c74815dff541cbd2b5ca0
@@ -118,9 +120,10 @@ pkgbase = lib32-mesa
 	sha256sums = db7d01726be8ab66ab32f9df467ae8b1148906685bbe75c82d1e65d7f5b3f841
 	sha256sums = 692fcb63b64b1758029e0a96ee63e049ce8c5948587f2f7208df04625e5f6b56
 	sha256sums = 25aa4ce346d03a6dcd68dd8b4010bcb74e54e62c90c573f394c46eae99aba32d
-	b2sums = 284bc47b27cdf4a8dac247b02ed8d0950009d8a2b72247bea1c938fc9ea7fa184c3acd2c077d8908a5445452d8eec2bbf02b704a0b30c5d3723a71f3fb64e2d5
+	b2sums = 28193a6e5ddcb8babe5176a23e4e0ccb32b2ab362e99f9755d26868483d2f19d96ebce8a6ff023ebc5c2a5134c962486758e6e5bd95052de6ba18bcd038ad438
 	b2sums = SKIP
 	b2sums = 593511ab3028bfd00d74fc622aef8dc7cc79929f16e997228f52546aa69a3e3bf346b9702b4be4e45511e2bab8589f6fcb701062c90b2f5d5e7dd4b34d43e626
+	b2sums = 8fb7ad671bcc93ee9fdc0e5a3b987db57e15b1b3bc1166e8171f9e70aa05bddf8b80c0ef6add6bcaca7c60cf833ed43b36c2a87692638ecd6312d53337bc4fda
 	b2sums = 431439d31632d177aeb15f910b4f546efa76d54fc74fc8e140399dc5e54eca33fd606f11dbfb48fa83067c8474ee512e62751895d5948367b65ab08b984284e5
 	b2sums = a6d47c903be6094423d89b8ec3ca899d0a84df6dbd6e76632bb6c9b9f40ad9c216f8fa400310753d392f85072756b43ac3892e0a2c4d55f87ab6463002554823
 	b2sums = 9a73962e1e38b84131ab2350b69a1f5d611c549533eec73e898c394a9b9442f357bb5d5f59e1be12270dd29bdf237dc2d21786c0c2210736e224ef5d48300dcf
@@ -169,8 +172,8 @@ pkgname = lib32-mesa
 	depends = lib32-zstd
 	depends = mesa
 	optdepends = opengl-man-pages: for the OpenGL API man pages
-	provides = lib32-libva-mesa-driver=1:25.3.5-2
-	provides = lib32-mesa-libgl=1:25.3.5-2
+	provides = lib32-libva-mesa-driver=1:26.0.0-1
+	provides = lib32-mesa-libgl=1:26.0.0-1
 	provides = lib32-libva-driver
 	provides = lib32-opengl-driver
 	conflicts = lib32-libva-mesa-driver<1:24.2.7-1
