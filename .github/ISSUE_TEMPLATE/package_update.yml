@@ -1,0 +1,58 @@
+name: Package Update Request
+description: Request an update for an existing package
+title: "[Update]: "
+labels: ["update"]
+assignees: [ptr1337, vnepogodin, 1Naim, ventueroo]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this template to request a version bump for a package that is already present in this repository.
+
+  - type: input
+    id: package
+    attributes:
+      label: Package name
+      description: The name of the package to update (as it appears in this repository).
+      placeholder: e.g. cachyos-hello
+    validations:
+      required: true
+
+  - type: input
+    id: current_version
+    attributes:
+      label: Current version
+      description: The version currently packaged in this repository.
+      placeholder: e.g. 1.2.3-1
+    validations:
+      required: true
+
+  - type: input
+    id: new_version
+    attributes:
+      label: New version
+      description: The version you are requesting.
+      placeholder: e.g. 1.3.0-1
+    validations:
+      required: true
+
+  - type: input
+    id: upstream
+    attributes:
+      label: Upstream source
+      description: Link to the upstream release, tag, or changelog confirming the new version.
+      placeholder: https://github.com/...
+    validations:
+      required: true
+
+  - type: textarea
+    id: reason
+    attributes:
+      label: Reason for update
+      description: Why is this update important? (bug fixes, new features, security patches, etc.)
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional context
+      description: Any other relevant information, such as breaking changes or required dependency bumps.
