@@ -20,7 +20,7 @@ _optimize_v4=${_optimize_v4-}
 pkgname=go
 epoch=2
 pkgver=1.26.0
-pkgrel=2
+pkgrel=3
 pkgdesc='Core compiler tools for the Go programming language'
 arch=(x86_64)
 url='https://golang.org/'
@@ -103,6 +103,16 @@ package() {
 
   # https://github.com/golang/go/issues/57179
   install -Dm644 go.env "$pkgdir/usr/lib/go/go.env"
+
+  # Reset GOAMD64 to v1 in the system go.env so that user builds default to the
+  # portable x86-64 baseline and do not inherit the optimization level used to
+  # compile this toolchain. Users or PKGBUILDs can still override via the
+  # GOAMD64 env var or `go env -w GOAMD64=v3`. (GH#1114)
+  if grep -q '^GOAMD64=' "$pkgdir/usr/lib/go/go.env"; then
+    sed -i 's/^GOAMD64=.*/GOAMD64=v1/' "$pkgdir/usr/lib/go/go.env"
+  else
+    echo 'GOAMD64=v1' >> "$pkgdir/usr/lib/go/go.env"
+  fi
 
   install -Dm644 LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
 }
