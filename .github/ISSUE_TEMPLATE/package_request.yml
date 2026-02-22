@@ -1,0 +1,54 @@
+name: New Package Request
+description: Request a new package to be added to the repository
+title: "[Package Request]: "
+labels: ["package request"]
+assignees: [ptr1337, vnepogodin, 1Naim, ventueroo]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Before opening a request, please check that the package is not already present in this repository. Use https://packages.cachyos.org
+
+  - type: input
+    id: package
+    attributes:
+      label: Package name
+      description: The name you would expect this package to have.
+      placeholder: e.g. my-tool
+    validations:
+      required: true
+
+  - type: input
+    id: upstream
+    attributes:
+      label: Upstream / source URL
+      description: Link to the project homepage, repository, or release page.
+      placeholder: https://github.com/...
+    validations:
+      required: true
+
+  - type: dropdown
+    id: availability
+    attributes:
+      label: Current availability
+      description: Where is this package currently available?
+      options:
+        - Not packaged anywhere
+        - AUR only
+        - Other distribution (please specify in description)
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: What does this package do and why should it be included in CachyOS-PKGBUILDs?
+    validations:
+      required: true
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional context
+      description: Links to existing AUR packages, related packages already in this repo, or any other relevant information.
