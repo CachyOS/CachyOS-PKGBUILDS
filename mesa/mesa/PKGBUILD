@@ -18,7 +18,6 @@ pkgname=(
   vulkan-freedreno
   vulkan-gfxstream
   vulkan-intel
-  vulkan-kosmickrisp
   vulkan-nouveau
   vulkan-panfrost
   vulkan-powervr
@@ -587,35 +586,6 @@ package_vulkan-intel() {
   provides=(vulkan-driver)
 
   mv vkintel/* "$pkgdir"
-
-  install -Dm644 mesa-$_pkgver/docs/license.rst -t "$pkgdir/usr/share/licenses/$pkgname"
-}
-
-package_vulkan-kosmickrisp() {
-  pkgdesc="Open-source Vulkan driver for Metal"
-  depends=(
-    expat
-    glibc
-    libdisplay-info
-    libdrm
-    libgcc
-    libstdc++
-    libx11
-    libxcb
-    libxshmfence
-    spirv-tools
-    systemd-libs
-    vulkan-icd-loader
-    vulkan-mesa-implicit-layers
-    wayland
-    xcb-util-keysyms
-    zlib
-    zstd
-  )
-  optdepends=("vulkan-mesa-layers: additional vulkan layers")
-  provides=(vulkan-driver)
-
-  mv vkkosmic/* "$pkgdir"
 
   install -Dm644 mesa-$_pkgver/docs/license.rst -t "$pkgdir/usr/share/licenses/$pkgname"
 }
