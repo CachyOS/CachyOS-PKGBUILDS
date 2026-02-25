@@ -26,7 +26,7 @@ pkgname=(
 )
 pkgver=26.0.1
 _pkgver=${pkgver/[a-z]/-&}
-pkgrel=1
+pkgrel=2
 epoch=1
 pkgdesc="Open-source OpenGL drivers - 32-bit"
 url="https://www.mesa3d.org/"
@@ -258,7 +258,6 @@ build() {
     -D video-codecs=all
     -D vulkan-drivers=all
     -D vulkan-layers=device-select,intel-nullhw,overlay,screenshot,anti-lag,vram-report-limit
-    -D vulkan-manifest-per-architecture=false
   )
 
   # Build only minimal debug info to reduce size

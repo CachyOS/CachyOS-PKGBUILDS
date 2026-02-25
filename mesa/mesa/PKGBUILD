@@ -31,7 +31,7 @@ pkgname=(
 )
 pkgver=26.0.1
 _pkgver=${pkgver/[a-z]/-&}
-pkgrel=1
+pkgrel=2
 epoch=1
 pkgdesc="Open-source OpenGL drivers"
 url="https://www.mesa3d.org/"
@@ -103,7 +103,7 @@ options=(
   !lto
 )
 source=(
-  "https://archive.mesa3d.org/mesa-$_pkgver.tar.xz"{,.sig}
+  "https://archive.mesa3d.org/mesa-$_pkgver.tar.xz"
   "gamescope-fps-limiter.patch"
   # Fix build on i686
   0001-kk-Fix-debug-printf-specifier.patch
@@ -165,7 +165,6 @@ for _crate in "${!_crates[@]}"; do
 done
 
 sha256sums=('bb5104f9f9a46c9b5175c24e601e0ef1ab44ce2d0fdbe81548b59adc8b385dcc'
-            'SKIP'
             '9c40bf44608a52c354c13508dec435fcd4ecccc6e34eaee9dbbba2ba0ce05ffc'
             '9403978c33030ce35e306d2e11fc5418257497ee16d2ccd2b0579360bfb5ef16'
             '67914ab451f3bfd2e69e5e9d2ef3858484e7074d63f204fd166ec391b54de21d'
@@ -198,7 +197,6 @@ sha256sums=('bb5104f9f9a46c9b5175c24e601e0ef1ab44ce2d0fdbe81548b59adc8b385dcc'
             '692fcb63b64b1758029e0a96ee63e049ce8c5948587f2f7208df04625e5f6b56'
             '25aa4ce346d03a6dcd68dd8b4010bcb74e54e62c90c573f394c46eae99aba32d')
 b2sums=('927782ac7500b75b3e146cb2bf42965cbaa414da4141e19d90bfe87365273ce647e4bbf32987a42d6e83e34c31c0614b6296fa3fa8bba32c79124b2a37c76319'
-        'SKIP'
         '593511ab3028bfd00d74fc622aef8dc7cc79929f16e997228f52546aa69a3e3bf346b9702b4be4e45511e2bab8589f6fcb701062c90b2f5d5e7dd4b34d43e626'
         'd216b9c9b719b6cb846b7598a89ebb0dd63e87f8678f060562d7a2f4746952fa4533372827f7745c99a03bed344104ad9595b95a4c173a1f3e9500bc57c384a6'
         '431439d31632d177aeb15f910b4f546efa76d54fc74fc8e140399dc5e54eca33fd606f11dbfb48fa83067c8474ee512e62751895d5948367b65ab08b984284e5'
@@ -271,7 +269,6 @@ build() {
     -D video-codecs=all
     -D vulkan-drivers=all
     -D vulkan-layers=device-select,intel-nullhw,overlay,screenshot,anti-lag,vram-report-limit
-    -D vulkan-manifest-per-architecture=false
   )
 
   # Build only minimal debug info to reduce size
@@ -335,7 +332,7 @@ package_mesa() {
   meson install -C build --destdir "$pkgdir" --no-rebuild
 
   (
-    local libdir=usr/lib
+    local libdir=usr/lib icddir=usr/share/vulkan/icd.d
 
     cd "$pkgdir"
 
@@ -343,46 +340,46 @@ package_mesa() {
     _pick opencl etc/OpenCL/vendors/rusticl.icd
 
     _pick vkasahi $libdir/libvulkan_asahi.so
-    _pick vkasahi usr/share/vulkan/icd.d/asahi_icd.json
+    _pick vkasahi $icddir/asahi_icd.*.json
 
     _pick vkbrcom $libdir/libvulkan_broadcom.so
-    _pick vkbrcom usr/share/vulkan/icd.d/broadcom_icd.json
+    _pick vkbrcom $icddir/broadcom_icd.*.json
 
     _pick vkd3d12 $libdir/libvulkan_dzn.so
     _pick vkd3d12 $libdir/libspirv_to_dxil.*
     _pick vkd3d12 usr/bin/spirv2dxil
-    _pick vkd3d12 usr/share/vulkan/icd.d/dzn_icd.json
+    _pick vkd3d12 $icddir/dzn_icd.*.json
 
     _pick vkfdreno $libdir/libvulkan_freedreno.so
-    _pick vkfdreno usr/share/vulkan/icd.d/freedreno_icd.json
+    _pick vkfdreno $icddir/freedreno_icd.*.json
 
     _pick vkgfxstr $libdir/libvulkan_gfxstream.so
-    _pick vkgfxstr usr/share/vulkan/icd.d/gfxstream_vk_icd.json
+    _pick vkgfxstr $icddir/gfxstream_vk_icd.*.json
 
     _pick vkintel $libdir/libvulkan_intel{,_hasvk}.so
-    _pick vkintel usr/share/vulkan/icd.d/intel{,_hasvk}_icd.json
+    _pick vkintel $icddir/intel{,_hasvk}_icd.*.json
 
     _pick vkkosmic $libdir/libvulkan_kosmickrisp.so
-    _pick vkkosmic usr/share/vulkan/icd.d/kosmickrisp_mesa_icd.json
+    _pick vkkosmic $icddir/kosmickrisp_mesa_icd.*.json
 
     _pick vknvidia $libdir/libvulkan_nouveau.so
-    _pick vknvidia usr/share/vulkan/icd.d/nouveau_icd.json
+    _pick vknvidia $icddir/nouveau_icd.*.json
 
     _pick vkpfrost $libdir/libvulkan_panfrost.so
-    _pick vkpfrost usr/share/vulkan/icd.d/panfrost_icd.json
+    _pick vkpfrost $icddir/panfrost_icd.*.json
 
     _pick vkpowrvr $libdir/libvulkan_powervr_mesa.so
-    _pick vkpowrvr usr/share/vulkan/icd.d/powervr_mesa_icd.json
+    _pick vkpowrvr $icddir/powervr_mesa_icd.*.json
 
     _pick vkradeon $libdir/libvulkan_radeon.so
     _pick vkradeon usr/share/drirc.d/00-radv-defaults.conf
-    _pick vkradeon usr/share/vulkan/icd.d/radeon_icd.json
+    _pick vkradeon $icddir/radeon_icd.*.json
 
     _pick vkswrast $libdir/libvulkan_lvp.so
-    _pick vkswrast usr/share/vulkan/icd.d/lvp_icd.json
+    _pick vkswrast $icddir/lvp_icd.*.json
 
     _pick vkvirtio $libdir/libvulkan_virtio.so
-    _pick vkvirtio usr/share/vulkan/icd.d/virtio_icd.json
+    _pick vkvirtio $icddir/virtio_icd.*.json
 
     _pick vkdevice $libdir/libVkLayer_MESA_anti_lag.so
     _pick vkdevice $libdir/libVkLayer_MESA_device_select.so
