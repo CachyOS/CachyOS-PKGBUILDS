@@ -1,7 +1,7 @@
 # Maintainer: Eric Naim <dnaim@cachyos.org>
 
 pkgname=gamescope-session-cachyos
-pkgver=1.1.4
+pkgver=1.1.5
 pkgrel=1
 pkgdesc="Steam Big Picture session based on gamescope from SteamOS"
 arch=('any')
@@ -29,7 +29,12 @@ optdepends=(
 provides=('gamescope-session-git' 'gamescope-session-steam-git')
 conflicts=('gamescope-session-git' 'gamescope-session-steam-git')
 source=("${pkgname}::git+${url}.git#tag=${pkgver}")
-sha256sums=('4b1b2a10408efa93b1fc825e3fc999ba6405940a4bc03d34ceb4f68ca955b4d7')
+sha256sums=('820e9639daa116403d8721796085c3e72fcc1d1c8da5352b7db3f76654281ebb')
+
+prepare() {
+    cd "${pkgname}"
+    git cherry-pick -n 4c9022052a30
+}
 
 package() {
     cd "${pkgname}"
