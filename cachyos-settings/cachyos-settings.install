@@ -5,6 +5,9 @@ post_install() {
     for service in "${SERVICES[@]}"; do
         systemctl enable "$service"
     done
+    if command -v iw >/dev/null 2>&1; then
+        systemctl enable cachyos-iw-set-regdomain.path
+    fi
 }
 
 post_upgrade() {
