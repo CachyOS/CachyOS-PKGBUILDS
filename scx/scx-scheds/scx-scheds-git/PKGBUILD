@@ -3,8 +3,8 @@
 
 pkgname=scx-scheds-git
 _gitname=scx
-pkgver=1.0.20.r144.gaed1f77d
-pkgrel=3
+pkgver=1.0.20.r158.g08ed41b6
+pkgrel=1
 pkgdesc='sched_ext schedulers and tools'
 url='https://github.com/sched-ext/scx'
 arch=('x86_64' 'aarch64')
@@ -38,53 +38,53 @@ conflicts=("scx-scheds")
 replaces=('scx-cake')
 
 _backports=(
-399baf08c6a73c8c5e88acc8b30b0fe9e7d857f2 # scx_cake: dead code cleanup + p->scx.slice locality promotion
-e00b4bb8d57ac767f3b87c7716b2b195e42be81a # scx_cake: eliminate bpf_task_storage_get from enqueue via dsq_vtime staging
-852b4d236c48acbc9301e93d9609ff8260255465 # scx_cake: eliminate bpf_task_storage_get from running and tick via mailbox staging
-37d58d61c74c2fe27c8f3db32ee0b3ae9565bcab # scx_cake: confidence-gated stopping eliminates kfunc for stable tasks
-065323060f9d6ca938656dd360db468b210d79e5 # scx_cake: benchmark-driven pattern optimizations for 9800X3D
-65074a4b38a9a849b7a623cc4f9d626e49428bcb # cake: branchless arithmetic optimizations (M6+M8+R1)
-66e7b693e96f780118014f50f40cdb175154f65e # fix(cake): eliminate Elden Ring tier oscillation + core migration
-8112d5d9688b8bfcd4c3cb7141a282600135e812 # chore: add mangohud/ to gitignore
-6fc08e394926d8bd7b2cc2563b3b22977d802933 # cake: S2 CPU placement + A4 tick-assembled tier snapshot
-5b3b95ec3097467f2cd2e9ecf925b7917446e1f1 # cake: fix CPU affinity crash in Gate 2 + optimize check
-42fac2eccb66c4ed16cba7a83864d1147fca309a # cake: upgrade to scx_bpf_locked_rq with __weak fallback
-8e6b47205fcf9e2d90a40b5cbe8b532570e8e219 # cake: HFT microarch optimizations (write coalescing + cold-path deferral)
-3ea3a4e5819fbb51400d6c2ad21cc8d95ad2c346 # scx_cake: MONSTER optimization + select_cpu affinity fix
-d7c3f13069812b30be67dec480a63732130a45f1 # fix(cake): eliminate u16 counter overflow cascades
-e47400c1abc5b36a0aa744dd99d0401a0ee3480c # fix(cake): correct mega_mailbox struct alignment
-9499545950203dba3667b086c9c9dc844ecbb589 # OPT2+OPT6: eliminate kfuncs from cake_stopping
-efc6a2932477a1e9b172710b2ec87abc0a7a04f4 # OPT2/OPT6: inline cold classification + slice-delta runtime
-ca228eec06ef47ab401ff1f77895c2b37fda1a71 # cake: Gate 4 lazy preempt — T0/T1 dispatch to worst-tier CPU via LOCAL_ON
-799efef1e3b1265d41cbd458e2ee4182e9c2942c # cake: R2 3-slot cache, R4 WSC hint, C1 interleaved u16, C2 deferred promotion
-b5c9d23e9169236b42294d8e2acb7dc02ac4e301 # cake: Gate 1c migration cooldown (NEAR_PREF) + DUAL_PHASE bimodal slice boost
-e612f946f164827ba520d1fddd6f0ac832b95631 # scx_cake: detect headless terminal and skip TUI/splash
-0a9d1258f05d9287dde3af41f5a8fa253955d31d # scx_cake: eliminate 4 sources of false sharing
-8488aa9116cc0682ab14ef772c15266fa53a20e3 # perf(cake): trampoline latency hiding — defer kfunc + pre-load + MLP
-1a7c57545aff6dbe322bcea18f9f6cc68736cd67 # perf(cake): revert spilled pre-loads per codegen audit
-96db33b50059de634e58bc2c6afd3315fb79ee53 # cake: remove dead code and add jitter guards
-a2edea9d5a2e3d97fc4b662096cb14d0d5860ac6 # arena: migrate per-task storage from bpf_task_storage_get to sdt_task arena
-e237b217ea794c1666944e1d1486be53acfbf488 # arena: migrate mega_mailbox + global_scratch to arena per-CPU arrays
-d23c0c478fd8ce8b220301ad63c1b2b8ba350b99 # arena: tier-occupancy bitmask for dispatch skip optimization
-9fbda3b153a990c3dc7edd31137d1b075232785e # arena: optimize ARENA_ASSOC to inline asm (2 insns vs 3)
-25f34f9a4e6e3cb952b09f38ab58de3ba1d79b5e # scx_cake: arena audit — fix tier_occupied race, stale preempt scratch
-9c1567a8d8561d5c70712fd514dd7ef0c563d208 # cake/bpf: C1 spatial consolidation — merge arena_mailbox + arena_scratch into unified per_cpu block
-4738102c0dee6b8b35edf03fd1976e87d36b1496 # scx_cake: bump scx_arena version to 0.1.4
-f0be16bf6dedaca1e8bcec960203ea6a29bfbe2b # scx_cake: fix CI exit code 143, proper UEI shutdown, skip ETD headless, fix heatmap layout
-4b92b13acca819a93c46c33e18a4c76f3d47f8ca # scx_cake: Final Jitter, Latency, and Topology Audit (Phase 3 & 4)
-eed49bf37d4667b4394e7cb724cc166055fe1b3d # Phase 5: Yielder Privilege System
-323e1251379abd87f988808f8e3f4ba811e8699f # scx_cake: waker-aware CPU placement (Gate 1W) & self-scaling yield priority
-da21233d64ac6332ee188c08d9f7035fc801452d # BenchLab 19-entry + Disruptor handoff: psychic cache removed, zero-arena cake_stopping
-4bb94f4c1fe3b4208be998d90dfd2099b2ef5e91 # Cargo.lock: update crates for scx_cake
-254d970ab678272df313264bacac3941e209163e # scx_cake: try sysinfo 0.35.2
-340da8efcfe7dbd5e6a7ffe931fef47c38bec8d7 # perf: execution order optimization + data flow audit
-28a16b0cb8f293dfaa3d0aeef41031335baa31be # cake: waker priority inheritance + BenchLab overhaul
-c5f767de1f28407fb3f2e8ffd8be3406655d1661 # cake: benchlab scrollable table + select_cpu_dfl + kick_cpu benchmarks
-ec7f098944e7ada567159e4cf617a2fd7e60d772 # cake: fix runtime crash — remove context-restricted kfunc benches
-4dfc7f202b4c3529d66940f48d6f9d6b5609b85b # perf: gate architecture restructure + zero-arena running + idle shadow hints
-29c88468396bfe9a2d0ed7e6a0ce58b5864db8cd # cake: waker-chain gate + variable deduplication
-51c5a60dc231ed84f683dc6f4adcaceadb3d8d57 # v1.0.3-Alpha: PPID-based game family detection
-133f1ecf07daaa17549d77b840ed860b61ebc23a # cake: add 15s hysteresis to game detection to prevent alt-tab freeze
+b2b3ae4a6cf51b3d1bdda9e06d900bec3fff82e6 # scx_cake: dead code cleanup + p->scx.slice locality promotion
+5bb5839cde06be5862109f0ac2763849c017ca97 # scx_cake: eliminate bpf_task_storage_get from enqueue via dsq_vtime staging
+2dc55cea5b2adcd4f9d0d6e870d4e75113f5d216 # scx_cake: eliminate bpf_task_storage_get from running and tick via mailbox staging
+f5205adebed04efdd1410adbb18375705d59b126 # scx_cake: confidence-gated stopping eliminates kfunc for stable tasks
+b684ab548e1b790efc4e31ad59a19cd9f1f4467e # scx_cake: benchmark-driven pattern optimizations for 9800X3D
+dd614756aba97a087c3ad9cfba4fb0b67fe961ea # cake: branchless arithmetic optimizations (M6+M8+R1)
+99e9378365dcd210c455fa9e61659f6de162b692 # fix(cake): eliminate Elden Ring tier oscillation + core migration
+8224c29de35932dc07845a5025552d30b53ab786 # chore: add mangohud/ to gitignore
+107366885a88d7789ddcdc6076c35a471b888c9e # cake: S2 CPU placement + A4 tick-assembled tier snapshot
+51b70982b7d74c0ca6d402c6516aab9f75b2dcb2 # cake: fix CPU affinity crash in Gate 2 + optimize check
+51927f808079238571d2b1c1c79bfac658c522d0 # cake: upgrade to scx_bpf_locked_rq with __weak fallback
+cdcc7b688531cdcd2de8468c6d5c57dc7224775b # cake: HFT microarch optimizations (write coalescing + cold-path deferral)
+59d823ec2753e0389e34c8851d06985da6b71c68 # scx_cake: MONSTER optimization + select_cpu affinity fix
+9f9749bf7aacc2ace85f7cbcf8396b4c719feb8e # fix(cake): eliminate u16 counter overflow cascades
+5e41c9e4fe8350daa105c30e29be1dfa5b8a18df # fix(cake): correct mega_mailbox struct alignment
+669f85ba29569db45f7b716b998c47213f8036cf # OPT2+OPT6: eliminate kfuncs from cake_stopping
+eff690150580730a44eefd4d3311d2cf6197f367 # OPT2/OPT6: inline cold classification + slice-delta runtime
+fd8e5b2b5135817d3c41085bdc181346ae641352 # cake: Gate 4 lazy preempt — T0/T1 dispatch to worst-tier CPU via LOCAL_ON
+f2b9b6ad836b57d34764fd3185f7bdfb98347d29 # cake: R2 3-slot cache, R4 WSC hint, C1 interleaved u16, C2 deferred promotion
+0033749a199753f45643f130dbf5366258ce1eaa # cake: Gate 1c migration cooldown (NEAR_PREF) + DUAL_PHASE bimodal slice boost
+4a4a6e2cc6b252437f4cc86755583fafef1bc7a4 # scx_cake: detect headless terminal and skip TUI/splash
+872a07e6896143d4637a1cf6e18770d8ae5c854b # scx_cake: eliminate 4 sources of false sharing
+c13fe21a1f016cf430dc70c6f61e4e33156fb67e # perf(cake): trampoline latency hiding — defer kfunc + pre-load + MLP
+b659a4eb082818172831a1d1985de88460f9c2af # perf(cake): revert spilled pre-loads per codegen audit
+0487c451154a65bf76add0b3978211dd8663decb # cake: remove dead code and add jitter guards
+58915168ae352d5bdaa10c7c1bc51f2c3951477a # arena: migrate per-task storage from bpf_task_storage_get to sdt_task arena
+67da5140faf50c244a8fd588d7dce9f331b70f86 # arena: migrate mega_mailbox + global_scratch to arena per-CPU arrays
+76820b4950b713749044a4fc234349cb39bcd520 # arena: tier-occupancy bitmask for dispatch skip optimization
+65df7182254c0145ca4b947fb038ec93a2b49f24 # arena: optimize ARENA_ASSOC to inline asm (2 insns vs 3)
+e796de590624bffd1608f5378361380dce9489ca # scx_cake: arena audit — fix tier_occupied race, stale preempt scratch
+5aeaa45bf22c9b7cd73f8c5e9440fbb89b1cce40 # cake/bpf: C1 spatial consolidation — merge arena_mailbox + arena_scratch into unified per_cpu block
+9a370115aeb499914fa5b9506e2bfcb79251b9b5 # scx_cake: bump scx_arena version to 0.1.4
+7f0c616b6858841bef5d44d2d87cb7d58a152fd3 # scx_cake: fix CI exit code 143, proper UEI shutdown, skip ETD headless, fix heatmap layout
+a0a83faeb714272fad26c707271e28d279246ea4 # scx_cake: Final Jitter, Latency, and Topology Audit (Phase 3 & 4)
+1c806791ec508fd671382252e81cd07b07e1822a # Phase 5: Yielder Privilege System
+742606ede9eb12bdf13db6068f55de345e3e962a # scx_cake: waker-aware CPU placement (Gate 1W) & self-scaling yield priority
+1540b55d848a662056b8224e5d85a9ae28267515 # BenchLab 19-entry + Disruptor handoff: psychic cache removed, zero-arena cake_stopping
+3ffd863563c5376001a357b0bf16e1fc72d133e6 # Cargo.lock: update crates for scx_cake
+8e8e8a754d51770f57641f261d2eb45a50a5805e # scx_cake: try sysinfo 0.35.2
+660747bec62d953c206611f1f2ea422f90a87b67 # perf: execution order optimization + data flow audit
+08fd3e03fffc306dcf3365585cb78b59ad5b2b03 # cake: waker priority inheritance + BenchLab overhaul
+582331f41206ab20307b37b6696aeb60aea8667f # cake: benchlab scrollable table + select_cpu_dfl + kick_cpu benchmarks
+080cae0dd64a720d03e83d1a9300419fe0d364f8 # cake: fix runtime crash — remove context-restricted kfunc benches
+7dd783da8486dc5e801ff21736b0ed3fb5768fa4 # perf: gate architecture restructure + zero-arena running + idle shadow hints
+a6beee192b34e85bb12f75add9250ac09d50ba34 # cake: waker-chain gate + variable deduplication
+1cbd6c5251293c370b71f7845988dd6636e51e0a # v1.0.3-Alpha: PPID-based game family detection
+7c1ad7e5fe4d52bd9042e98444e6286d2ebdd26a # cake: add 15s hysteresis to game detection to prevent alt-tab freeze
 )
 
 _reverts=(
