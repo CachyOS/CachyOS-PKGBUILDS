@@ -3,9 +3,9 @@
 # Contributor: Antonio Rojas <arojas@archlinux.org>
 
 pkgname=plasma-login-manager
-pkgver=6.6.0
+pkgver=6.6.1
 _dirver=$(echo $pkgver | cut -d. -f1-3)
-pkgrel=2
+pkgrel=3
 arch=(x86_64)
 pkgdesc='Plasma Login Manager'
 url='https://kde.org/plasma-desktop/'
@@ -38,17 +38,21 @@ makedepends=(extra-cmake-modules
              qt6-tools)
 groups=(plasma)
 source=(https://download.kde.org/stable/plasma/$_dirver/$pkgname-$pkgver.tar.xz{,.sig}
-       0001-sessionmodel-Sort-sessions-with-Plasma-first-and-Way.patch)
-sha256sums=('7498de956b308b71fd42676028209235e2b7fbf793eee029e65484979e2ef0d4'
+       https://invent.kde.org/plasma/plasma-login-manager/-/merge_requests/112.patch
+       https://invent.kde.org/plasma/plasma-login-manager/-/merge_requests/117.patch)
+sha256sums=('af7f911139a8ae4cd5e32800facb412f3ddda6dbd9d0fa27a3f4c6a6f98d6f39'
             'SKIP'
-            '3046990bd4da0a6f3ddf0554e3fcfd788e866eefc427ca2368148fd84900c64d')
+            '128b2f76a8ddb0b58a9acf32a667e10a28d5f3db3864058d2cd42f3e17103034'
+            '123278d455ef386494b91997209406bd3bcd16c5acd14329281822d0f17f2afc')
 validpgpkeys=('E0A3EB202F8E57528E13E72FD7574483BB57B18D'  # Jonathan Esk-Riddell <jr@jriddell.org>
               '0AAC775BB6437A8D9AF7A3ACFE0784117FBCE11D'  # Bhushan Shah <bshah@kde.org>
               'D07BD8662C56CB291B316EB2F5675605C74E02CF'  # David Edmundson <davidedmundson@kde.org>
               '1FA881591C26B276D7A5518EEAAF29B42A678C20') # Marco Martin <notmart@gmail.com>
 prepare() {
-cd $pkgname-$pkgver
-patch -Np1 < ../0001-sessionmodel-Sort-sessions-with-Plasma-first-and-Way.patch
+  cd $pkgname-$pkgver
+  patch -Np1 < ../112.patch
+  # Fix for saving default with KCM
+  patch -Np1 < ../117.patch
 }
 
 build() {
