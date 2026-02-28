@@ -2,7 +2,7 @@
 
 _gitname=CachyOS-Settings
 pkgname=cachyos-settings
-pkgver=1.3.1
+pkgver=1.3.2
 pkgrel=1
 epoch=1
 groups=(cachyos)
@@ -13,7 +13,7 @@ pkgdesc='CachyOS - Settings'
 url="https://github.com/CachyOS/$_gitname"
 source=("git+$url.git?signed#tag=$pkgver")
 install="$pkgname.install"
-sha256sums=('a20d39194a306726423925f0c0d9e4f71aa55220c564578bebf5dd40e5a42cf5')
+sha256sums=('a6fb6897cd92262fe2691431e25efe3b0906347fc212f55354e9ee2d456fbbf6')
 validpgpkeys=(
   E8B9AA39F054E30E8290D492C3C4820857F654FE  # Peter Jung <admin@ptr1337.dev>
   B1B70BB1CD56047DEF31DE2EB62C3D10C54D5DA9  # Vladislav Nepogodin <nepogodin.vlad@gmail.com>
@@ -24,12 +24,12 @@ depends=(
   cachyos-ananicy-rules
   inxi
   "systemd>=256"
+  iw # for setting proper regulatory
+  wireless-regdb
 )
 optdepends=('libluv: for topmem'
             'lua-luv: for topmem'
-            'power-profiles-daemon: For game-performance'
-            'iw: for automatic wireless regulatory domain management'
-            'wireless-regdb: wireless regulatory domain database for iw-set-regdomain')
+            'power-profiles-daemon: For game-performance')
 provides=('ntsync-common')
 prepare() {
   cd $_gitname
