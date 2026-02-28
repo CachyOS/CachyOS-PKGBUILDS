@@ -1,0 +1,19 @@
+--- a/build/config/compiler/BUILD.gn
++++ b/build/config/compiler/BUILD.gn
+@@ -246,6 +246,15 @@
+   }
+ }
+ 
++# Emit relocs for BOLT
++config("emit-relocs") {
++  if (!using_sanitizer && is_linux) {
++    ldflags = [
++      "-Wl,--emit-relocs",
++    ]
++  }
++}
++
+ # compiler ---------------------------------------------------------------------
+ #
+ # Base compiler configuration.
+ 
