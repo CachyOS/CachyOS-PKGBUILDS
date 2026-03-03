@@ -15,7 +15,7 @@ pkgbase=glibc
 pkgname=(glibc lib32-glibc glibc-locales)
 pkgver=2.43+r5+g856c426a7534
 _commit=856c426a753450b8c6861a5b994a564f4fc16d4b
-pkgrel=2
+pkgrel=7
 arch=(x86_64 aarch64)
 url='https://www.gnu.org/software/libc'
 license=(GPL-2.0-or-later LGPL-2.1-or-later)
@@ -33,6 +33,7 @@ source=(
   lib32-glibc.conf
   sdt.h
   sdt-config.h
+  clearlinux.patch
 )
 validpgpkeys=(7273542B39962DF7B299931416792B4EA25340F8 # Carlos O'Donell
               BC7C7372637EC10C57D7AA6579C43DFBF1CF2187) # Siddhesh Poyarekar
@@ -42,7 +43,7 @@ b2sums=('97d1704b3b730c966ba202bb769ee21f0688f7a326f90c33756cb94bb32e954bd8ee2ce
         '7c265e6d36a5c0dff127093580827d15519b6c7205c2e1300e82f0fb5b9dd00b6accb40c56581f18179c4fbbc95bd2bf1b900ace867a83accde0969f7b609f8a'
         'a6a5e2f2a627cc0d13d11a82458cfd0aa75ec1c5a3c7647e5d5a3bb1d4c0770887a3909bfda1236803d5bc9801bfd6251e13483e9adf797e4725332cd0d91a0e'
         '214e995e84b342fe7b2a7704ce011b7c7fc74c2971f98eeb3b4e677b99c860addc0a7d91b8dc0f0b8be7537782ee331999e02ba48f4ccc1c331b60f27d715678'
-        '50f3faea522d86efd27cdc41695647c9ee8326e0173664112806686d00cd39ceab059d454ee26da1d46542776db4f66704d645a5e42bc48c814364259748008c')
+        'df6dc7f96125c2c869574394576d820bfd2d24765f73314401d750222d717ee48bac0fc65eecfb2058ea3ea891ddc95e72c338fd22cac0d1a574207efed51fc6')
 
 #pkgver() {
 #  cd glibc
@@ -54,7 +55,7 @@ prepare() {
 
   [[ -d glibc-$pkgver ]] && ln -s glibc-$pkgver glibc
   cd glibc
-
+  patch -Np1 < ../clearlinux.patch
 }
 
 build() {
@@ -106,9 +107,8 @@ build() {
         --libdir=/usr/lib \
         --libexecdir=/usr/lib \
         --enable-cet \
-        --enable-sframe \
         "${_configure_flags[@]}"
-
+#         --enable-sframe \ disable sframe till arch enables it
     make -O
 
     # build info pages manually for reproducibility
