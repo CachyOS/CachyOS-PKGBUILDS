@@ -72,21 +72,3 @@ index b5f95890..30c71c84 100644
  endif
 -- 
 2.21.0
-
-diff --git a/sysdeps/x86_64/fpu/Makefile b/sysdeps/x86_64/fpu/Makefile
-index b82cd126..56e68f04 100644
---- a/sysdeps/x86_64/fpu/Makefile
-+++ b/sysdeps/x86_64/fpu/Makefile
-@@ -136,8 +136,8 @@ ifeq ($(subdir)$(config-cflags-mprefer-vector-width),mathyes)
- #
- # Limit vector width to 128 bits to work around this issue.  It improves
- # performance of sin and cos by more than 40% on Skylake.
--CFLAGS-branred.c = -mprefer-vector-width=128
--CFLAGS-s_sincos.c = -mprefer-vector-width=256
--CFLAGS-e_exp.c = -mprefer-vector-width=128
--CFLAGS-e_exp2.c = -mprefer-vector-width=128
-+CFLAGS-branred.c = -mprefer-vector-width=128 -fno-tree-vectorize
-+CFLAGS-s_sincos.c = -mprefer-vector-width=256 -fno-tree-vectorize
-+CFLAGS-e_exp.c = -mprefer-vector-width=128 -fno-tree-vectorize
-+CFLAGS-e_exp2.c = -mprefer-vector-width=128 -fno-tree-vectorize
- endif
