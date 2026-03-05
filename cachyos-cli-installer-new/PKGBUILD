@@ -2,24 +2,32 @@
 
 pkgname=cachyos-cli-installer-new
 _pkgname=New-Cli-Installer
-pkgver=0.9.4
+pkgver=0.10.0
 pkgrel=1
 pkgdesc='New CLI installer for CachyOS'
-arch=('x86_64')
+arch=(x86_64)
 license=(GPL-3.0-or-later)
 url="https://github.com/cachyos/new-cli-installer"
-depends=('fzf' 'gawk' 'chwd' 'cachyos-rate-mirrors' 'curl' 'util-linux')
-makedepends=('cmake' 'ninja' 'git')
-source=("$pkgver.tar.gz::$url/archive/$pkgver.tar.gz")
-sha512sums=('83cde0c813e876d263082d4e76ff3caaacd7b933824ab2264b208808ad5ee00babb6c56751705ca8a5753d4c4fd52ae6677a3402b661c6f653eef319e0ae7432')
+depends=('fzf' 'gawk' 'chwd' 'cachyos-rate-mirrors' 'curl' 'coreutils' 'util-linux' 'gptfdisk')
+makedepends=('cmake' 'ninja' 'git' 'lld' 'clang' 'llvm')
+source=("$pkgname::git+$url.git#tag=${pkgver}?signed")
+sha256sums=('71bd38c338422dac290553e5dc409acd85f08a00aa30ebdc4472c299494c628d')
+validpgpkeys=(
+  'B1B70BB1CD56047DEF31DE2EB62C3D10C54D5DA9'  # Vladislav Nepogodin <nepogodin.vlad@gmail.com>
+)
 
 build() {
-  cd "$srcdir/$_pkgname-$pkgver"
+  cd "$srcdir/$pkgname"
 
   CFLAGS=${CFLAGS/-Wp,-D_GLIBCXX_ASSERTIONS}
   CXXFLAGS=${CXXFLAGS/-Wp,-D_GLIBCXX_ASSERTIONS}
 
-  _cpuCount=$(grep -c -w ^processor /proc/cpuinfo)
+  # we are building with llvm stack here
+  export AR=llvm-ar
+  export CC=clang
+  export CXX=clang++
+  export NM=llvm-nm
+  export RANLIB=llvm-ranlib
 
   cmake -S . -Bbuild \
         -GNinja \
@@ -28,14 +36,13 @@ build() {
         -DCMAKE_INSTALL_LIBDIR=lib \
         -DENABLE_DEVENV=OFF \
         -DCOS_BUILD_STATIC=ON
-  cmake --build build --parallel $_cpuCount
+  cmake --build build
 }
 
 package() {
-  cd "$srcdir/$_pkgname-$pkgver"
+  cd "$srcdir/$pkgname"
   DESTDIR="${pkgdir}" cmake --build build --target install
 
-  install -Dm644 LICENSE "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE"
   install -Dm644 net-profiles.toml "${pkgdir}/var/lib/cachyos-installer/net-profiles.toml"
 }
 
