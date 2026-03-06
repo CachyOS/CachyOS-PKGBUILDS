@@ -3,7 +3,7 @@
 
 pkgname=scx-scheds-git
 _gitname=scx
-pkgver=1.0.20.r238.g6fa5e78c
+pkgver=1.0.20.r252.gec3423bc
 pkgrel=1
 pkgdesc='sched_ext schedulers and tools'
 url='https://github.com/sched-ext/scx'
@@ -38,61 +38,61 @@ conflicts=("scx-scheds")
 replaces=('scx-cake')
 
 _backports=(
-fe3b86bf38873fb47dbfe3cd009845dce3e35b2e # chore(scx_cake): fix Cargo.toml
-a7d1b056211b5e6bcac17b5fe47b6ca9f1beebe3 # scx_cake: dead code cleanup + p->scx.slice locality promotion
-bdf9b8ec0e08beba267e4b1562b395dc8bd595d5 # scx_cake: eliminate bpf_task_storage_get from enqueue via dsq_vtime staging
-dc15570de508e832278c1556958d477dccd1bf45 # scx_cake: eliminate bpf_task_storage_get from running and tick via mailbox staging
-7b8c753ccdebcf5cd0f7d52f0e8d8fd218b1c549 # scx_cake: confidence-gated stopping eliminates kfunc for stable tasks
-300e94de0bfef10e5b8df150b7047e9fe09231f1 # scx_cake: benchmark-driven pattern optimizations for 9800X3D
-b38aba73cfff294a3484ad08661d2b1f95b6c381 # cake: branchless arithmetic optimizations (M6+M8+R1)
-464dba45c862379af6b974cab61cf6803b5a36dd # fix(cake): eliminate Elden Ring tier oscillation + core migration
-a415889985d7b91f8d9e1d1c3e747fba67329c5b # chore: add mangohud/ to gitignore
-e80ac92dfce1e8a890c0036dcf95647bf0ffa8fb # cake: S2 CPU placement + A4 tick-assembled tier snapshot
-34c69c684ca2d219da6db0174e198e35e4d795ce # cake: fix CPU affinity crash in Gate 2 + optimize check
-0c5303e7a99eebd9206d96f12bf8946ae04533c2 # cake: upgrade to scx_bpf_locked_rq with __weak fallback
-80c801947ddb167cf9eb0be7a4f3d3755b09fe45 # cake: HFT microarch optimizations (write coalescing + cold-path deferral)
-42b37cb144d0b9ad2681704cdcc86ae23dda5ed4 # scx_cake: MONSTER optimization + select_cpu affinity fix
-adc07c3686b3f69a88c373d20b983d402e67070c # fix(cake): eliminate u16 counter overflow cascades
-d44ecc73bb093d4b524e053c18e0c770417dd2d2 # fix(cake): correct mega_mailbox struct alignment
-5c7919dc5160b4667b7b890671e507469cf14c35 # OPT2+OPT6: eliminate kfuncs from cake_stopping
-dc757b3d549e4644c5e8c9ead6e9d7efdaf7dd8a # OPT2/OPT6: inline cold classification + slice-delta runtime
-5c3f44077f10aa5c6f757464490d8db946f66593 # cake: Gate 4 lazy preempt — T0/T1 dispatch to worst-tier CPU via LOCAL_ON
-51e2486d5a479e2243b0554806f1a87e19018b2c # cake: R2 3-slot cache, R4 WSC hint, C1 interleaved u16, C2 deferred promotion
-5ceda23b0dba3ee119526fc305e615228ff9b08b # cake: Gate 1c migration cooldown (NEAR_PREF) + DUAL_PHASE bimodal slice boost
-198ada37cb7a5bcf360ab99ee4a90d39f406558b # scx_cake: detect headless terminal and skip TUI/splash
-7524b6635f47b02411579e7da487731258f5d326 # scx_cake: eliminate 4 sources of false sharing
-f4dc7a2a03acb5c2a09bd0bdea8de2bcdeac756c # perf(cake): trampoline latency hiding — defer kfunc + pre-load + MLP
-2faeb9af127e471525f96dccd6abe1783c860e69 # perf(cake): revert spilled pre-loads per codegen audit
-7f3c6d5332064f42a87a0ba573eded6fd34541f9 # cake: remove dead code and add jitter guards
-365118c9a795ecb053d269c50c2b76a794127cf7 # arena: migrate per-task storage from bpf_task_storage_get to sdt_task arena
-4522edaa840780fbe3fc9a23072d5b2211aa5bee # arena: migrate mega_mailbox + global_scratch to arena per-CPU arrays
-94259fc6cd8dcd26827ed18346477fc308acdd59 # arena: tier-occupancy bitmask for dispatch skip optimization
-1f53bd275e10c93613ce324f2b3d836099a9bc42 # arena: optimize ARENA_ASSOC to inline asm (2 insns vs 3)
-dab8a3f7d27b18c98ddc51a520ccd806e15e458f # scx_cake: arena audit — fix tier_occupied race, stale preempt scratch
-62e1ff7895fbaafcc9d2c5741c1c0e840ed7f843 # cake/bpf: C1 spatial consolidation — merge arena_mailbox + arena_scratch into unified per_cpu block
-19e00ce397b80466d85027e6ff4d6d50e5d540ca # scx_cake: bump scx_arena version to 0.1.4
-24c35a133d1e103c9f1caf35be10e99b3f3afa92 # scx_cake: fix CI exit code 143, proper UEI shutdown, skip ETD headless, fix heatmap layout
-9bfb2dd767b4b0c89fc80a8bae7baf9cc3a1792d # scx_cake: Final Jitter, Latency, and Topology Audit (Phase 3 & 4)
-1aa1f549f17c90aef0bd6ea10111dba324055a3a # Phase 5: Yielder Privilege System
-08c4e4416391ac9d72c8e93ce33840cbc5a78c91 # scx_cake: waker-aware CPU placement (Gate 1W) & self-scaling yield priority
-4cf8e687136eb623f2191c4129e0a3b3b18ac593 # BenchLab 19-entry + Disruptor handoff: psychic cache removed, zero-arena cake_stopping
-0fd707797531dbbed437e54b189f7afae95bada7 # scx_cake: fix PR import issues (restore rustland_core include, sysinfo 0.35.2)
-b652d491dae67bf17744760f6accc63aa173971a # perf: execution order optimization + data flow audit
-21ecb16e3769244ba75b1fe5abbb26920aca3e1d # cake: waker priority inheritance + BenchLab overhaul
-57283c7d0b48e9bf556b9b237c2fb06186b9e544 # cake: benchlab scrollable table + select_cpu_dfl + kick_cpu benchmarks
-0b3c6e8f7c7ef68c6123f06959412f8ad4e3b79b # cake: fix runtime crash — remove context-restricted kfunc benches
-033293dda1ca03a7bf06b09f7cd25673edc9e7b6 # perf: gate architecture restructure + zero-arena running + idle shadow hints
-a2a51fcd49b7eeb340c9a038d792ff1ccb95f34a # cake: waker-chain gate + variable deduplication
-1066e0563c6bc15e0d159e202328766c67282568 # v1.0.3-Alpha: PPID-based game family detection
-57ba03f5e2c4ed878bbd29a3ded7b75d4ed506e0 # cake: add 15s hysteresis to game detection to prevent alt-tab freeze
-7e47b46bb1cf02d912d84f51777e9423e2b50f2b # fix(scx_cake): PPID game family detection broken in release builds
-c16b27ab3085579c58e0cd6edde8d10336bebf4d # fix: eliminate TOCTOU race in CAKE_STATS_ACTIVE causing callback profile corruption
-3bc9e835d13e71fe38dbfe734732fe86f1ea561c # scx_cake: clock domain unification, Gate 1S removal, adaptive preemption
-16665ea7a0eacc97b54d597de26b7a0c76debdd5 # scx_cake: update Cargo.lock
-1f53862e3612d2a11c679ee69d897c6a54af1a36 # scx_cake 1.0.4: Storage consolidation + fast paths
-9868cdedfe6806541e719ed2abf4255cad03ac6f # scx_cake: simplify passes — GAME throughput, logic flow, migration reduction
-9d84b1c06269fcf10664b606538dd7fe3215ded8 # scx_cake: COMPILATION throughput + GAMING unfairness + verifier fix
-c984cd8e84245241fb939367f78ad01f3d7d6798 # scx_cake: release build correctness fixes
+7514e70f83f95b778ab280e2ea26dbb96e229985 # chore(scx_cake): fix Cargo.toml
+5face68425d7efda66792898ba3b87f246aa4d44 # scx_cake: dead code cleanup + p->scx.slice locality promotion
+885110d411d479d57e4cdc202c354cb82396e186 # scx_cake: eliminate bpf_task_storage_get from enqueue via dsq_vtime staging
+5ed399df2e7c497cb21d3598ba04796b930fd7df # scx_cake: eliminate bpf_task_storage_get from running and tick via mailbox staging
+66fa0c7dcbc982382faad36d3091eb52ece4278a # scx_cake: confidence-gated stopping eliminates kfunc for stable tasks
+2ad6adafe212f05699c33e0980b91e9a3de06335 # scx_cake: benchmark-driven pattern optimizations for 9800X3D
+3facbc98860058e9cc66c8fdb6d11151445da08d # cake: branchless arithmetic optimizations (M6+M8+R1)
+d31a5d469db20ad5f5fdf8c69681eb95d6bb0431 # fix(cake): eliminate Elden Ring tier oscillation + core migration
+935ac00a7b965590795f93c86cf2ec97e25a5b49 # chore: add mangohud/ to gitignore
+7b75f4f1a37736e9b8a0c11ec56fb1f2e73a3415 # cake: S2 CPU placement + A4 tick-assembled tier snapshot
+ed3edf2851be9c718ae1588cef90fb57a2fc01be # cake: fix CPU affinity crash in Gate 2 + optimize check
+a26b802492e4a080b74695d1bc4eb7a747d8aab6 # cake: upgrade to scx_bpf_locked_rq with __weak fallback
+19c222d2a0ac8445a454a4254eb88456a1d91ff8 # cake: HFT microarch optimizations (write coalescing + cold-path deferral)
+c789895659cb52cc2d729ae092454f5e49a11584 # scx_cake: MONSTER optimization + select_cpu affinity fix
+a7b9b604a2133ecde86dd682cebe89c208f0d6cf # fix(cake): eliminate u16 counter overflow cascades
+fab5a4eaabe90e491657062af51940e069ef2db1 # fix(cake): correct mega_mailbox struct alignment
+f14ae8fad5655dbdfb3665f5c12de83b682881fd # OPT2+OPT6: eliminate kfuncs from cake_stopping
+e5c2391bed3a82ffaf2b9ebb56e95251a9477b26 # OPT2/OPT6: inline cold classification + slice-delta runtime
+5d6d0f37247083656a584c2465f0f63d970b1271 # cake: Gate 4 lazy preempt — T0/T1 dispatch to worst-tier CPU via LOCAL_ON
+51cb212caa838e53133077a9ca4c38d9cbd21dec # cake: R2 3-slot cache, R4 WSC hint, C1 interleaved u16, C2 deferred promotion
+4c1871ece9d956dd2ee64a8f28666d09a2b70376 # cake: Gate 1c migration cooldown (NEAR_PREF) + DUAL_PHASE bimodal slice boost
+a3f71db23062f9e29214432e8c21dd3434e23f4a # scx_cake: detect headless terminal and skip TUI/splash
+b0c5b919f063ddd7db23b415a4f2656d18735e7d # scx_cake: eliminate 4 sources of false sharing
+0cd8722abd3cfc9a8afa166b10ec1eba9cc79174 # perf(cake): trampoline latency hiding — defer kfunc + pre-load + MLP
+bd388b206e05737272a1ce1270de51d328498959 # perf(cake): revert spilled pre-loads per codegen audit
+9c0615d41c6a0425ce3ee4cc696ce6cdb6b372e1 # cake: remove dead code and add jitter guards
+44a3c02b43a71d4b7246b3db36e2cc922ec590d2 # arena: migrate per-task storage from bpf_task_storage_get to sdt_task arena
+9eea0bbaddd695ab4851ae20ab15b171b49cbda9 # arena: migrate mega_mailbox + global_scratch to arena per-CPU arrays
+6999e60a74f530408c8ae0e66b1398e8f59cfb20 # arena: tier-occupancy bitmask for dispatch skip optimization
+56a573be33e4600c88afceb19cbe0d4fef305faf # arena: optimize ARENA_ASSOC to inline asm (2 insns vs 3)
+d933120e5e176b268c63032d4ccc07b65a4dabbd # scx_cake: arena audit — fix tier_occupied race, stale preempt scratch
+5ee7ab1ab915d02f9f79b50d33d96da5958127aa # cake/bpf: C1 spatial consolidation — merge arena_mailbox + arena_scratch into unified per_cpu block
+1e73b04222fe0c4724671e891bad7f93ce245b12 # scx_cake: bump scx_arena version to 0.1.4
+165928a9f7d7f2e510b2ae8ea750b607f4c22f82 # scx_cake: fix CI exit code 143, proper UEI shutdown, skip ETD headless, fix heatmap layout
+81d5e152b01af366796864ba418cefb86dce976a # scx_cake: Final Jitter, Latency, and Topology Audit (Phase 3 & 4)
+f5c64d04e2e52e735457139ef0359880b9021c2d # Phase 5: Yielder Privilege System
+b0805882c4d574c7840fc41cd9842171048dd5e9 # scx_cake: waker-aware CPU placement (Gate 1W) & self-scaling yield priority
+4f29c75ab173b589d533e5aaf812e250d8ce9925 # BenchLab 19-entry + Disruptor handoff: psychic cache removed, zero-arena cake_stopping
+e620e897b086a399e923071ba79019e3f38eb354 # scx_cake: fix PR import issues (restore rustland_core include, sysinfo 0.35.2)
+0bf82fa6074002bcef9ae4c9d070d5f18e2cfb78 # perf: execution order optimization + data flow audit
+e1b25c89b91b3e2ccbb01ed9a68244c802dc4302 # cake: waker priority inheritance + BenchLab overhaul
+cb1b1796f2ad76abf9557cf75c80986df4d70ed1 # cake: benchlab scrollable table + select_cpu_dfl + kick_cpu benchmarks
+464af9fb95c24d54b6490d05a55050a6e1973495 # cake: fix runtime crash — remove context-restricted kfunc benches
+fc6e4b18389da00a4b81a598c9d25e0ad99fe8e6 # perf: gate architecture restructure + zero-arena running + idle shadow hints
+02c7dae392d5cc13cfab8cb500fdcff637ff6c2f # cake: waker-chain gate + variable deduplication
+d6f0d48aa9ee3e0902f09ee0dc0df0972dd6d226 # v1.0.3-Alpha: PPID-based game family detection
+a1ce4d1a0213d3ec0006e82fb4d218e4019fddd0 # cake: add 15s hysteresis to game detection to prevent alt-tab freeze
+2135d09ee6d5f06a078bcb3abac175097c268dbe # fix(scx_cake): PPID game family detection broken in release builds
+4bb945e60425486ff7998b80519ccb280b1b8fc3 # fix: eliminate TOCTOU race in CAKE_STATS_ACTIVE causing callback profile corruption
+dc15a24ca0e999b26035134bcccbea39c6b484cc # scx_cake: clock domain unification, Gate 1S removal, adaptive preemption
+0594da30e19af2499305a55f549b4fcb26e07184 # scx_cake: update Cargo.lock
+f28c76439c45235c0fd8ea498dd55c6a58e2367d # scx_cake 1.0.4: Storage consolidation + fast paths
+79fbdd14f8f7a4a9ffc845b93a6f77ba27815229 # scx_cake: simplify passes — GAME throughput, logic flow, migration reduction
+b028bea7f3c49ab006d392cfee3d00c068b5a03a # scx_cake: COMPILATION throughput + GAMING unfairness + verifier fix
+d9a83c4ee7fff3e1b2aa27cc02e7c88f90ed44eb # scx_cake: release build correctness fixes
 )
 
 _reverts=(
