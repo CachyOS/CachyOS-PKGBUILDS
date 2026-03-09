@@ -1,0 +1,59 @@
+# Maintainer: Eric Naim <dnaim@cachyos.org>
+# AUR Maintainer: Shadichy <shadichy@blisslabs.org>
+
+pkgname=ntfsprogs-plus
+pkgver=1.0.0
+pkgrel=1
+pkgdesc='NTFS filesystem userspace utilities'
+arch=('x86_64')
+license=('GPL-2.0-or-later')
+url="https://github.com/ntfsprogs-plus/ntfsprogs-plus"
+depends=('glibc' 'util-linux-libs')
+makedepends=(
+  'autoconf'
+  'automake'
+  'git'
+  'libtool'
+  'libgcrypt'
+  'pkgconf'
+)
+conflicts=('ntfsprogs' 'ntfs-3g')
+provides=('libntfs.so' 'ntfsprogs')
+_commit=63d65e8c0db971b040645dba3641a35cbbbf6bdc
+source=("git+${url}.git#commit=${_commit}")
+sha256sums=('a99d0fdc0a8bda50dc488a48250e8f3ca1fd0b158b4c11862544a6e3466a122f')
+
+prepare() {
+  cd "${pkgname}"
+  ./autogen.sh
+}
+
+build() {
+  cd "${pkgname}"
+
+  ./configure \
+    --prefix=/usr \
+    --sbin=/usr/bin \
+    --includedir=/usr/include/ntfsprogs-plus \
+    --mandir=/usr/share/man \
+    --disable-ldconfig \
+    --enable-xattr-mappings \
+    --enable-posix-acls \
+    --enable-extras \
+    --enable-crypto
+  make
+}
+
+package() {
+  cd ${srcdir}/${pkgname}
+
+  make \
+    DESTDIR="${pkgdir}" \
+    rootbindir=/usr/bin \
+    rootsbindir=/usr/bin \
+    rootlibdir=/usr/lib \
+    install
+
+  # License
+  install -Dm644 COPYING "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE"
+}
