@@ -16,13 +16,6 @@ validpgpkeys=(
   'B1B70BB1CD56047DEF31DE2EB62C3D10C54D5DA9'  # Vladislav Nepogodin <nepogodin.vlad@gmail.com>
 )
 
-prepare() {
-  cd ${srcdir}/packageinstaller
-
-  # patch for pacman 7.1.0
-  patch -Np1 -i ../2f28234b9c37d24256ec793371f50eeb8dae8a96.patch
-}
-
 build() {
   cd ${srcdir}/packageinstaller
 
