@@ -8,6 +8,7 @@ arch=('any')
 url="https://github.com/cachyos/$pkgname"
 license=(GPL-3.0-only)
 makedepends=('coreutils' 'git')
+install=$pkgname.install
 source=(git+$url#commit=911122088ceeb9bb9eed45965e725963303dd853)
 sha512sums=('a99a0ab39f6f0640663eba685c3183ec23ed4883c4112e19a5479e55a73a4a3334ea6184051d07c54c663c6978e8114edf9fb213614e78a10f0cb3db0be3f140')
 depends=(
@@ -23,9 +24,6 @@ depends=(
   xdg-desktop-portal-gnome
   xdg-desktop-portal-gtk
   xwayland-satellite
-)
-optdepends=(
-  'polkit-kde-agent: previously used alternative to noctalia polkit-agent'
 )
 provides=('cachyos-desktop-settings')
 conflicts=('cachyos-desktop-settings')
