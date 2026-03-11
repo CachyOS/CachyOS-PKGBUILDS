@@ -4,7 +4,7 @@
 
 pkgbase="sqlite"
 pkgname=('sqlite' 'sqlite-tcl' 'sqlite-analyzer' 'lemon' 'sqlite-doc')
-pkgver=3.51.2
+pkgver=3.52.0
 _srcver=$(echo "$pkgver" | awk -F. '{ printf "%d%02d%02d00", $1, $2, $3 }')
 _docver=${_srcver}
 #_docver=3440000
@@ -23,8 +23,8 @@ source=(https://www.sqlite.org/2026/sqlite-src-${_srcver}.zip
         https://datasets.clickhouse.com/hits_compatible/hits.csv.gz
         remove-header-in-command.patch)
 # upstream now switched to sha3sums - currently not supported by makepkg
-sha256sums=('85110f762d5079414d99dd5d7917bc3ff7e05876e6ccbd13d8496a3817f20829'
-            'c6e30d07c5e9c126901c54d8d7c90a9c1a37078245517f060b3c69c4de43bf5d'
+sha256sums=('652a98ca833ed638809a52bec225a7f37799f71a995778f9ccb68ad03bd1fc11'
+            '6f0d517e0c47e6446c74cf5503c87312181b80f04c95743f99f05af3ccc5e5a6'
             'ce0083835e458236c83d4f74ad398816e29859cd2f940c7aad9080835b50dcec'
             '4e57d9ac979f1c9872e69799c2597eeef4c6ce7224f3ede0bf9dc8d217b1e65d'
             'SKIP'
@@ -142,7 +142,7 @@ build() {
 
   # build additional tools - broken build: changeset rbu
   make dbdump dbhash dbtotxt index_usage scrub showdb showjournal showshm \
-       showstat4 showwal sqldiff sqlite3_analyzer sqlite3_checker \
+       showstat4 showwal sqldiff sqlite3_analyzer \
        sqlite3_expert sqlite3_rsync sqltclsh
 }
 
@@ -177,7 +177,7 @@ package_sqlite() {
 package_sqlite-tcl() {
 
  pkgdesc="sqlite Tcl Extension Architecture (TEA)"
- depends=('sqlite' 'tcl' 'glibc')
+ depends=('sqlite' 'tcl' 'zlib' 'glibc')
  provides=("sqlite3-tcl=$pkgver")
  replaces=("sqlite3-tcl")
 
@@ -186,7 +186,7 @@ package_sqlite-tcl() {
   mv "$srcdir"/tcl/* "${pkgdir}"/usr/lib
 
   install -m755 -d "${pkgdir}"/usr/bin
-  install -m755 sqlite3_checker sqltclsh "${pkgdir}"/usr/bin/
+  install -m755 sqltclsh "${pkgdir}"/usr/bin/
 
   # license
   install -D -m644 "${srcdir}"/license.txt "${pkgdir}"/usr/share/licenses/${pkgname}/license.txt
