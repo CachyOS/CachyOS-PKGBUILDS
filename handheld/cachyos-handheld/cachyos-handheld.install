@@ -30,35 +30,27 @@ EOF
   fi
 }
 
-steamos_steam() {
-  # Grab the steam bootstrap for first boot
-  URL="https://steamdeck-packages.steamos.cloud/archlinux-mirror/jupiter-main/os/x86_64/steam-jupiter-stable-1.0.0.79-1.1-x86_64.pkg.tar.zst"
-  TMP_PKG="/tmp/package.pkg.tar.zst"
-  OUTPUT_FILE="/tmp/bootstraplinux_ubuntu12_32.tar.xz"
-  TARGET_FILE="/usr/lib/steam/bootstraplinux_ubuntu12_32.tar.xz"
+bootstrap_setup() {
+  # Use SteamOS bootstrap to speed up first boot setup.
+  URL="https://steamdeck-packages.steamos.cloud/archlinux-mirror/jupiter-main/os/x86_64/steam-jupiter-stable-1.0.0.85-2-x86_64.pkg.tar.zst"
+  BOOTSTRAP_SHA512=a013473d28a9d10a865b543ee1c42fa514c4af383b63f7dbf8e38d18e358ebdbc247caff1e39cc372a71b05fdd506f2356e1af0c5404a95f6615191d994e0fbf
 
-  echo "Downloading $URL"
-  curl -o "$TMP_PKG" "$URL"
-  ZST_CHECKSUM=54b40e62f20202c5e9be83f7be9130976327a51981c6ac5841f83738ea191c168d6974563bcfe82b6a116c680e45a9dfe15709eb39f94a9f6cc1bcc7a53b7996
-  TMP_PKG_CHECKSUM=$(sha512sum ${TMP_PKG} | cut -d " " -f1)
-  if [[ "$ZST_CHECKSUM" == "$TMP_PKG_CHECKSUM" ]]; then
-     echo "Extracting $OUTPUT_FILE"
-     tar -I zstd -xvf "$TMP_PKG" usr/lib/steam/bootstraplinux_ubuntu12_32.tar.xz -O > "$OUTPUT_FILE"
-  else
-     echo "Download failed!"
-     exit 1
-  fi
-   XZ_CHECKSUM=ba46762da3a809735e57c84afea525f703e6a5c67d2ab14e2dde949f2fdb490f198eb147deb5297349a788e5645949490574175935e66dfe11b6f9d4069140cc
-  BS_CHECKSUM=$(sha512sum ${OUTPUT_FILE} | cut -d " " -f1)
-  if [[ "$XZ_CHECKSUM" == "$BS_CHECKSUM" ]]; then
-     echo "moving $OUTPUT_FILE to $TARGET_FILE"
-     mv "$OUTPUT_FILE" "$TARGET_FILE"
-  else
-     echo "Extraction failed!"
-     exit 1
-  fi
-  [[ -e "$TMP_PKG" ]] && rm "$TMP_PKG"
-  [[ -e "$OUTPUT_FILE" ]] && rm "$OUTPUT_FILE"
+  echo "Downloading SteamOS bootstrap"
+  curl -o /tmp/steam-jupiter-stable.tar.zst "$URL"
+
+  echo "Extracting /tmp/bootstraplinux_ubuntu12_32.tar.xz"
+  tar -I zstd -xOf /tmp/steam-jupiter-stable.tar.zst usr/lib/steam/bootstraplinux_ubuntu12_32.tar.xz > /tmp/bootstraplinux_ubuntu12_32.tar.xz
+
+  echo "$BOOTSTRAP_SHA512  /tmp/bootstraplinux_ubuntu12_32.tar.xz" | sha512sum -c - >/dev/null 2>&1 || {
+    echo "Extraction failed!"
+    exit 1
+  }
+
+  # Move to Steam path
+  mv -f /tmp/bootstraplinux_ubuntu12_32.tar.xz /usr/lib/steam/bootstraplinux_ubuntu12_32.tar.xz
+
+  # Cleanup
+  rm -f /tmp/steam-jupiter-stable.tar.zst /tmp/bootstraplinux_ubuntu12_32.tar.xz
 }
 
 post_install() {
@@ -74,7 +66,7 @@ post_install() {
   ln -sf /usr/lib/systemd/system/plasmalogin.service /etc/systemd/system/display-manager.service
 
   # First boot setup
-  steamos_steam
+  bootstrap_setup
   touch /etc/handheld-first-boot
 
   # Update users plasmalogin config to reflect the changes
