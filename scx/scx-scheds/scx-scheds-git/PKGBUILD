@@ -4,7 +4,7 @@
 pkgname=scx-scheds-git
 _gitname=scx
 pkgver=1.1.0.r88.g1c9bc1eb
-pkgrel=1
+pkgrel=2
 pkgdesc='sched_ext schedulers and tools'
 url='https://github.com/sched-ext/scx'
 arch=('x86_64' 'aarch64')
@@ -38,10 +38,13 @@ conflicts=("scx-scheds")
 replaces=('scx-cake')
 
 _backports=(
-37aa742e4c9a91283acc554f5d3cc1f74d6ea270 # fix: correctness improvements and scx_loader compatibility
-6651024b34e971e4ef71d4307c59bccd94dec44b # cake_stopping: hot-path optimization — -25% insns, -40% spills, -100% divs
-fe7876481c8de5d7ccca091ccbd74ef1f4a6a6cd # cake_stopping: zero-spill architectural decomposition (42→0 spills, 419→30 insns)
-e6d219a11167e6f18682fa68c5673b608450e9eb # scx_cake: zero register spills across all BPF functions
+043876692055d190a414c0b97194fe3d6093d888 # fix: correctness improvements and scx_loader compatibility
+59e968d9a1683fc683c1cd404a0831fd5753bcd8 # cake_stopping: hot-path optimization — -25% insns, -40% spills, -100% divs
+81523f1170705a752610deb0075aae4994b34cc2 # cake_stopping: zero-spill architectural decomposition (42→0 spills, 419→30 insns)
+a7bc15c5a2b655bab83624c053b89a2ff73d6253 # scx_cake: zero register spills across all BPF functions
+4d992ce6d6fc08227e8e37b776e7feca5572270f # scx_cake: hot-path instruction audit — 30% reduction
+d93085915bfa3d60e298dff5d384e7c3579e714e # scx_cake: cold-path audit — gate init_task tctx writes behind CAKE_STATS_ENABLED
+a07d4c19daf41a97c1312fb7add3da18e7504948 # cargo: fix formatting
 )
 
 _reverts=(
