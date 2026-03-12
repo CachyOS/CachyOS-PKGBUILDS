@@ -3,7 +3,7 @@
 
 pkgname=rate-mirrors
 pkgver=0.28.1
-pkgrel=2
+pkgrel=3
 pkgdesc="Everyday-use client-side map-aware mirror ranking tool"
 arch=(x86_64)
 url="https://github.com/westandskif/rate-mirrors"
@@ -15,10 +15,12 @@ source=(
     "${pkgname}::git+$url.git#tag=v${pkgver}"
     https://github.com/CachyOS/rate-mirrors/commit/29d2f3beb572187d0ece1e81e78b4e5612b563b2.patch
     https://github.com/CachyOS/rate-mirrors/commit/c221115b27bf98285c84fc07caa00b72146e2ce8.patch
+    https://github.com/CachyOS/rate-mirrors/commit/030770f743b155a3b02c904ccd8f9839703d6a76.patch
 )
 sha256sums=('87812b06dd134632f1a262a85d1d90ad2b99fe2081ad13fa4afb6ece86fc8578'
             '10ffe2092e2f7bd19ad3e842d82734817276e3bca19344c778504b812c357b21'
-            '416a4fe6d0e49dcea0189a9e965328e4402827eec16038b9647983768a001eca')
+            '416a4fe6d0e49dcea0189a9e965328e4402827eec16038b9647983768a001eca'
+            'f941a1d5c930449174b3189608dffbc05b308725d035bd2eb6ad15a407080a98')
 
 prepare() {
   cd "$pkgname"
@@ -28,6 +30,9 @@ prepare() {
 
   # cachyos: add proxy mirrorlist as primary
   patch -Np1 -i ../c221115b27bf98285c84fc07caa00b72146e2ce8.patch
+
+  # Fix for hang after retesting top mirrors
+  patch -Np1 < ../030770f743b155a3b02c904ccd8f9839703d6a76.patch
 
   cargo fetch --locked --target "$CARCH-unknown-linux-gnu"
 }
