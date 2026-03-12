@@ -3,7 +3,7 @@
 
 pkgname=scx-scheds-git
 _gitname=scx
-pkgver=1.1.0.r52.g080afd64
+pkgver=1.1.0.r88.g1c9bc1eb
 pkgrel=1
 pkgdesc='sched_ext schedulers and tools'
 url='https://github.com/sched-ext/scx'
@@ -38,6 +38,10 @@ conflicts=("scx-scheds")
 replaces=('scx-cake')
 
 _backports=(
+37aa742e4c9a91283acc554f5d3cc1f74d6ea270 # fix: correctness improvements and scx_loader compatibility
+6651024b34e971e4ef71d4307c59bccd94dec44b # cake_stopping: hot-path optimization — -25% insns, -40% spills, -100% divs
+fe7876481c8de5d7ccca091ccbd74ef1f4a6a6cd # cake_stopping: zero-spill architectural decomposition (42→0 spills, 419→30 insns)
+e6d219a11167e6f18682fa68c5673b608450e9eb # scx_cake: zero register spills across all BPF functions
 )
 
 _reverts=(
