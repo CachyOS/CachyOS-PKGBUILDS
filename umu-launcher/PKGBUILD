@@ -3,7 +3,7 @@
 
 pkgname=umu-launcher
 pkgver=1.3.0
-pkgrel=7
+pkgrel=9
 pkgdesc="This is the Unified Launcher for Windows Games on Linux, to run Proton with fixes outside of Steam"
 arch=('x86_64')
 url="https://github.com/Open-Wine-Components/umu-launcher"
@@ -66,13 +66,16 @@ optdepends=(
   'python-truststore: Verify certificates using OS trust stores'
 )
 source=(
-    "git+https://github.com/Open-Wine-Components/umu-launcher.git#commit=577d9f68fcb19cb398c026962b3be649f277d322"
+    "git+https://github.com/Open-Wine-Components/umu-launcher.git#commit=cfa9df7a069b792cb06c5fe5e13a7e6020570010"
+    umu-container-nsenter.patch
 )
-sha256sums=('bc8098d1e9c8b0e4787203d3bf040bb2b7e281bcf036c1ca932332cbf39d3bd4')
+sha256sums=('db957da21d1da71238d06b65ecef8837267d9356ffacef6f396b5b4efaf1b618'
+            '5f10e86306e4564d9a6bd362108b11e2722f5faae13a63ead105ebe9b845238e')
 
 
 prepare() {
   cd "$srcdir"/umu-launcher
+  patch -Np1 -i "$srcdir"/umu-container-nsenter.patch
   export RUSTUP_TOOLCHAIN=stable
   export CARGO_HOME="${srcdir}"/umu-cargo
   cargo update
