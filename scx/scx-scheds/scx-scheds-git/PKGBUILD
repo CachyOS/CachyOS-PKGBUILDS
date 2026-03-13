@@ -3,8 +3,8 @@
 
 pkgname=scx-scheds-git
 _gitname=scx
-pkgver=1.1.0.r88.g1c9bc1eb
-pkgrel=2
+pkgver=1.1.0.r94.ga0c1d2cc
+pkgrel=1
 pkgdesc='sched_ext schedulers and tools'
 url='https://github.com/sched-ext/scx'
 arch=('x86_64' 'aarch64')
@@ -38,13 +38,16 @@ conflicts=("scx-scheds")
 replaces=('scx-cake')
 
 _backports=(
-043876692055d190a414c0b97194fe3d6093d888 # fix: correctness improvements and scx_loader compatibility
-59e968d9a1683fc683c1cd404a0831fd5753bcd8 # cake_stopping: hot-path optimization — -25% insns, -40% spills, -100% divs
-81523f1170705a752610deb0075aae4994b34cc2 # cake_stopping: zero-spill architectural decomposition (42→0 spills, 419→30 insns)
-a7bc15c5a2b655bab83624c053b89a2ff73d6253 # scx_cake: zero register spills across all BPF functions
-4d992ce6d6fc08227e8e37b776e7feca5572270f # scx_cake: hot-path instruction audit — 30% reduction
-d93085915bfa3d60e298dff5d384e7c3579e714e # scx_cake: cold-path audit — gate init_task tctx writes behind CAKE_STATS_ENABLED
-a07d4c19daf41a97c1312fb7add3da18e7504948 # cargo: fix formatting
+62e15578c23742dd5627ca280bcb7382c52f0936 # fix: correctness improvements and scx_loader compatibility
+73340c5ea864c882e381282d66deb72a661d8058 # cake_stopping: hot-path optimization — -25% insns, -40% spills, -100% divs
+c6ea5120a62a0d49932cc4b8a1835a8392a2853b # cake_stopping: zero-spill architectural decomposition (42→0 spills, 419→30 insns)
+37a2617d8dfd1b9372508d4796d09f3d7dc5be94 # scx_cake: zero register spills across all BPF functions
+353648255a543d47dd0ccb5c237ba82fcbfa542a # scx_cake: hot-path instruction audit — 30% reduction
+14d8e83cdb59014b75bf0c60a4ff2bd4f3cbc0e9 # scx_cake: cold-path audit — gate init_task tctx writes behind CAKE_STATS_ENABLED
+f7d1e96d8230328acc79bd568635dfaf8cdac33e # scx_cake: cold-path audit — remove dead cached_cpumask, fuse stores, branchless PF_KTHREAD
+d662e06bccb9ac29a63a999238cbb9a841efcb56 # P2: hot path -63 insns (593->530, 10.6%)
+35ccb68d56423fd796304c1fc5086582436ac4a2 # fix(cake): anti-starvation — remove p->scx.slice write from stopping
+e10e080d3543abc83dfcb0179d1a2c92b234c372 # cargo: fix formatting
 )
 
 _reverts=(
