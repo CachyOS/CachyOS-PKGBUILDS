@@ -1,0 +1,161 @@
+# see src/bootstrap/defaults/
+profile = "dist"
+
+# see src/bootstrap/src/utils/change_tracker.rs
+change-id = 148671
+
+[llvm]
+download-ci-llvm = false
+link-shared = true
+
+[gcc]
+download-ci-gcc = false
+
+[build]
+description = "%description%"
+target = [
+  "loongarch64-unknown-linux-gnu",
+  "loongarch64-unknown-linux-musl",
+  "aarch64-unknown-linux-gnu",
+  "aarch64-unknown-linux-musl",
+  "wasm32-unknown-unknown",
+  "wasm32v1-none",
+  "wasm32-wasip1",
+  "wasm32-wasip1-threads",
+  "wasm32-wasip2",
+]
+cargo = "/usr/bin/cargo"
+rustc = "/usr/bin/rustc"
+rustfmt = "/usr/bin/rustfmt"
+locked-deps = true
+vendor = true
+tools = [
+  "cargo",
+  "clippy",
+  "rustdoc",
+  "rustfmt",
+  "rust-analyzer-proc-macro-srv",
+  "analysis",
+  "src",
+]
+sanitizers = true
+profiler = true
+
+# Generating docs fails with the wasm32-* targets
+docs = false
+
+[install]
+prefix = "/usr"
+
+[rust]
+codegen-units = 1
+codegen-units-std = 1
+debuginfo-level = 2
+debuginfo-level-std = 2
+channel = "stable"
+rpath = false
+frame-pointers = true
+lld = false
+bootstrap-override-lld = "external"
+llvm-bitcode-linker = false
+deny-warnings = false
+backtrace-on-ice = true
+remap-debuginfo = false
+lto = "fat"
+parallel-frontend-threads = 0
+
+[dist]
+compression-formats = ["gz"]
+compression-profile = "fast"
+
+[target.loongarch64-unknown-linux-gnu]
+llvm-config = "/usr/bin/llvm-config"
+cc = "loongarch64-linux-gnu-gcc"
+cxx = "loongarch64-linux-gnu-g++"
+ar = "loongarch64-linux-gnu-gcc-ar"
+ranlib = "loongarch64-linux-gnu-ranlib"
+linker = "loongarch64-linux-gnu-gcc"
+default-linker = "loongarch64-linux-gnu-gcc"
+optimized-compiler-builtins = "%clangdir%/lib/linux/libclang_rt.builtins-loongarch64.a"
+
+[target.loongarch64-unknown-linux-musl]
+musl-root = "/usr/lib/musl"
+cc = "loongarch64-linux-musl-gcc"
+cxx = "loongarch64-linux-gnu-g++"
+ar = "loongarch64-linux-gnu-gcc-ar"
+ranlib = "loongarch64-linux-gnu-ranlib"
+linker = "loongarch64-linux-gnu-gcc"
+default-linker = "loongarch64-linux-gnu-gcc"
+sanitizers = false
+
+[target.aarch64-unknown-linux-gnu]
+cc = "aarch64-linux-gnu-gcc"
+cxx = "aarch64-linux-gnu-g++"
+ar = "aarch64-linux-gnu-gcc-ar"
+ranlib = "aarch64-linux-gnu-gcc-ranlib"
+linker = "aarch64-linux-gnu-gcc"
+default-linker = "aarch64-linux-gnu-gcc"
+sanitizers = false
+
+[target.aarch64-unknown-linux-musl]
+musl-root = "/usr/aarch64-linux-musl/lib/musl"
+cc = "aarch64-linux-musl-gcc"
+cxx = "aarch64-linux-gnu-g++"
+ar = "aarch64-linux-gnu-gcc-ar"
+ranlib = "aarch64-linux-gnu-gcc-ranlib"
+linker = "aarch64-linux-gnu-gcc"
+default-linker = "aarch64-linux-gnu-gcc"
+sanitizers = false
+
+[target.wasm32-unknown-unknown]
+cc = "clang"
+cxx = "clang++"
+ar = "llvm-ar"
+ranlib = "llvm-ranlib"
+linker = "wasm-ld"
+default-linker = "wasm-ld"
+sanitizers = false
+profiler = false
+
+[target.wasm32v1-none]
+cc = "clang"
+cxx = "clang++"
+ar = "llvm-ar"
+ranlib = "llvm-ranlib"
+linker = "wasm-ld"
+default-linker = "wasm-ld"
+sanitizers = false
+profiler = false
+
+[target.wasm32-wasip1]
+wasi-root = "/usr/share/wasi-sysroot"
+cc = "clang"
+cxx = "clang++"
+ar = "llvm-ar"
+ranlib = "llvm-ranlib"
+linker = "wasm-ld"
+default-linker = "wasm-ld"
+sanitizers = false
+profiler = false
+
+[target.wasm32-wasip1-threads]
+wasi-root = "/usr/share/wasi-sysroot"
+cc = "clang"
+cxx = "clang++"
+ar = "llvm-ar"
+ranlib = "llvm-ranlib"
+linker = "wasm-ld"
+default-linker = "wasm-ld"
+sanitizers = false
+profiler = false
+
+[target.wasm32-wasip2]
+wasi-root = "/usr/share/wasi-sysroot"
+cc = "clang"
+cxx = "clang++"
+ar = "llvm-ar"
+ranlib = "llvm-ranlib"
+linker = "wasm-ld"
+default-linker = "wasm-ld"
+sanitizers = false
+profiler = false

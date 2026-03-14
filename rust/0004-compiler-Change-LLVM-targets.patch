@@ -1,0 +1,67 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: "Jan Alexander Steffens (heftig)" <heftig@archlinux.org>
+Date: Fri, 12 Mar 2021 17:31:56 +0100
+Subject: [PATCH] compiler: Change LLVM targets
+
+ - Change x86_64-unknown-linux-gnu to use x86_64-pc-linux-gnu
+ - Change i686-unknown-linux-gnu to use i686-pc-linux-gnu
+
+Reintroduce the aliasing that was removed in 1.52.0 and alias the -pc-
+triples to the -unknown- triples. This avoids defining proper -pc-
+targets, as things break when this is done:
+
+ - The crate ecosystem expects the -unknown- targets. Making -pc-
+   rustc's host triple (and thus default target) would break various
+   crates.
+ - Firefox's build breaks when the host triple (from
+   `rustc --version --verbose`) is different from the target triple
+   (from `rustc --print target-list`) that best matches autoconf.
+---
+ compiler/rustc_session/src/config.rs                        | 6 ++++++
+ .../rustc_target/src/spec/targets/i686_unknown_linux_gnu.rs | 2 +-
+ .../src/spec/targets/x86_64_unknown_linux_gnu.rs            | 2 +-
+ 3 files changed, 8 insertions(+), 2 deletions(-)
+
+diff --git a/compiler/rustc_session/src/config.rs b/compiler/rustc_session/src/config.rs
+index f0dc5b9ac48c..2c72cc11f587 100644
+--- a/compiler/rustc_session/src/config.rs
++++ b/compiler/rustc_session/src/config.rs
+@@ -2214,6 +2214,12 @@ pub fn parse_target_triple(early_dcx: &EarlyDiagCtxt, matches: &getopts::Matches
+                 early_dcx.early_fatal(format!("target file {path:?} does not exist"))
+             })
+         }
++        Some(target) if &target == "x86_64-pc-linux-gnu" => {
++            TargetTuple::from_tuple("x86_64-unknown-linux-gnu")
++        }
++        Some(target) if &target == "i686-pc-linux-gnu" => {
++            TargetTuple::from_tuple("i686-unknown-linux-gnu")
++        }
+         Some(target) => TargetTuple::TargetTuple(target),
+         _ => TargetTuple::from_tuple(host_tuple()),
+     }
+diff --git a/compiler/rustc_target/src/spec/targets/i686_unknown_linux_gnu.rs b/compiler/rustc_target/src/spec/targets/i686_unknown_linux_gnu.rs
+index 932f6034433e..7137a3ac9de1 100644
+--- a/compiler/rustc_target/src/spec/targets/i686_unknown_linux_gnu.rs
++++ b/compiler/rustc_target/src/spec/targets/i686_unknown_linux_gnu.rs
+@@ -24,7 +24,7 @@ pub(crate) fn target() -> Target {
+     base.stack_probes = StackProbeType::Inline;
+ 
+     Target {
+-        llvm_target: "i686-unknown-linux-gnu".into(),
++        llvm_target: "i686-pc-linux-gnu".into(),
+         metadata: TargetMetadata {
+             description: Some("32-bit Linux (kernel 3.2, glibc 2.17+)".into()),
+             tier: Some(1),
+diff --git a/compiler/rustc_target/src/spec/targets/x86_64_unknown_linux_gnu.rs b/compiler/rustc_target/src/spec/targets/x86_64_unknown_linux_gnu.rs
+index defa9f146d79..dea63ac7d5b8 100644
+--- a/compiler/rustc_target/src/spec/targets/x86_64_unknown_linux_gnu.rs
++++ b/compiler/rustc_target/src/spec/targets/x86_64_unknown_linux_gnu.rs
+@@ -22,7 +22,7 @@ pub(crate) fn target() -> Target {
+     base.supports_xray = true;
+ 
+     Target {
+-        llvm_target: "x86_64-unknown-linux-gnu".into(),
++        llvm_target: "x86_64-pc-linux-gnu".into(),
+         metadata: TargetMetadata {
+             description: Some("64-bit Linux (kernel 3.2+, glibc 2.17+)".into()),
+             tier: Some(1),
