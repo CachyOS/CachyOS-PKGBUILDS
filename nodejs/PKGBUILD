@@ -51,10 +51,39 @@ validpgpkeys=(
   '108F52B48DB57BB0CC439B2997B01419BD92F80A' # Ruy Adorno <ruyadorno@hotmail.com>
 )
 
+_common_flags=(
+  -fno-semantic-interposition
+  -Wno-error=coverage-mismatch
+)
+
+_configure_args=(
+  --ninja
+  --prefix=/usr
+  --with-intl=system-icu
+  --without-npm
+  --shared-ada
+  --shared-brotli
+  --shared-cares
+  --shared-libuv
+  --shared-nghttp2
+  --shared-nghttp3
+  --shared-ngtcp2
+  --shared-openssl
+  --shared-simdjson
+  --shared-zlib
+  --shared-zstd
+  # --shared-http-parser
+  # --shared-simdutf
+  # --shared-v8
+)
+
 _set_flags() {
   # /usr/lib/libnode.so uses malloc_usable_size, which is incompatible with fortification level 3
   CFLAGS="${CFLAGS/_FORTIFY_SOURCE=3/_FORTIFY_SOURCE=2}"
   CXXFLAGS="${CXXFLAGS/_FORTIFY_SOURCE=3/_FORTIFY_SOURCE=2}"
+
+  export CFLAGS+=" ${_common_flags[*]}"
+  export CXXFLAGS+=" ${_common_flags[*]}"
 }
 
 prepare() {
@@ -67,62 +96,19 @@ build() {
   _set_flags
   cd node
 
-  # Do not error on PGO mismatch
-  export CFLAGS+=" -fno-semantic-interposition -Wno-error=coverage-mismatch"
-  export CXXFLAGS+=" -fno-semantic-interposition -Wno-error=coverage-mismatch"
-  ./configure \
-    --ninja \
-    --prefix=/usr \
-    --with-intl=system-icu \
-    --without-npm \
-    --shared-ada \
-    --shared-brotli \
-    --shared-cares \
-    --shared-libuv \
-    --shared-nghttp2 \
-    --shared-nghttp3 \
-    --shared-ngtcp2 \
-    --shared-openssl \
-    --shared-simdjson \
-    --shared-zlib \
-    --shared-zstd \
-    --enable-pgo-generate
-    # --shared-http-parser
-    # --shared-simdutf
-    # --shared-v8
-
+  # PGO: instrumented build
+  ./configure "${_configure_args[@]}" --enable-pgo-generate
   make
+
+  # PGO: generate profile data
   make test || true
 
-  ./configure \
-      --ninja \
-    --prefix=/usr \
-    --with-intl=system-icu \
-    --without-npm \
-    --shared-ada \
-    --shared-brotli \
-    --shared-cares \
-    --shared-libuv \
-    --shared-nghttp2 \
-    --shared-nghttp3 \
-    --shared-ngtcp2 \
-    --shared-openssl \
-    --shared-simdjson \
-    --shared-zlib \
-    --shared-zstd \
-    --enable-pgo-use
-    # --shared-http-parser
-    # --shared-simdutf
-    # --shared-v8
-
+  # PGO: optimized build using collected profile data
+  ./configure "${_configure_args[@]}" --enable-pgo-use
   make
 }
 
 package() {
-  # Do not error on PGO mismatch
-  # Even on packaging steps it needs the export :(
-  export CFLAGS+=" -fno-semantic-interposition -Wno-error=coverage-mismatch"
-  export CXXFLAGS+=" -fno-semantic-interposition -Wno-error=coverage-mismatch"
   _set_flags
   cd node
   make DESTDIR="$pkgdir" install
