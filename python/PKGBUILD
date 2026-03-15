@@ -10,14 +10,14 @@ shopt -s extglob
 pkgbase=python
 pkgname=(python python-tests)
 pkgver=3.14.3
-pkgrel=2
+pkgrel=4
 _pybasever=${pkgver%.*}
 pkgdesc="The Python programming language"
 arch=('x86_64')
 license=('PSF-2.0')
 url="https://www.python.org/"
-depends=('bzip2' 'expat' 'gdbm' 'libffi' 'libnsl' 'libxcrypt' 'openssl' 'zlib' 'tzdata' 'mpdecimal')
-makedepends=('tk' 'sqlite' 'bluez-libs' 'llvm' 'gdb' 'xorg-server-xvfb' 'ttf-font' 'llvm-bolt')
+depends=('bzip2' 'expat' 'gdbm' 'libffi' 'libnsl' 'libxcrypt' 'openssl' 'zlib' 'zstd' 'tzdata' 'mpdecimal')
+makedepends=('tk' 'sqlite' 'bluez-libs' 'clang' 'llvm' 'gdb' 'xorg-server-xvfb' 'ttf-font' 'llvm-bolt')
 source=("https://www.python.org/ftp/python/${pkgver%rc*}/Python-${pkgver}.tar.xz"
         EXTERNALLY-MANAGED)
 sha512sums=('9fd875f7a1d96d64e7150913ef38b72b0aeecfcbc24ba46967e57b6495146b0cba6b940c273561fc4d656b6d0ce2e23ffb7bd32bcd0b61fd59a6d90585998c07'
@@ -42,19 +42,22 @@ build() {
   # PGO should be done with -O3
   CFLAGS="${CFLAGS/-O2/-O3} -ffat-lto-objects"
 
-  export CFLAGS+=" -fno-semantic-interposition"
-  export CXXLAGS+=" -fno-semantic-interposition"
+  export CC=clang
+  export CXX=clang++
 
+  export CFLAGS+=" -fno-semantic-interposition"
+  export CXXFLAGS+=" -fno-semantic-interposition"
 
   # Disable bundled pip & setuptools
   # BOLT is disabled due LLVM or upstream issue
-  # retest pending with 3.14
   # https://github.com/python/cpython/issues/124948
+  # https://github.com/python/cpython/issues/141775
   ./configure --prefix=/usr \
               --enable-shared \
               --with-computed-gotos \
               --enable-optimizations \
               --with-lto \
+              --with-tail-call-interp \
               --enable-ipv6 \
               --with-system-expat \
               --with-dbmliborder=gdbm:ndbm \
