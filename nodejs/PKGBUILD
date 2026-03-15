@@ -100,8 +100,58 @@ build() {
   ./configure "${_configure_args[@]}" --enable-pgo-generate
   make
 
-  # PGO: generate profile data
+  # PGO: generate profile data via test suite (broad coverage)
   make test || true
+
+  # PGO: generate profile data via synthetic workload (deep coverage of hot paths)
+  out/Release/node -e "
+    const crypto = require('crypto');
+    const zlib = require('zlib');
+    const { Readable, Writable } = require('stream');
+    const { URL } = require('url');
+
+    // Crypto - heavily used in TLS/HTTPS
+    for (let i = 0; i < 5000; i++) {
+      crypto.createHash('sha256').update('bench').digest('hex');
+      crypto.createHash('md5').update('bench').digest('hex');
+      crypto.randomBytes(64);
+    }
+
+    // JSON parse/stringify - extremely common in APIs
+    const obj = {users: Array.from({length: 100}, (_, i) => ({id: i, name: 'user' + i, active: true}))};
+    for (let i = 0; i < 5000; i++) {
+      JSON.parse(JSON.stringify(obj));
+    }
+
+    // Buffer operations
+    for (let i = 0; i < 5000; i++) {
+      const b = Buffer.alloc(4096);
+      b.fill('x');
+      b.toString('utf8');
+      b.toString('base64');
+      Buffer.concat([b, b]);
+    }
+
+    // URL parsing
+    for (let i = 0; i < 5000; i++) {
+      new URL('https://example.com/path/to/resource?key=value&foo=bar#section');
+    }
+
+    // Zlib compress/decompress
+    const data = Buffer.alloc(16384, 'abcdefgh');
+    for (let i = 0; i < 500; i++) {
+      const compressed = zlib.deflateSync(data);
+      zlib.inflateSync(compressed);
+    }
+
+    // Stream pipeline
+    for (let i = 0; i < 500; i++) {
+      const chunks = [];
+      const r = new Readable({read() { this.push(Buffer.alloc(1024, 'a')); this.push(null); }});
+      const w = new Writable({write(chunk, enc, cb) { chunks.push(chunk); cb(); }});
+      r.pipe(w);
+    }
+  "
 
   # PGO: optimized build using collected profile data
   ./configure "${_configure_args[@]}" --enable-pgo-use
