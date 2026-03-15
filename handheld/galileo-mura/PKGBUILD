@@ -3,7 +3,7 @@
 
 pkgname=galileo-mura
 pkgver=0.9
-pkgrel=3
+pkgrel=4
 pkgdesc="Utilities for setting and reading mura correction on Galileo"
 arch=(x86_64)
 url="https://github.com/evlaV/galileo-mura-extractor"
@@ -24,5 +24,8 @@ package() {
     cd "galileo-mura-extractor"
 
     DESTDIR="$pkgdir" meson install -C build --skip-subprojects
+
+    chmod u+s "$pkgdir/usr/bin/galileo-mura-extractor"
+
     install -Dm 644 LICENSE -t "${pkgdir}"/usr/share/licenses/galileo-mura/
 }
