@@ -1,0 +1,667 @@
+# Maintainer: Roberto Ramirez (jobeto86) <https://github.com/jobeto86>
+# Contributor: Caleb Maclennan <caleb@alerque.com>
+# Contributor: loqs <bugs-archlinux@entropy-collector.net>
+# Contributor: kxxt <rsworktech@outlook.com>
+
+# https://releases.electronjs.org/
+# https://gitlab.com/Matt.Jolly/chromium-patches/-/tags
+
+# Note: source array can be synced with an Electron release after updating $pkgver with:
+# bash -c 'source PKGBUILD; _update_sources'
+
+pkgver=39.5.2
+_gcc_patches=142
+pkgrel=1
+_major_ver=${pkgver%%.*}
+pkgname="electron${_major_ver}"
+pkgdesc='Build cross platform desktop apps with web technologies'
+arch=(x86_64)
+url='https://electronjs.org'
+license=(MIT BSD-3-Clause)
+depends=(c-ares
+         gcc-libs # libgcc_s.so
+         glibc # libc.so libm.so
+         gtk3 libgtk-3.so
+         libevent
+         libffi libffi.so
+         libpulse libpulse.so
+         nss # libnss3.so
+         zlib libz.so)
+makedepends=(clang
+             compiler-rt
+             git
+             gn
+             gperf
+             # harfbuzz-icu # disabled because ICU 76 not supported yet
+             java-runtime-headless
+             libnotify
+             libva
+             lld
+             llvm
+             ninja
+             # Electron ships a vendored nodejs. Meanwhile the npm dependency pulls in nodejs which is Arch's freshest version.
+             # Using system nodejs instead of nodejs-lts-iron to avoid conflict with existing installation.
+             nodejs
+             npm
+             patchutils
+             pciutils
+             pipewire
+             python
+             python-requests
+             qt5-base
+             rsync
+             rustup
+             rust-bindgen
+             wget
+             yarn)
+optdepends=('kde-cli-tools: file deletion support (kioclient5)'
+            'pipewire: WebRTC desktop sharing under Wayland'
+            'qt5-base: enable Qt5 with --enable-features=AllowQt'
+            'gtk4: for --gtk-version=4 (GTK4 IME might work better on Wayland)'
+            'trash-cli: file deletion support (trash-put)'
+            'xdg-utils: open URLs with desktop’s default (xdg-email, xdg-open)')
+options=('!lto') # Electron adds its own flags for ThinLTO
+source=("git+https://github.com/electron/electron.git?depth=1#tag=v$pkgver"
+        https://gitlab.com/Matt.Jolly/chromium-patches/-/archive/$_gcc_patches/chromium-patches-$_gcc_patches.tar.bz2
+        # Chromium
+        chromium-138-nodejs-version-check.patch
+        chromium-138-rust-1.86-mismatched_lifetime_syntaxes.patch
+        compiler-rt-adjust-paths.patch
+        increase-fortify-level.patch
+        chromium-141-cssstylesheet-iwyu.patch
+        # CachyOS - glibc 2.43 SYS_SECCOMP collision fix
+        fix-sys-seccomp-glibc243.patch
+        # Electron
+        electron-launcher.sh
+        jinja-python-3.10.patch
+        use-system-libraries-in-node.patch
+        makepkg-source-roller.py
+        # BEGIN managed sources
+        chromium-mirror::git+https://github.com/chromium/chromium.git?depth=1#tag=142.0.7444.265
+        chromium-mirror_third_party_nan::git+https://github.com/nodejs/nan.git#commit=e14bdcd1f72d62bca1d541b66da43130384ec213
+        chromium-mirror_third_party_electron_node::git+https://github.com/nodejs/node.git#tag=v22.22.0
+        chromium-mirror_third_party_engflow-reclient-configs::git+https://github.com/EngFlow/reclient-configs.git#commit=955335c30a752e9ef7bff375baab5e0819b6c00d
+        chromium-mirror_third_party_clang-format_script::git+https://chromium.googlesource.com/external/github.com/llvm/llvm-project/clang/tools/clang-format.git#commit=37f6e68a107df43b7d7e044fd36a13cbae3413f2
+        chromium-mirror_third_party_compiler-rt_src::git+https://chromium.googlesource.com/external/github.com/llvm/llvm-project/compiler-rt.git#commit=05f2a5dd0d1386777ae9d7fac9da776f82e7e0f2
+        chromium-mirror_third_party_libc++_src::git+https://chromium.googlesource.com/external/github.com/llvm/llvm-project/libcxx.git#commit=b77132b512d5411f8393fd3decb3abaeaf1d3ec8
+        chromium-mirror_third_party_libc++abi_src::git+https://chromium.googlesource.com/external/github.com/llvm/llvm-project/libcxxabi.git#commit=864f61dc9253d56586ada34c388278565ef513f6
+        chromium-mirror_third_party_libunwind_src::git+https://chromium.googlesource.com/external/github.com/llvm/llvm-project/libunwind.git#commit=322be580a5a193a921c349a15747eeeb9a716ad1
+        chromium-mirror_third_party_llvm-libc_src::git+https://chromium.googlesource.com/external/github.com/llvm/llvm-project/libc.git#commit=0c61a55402c6a0d9d6ca2aeb3c6a2613a8bc8c55
+        chromium-mirror_media_cdm_api::git+https://chromium.googlesource.com/chromium/cdm.git#commit=a4cbc4325e6de42ead733f2af43c08292d0e65a8
+        chromium-mirror_net_third_party_quiche_src::git+https://quiche.googlesource.com/quiche.git#commit=c0df0d316bd7e4ddf44e5ba094b5c5b061d94b0c
+        chromium-mirror_third_party_angle::git+https://chromium.googlesource.com/angle/angle.git#commit=7628a2726022fc768f2464ed5060bbc97e13f77a
+        chromium-mirror_third_party_anonymous_tokens_src::git+https://chromium.googlesource.com/external/github.com/google/anonymous-tokens.git#commit=50e04fb27eacd49a5e2bfde5977ac689e13ebeeb
+        chromium-mirror_third_party_readability_src::git+https://chromium.googlesource.com/external/github.com/mozilla/readability.git#commit=1f0ec42686c89a4a1c71789849f7ffde349ab197
+        chromium-mirror_third_party_content_analysis_sdk_src::git+https://chromium.googlesource.com/external/github.com/chromium/content_analysis_sdk.git#commit=9a408736204513e0e95dd2ab3c08de0d95963efc
+        chromium-mirror_third_party_dav1d_libdav1d::git+https://chromium.googlesource.com/external/github.com/videolan/dav1d.git#commit=af5cf2b1e7f03d6f6de84477e1ca8eed1f3eb03d
+        chromium-mirror_third_party_dawn::git+https://dawn.googlesource.com/dawn.git#commit=95f9c2b375395cc82941babdf1e9f0cf60a32831
+        chromium-mirror_third_party_highway_src::git+https://chromium.googlesource.com/external/github.com/google/highway.git#commit=84379d1c73de9681b54fbe1c035a23c7bd5d272d
+        chromium-mirror_third_party_libpfm4_src::git+https://chromium.googlesource.com/external/git.code.sf.net/p/perfmon2/libpfm4.git#commit=964baf9d35d5f88d8422f96d8a82c672042e7064
+        chromium-mirror_third_party_boringssl_src::git+https://boringssl.googlesource.com/boringssl.git#commit=91f3df0a20f6d3dd3e2f749b4a2730b68c3d585e
+        chromium-mirror_third_party_breakpad_breakpad::git+https://chromium.googlesource.com/breakpad/breakpad.git#commit=a1220f673dc44632e821bd1a217089e5a159a203
+        chromium-mirror_third_party_cast_core_public_src::git+https://chromium.googlesource.com/cast_core/public.git#commit=f5ee589bdaea60418f670fa176be15ccb9a34942
+        chromium-mirror_third_party_catapult::git+https://chromium.googlesource.com/catapult.git#commit=04c85a1d0e324464c6be4b3d193b47cb6177d03a
+        chromium-mirror_third_party_ced_src::git+https://chromium.googlesource.com/external/github.com/google/compact_enc_det.git#commit=ba412eaaacd3186085babcd901679a48863c7dd5
+        chromium-mirror_third_party_cld_3_src::git+https://chromium.googlesource.com/external/github.com/google/cld_3.git#commit=b48dc46512566f5a2d41118c8c1116c4f96dc661
+        chromium-mirror_third_party_colorama_src::git+https://chromium.googlesource.com/external/colorama.git#commit=3de9f013df4b470069d03d250224062e8cf15c49
+        chromium-mirror_third_party_cpu_features_src::git+https://chromium.googlesource.com/external/github.com/google/cpu_features.git#commit=936b9ab5515dead115606559502e3864958f7f6e
+        chromium-mirror_third_party_cpuinfo_src::git+https://chromium.googlesource.com/external/github.com/pytorch/cpuinfo.git#commit=877328f188a3c7d1fa855871a278eb48d530c4c0
+        chromium-mirror_third_party_crc32c_src::git+https://chromium.googlesource.com/external/github.com/google/crc32c.git#commit=d3d60ac6e0f16780bcfcc825385e1d338801a558
+        chromium-mirror_third_party_cros_system_api::git+https://chromium.googlesource.com/chromiumos/platform2/system_api.git#commit=c33ff08e2b27ddaed22c8799fefd3a4b7d3c49a9
+        chromium-mirror_third_party_depot_tools::git+https://chromium.googlesource.com/chromium/tools/depot_tools.git#commit=675a3a9ccd7cf9367bb4caa58c30f08b56d45ef5
+        chromium-mirror_third_party_devtools-frontend_src::git+https://chromium.googlesource.com/devtools/devtools-frontend.git#commit=747b0d1aebe33e5fc3d32677eb88315ab000eb5e
+        chromium-mirror_third_party_dom_distiller_js_dist::git+https://chromium.googlesource.com/chromium/dom-distiller/dist.git#commit=199de96b345ada7c6e7e6ba3d2fa7a6911b8767d
+        chromium-mirror_third_party_dragonbox_src::git+https://chromium.googlesource.com/external/github.com/jk-jeon/dragonbox.git#commit=6c7c925b571d54486b9ffae8d9d18a822801cbda
+        chromium-mirror_third_party_eigen3_src::git+https://chromium.googlesource.com/external/gitlab.com/libeigen/eigen.git#commit=430e35fbd15d3c946d2d2ba19ec41c16ba217cb3
+        chromium-mirror_third_party_farmhash_src::git+https://chromium.googlesource.com/external/github.com/google/farmhash.git#commit=816a4ae622e964763ca0862d9dbd19324a1eaf45
+        chromium-mirror_third_party_fast_float_src::git+https://chromium.googlesource.com/external/github.com/fastfloat/fast_float.git#commit=cb1d42aaa1e14b09e1452cfdef373d051b8c02a4
+        chromium-mirror_third_party_federated_compute_src::git+https://chromium.googlesource.com/external/github.com/google-parfait/federated-compute.git#commit=e51058dfe7888094ecc09cda38bfceffd4d4664b
+        chromium-mirror_third_party_ffmpeg::git+https://chromium.googlesource.com/chromium/third_party/ffmpeg.git#commit=9e751092c9498b84bbb77e2e0689ef9f50fe608f
+        chromium-mirror_third_party_flac::git+https://chromium.googlesource.com/chromium/deps/flac.git#commit=807e251d9f8c5dd6059e547931e9c6a4251967af
+        chromium-mirror_third_party_flatbuffers_src::git+https://chromium.googlesource.com/external/github.com/google/flatbuffers.git#commit=1c514626e83c20fffa8557e75641848e1e15cd5e
+        chromium-mirror_third_party_fontconfig_src::git+https://chromium.googlesource.com/external/fontconfig.git#commit=f0ed9c3f43161d3555f6f7a5234b22fe7ca60727
+        chromium-mirror_third_party_fp16_src::git+https://chromium.googlesource.com/external/github.com/Maratyszcza/FP16.git#commit=3d2de1816307bac63c16a297e8c4dc501b4076df
+        chromium-mirror_third_party_gemmlowp_src::git+https://chromium.googlesource.com/external/github.com/google/gemmlowp.git#commit=16e8662c34917be0065110bfcd9cc27d30f52fdf
+        chromium-mirror_third_party_freetype_src::git+https://chromium.googlesource.com/chromium/src/third_party/freetype2.git#commit=d3668e00da732654b50e4e81f982544ed6e26390
+        chromium-mirror_third_party_fxdiv_src::git+https://chromium.googlesource.com/external/github.com/Maratyszcza/FXdiv.git#commit=63058eff77e11aa15bf531df5dd34395ec3017c8
+        chromium-mirror_third_party_harfbuzz-ng_src::git+https://chromium.googlesource.com/external/github.com/harfbuzz/harfbuzz.git#commit=7d936359a27abb2d7cb14ecc102463bb15c11843
+        chromium-mirror_third_party_ink_src::git+https://chromium.googlesource.com/external/github.com/google/ink.git#commit=4e6081ad7052f97df7d77e1d87cea2d70c18a47b
+        chromium-mirror_third_party_ink_stroke_modeler_src::git+https://chromium.googlesource.com/external/github.com/google/ink-stroke-modeler.git#commit=fe79520c9ad7d2d445d26d3c59fda6fc54eb4d5c
+        chromium-mirror_third_party_instrumented_libs::git+https://chromium.googlesource.com/chromium/third_party/instrumented_libraries.git#commit=69015643b3f68dbd438c010439c59adc52cac808
+        chromium-mirror_third_party_emoji-segmenter_src::git+https://chromium.googlesource.com/external/github.com/google/emoji-segmenter.git#commit=955936be8b391e00835257059607d7c5b72ce744
+        chromium-mirror_third_party_oak_src::git+https://chromium.googlesource.com/external/github.com/project-oak/oak.git#commit=96c00a6c99ac382f3f3a8f376bc7a70890d1adaa
+        chromium-mirror_third_party_ots_src::git+https://chromium.googlesource.com/external/github.com/khaledhosny/ots.git#commit=46bea9879127d0ff1c6601b078e2ce98e83fcd33
+        chromium-mirror_third_party_libgav1_src::git+https://chromium.googlesource.com/codecs/libgav1.git#commit=c05bf9be660cf170d7c26bd06bb42b3322180e58
+        chromium-mirror_third_party_googletest_src::git+https://chromium.googlesource.com/external/github.com/google/googletest.git#commit=244cec869d12e53378fa0efb610cd4c32a454ec8
+        chromium-mirror_third_party_hunspell_dictionaries::git+https://chromium.googlesource.com/chromium/deps/hunspell_dictionaries.git#commit=41cdffd71c9948f63c7ad36e1fb0ff519aa7a37e
+        chromium-mirror_third_party_icu::git+https://chromium.googlesource.com/chromium/deps/icu.git#commit=1b2e3e8a421efae36141a7b932b41e315b089af8
+        chromium-mirror_third_party_jsoncpp_source::git+https://chromium.googlesource.com/external/github.com/open-source-parsers/jsoncpp.git#commit=42e892d96e47b1f6e29844cc705e148ec4856448
+        chromium-mirror_third_party_leveldatabase_src::git+https://chromium.googlesource.com/external/leveldb.git#commit=4ee78d7ea98330f7d7599c42576ca99e3c6ff9c5
+        chromium-mirror_third_party_domato_src::git+https://chromium.googlesource.com/external/github.com/googleprojectzero/domato.git#commit=053714bccbda79cf76dac3fee48ab2b27f21925e
+        chromium-mirror_third_party_libaddressinput_src::git+https://chromium.googlesource.com/external/libaddressinput.git#commit=2610f7b1043d6784ada41392fc9392d1ea09ea07
+        chromium-mirror_third_party_libaom_source_libaom::git+https://aomedia.googlesource.com/aom.git#commit=2a70ad7bee390757eaa83aff12f310ba53915e9f
+        chromium-mirror_third_party_crabbyavif_src::git+https://chromium.googlesource.com/external/github.com/webmproject/CrabbyAvif.git#commit=3ba05863e84fd3acb4f4af2b4545221b317a2e55
+        chromium-mirror_third_party_nearby_src::git+https://chromium.googlesource.com/external/github.com/google/nearby-connections.git#commit=0bad8b0c9877f92eeeb550654f1ea51a71a085e4
+        chromium-mirror_third_party_securemessage_src::git+https://chromium.googlesource.com/external/github.com/google/securemessage.git#commit=fa07beb12babc3b25e0c5b1f38c16aa8cb6b8f84
+        chromium-mirror_third_party_jetstream_main::git+https://chromium.googlesource.com/external/github.com/WebKit/JetStream.git#commit=b400dd340af3457890ec7b4a903fefb02fcf2dc6
+        chromium-mirror_third_party_ukey2_src::git+https://chromium.googlesource.com/external/github.com/google/ukey2.git#commit=0275885d8e6038c39b8a8ca55e75d1d4d1727f47
+        chromium-mirror_third_party_cros-components_src::git+https://chromium.googlesource.com/external/google3/cros_components.git#commit=7ccdbf60606671c2c057628125908fbfef9bd0c8
+        chromium-mirror_third_party_libdrm_src::git+https://chromium.googlesource.com/chromiumos/third_party/libdrm.git#commit=ad78bb591d02162d3b90890aa4d0a238b2a37cde
+        chromium-mirror_third_party_expat_src::git+https://chromium.googlesource.com/external/github.com/libexpat/libexpat.git#commit=69d6c054c1bd5258c2a13405a7f5628c72c177c2
+        chromium-mirror_third_party_libipp_libipp::git+https://chromium.googlesource.com/chromiumos/platform2/libipp.git#commit=2209bb84a8e122dab7c02fe66cc61a7b42873d7f
+        chromium-mirror_third_party_libjpeg_turbo::git+https://chromium.googlesource.com/chromium/deps/libjpeg_turbo.git#commit=e14cbfaa85529d47f9f55b0f104a579c1061f9ad
+        chromium-mirror_third_party_liblouis_src::git+https://chromium.googlesource.com/external/liblouis-github.git#commit=9700847afb92cb35969bdfcbbfbbb74b9c7b3376
+        chromium-mirror_third_party_libphonenumber_dist::git+https://chromium.googlesource.com/external/libphonenumber.git#commit=9d46308f313f2bf8dbce1dfd4f364633ca869ca7
+        chromium-mirror_third_party_libprotobuf-mutator_src::git+https://chromium.googlesource.com/external/github.com/google/libprotobuf-mutator.git#commit=7bf98f78a30b067e22420ff699348f084f802e12
+        chromium-mirror_third_party_libsrtp::git+https://chromium.googlesource.com/chromium/deps/libsrtp.git#commit=a52756acb1c5e133089c798736dd171567df11f5
+        chromium-mirror_third_party_libsync_src::git+https://chromium.googlesource.com/aosp/platform/system/core/libsync.git#commit=f4f4387b6bf2387efbcfd1453af4892e8982faf6
+        chromium-mirror_third_party_libva-fake-driver_src::git+https://chromium.googlesource.com/chromiumos/platform/libva-fake-driver.git#commit=a9bcab9cd6b15d4e3634ca44d5e5f7652c612194
+        chromium-mirror_third_party_libvpx_source_libvpx::git+https://chromium.googlesource.com/webm/libvpx.git#commit=8d00aca60b951444582b1373e4e47f0ca6e0871c
+        chromium-mirror_third_party_libwebm_source::git+https://chromium.googlesource.com/webm/libwebm.git#commit=f2a982d748b80586ae53b89a2e6ebbc305848b8c
+        chromium-mirror_third_party_libwebp_src::git+https://chromium.googlesource.com/webm/libwebp.git#commit=b0e8039062eedbcb20ebb1bad62bfeaee2b94ec6
+        chromium-mirror_third_party_libyuv::git+https://chromium.googlesource.com/libyuv/libyuv.git#commit=94417b9d213364905ce849c25719b819b8dbbaaa
+        chromium-mirror_third_party_lss::git+https://chromium.googlesource.com/linux-syscall-support.git#commit=ed31caa60f20a4f6569883b2d752ef7522de51e0
+        chromium-mirror_third_party_material_color_utilities_src::git+https://chromium.googlesource.com/external/github.com/material-foundation/material-color-utilities.git#commit=13434b50dcb64a482cc91191f8cf6151d90f5465
+        chromium-mirror_third_party_minigbm_src::git+https://chromium.googlesource.com/chromiumos/platform/minigbm.git#commit=3018207f4d89395cc271278fb9a6558b660885f5
+        chromium-mirror_third_party_nasm::git+https://chromium.googlesource.com/chromium/deps/nasm.git#commit=e2c93c34982b286b27ce8b56dd7159e0b90869a2
+        chromium-mirror_third_party_neon_2_sse_src::git+https://chromium.googlesource.com/external/github.com/intel/ARM_NEON_2_x86_SSE.git#commit=eb8b80b28f956275e291ea04a7beb5ed8289e872
+        chromium-mirror_third_party_openh264_src::git+https://chromium.googlesource.com/external/github.com/cisco/openh264.git#commit=652bdb7719f30b52b08e506645a7322ff1b2cc6f
+        chromium-mirror_third_party_openscreen_src::git+https://chromium.googlesource.com/openscreen.git#commit=4654d7968ac1a1e825a84bd4d85acadd7993c49a
+        chromium-mirror_third_party_openxr_src::git+https://chromium.googlesource.com/external/github.com/KhronosGroup/OpenXR-SDK.git#commit=57572a0e91890fe7183de25a62153aec955d64ba
+        chromium-mirror_third_party_pdfium::git+https://pdfium.googlesource.com/pdfium.git#commit=e95c6ead2f97716c98526ec42d5fd9ebb50e6e23
+        chromium-mirror_third_party_perfetto_3b5d0997::git+https://chromium.googlesource.com/external/github.com/google/perfetto.git#commit=d5bbee7afdf259af4212929ccbff467dd5349953
+        chromium-mirror_third_party_protobuf-javascript_src::git+https://chromium.googlesource.com/external/github.com/protocolbuffers/protobuf-javascript.git#commit=e6d763860001ba1a76a63adcff5efb12b1c96024
+        chromium-mirror_third_party_pthreadpool_src_934f177b::git+https://chromium.googlesource.com/external/github.com/google/pthreadpool.git#commit=f5a07eddbf4be8f23e29e60a2ccf66b78b71f119
+        chromium-mirror_third_party_pyelftools::git+https://chromium.googlesource.com/chromiumos/third_party/pyelftools.git#commit=19b3e610c86fcadb837d252c794cb5e8008826ae
+        chromium-mirror_third_party_quic_trace_src::git+https://chromium.googlesource.com/external/github.com/google/quic-trace.git#commit=ed3deb8a056b260c59f2fd42af6dfa3db48a8cad
+        chromium-mirror_third_party_pywebsocket3_src::git+https://chromium.googlesource.com/external/github.com/GoogleChromeLabs/pywebsocket3.git#commit=50602a14f1b6da17e0b619833a13addc6ea78bc2
+        chromium-mirror_third_party_re2_src::git+https://chromium.googlesource.com/external/github.com/google/re2.git#commit=cd7b2823a8375371f7efe6dae17837c9ab407693
+        chromium-mirror_third_party_ruy_src::git+https://chromium.googlesource.com/external/github.com/google/ruy.git#commit=9940fbf1e0c0863907e77e0600b99bb3e2bc2b9f
+        chromium-mirror_third_party_search_engines_data_resources::git+https://chromium.googlesource.com/external/search_engines_data.git#commit=94eb2a9a225078cb5f40e82fd890bce387c8121a
+        chromium-mirror_third_party_skia::git+https://skia.googlesource.com/skia.git#commit=f4ed99d2443962782cf5f8b4dd27179f131e7cbe
+        chromium-mirror_third_party_smhasher_src::git+https://chromium.googlesource.com/external/smhasher.git#commit=0ff96f7835817a27d0487325b6c16033e2992eb5
+        chromium-mirror_third_party_snappy_src::git+https://chromium.googlesource.com/external/github.com/google/snappy.git#commit=32ded457c0b1fe78ceb8397632c416568d6714a0
+        chromium-mirror_third_party_sqlite_src::git+https://chromium.googlesource.com/chromium/deps/sqlite.git#commit=7d348fc79216a09b864ff881d8561a6222301666
+        chromium-mirror_third_party_swiftshader::git+https://swiftshader.googlesource.com/SwiftShader.git#commit=5f1c459a11bb4899301e89609cbf7547f9f31e20
+        chromium-mirror_third_party_text-fragments-polyfill_src::git+https://chromium.googlesource.com/external/github.com/GoogleChromeLabs/text-fragments-polyfill.git#commit=c036420683f672d685e27415de0a5f5e85bdc23f
+        chromium-mirror_third_party_tflite_src::git+https://chromium.googlesource.com/external/github.com/tensorflow/tensorflow.git#commit=313f58ae85278ced9ccc7f90ee630bdf8735c52f
+        chromium-mirror_third_party_vulkan-deps::git+https://chromium.googlesource.com/vulkan-deps.git#commit=02470a3c2773a9fa236c7e8dacd72deb4b5131e3
+        chromium-mirror_third_party_glslang_src::git+https://chromium.googlesource.com/external/github.com/KhronosGroup/glslang.git#commit=a57276bf558f5cf94d3a9854ebdf5a2236849a5a
+        chromium-mirror_third_party_spirv-cross_src::git+https://chromium.googlesource.com/external/github.com/KhronosGroup/SPIRV-Cross.git#commit=b8fcf307f1f347089e3c46eb4451d27f32ebc8d3
+        chromium-mirror_third_party_spirv-headers_src::git+https://chromium.googlesource.com/external/github.com/KhronosGroup/SPIRV-Headers.git#commit=01e0577914a75a2569c846778c2f93aa8e6feddd
+        chromium-mirror_third_party_spirv-tools_src::git+https://chromium.googlesource.com/external/github.com/KhronosGroup/SPIRV-Tools.git#commit=d5d5b61e2d5ae9b98ef403b3f3f922711812888a
+        chromium-mirror_third_party_vulkan-headers_src::git+https://chromium.googlesource.com/external/github.com/KhronosGroup/Vulkan-Headers.git#commit=a4f8ada9f4f97c45b8c89c57997be9cebaae65d2
+        chromium-mirror_third_party_vulkan-loader_src::git+https://chromium.googlesource.com/external/github.com/KhronosGroup/Vulkan-Loader.git#commit=f703f919c30c5b67958d35d40a4297cb3823ed78
+        chromium-mirror_third_party_vulkan-tools_src::git+https://chromium.googlesource.com/external/github.com/KhronosGroup/Vulkan-Tools.git#commit=d643b80d6ba8c191bc289fdda52867c3bb3c190b
+        chromium-mirror_third_party_vulkan-utility-libraries_src::git+https://chromium.googlesource.com/external/github.com/KhronosGroup/Vulkan-Utility-Libraries.git#commit=4322db5906e67b57ec9c327e6afe3d98ed893df7
+        chromium-mirror_third_party_vulkan-validation-layers_src::git+https://chromium.googlesource.com/external/github.com/KhronosGroup/Vulkan-ValidationLayers.git#commit=83d96b88de7b85c3f29545170857e54e348421b2
+        chromium-mirror_third_party_vulkan_memory_allocator::git+https://chromium.googlesource.com/external/github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator.git#commit=cb0597213b0fcb999caa9ed08c2f88dc45eb7d50
+        chromium-mirror_third_party_wayland_src::git+https://chromium.googlesource.com/external/anongit.freedesktop.org/git/wayland/wayland.git#commit=a156431ea66fe67d69c9fbba8a8ad34dabbab81c
+        chromium-mirror_third_party_wayland-protocols_src::git+https://chromium.googlesource.com/external/anongit.freedesktop.org/git/wayland/wayland-protocols.git#commit=efbc060534be948b63e1f395d69b583eebba3235
+        chromium-mirror_third_party_wayland-protocols_kde::git+https://chromium.googlesource.com/external/github.com/KDE/plasma-wayland-protocols.git#commit=0b07950714b3a36c9b9f71fc025fc7783e82926e
+        chromium-mirror_third_party_wayland-protocols_gtk::git+https://chromium.googlesource.com/external/github.com/GNOME/gtk.git#commit=40ebed3a03aef096addc0af09fec4ec529d882a0
+        chromium-mirror_third_party_webdriver_pylib::git+https://chromium.googlesource.com/external/github.com/SeleniumHQ/selenium/py.git#commit=1e954903022e9386b9acf452c24f4458dd4c4fc1
+        chromium-mirror_third_party_webgl_src::git+https://chromium.googlesource.com/external/khronosgroup/webgl.git#commit=c01b768bce4a143e152c1870b6ba99ea6267d2b0
+        chromium-mirror_third_party_webpagereplay::git+https://chromium.googlesource.com/webpagereplay.git#commit=9057e5d942f2bfcee71cc20415a7f86c966241f8
+        chromium-mirror_third_party_webrtc::git+https://webrtc.googlesource.com/src.git#commit=29d6eabaf0b5c1a62af6e7fd03adebf5e1a446e8
+        chromium-mirror_third_party_wuffs_src::git+https://skia.googlesource.com/external/github.com/google/wuffs-mirror-release-c.git#commit=e3f919ccfe3ef542cfc983a82146070258fb57f8
+        chromium-mirror_third_party_weston_src::git+https://chromium.googlesource.com/external/anongit.freedesktop.org/git/wayland/weston.git#commit=bdba2f9adaca673fd58339d8140bc04727ee279d
+        chromium-mirror_third_party_xdg-utils::git+https://chromium.googlesource.com/chromium/deps/xdg-utils.git#commit=cb54d9db2e535ee4ef13cc91b65a1e2741a94a44
+        chromium-mirror_third_party_xnnpack_src::git+https://chromium.googlesource.com/external/github.com/google/XNNPACK.git#commit=4d098efeac50c44a7c03e6feb1794908db4c3158
+        chromium-mirror_third_party_zstd_src::git+https://chromium.googlesource.com/external/github.com/facebook/zstd.git#commit=89d685e42dbcf815a16ed0fcd7d050ef74ccad96
+        chromium-mirror_v8::git+https://chromium.googlesource.com/v8/v8.git#commit=8fa4e7c7469cd4d321e2241b86f684d52197a615
+        chromium-mirror_third_party_angle_third_party_glmark2_src::git+https://chromium.googlesource.com/external/github.com/glmark2/glmark2.git#commit=6edcf02205fd1e8979dc3f3964257a81959b80c8
+        chromium-mirror_third_party_angle_third_party_rapidjson_src::git+https://chromium.googlesource.com/external/github.com/Tencent/rapidjson.git#commit=781a4e667d84aeedbeb8184b7b62425ea66ec59f
+        chromium-mirror_third_party_angle_third_party_VK-GL-CTS_src::git+https://chromium.googlesource.com/external/github.com/KhronosGroup/VK-GL-CTS.git#commit=c67cffddd65aba724950e062343fa1cc89560b33
+        chromium-mirror_third_party_dawn_buildtools::git+https://chromium.googlesource.com/chromium/src/buildtools.git#commit=958004daacdd90070d44b236a1581c81d71740ca
+        chromium-mirror_third_party_dawn_build::git+https://chromium.googlesource.com/chromium/src/build.git#commit=0c8d2cd8fbe6a0755441ba3f6402bb241a3f6f1e
+        chromium-mirror_third_party_dawn_tools_clang::git+https://chromium.googlesource.com/chromium/src/tools/clang.git#commit=8e6c4696e2aee88cf2c60c1e6a527069fb735c14
+        chromium-mirror_third_party_dawn_tools_memory::git+https://chromium.googlesource.com/chromium/src/tools/memory.git#commit=3c7b1f4daab1520239cb172059e2e16684fd3128
+        chromium-mirror_third_party_dawn_tools_valgrind::git+https://chromium.googlesource.com/chromium/src/tools/valgrind.git#commit=da34b95fdbf2032df6cda5f3828c2ba421592644
+        chromium-mirror_third_party_dawn_tools_mb::git+https://chromium.googlesource.com/chromium/src/tools/mb.git#commit=6c50647ee969539f9371fafdeeb38d6b2c13dc34
+        chromium-mirror_third_party_dawn_third_party_jinja2::git+https://chromium.googlesource.com/chromium/src/third_party/jinja2.git#commit=e2d024354e11cc6b041b0cff032d73f0c7e43a07
+        chromium-mirror_third_party_dawn_third_party_markupsafe::git+https://chromium.googlesource.com/chromium/src/third_party/markupsafe.git#commit=0bad08bb207bbfc1d6f3bbc82b9242b0c50e5794
+        chromium-mirror_third_party_dawn_third_party_glfw::git+https://chromium.googlesource.com/external/github.com/glfw/glfw.git#commit=b35641f4a3c62aa86a0b3c983d163bc0fe36026d
+        chromium-mirror_third_party_dawn_third_party_zlib::git+https://chromium.googlesource.com/chromium/src/third_party/zlib.git#commit=caf4afa1afc92e16fef429f182444bed98a46a6c
+        chromium-mirror_third_party_dawn_third_party_abseil-cpp::git+https://chromium.googlesource.com/chromium/src/third_party/abseil-cpp.git#commit=9d692d669253232c024b20ae19d2ff0b581ee1cd
+        chromium-mirror_third_party_dawn_third_party_dxc::git+https://chromium.googlesource.com/external/github.com/microsoft/DirectXShaderCompiler.git#commit=2b58d6d865832f7146d6e22e2106e562458bbd0a
+        chromium-mirror_third_party_dawn_third_party_dxheaders::git+https://chromium.googlesource.com/external/github.com/microsoft/DirectX-Headers.git#commit=980971e835876dc0cde415e8f9bc646e64667bf7
+        chromium-mirror_third_party_dawn_third_party_khronos_OpenGL-Registry::git+https://chromium.googlesource.com/external/github.com/KhronosGroup/OpenGL-Registry.git#commit=5bae8738b23d06968e7c3a41308568120943ae77
+        chromium-mirror_third_party_dawn_third_party_khronos_EGL-Registry::git+https://chromium.googlesource.com/external/github.com/KhronosGroup/EGL-Registry.git#commit=7dea2ed79187cd13f76183c4b9100159b9e3e071
+        chromium-mirror_third_party_dawn_third_party_webgpu-headers_src::git+https://chromium.googlesource.com/external/github.com/webgpu-native/webgpu-headers.git#commit=53a87a3d8cb4c32ec026978ce003020741df6f53
+        chromium-mirror_third_party_dawn_third_party_protobuf::git+https://chromium.googlesource.com/chromium/src/third_party/protobuf.git#commit=fef7a765bb0d1122d32b99f588537b83e2dffe7b
+        chromium-mirror_third_party_dawn_tools_protoc_wrapper::git+https://chromium.googlesource.com/chromium/src/tools/protoc_wrapper.git#commit=8ad6d21544b14c7f753852328d71861b363cc512
+        chromium-mirror_third_party_dawn_third_party_partition_alloc::git+https://chromium.googlesource.com/chromium/src/base/allocator/partition_allocator.git#commit=fae4df38cef9720a13dd55a6b1d20600919e671b
+        chromium-mirror_third_party_openscreen_src_third_party_tinycbor_src::git+https://chromium.googlesource.com/external/github.com/intel/tinycbor.git#commit=d393c16f3eb30d0c47e6f9d92db62272f0ec4dc7
+        # END managed sources
+        )
+sha256sums=('cef6deaf139745f46bbcee57f842bbcc2a44f46c3d737107e46533bbd4528545'
+            '27c2669be463ab462636c7367efddea29e810c58a185281084132ee4a98a17c5'
+            '11a96ffa21448ec4c63dd5c8d6795a1998d8e5cd5a689d91aea4d2bdd13fb06e'
+            '5abc8611463b3097fc5ce58017ef918af8b70d616ad093b8b486d017d021bbdf'
+            'ec8e49b7114e2fa2d359155c9ef722ff1ba5fe2c518fa48e30863d71d3b82863'
+            'd634d2ce1fc63da7ac41f432b1e84c59b7cceabf19d510848a7cff40c8025342'
+            'de5c873564b09713b65dd9e6a0b9049d7b3cf8f881436f36e1c091824b63e876'
+            '30f358579897a2059eda9f77934d98ead8bb4acaaf566b307fda3d2945fb17b0'
+            '13fcf26193f4417fd5dfbc82a3f24e5c7a1cce82f729f6a73f1b1d3a7b580b34'
+            '55dbe71dbc1f3ab60bf1fa79f7aea7ef1fe76436b1d7df48728a1f8227d2134e'
+            '2eacf9210185e497fec084d9ba87fd5796f867d871f7f0c5418d2833f3fd4226'
+            'da228d1bbe2e078acf33f0f1123f5eaf82fbd3af6f93e67315390a6cd685c1df'
+            '2998e33d9d607bd07aff299acebce7ba9edde87c32fd9dfef64b8d44a958013e'
+            '0b7a546ee6913c49519c10c293ac530ff381641a8a465fa2e184d6dbe0fb784d'
+            '15355f12077d5751500bfb1a427ed37df12a7abdddc9f979ccd44751ff7a2c01'
+            '3522166c3ca75316a172b7cc4fe12bba9367e30fed16df8193ede2e236dca8c5'
+            '60935b226794933e881973746d892eb6fb7b7d596bf6cf9ff3c4f2da56240a9b'
+            '28ffaac5ade55e51505c9e00d6e9bcc4eb13ce4b1ba1f1b4ebce1abfb0db377e'
+            'f76812c910bb67635774a3058375a6c17b7766bda09d843adbed455476ea1dd0'
+            'f8b66cbdca9280a5d0bf6c6446e63ccf0931e314d8c6f7baf1fd14abbd0d03dd'
+            'eb1c677e21f761b23f39f288c32c5750316056c963521108322b7d8c8fe82a7b'
+            'fdc6ac49290a934aeac3b1f08e33de4b28145f525a8486f9201b67b555ad8761'
+            '9ad7f930cde7fd9827eec7f08feb4304e85cf41f53155d4072f120cece6c2ea4'
+            'f833be41fb49a1d2bb58df58cf4de2d01297b4ab0635954c00f30904b1190e15'
+            '0052fc872f7e65448ac7c7d7319d344f9840d0683aee9eed6c435f6531174a38'
+            'a9ad46498db12ae69b6202da8e721b32bf57b4f70fedfb56160cc30351fc9a9a'
+            'ac6eb9ac9b5b25887d8562fdbf16a6478b521fe8f3547f9be347dddf1c13b106'
+            '89a368f0652d857d38402d6f3c5cded3c1757230ab7abe01df850a7bf8359119'
+            '1a1594b4ef2cab3ddd2d3aa655d4c11953be550f4997ab73fd8545f416ad2efa'
+            'f05046409a0d715f90fd312db20bc8ef26608afcca91d1e58e8e6c364e5033f9'
+            '61585b43a12a7d10b3198a5c0d51f1ab67e11a3a64dcf58393e24c1b9924c3ea'
+            '152fef66b09a7c6ca47e6c0a65591fcd426f0d551c275a9589a57f2978bb817a'
+            '90e5693a68854151d394e8aa87b8746dff4cf150c795ec0706cf5e62c560a82d'
+            '9173606cd750c821eeb3ba48131cdaf65e37c9447d6cf99b26e2ef5c90fe855c'
+            'da13009001bb6b7a47ac1351b017c2c37320b9a3290f222d3d82b583b630d49a'
+            'eeb5c7309a9834cba8e874f30a887110719041182a5abbe8c90d6b468879e93f'
+            '8b97c25874c17644300d1cbe6ac1fceb705bf18297e27699ba20497fc47ae239'
+            'e6a28c25e3d93c9c37414149ff44ac7a1bbb4d8a167061f8ee9679dc065af1bb'
+            '9e950d9f0bf7f0b52de6744de0922583b4b32281e87f0488c2d1cfc533665aa5'
+            '6125206b56f365874ba812038dbcd4271f8a73235ab4d211c42b7fd2d636bbc8'
+            '351b3b74d74314e1d69c017b6aef680b562a3fd33a07f9457f069bda36d591d5'
+            '6ae7ae01b3c23f8bf7657a59427aac6f3216e041ebdb983b82c002a949bdb071'
+            '6b02aed0ea7993dc987489fa1d118e4288be866f5fb0836eb69279e92477088b'
+            'a845035b8bcfb4be06119aeebf1ccab27d2368893e56224999873d8df4e13968'
+            'c3451a7bcba72f8112167668a6e64d4230eeff7e48d3d2ba7be6688907accd9d'
+            '47f3f3d044cc0658274833022db1e7695964b1da8f37cb905882d15457212fba'
+            '7a6c373f8694e540f5a767b315670ccef5526baa41f5427f02db2e4bf261765c'
+            '8f44d9f9934aa36f7b21e0b55c1ac88e2704888e0b82cbcabec399db8d0511a9'
+            '6258126c4c354ccacd0ec5f9f82c6970d576359c7aba86e44277b459d1645325'
+            'be05ebb53b7468e246aac2a22d1ce748c25e2e0cc5d0227e16272a00827092ff'
+            '23fcbc1dcc14138db1b6eb9f7bfa109855fcbbee9b2a10dcfcbc793d5d1aca57'
+            '65b6ad7914f34b80f7a4b217cffbffdf038c83207d5cb7af1d24525b6dad0d9b'
+            '87b0f1444f8d070caf7eb2480ff485eee0002ddaf53642d418d48b6f947c0872'
+            '0072d95f6e91895f6e1f5b3156233c1ac55fda16d9ee1c5aabef7ce417d7f8b7'
+            'fccdf041edb00a6ce339adfd09679ccca30ee8ee0bc17be9d672e63d8ebfc79c'
+            '45e09eeb588025344900bac71968671c87351ff747edc40779c6014b189dd0fa'
+            '44bfb17a0c2daef161be40aa1f9f0e541427c0d5cd8f4b7ea19a6c7c62c61931'
+            'c7b43c28d031a84064112bb358eaba61e928544e04ce81e9f30e10a8fc39b5d0'
+            '0f27ab5434870f31886d7c958ced4ff335a09a1080637fb50afdf95db19e3442'
+            '75869238dacc9bb792d3bd7ad8803f5d0b98aff989b2d8e880377d00ef9f9bca'
+            'f2ad931b56c8ac5e9b69a149aa0383ee738de0936b072b77b67fe57a88834b62'
+            '4b60993f806163589f46dde162fe6750fcaafcdc72dde611002a05d50aaa63b4'
+            'c3db1069a0f69cb2b6cacaaa5a43333799e69a07282b53c5f45383e086833258'
+            '66004b44318ad7e4329d65b08320136ee8a9f074b7b001107c52377493d28cc0'
+            'bca96806c6ab1057c3ba5dfa54720739a189947f3449e67af5bca45e7607041e'
+            'af81f653b73270d4b8f9d1e92ecf39821498c08f4ca5c69872e39bac90b40083'
+            '488513b955f90b0f965be248631fedab0f27714c49632eb58389c2ff18815199'
+            '8017a45e2e0ca82c3f0a2fa60bb1be53a5b0adbdc413ba2868d5d29dae2d4ba6'
+            '92fe0e99dea519a56b80321646b7b2b674564f4e8d036cbbf4d98e8588531720'
+            '00d5076c4d326efc38df2c34e0748ef8941420b32de498d668ddf4b7392b9f8b'
+            '9f58ce3d45baf6796965aa79109af62c330f82b97d320bb5d7bbbdea0e579a92'
+            '2c21c74e00540f211bb57b33e8644f8ab2ec511b7b905b432acc163d898cca34'
+            'c2eb3aee5d91aa9d80d651d5bc26ae729e9a5bdd2f62985ca394cebac5b8174f'
+            'bb19e0319273e64c3eda91786d1bb1c6038cc90e1380c56abcb96a62e29d46ee'
+            'e1251967e2f6adb56a8cef096319b4c7261143e43bd371fe4043cb97ade734d3'
+            '7b3ea438187804835305ddaf2f2e3ed9578fc9b9ffb7fb06c10565c0aafa905b'
+            'b453b8207a2bd857cd65ccf56b8846a5cad3c0de359fbc258164273159dda781'
+            '66b8f66432b1325861b5f411c71ec49fa171d9a0063bf958242ddde6ce09c12f'
+            '95e090bfc552b0ec239ccf1442103a589e29ccf1a25c91fac0c365834f59892a'
+            '9c888babaaf59afc855d944e8b26ab573d5e80026dc3bc8dc64720b8f5bb27a2'
+            '373fa9a68a59fa75922b7c7b14fad0a35703d638e2877d9be31f2d2bc908fb01'
+            'ae2c189d21dcd056116ee1c3d54b5ae3874e5ac0cc2086c137625b618334cbb1'
+            '7101212454ccddf53d69525cf105f0fd6795fd9b1fd948f8c96ac73ce512c41d'
+            'fe2f23319ca61ecb2fac8e586ad71fe36ba340fd4f5c4d0372d0e119d5c264e0'
+            '080009891e90088f91c9a4fae711fa2bf56599719480e17b108047089798e16e'
+            '4070e77bf7afd9fb949067f63c3580d1f5badacfe4c2ab187129ba20446efd04'
+            'cf14b8dbbde77c5a844eb06b1869c40342ea41bf1bff8b112ab388729a92f3e0'
+            'cb8390c0d03bea1724a2f0c822b46331ff2fd5eac5bbe216f5d229c2c859ee75'
+            '867f9d88a2146f54979508a670f28f681c729dd144956941066a422714fbd8c7'
+            '9341676174943fbc5268e023c3e572171289fc4748401723a6dcaef50f793dcd'
+            '7b81837265657fa3404c93b2de8d5735265dfecc52ec9e5a3157ef4a14cfdba1'
+            '5c5a9f0f7f1f809ec60d3a7da464a013fcda143ffd5535735bb245c364b5f701'
+            '9f978082cb3c37055d199dd8937a56c5114fa26807c1cbdd8b80d62f4ce0388c'
+            'dc41f49ceeb5058dda6a7fe5718c7487673d8772889aa295af2cf12e0876e6cb'
+            'dfc83e0c7be1fa4c55808b7cd3d425cb95b648a2ff8a7255b278a4a1110dcb22'
+            '25bc4bf11c958537b4e725542fae58fc1ec00800306cdd70f3c5f94e1a5180df'
+            'f2aba031573fc4929d2bd9d03e4b18c4385f399fa0b605eca35898567ebdf7b4'
+            '9010695b87eef676b62ec429879972c135987dab6eb53b0a4edf1b5a7cb0bb8b'
+            '7a213d279ebb40cb7d53f637f9c5f86bed396788c1d7db736846cb7275eb5477'
+            '34f643fd7cf56634ef1fe040568ebc42329cb8645c98933087a98136468ab671'
+            'af96173677a5d2e66a60c0aca3d53e108ead7d4d2007b4ef38b7173131d91447'
+            '56768285ca94c9b3d1d07431ac50384ba6153eefae132fd2437221f2ce8db29b'
+            '632d427e50354b5208a34f14e5751d504656159bdcfb831f86e4b751b8eadc1d'
+            '0cd5dbbeb263187e50d36c6c8be40b443a63c85bc9a445a630f3901ebca4a768'
+            'bb25474cf5aea05ebb7232686f87d11204e6f6e509ba8c5f9ed0a398aec7f027'
+            'd66708c841911b03dbed15cb1104b5785db20d14339336a85be827c03d5d0e3b'
+            '810fde6ebf6ab64b917909edfc7a17a5552d55cb20ebd0e44cc1206224be47ae'
+            '99995f0ca85ab0e85bd291e5336657df41409a48ca5439dcaf162d8b11ac0ec6'
+            'b641f9f95d9c7b231fc291ee5c1ef5e1badc727200f6dece4a32b92ca730b3df'
+            '599bbbabf9e2dc2006dd9e3e9636c4f648360726173793bf6a5a5414698762c5'
+            '16ab27acc9ec315fdbdf27708a4a96eda1c14ed5e1f7c8a142bd19d7974bb0f5'
+            'c3419592b3b900c98f91fc99bed715c8b24b1f5f885a3eeb593e88389868a825'
+            'a7bb363d495a71d74392c3b956afad5870cd23ab12d31f5d19a1ef78f4b7b1d0'
+            '59258678a57317b5695183f0f734b28afe21a48466114c8b90f1aa4d21320d54'
+            '4ebe3ffd4fcd7b1057ce72b0439638c43aa8825040be30b11b8b5a5101a06bb0'
+            'b07116bf69c635b29f36e097c97445200042b713d5ac8b64a4b95777aa6fc7ee'
+            '0dd44cc8f418dc1e70acd1aa0d1754b6a173e2fea1ab72af401cdece6c597d78'
+            '0d41e6c263c7d8aaf16ce621087861dcc0a1219bc073a90ce38caff039a83aac'
+            '108a67f21c2bdf2dbc4838f3ba32c992325a29cb62a14b377f8a04a9ad5b2b82'
+            '2da3c09a21e9abfe1f08f25ce4092f210c509dfffe1aea490a10e7c1cd05517f'
+            '73aeff945be23d86b500298b18fa6591d7abbecf8b6e00967861674aadbb9c6a'
+            'eeb068d75f3b7d835675cd218e145ec93d39be11672c925f01d7a76bb15fec38'
+            '0f18fde832017387600b5ee2ec6a0ae82125c82b97c0f717772f3cd5dfdcd57b'
+            '8d4d0e7c1e60914372fb7dae6e491f346af481f73901fd4b0970be7f7ef73b81'
+            'f1297b558401952521e71756f2764db2341811e147dc1a407258785ebbf7dd20'
+            '2a17178d721a50623d191f5e0dcc2f2553415af3b2892552866cd29f57e88265'
+            'ca4bec3aff7bd5555c46b9bc3469a4175d462c43d6f903e23bbe3109f1d4e740'
+            '123684641c7faeae4c49193c43e0b19485c2906bf7236672b40566eaf426ea42'
+            '32cae2eee01c94f8d28759138ff89db729093b766d1876907c95cfe2a244fd3b'
+            '4a83ab8b4f9403cda7d94f7638fd136e238e31573bbf39f3e77546e3835762c5'
+            '0fad74d05a770f8211e8bdbc81a62914d528f1c6e9e94e7f18a5ed17c8d786d8'
+            '8ee0bade4127e082dc1ae86f0068aa32ea0fbce26069ed2d9dbdef324e1bb980'
+            '90ebdcba3ae5996e34f409049b704907739bb68f5eb416d5ef3a8abbbac4b059'
+            '1da28304d237ba934e76394107e46fed0e4120fd2b257f1c667c2d11b52d959b'
+            'a9a8839d08232091a0cd381f51380a0a6ebe841f5a8e50a6047aae7b8e34c681'
+            '1a51c51f2edfe8330e18ec3febc7fc835502e840c993dec2de6f06ac9138f666'
+            '91ef8477f7d670d88f4d8bdeca47aa3b661f6a359fe8ac973bcdf2315affdcda'
+            'ead839e0e828b7b3ab920124a86b7c43dbe3afadb2dfcaa96604b8e355c885f4'
+            'd744b34331ea129494c4944ca8d335ce12d954ff8ef2d5c0db584db167e84558'
+            '0c9106a2bef658f02b2312d081faad6ba8a72bbb5b4ee1cae7d0a95e4ef53f8f'
+            '0ea6a535e827f911ce8360c0a7e6243872a98cbe8b2eeaf7cc31ed0f2e8e8e20'
+            '910bc5d9e7523ccd09506bafe3fac586db5106d8cc72d77e8457fdf8b43c225e'
+            '719e7fc7a515aa198ba24ec778fc5093e5308f67bf893441a91b57dd3f531780'
+            '6eb386823529fc08c93f1d20e6a68dc07b1bf54e0bf6465e5524a7e7910b20aa'
+            '2a9f035ab20c54304d628c8febc172eefc1883b9fae0e41b6b1b0f718947960e'
+            '4dfc3a5c54acbdafd4c7ab2826756ac2e69521350ab7f8b80b7ad374ce7ac84f'
+            '716cc81139f11a2b438802d37f245f885fc9a0c69ef429a11b156145c903a932'
+            'a13e9ed12bde3651928db47a4dc171939e4ac9a8a4221b30597e0f949a27089a'
+            '631711dc52a267a15449dfcf4b0f1255785b3579a20c46af83ae08a272d0545c'
+            '7cf5d158ec3342ada7d40cbd2736b1c76ec7a071c37612c1bde6a9a13ba7ce93'
+            '6952132f3fefec10f3f77b62771673fa0a4345e90ea6b8448bd84d0b62c19bcb'
+            'bebeae152d51470d9be1e274409f44fd9d626d5eaa996408df8d9564129e6b79'
+            '84907ff35b9cc3a21dc28bbeef75e3dbbe1048ae2a3799dc5bc781507f1d882e'
+            'd672246ba0ed6e7699bd3effd6949d22f4dd42ba74bb2ac0064b7e03d6322877'
+            'b48490fbcdad8becc160f2dab2ee4a0f67327f1e9d9ddbd96e44150175c68ca9'
+            '0b95ed21612b4f02e65643f2029d8ce5710f49dbe8b229350bbe643167a4b83b'
+            '9bd1e05f5128b4715c2d354a6895839d01aae4fc9f56b9d0411afc87fb46daf4'
+            '3e94d9298376d0972c488f39df2a8eb8e05b475acb34c8fb8cb1c5c8f30ec19f'
+            'dc88ac9763d900755dd5cc5a7c4b0c7c8a4f44244c4b50fe61e28938480816ea'
+            '2503c59348b763b800be1072774b9a1ee23c0abac1572bb02f95c6699a8bbc95'
+            'f7f5d15365443cbd8137445c3aedf8ccd31c3402f72c0fa7c16e7bf1c7977139'
+            'f8627f5f3a7c119807afc9dc66ce7cb350f905fd1db7fb6b0077552974a07515'
+            'ac3f025aa27fec77b24b443df3a69750dc9bb070a40af5180d031b81e66e328c'
+            '9ef77b12c54534daf3dd8d4a19cb29ea64c36d35742d48a2ad1febc4616fc7bb'
+            '2a41bb926d0b0e0b49602dd5b835c6d0a8755a03c4267642c9a6c207ea3418ab'
+            'c78207d508b9c3314395d294324285fb4a2d8c4e3250818b0558b8491f8f56ac'
+            'a3c3060e83a54e8c839a25375b1551974dda160a09da0e3a8969c07766ca421c'
+            'c23fa31250811a76be900554b9ac127f861ebde09c07ac67cd6b82dd214e5686')
+
+# Possible replacements are listed in build/linux/unbundle/replace_gn_files.py
+# Keys are the names in the above script; values are the dependencies in Arch
+# plus any so names that are provided + linked
+declare -gA _system_libs=(
+  [brotli]=brotli
+  # [dav1d]="dav1d libdav1d.so"
+  # [ffmpeg]="ffmpeg libavcodec.so libavcodec.so libavformat.so libavutil.so" # YouTube playback stopped working in Chromium 120
+  [flac]="flac libFLAC.so"
+  [fontconfig]="fontconfig libfontconfig.so"
+  [freetype]="freetype2 libfreetype.so"
+  [harfbuzz-ng]="harfbuzz libharfbuzz.so libharfbuzz-subset.so"
+  # [icu]="icu libicui18n.so libicuuc.so" # disabled because ICU 76 not supported yet
+  # [jsoncpp]="jsoncpp libjsoncpp.so"  # needs libstdc++
+  # [libaom]=aom
+  # [libavif]=libavif # libavif.so libavutil.so # needs -DAVIF_ENABLE_EXPERIMENTAL_GAIN_MAP=ON
+  [libdrm]=libdrm # libdrm.so
+  [libjpeg]="libjpeg-turbo libjpeg.so"
+  [libpng]="libpng libpng16.so"
+  # [libvpx]=libvpx
+  # [libwebp]="libwebp libwebpdemux.so libwebpmux.so libwebp.so" # //third_party/libavif:libavif_enc needs //third_party/libwebp:libwebp_sharpyuv
+  [libxml]="libxml2 libxml2.so"
+  [libxslt]="libxslt libxslt.so"
+  [opus]="opus libopus.so"
+  # [re2]="re2 libre2.so" # needs libstdc++
+  # [snappy]=snappy # libsnappy.so # needs libstdc++
+  # [woff2]="woff2 libwoff2dec.so" # needs libstdc++
+  [zlib]=minizip # libminizip.so
+)
+_unwanted_bundled_libs=(
+  $(printf "%s\n" ${!_system_libs[@]} | sed 's/^libjpeg$/&_turbo/')
+)
+depends+=(${_system_libs[@]})
+
+_update_sources() {
+  python makepkg-source-roller.py update "v$pkgver" "$pkgname"
+  updpkgsums
+}
+
+prepare() {
+  rustup toolchain install 1.91.1
+
+  sed -i "s|@ELECTRON@|${pkgname}|" electron-launcher.sh
+
+  cp -r chromium-mirror_third_party_depot_tools depot_tools
+  export PATH+=":$PWD/depot_tools" DEPOT_TOOLS_UPDATE=0
+  #export VPYTHON_BYPASS='manually managed python not supported by chrome operations'
+
+  echo "Putting together electron sources"
+  # Generate gclient gn args file and prepare-electron-source-tree.sh
+  python makepkg-source-roller.py generate electron/DEPS $pkgname
+  rbash prepare-electron-source-tree.sh "$CARCH"
+  mv electron src/electron
+
+  echo "Running hooks..."
+  # depot_tools/gclient.py runhooks
+  src/build/landmines.py
+  src/build/util/lastchange.py -o src/build/util/LASTCHANGE
+  src/build/util/lastchange.py -m GPU_LISTS_VERSION \
+    --revision-id-only --header src/gpu/config/gpu_lists_version.h
+  src/build/util/lastchange.py -m SKIA_COMMIT_HASH \
+    -s src/third_party/skia --header src/skia/ext/skia_commit_hash.h
+  src/build/util/lastchange.py \
+    -s src/third_party/dawn --revision src/gpu/webgpu/DAWN_VERSION
+  src/tools/update_pgo_profiles.py --target=linux update \
+    --gs-url-base=chromium-optimization-profiles/pgo_profiles
+
+  # https://gitlab.archlinux.org/archlinux/packaging/packages/electron32/-/issues/1
+  src/third_party/node/update_npm_deps
+
+  src/electron/script/apply_all_patches.py \
+      src/electron/patches/config.json
+
+  # https://github.com/nodejs/node/issues/48444
+  export UV_USE_IO_URING=0
+
+  pushd src
+  pushd electron
+  yarn install --frozen-lockfile
+  popd
+
+  echo "Applying local patches..."
+
+  # https://crbug.com/893950
+  sed -i -e 's/\<xmlMalloc\>/malloc/' -e 's/\<xmlFree\>/free/' \
+         -e '1i #include <cstdlib>' \
+    third_party/blink/renderer/core/xml/*.cc \
+    third_party/blink/renderer/core/xml/parser/xml_document_parser.cc \
+    third_party/libxml/chromium/*.cc
+
+  # Upstream fixes
+
+  # Fixes from Gentoo
+  patch -Np1 -i ../chromium-138-nodejs-version-check.patch
+  patch -Np1 -i ../chromium-141-cssstylesheet-iwyu.patch
+
+  # Fixes from NixOS
+  patch -Np1 -i ../chromium-138-rust-1.86-mismatched_lifetime_syntaxes.patch
+
+  # Allow libclang_rt.builtins from compiler-rt >= 16 to be used
+  patch -Np1 -i ../compiler-rt-adjust-paths.patch
+
+  # Increase _FORTIFY_SOURCE level to match Arch's default flags
+  patch -Np1 -i ../increase-fortify-level.patch
+
+  # CachyOS: Fix SYS_SECCOMP collision with glibc 2.43+
+  patch -Np1 -i ../fix-sys-seccomp-glibc243.patch
+
+  # Fixes for building with libstdc++ instead of libc++
+  # patch -Np1 -i ../chromium-patches-*/chromium-142-compiler.patch
+
+  # Link to system tools required by the build
+  mkdir -p third_party/node/linux/node-linux-x64/bin
+  ln -sfn /usr/bin/node third_party/node/linux/node-linux-x64/bin/
+  mkdir -p third_party/jdk/current/bin
+  ln -sfn /usr/bin/java third_party/jdk/current/bin/
+  ln -sfn /usr/bin/clang-format buildtools/linux64
+
+  # Electron specific fixes
+  patch -Np1 -i "${srcdir}/jinja-python-3.10.patch" -d "third_party/electron_node/tools/inspector_protocol/jinja2"
+  patch -Np1 -i "${srcdir}/use-system-libraries-in-node.patch"
+
+  # Allow building against system libraries in official builds
+  echo "Patching Chromium for using system libraries..."
+  sed -i 's/OFFICIAL_BUILD/GOOGLE_CHROME_BUILD/' \
+    tools/generate_shim_headers/generate_shim_headers.py
+
+  # Remove bundled libraries for which we will use the system copies; this
+  # *should* do what the remove_bundled_libraries.py script does, with the
+  # added benefit of not having to list all the remaining libraries
+  local _lib
+  for _lib in ${_unwanted_bundled_libs[@]}; do
+    find "third_party/$_lib" -type f \
+      \! -path "third_party/$_lib/chromium/*" \
+      \! -path "third_party/$_lib/google/*" \
+      \! -path "third_party/harfbuzz-ng/utils/hb_scoped.h" \
+        \! -regex '.*\.\(gn\|gni\|isolate\)' \
+        -delete
+  done
+
+  ./build/linux/unbundle/replace_gn_files.py \
+    --system-libraries "${!_system_libs[@]}"
+
+  # Generate missing header
+  python3 build/util/lastchange.py -m DAWN_COMMIT_HASH \
+    -s third_party/dawn --revision gpu/webgpu/DAWN_VERSION \
+    --header gpu/webgpu/dawn_commit_hash.h
+}
+
+build() {
+  cd src
+
+  export CC=clang
+  export CXX=clang++
+  export AR=ar
+  export NM=nm
+
+  local _flags=(
+    'custom_toolchain="//build/toolchain/linux/unbundle:default"'
+    'host_toolchain="//build/toolchain/linux/unbundle:default"'
+    'is_official_build=true' # implies is_cfi=true on x86_64
+    'symbol_level=0' # sufficient for backtraces on x86(_64)
+    'treat_warnings_as_errors=false'
+    'fatal_linker_warnings=false'
+    'disable_fieldtrial_testing_config=true'
+    'blink_enable_generated_code_formatting=false'
+    'ffmpeg_branding="Chrome"'
+    'proprietary_codecs=true'
+    'rtc_use_pipewire=true'
+    'link_pulseaudio=true'
+    'use_custom_libcxx=true' # https://github.com/llvm/llvm-project/issues/61705
+    'use_sysroot=false'
+    'use_system_libffi=true'
+    'enable_hangout_services_extension=true'
+    'enable_widevine=false'
+    'thin_lto_enable_optimizations=true' # CachyOS: Explicitly enable ThinLTO optimizations
+  )
+
+  if [[ -n ${_system_libs[icu]+set} ]]; then
+    _flags+=('icu_use_data_file=false')
+  fi
+
+  local _clang_version=$(
+    clang --version | grep -m1 version | sed 's/.* \([0-9]\+\).*/\1/')
+
+  _flags+=(
+    'clang_base_path="/usr"'
+    'clang_use_chrome_plugins=false'
+    "clang_version=\"$_clang_version\""
+    'chrome_pgo_phase=0' # needs newer clang to read the bundled PGO profile
+  )
+
+  # Allow the use of nightly features with stable Rust compiler
+  # https://github.com/ungoogled-software/ungoogled-chromium/pull/2696#issuecomment-1918173198
+  export RUSTC_BOOTSTRAP=1
+
+  _flags+=(
+    'rust_sysroot_absolute="/usr"'
+    'rust_bindgen_root="/usr"'
+    "rustc_version=\"$(rustc --version)\""
+  )
+
+  # Facilitate deterministic builds (taken from build/config/compiler/BUILD.gn)
+  CFLAGS+='   -Wno-builtin-macro-redefined'
+  CXXFLAGS+=' -Wno-builtin-macro-redefined'
+  CPPFLAGS+=' -D__DATE__=  -D__TIME__=  -D__TIMESTAMP__='
+
+  # Do not warn about unknown warning options
+  CFLAGS+='   -Wno-unknown-warning-option'
+  CXXFLAGS+=' -Wno-unknown-warning-option'
+
+  # Let Chromium set its own symbol level
+  CFLAGS=${CFLAGS/-g }
+  CXXFLAGS=${CXXFLAGS/-g }
+
+  # https://github.com/ungoogled-software/ungoogled-chromium-archlinux/issues/123
+  CFLAGS=${CFLAGS/-fexceptions}
+  CFLAGS=${CFLAGS/-fcf-protection}
+  CXXFLAGS=${CXXFLAGS/-fexceptions}
+  CXXFLAGS=${CXXFLAGS/-fcf-protection}
+
+  # This appears to cause random segfaults when combined with ThinLTO
+  # https://bugs.archlinux.org/task/73518
+  CFLAGS=${CFLAGS/-fstack-clash-protection}
+  CXXFLAGS=${CXXFLAGS/-fstack-clash-protection}
+
+  # https://crbug.com/957519#c122
+  CXXFLAGS=${CXXFLAGS/-Wp,-D_GLIBCXX_ASSERTIONS}
+
+  if [[ $CARCH == aarch64 ]]; then
+    # On aarch64, certain files (e.g. in libvpx and libyuv) needs to be compiled
+    # with additional arch features (e.g. dotprod, sve, sme)
+    # Having an arch setting in the C(XX)FLAGS overrides those
+    # and causes compilation failure
+    CFLAGS="${CFLAGS/-march=*([^ ]) }"
+    CXXFLAGS="${CXXFLAGS/-march=*([^ ]) }"
+  fi
+
+  export CHROMIUM_BUILDTOOLS_PATH="${PWD}/buildtools"
+  gn gen out/Release \
+      --args="import(\"//electron/build/args/release.gn\") ${_flags[*]}"
+  ninja -C out/Release electron electron_dist_zip
+  # ninja -C out/Release third_party/electron_node:headers
+}
+
+package() {
+  install -dm755 "${pkgdir:?}/usr/lib/${pkgname}"
+  bsdtar -xf src/out/Release/dist.zip -C "${pkgdir}/usr/lib/${pkgname}"
+
+  chmod u+s "${pkgdir}/usr/lib/${pkgname}/chrome-sandbox"
+
+  install -dm755 "${pkgdir}/usr/share/licenses/${pkgname}"
+  ln -sr -t "${pkgdir}"/usr/share/licenses/${pkgname} \
+    "${pkgdir}"/usr/lib/${pkgname}/{LICENSE,LICENSES.chromium.html}     
+
+  install -Dm755 "${srcdir}/electron-launcher.sh" \
+    "${pkgdir}/usr/bin/${pkgname}"
+
+  # Install icon file
+  install -Dm644 src/electron/default_app/icon.png \
+          "${pkgdir}/usr/share/pixmaps/${pkgname}.png"  # hicolor has no 1024x1024
+}
