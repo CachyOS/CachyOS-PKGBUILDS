@@ -3,8 +3,8 @@
 
 pkgname=scx-scheds-git
 _gitname=scx
-pkgver=1.1.0.r94.ga0c1d2cc
-pkgrel=6
+pkgver=1.1.0.r102.g8b78969c
+pkgrel=1
 pkgdesc='sched_ext schedulers and tools'
 url='https://github.com/sched-ext/scx'
 arch=('x86_64' 'aarch64')
@@ -38,20 +38,24 @@ conflicts=("scx-scheds")
 replaces=('scx-cake')
 
 _backports=(
-62e15578c23742dd5627ca280bcb7382c52f0936 # fix: correctness improvements and scx_loader compatibility
-73340c5ea864c882e381282d66deb72a661d8058 # cake_stopping: hot-path optimization — -25% insns, -40% spills, -100% divs
-c6ea5120a62a0d49932cc4b8a1835a8392a2853b # cake_stopping: zero-spill architectural decomposition (42→0 spills, 419→30 insns)
-37a2617d8dfd1b9372508d4796d09f3d7dc5be94 # scx_cake: zero register spills across all BPF functions
-353648255a543d47dd0ccb5c237ba82fcbfa542a # scx_cake: hot-path instruction audit — 30% reduction
-14d8e83cdb59014b75bf0c60a4ff2bd4f3cbc0e9 # scx_cake: cold-path audit — gate init_task tctx writes behind CAKE_STATS_ENABLED
-f7d1e96d8230328acc79bd568635dfaf8cdac33e # scx_cake: cold-path audit — remove dead cached_cpumask, fuse stores, branchless PF_KTHREAD
-d662e06bccb9ac29a63a999238cbb9a841efcb56 # P2: hot path -63 insns (593->530, 10.6%)
-35ccb68d56423fd796304c1fc5086582436ac4a2 # fix(cake): anti-starvation — remove p->scx.slice write from stopping
-8f7438b83b98603472db2ee5e9ad7a2c3832e67d # scx_cake: lint cleanup — fmt, clippy, trailing whitespace, dead code removal
-30fd03bfeca3669eb37bb44cf29717d7716c7d02 # scx_cake: add CO-RE compat for cake_select_cpu on kernel 6.12
-68db0c4b4af1a5ea2d33f2ef75099b6987ec9a6b # scx_cake: enable ctrlc termination feature for SIGTERM handling
-0442fd8ecbf4f4289ae92067dd9e32d7782ea65b # FunSearch R8-R12: −50 insns (558→508, −9.0%), 0 spills
-f98662c1185157964e9f86a3acc62e614523462d # cake: fix game swap correctness + reduce stopping_reclassify insns
+3c3bb59057f37189c4c647f25f1a77496e74d1ab # fix: correctness improvements and scx_loader compatibility
+3893e8da5f132eb3122fd90454ac49e952365f4c # cake_stopping: hot-path optimization — -25% insns, -40% spills, -100% divs
+8dafd7d85b81779eca3a180da69398ed9e3a5c9c # cake_stopping: zero-spill architectural decomposition (42→0 spills, 419→30 insns)
+abb85e1638149b8f9d84f78b17e66a7028930906 # scx_cake: zero register spills across all BPF functions
+09e50f2544fa0e42a2ed67bed211d1540c22f6bd # scx_cake: hot-path instruction audit — 30% reduction
+51d10a4a81fca82aae40b11f46ff270bf556211a # scx_cake: cold-path audit — gate init_task tctx writes behind CAKE_STATS_ENABLED
+15ff236ab78feb3f37b496fb4c6b0c2a4b835daf # scx_cake: cold-path audit — remove dead cached_cpumask, fuse stores, branchless PF_KTHREAD
+b0b5e8cb7a6810df8335b5a42c0473c36196dfee # P2: hot path -63 insns (593->530, 10.6%)
+36e3c6695340d27eff25b181defc9e36ab0086bd # fix(cake): anti-starvation — remove p->scx.slice write from stopping
+59f79c7849e9a91112704656e9a6dc52d48d11e3 # scx_cake: lint cleanup — fmt, clippy, trailing whitespace, dead code removal
+f2afa32df02d979975a3d8ffdd78640e8c1ec1ff # scx_cake: add CO-RE compat for cake_select_cpu on kernel 6.12
+9dd459665fb38678fa41577148477c0cc231c0dc # scx_cake: enable ctrlc termination feature for SIGTERM handling
+3499c2043fd0c41da660cdd12e59c138d6777d0f # FunSearch R8-R12: −50 insns (558→508, −9.0%), 0 spills
+cec3b3176f0dca4cc86a99f95208a2cff4d9d49c # cake: fix game swap correctness + reduce stopping_reclassify insns
+4ce1b9777aed242035ecac7c46ba1bbedf16ac67 # cake: per-CPU BSS optimization + cpuperf removal + zero spills
+77493590d98466759923fcbd48b49e7a95a22bf8 # cake: simplify game detection for native Linux games (CS2, Dota 2)
+1b4a76426896d650e34a80389dff2d244d52e9c5 # cake: eliminate all r10 refs from 11 hot-path functions
+202ce748779963c1a1341416c5412fc31d71c95f # fix(bpf): guard CONFIG_SCHEDSTATS bench probes for aarch64 compat
 )
 
 _reverts=(
