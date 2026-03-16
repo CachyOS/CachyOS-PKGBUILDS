@@ -1,0 +1,248 @@
+From 57cb1ec16d3c9819cbb9d0f0e3ad2be64f43ec89 Mon Sep 17 00:00:00 2001
+From: Stelios Tsampas <loathingkernel@gmail.com>
+Date: Wed, 11 Mar 2026 22:12:00 +0200
+Subject: [PATCH 1/3] umu_proton: add special case `umu-host` tool to satisfy
+ `UMU_NO_PROTON=1` fallback
+
+This tool is not invokable externally, it exists to satisfy `UMU_NO_PROTON=1`
+semantics when a non-runtime proton is executed. This tool just runs something on
+the host, like other tools would run the same linux binary in their respective
+runtime.
+---
+ umu/umu_proton.py | 21 ++++++++++++---------
+ umu/umu_run.py    |  4 +++-
+ 2 files changed, 15 insertions(+), 10 deletions(-)
+
+diff --git a/umu/umu_proton.py b/umu/umu_proton.py
+index f5ef58c..abdace2 100644
+--- a/umu/umu_proton.py
++++ b/umu/umu_proton.py
+@@ -61,6 +61,8 @@ class ProtonVersion(Enum):
+     UMUSniper_arm64 = "umu-sniper-arm64"
+     UMUSteamRT4 = "umu-steamrt4"
+     UMUSteamRT4_arm64 = "umu-steamrt4-arm64"
++    # Special case, non-invokable
++    UMUHost = "umu-host"
+ 
+ 
+ def get_umu_proton(env: dict[str, str], session_pools: SessionPools) -> dict[str, str]:
+@@ -124,6 +126,7 @@ def _get_umu_runtime_tool(env: dict[str, str], name: str) -> dict[str, str] | No
+             ProtonVersion.UMUSniper_arm64.value,
+             ProtonVersion.UMUSteamRT4.value,
+             ProtonVersion.UMUSteamRT4_arm64.value,
++            ProtonVersion.UMUHost.value,
+         }
+     ):
+         return None
+@@ -155,16 +158,16 @@ def _get_umu_runtime_tool(env: dict[str, str], name: str) -> dict[str, str] | No
+             }
+         }
+     }
+-    toolmanifest = {
+-        "manifest": {
+-            "version": "2",
+-            "commandline": "/entry-point",
+-            "require_tool_appid": rt_appid,
+-            "use_sessions": "1",
+-            # special value, see CompatLayer.layer_name()
+-            "compatmanager_layer_name": "umu-passthrough",
+-        }
++    manifest = {
++        "version": "2",
++        "commandline": "/entry-point",
++        "use_sessions": "1",
++        # special value, see CompatLayer.layer_name()
++        "compatmanager_layer_name": "umu-passthrough",
+     }
++    if rt_appid:
++        manifest["require_tool_appid"] = rt_appid
++    toolmanifest = { "manifest": manifest }
+ 
+     if not tool_path.is_dir():
+         tool_path.mkdir(parents=True, exist_ok=True)
+diff --git a/umu/umu_run.py b/umu/umu_run.py
+index 90ba7a4..39dba48 100755
+--- a/umu/umu_run.py
++++ b/umu/umu_run.py
+@@ -933,7 +933,9 @@ def umu_run(args: Namespace | tuple[str, list[str]]) -> int:
+         # Setup the launcher and runtime files
+         _, do_download = check_env(env)
+ 
+-        if runtime_variant:
++        if runtime_name == "host":
++            download_proton(env, session_pools, download=do_download)
++        elif runtime_variant:
+             UMU_LOCAL.joinpath(runtime_variant).mkdir(parents=True, exist_ok=True)
+ 
+             future: Future = thread_pool.submit(
+-- 
+2.53.0
+
+
+From 4d89113565ce6385f7e27299bb0353100fe80221 Mon Sep 17 00:00:00 2001
+From: Stelios Tsampas <loathingkernel@gmail.com>
+Date: Thu, 12 Mar 2026 01:18:34 +0200
+Subject: [PATCH 2/3] umu_run: replace token string values with ProtonVersion
+ enumeration members
+
+---
+ umu/umu_run.py | 21 ++++++++++++---------
+ 1 file changed, 12 insertions(+), 9 deletions(-)
+
+diff --git a/umu/umu_run.py b/umu/umu_run.py
+index 39dba48..e6dd1f1 100755
+--- a/umu/umu_run.py
++++ b/umu/umu_run.py
+@@ -737,9 +737,9 @@ def resolve_runtime() -> UmuRuntime:
+     # Backwards compatibility stuff, map RUNTIMEPATH tokens to
+     # umu's passthrough compatibility layers for runtimes.
+     runtimepath_compat = {
+-        "steamrt2": "umu-soldier",
+-        "steamrt3": "umu-sniper",
+-        "steamrt4": "umu-steamrt4",
++        "steamrt2": ProtonVersion.UMUSoldier.value,
++        "steamrt3": ProtonVersion.UMUSniper.value,
++        "steamrt4": ProtonVersion.UMUSteamRT4.value,
+     }
+     if os.environ.get("RUNTIMEPATH") and (
+         os.environ.get("UMU_NO_PROTON") or not os.environ.get("PROTONPATH")
+@@ -748,14 +748,17 @@ def resolve_runtime() -> UmuRuntime:
+ 
+     # default to UMU-Latest if PROTONPATH is not set
+     if not os.environ.get("PROTONPATH"):
+-        os.environ["PROTONPATH"] = "UMU-Latest"
++        os.environ["PROTONPATH"] = ProtonVersion.UMULatest.value
+ 
+     named_runtimes = {
+-        RUNTIME_NAMES["steamrt4"]: {"umu-steamrt4"},
+-        RUNTIME_NAMES["steamrt4-arm64"]: {"umu-steamrt4-arm64"},
+-        RUNTIME_NAMES["sniper"]: {"GE-Proton", "GE-Latest", "UMU-Latest", "umu-sniper"},
+-        RUNTIME_NAMES["sniper-arm64"]: {"umu-sniper-arm64"},
+-        RUNTIME_NAMES["soldier"]: {"umu-scout", "umu-soldier"},
++        RUNTIME_NAMES["steamrt4"]: { ProtonVersion.UMUSteamRT4.value },
++        RUNTIME_NAMES["steamrt4-arm64"]: { ProtonVersion.UMUSteamRT4_arm64.value },
++        RUNTIME_NAMES["sniper"]: {
++            ProtonVersion.UMUSniper.value, ProtonVersion.UMULatest.value,
++            ProtonVersion.GEProton.value, ProtonVersion.GELatest.value,
++        },
++        RUNTIME_NAMES["sniper-arm64"]: { ProtonVersion.UMUSniper_arm64.value },
++        RUNTIME_NAMES["soldier"]: { ProtonVersion.UMUScout.value, ProtonVersion.UMUSoldier.value },
+     }
+ 
+     for name in named_runtimes:
+-- 
+2.53.0
+
+
+From c8cf83b2136ccf5151d0e5d0e5df92ec60e15451 Mon Sep 17 00:00:00 2001
+From: Stelios Tsampas <loathingkernel@gmail.com>
+Date: Thu, 12 Mar 2026 21:30:37 +0200
+Subject: [PATCH 3/3] umu_run: gate container re-enter behavior behind an
+ explicit switch
+
+Introduce `UMU_CONTAINER_NSENTER` env variable to control whether umu will
+try to detect a running proton instance on the target prefix through through
+the launcher service dbus interface. When this env variable is set to `1`,
+umu will attempt to connect to the dbus interface 5 times in 2 second intervals
+to allow time for the interface to become available. If a running instance
+is not detected, it will try running the target executable normally. If a
+running container is detected it will re-enter the active container.
+
+If the env variable is missing or has an different value, umu will not consider
+querying the launcher service dbus interface. The reason for this change in
+behavior is due to existing software such as Lutris's installers indirectly
+depend on the implicit atomic proton invocations provided by the
+`waitforexitandrun`
+---
+ umu/umu_run.py | 40 +++++++++++++++++++++++++---------------
+ 1 file changed, 25 insertions(+), 15 deletions(-)
+
+diff --git a/umu/umu_run.py b/umu/umu_run.py
+index e6dd1f1..791440d 100755
+--- a/umu/umu_run.py
++++ b/umu/umu_run.py
+@@ -3,6 +3,7 @@ import os
+ import signal
+ import sys
+ import threading
++import time
+ from _ctypes import CFuncPtr
+ from argparse import Namespace
+ from array import array
+@@ -282,10 +283,6 @@ def set_env(
+     # PATHS
+     env["WINEPREFIX"] = str(pfx)
+     env["STEAM_COMPAT_DATA_PATH"] = str(pfx)
+-    prefix_md5 = hashlib.md5(str(pfx).encode("utf-8")).hexdigest()
+-    # proton_md5 = hashlib.md5(str(protonpath).encode("utf-8")).hexdigest()  # noqa: RUF100,S324
+-    # env["STEAM_COMPAT_APP_ID"] = f"{prefix_md5}_{proton_md5}"
+-    env["STEAM_COMPAT_APP_ID"] = f"{prefix_md5}"
+     env["STEAM_COMPAT_SHADER_PATH"] = str(pfx.joinpath("shadercache"))
+     env["PROTONPATH"] = str(protonpath)
+     env["STEAM_COMPAT_TOOL_PATHS"] = (
+@@ -295,6 +292,13 @@ def set_env(
+     )
+     env["STEAM_COMPAT_MOUNTS"] = env["STEAM_COMPAT_TOOL_PATHS"]
+ 
++    # Launcher service
++    prefix_md5 = hashlib.md5(str(pfx).encode("utf-8")).hexdigest()
++    # proton_md5 = hashlib.md5(str(protonpath).encode("utf-8")).hexdigest()  # noqa: RUF100,S324
++    # env["STEAM_COMPAT_APP_ID"] = f"{prefix_md5}_{proton_md5}"
++    env["STEAM_COMPAT_APP_ID"] = f"{prefix_md5}"
++    env["UMU_CONTAINER_NSENTER"] = os.environ.get("UMU_CONTAINER_NSENTER") or ""
++
+     # Zenity
+     env["UMU_ZENITY"] = os.environ.get("UMU_ZENITY") or ""
+ 
+@@ -368,7 +372,7 @@ def build_command(
+         )
+ 
+     nsenter: tuple[str, ...] = ()
+-    if launch_client := layer.launch_client:
++    if (launch_client := layer.launch_client) and env.get("UMU_CONTAINER_NSENTER") == "1":
+         # launch_client is provided by the runtime layer (not arbitrary user input).
+         # Resolve via PATH when needed so we execute a concrete binary.
+         exe_path: str
+@@ -381,16 +385,21 @@ def build_command(
+                 raise FileNotFoundError(msg)
+             exe_path = resolved
+ 
+-        with Popen(
+-            [exe_path, "--list"], stdout=PIPE, stderr=PIPE
+-        ) as proc:  # nosec B603
+-            out, err = proc.communicate()
+-        bus_names = out.decode("utf-8").splitlines()
+-        pfx_bus = "com.steampowered.App" + env["STEAM_COMPAT_APP_ID"]
+-        if f"--bus-name={pfx_bus}" in bus_names:
+-            nsenter = (exe_path, f"--bus-name={pfx_bus}", "--")
+-            env["PROTON_VERB"] = "runinprefix"
+-            log.info("Re-entering container through bus '%s'", pfx_bus)
++        attempts: int = 5
++        for trial in range(attempts):
++            with Popen(
++                [exe_path, "--list"], stdout=PIPE, stderr=PIPE
++            ) as proc:  # nosec B603
++                out, err = proc.communicate()
++            bus_names = out.decode("utf-8").splitlines()
++            pfx_bus = "com.steampowered.App" + env["STEAM_COMPAT_APP_ID"]
++            if f"--bus-name={pfx_bus}" in bus_names:
++                nsenter = (exe_path, f"--bus-name={pfx_bus}", "--")
++                env["PROTON_VERB"] = "runinprefix"
++                log.info("Re-entering container through bus '%s'", pfx_bus)
++                break
++            log.info("Failed to find bus name %s (retry %s)", pfx_bus, trial + 1)
++            time.sleep(2)
+ 
+     is_nsenter: bool = bool(nsenter)
+     return (
+@@ -828,6 +837,7 @@ def umu_run(args: Namespace | tuple[str, list[str]]) -> int:
+         "UMU_NO_RUNTIME": "",
+         "UMU_RUNTIME_UPDATE": "",
+         "UMU_NO_PROTON": "",
++        "UMU_CONTAINER_NSENTER": "",
+         "RUNTIMEPATH": "",
+     }
+     opts: list[str] = []
+-- 
+2.53.0
+
