@@ -66,16 +66,13 @@ optdepends=(
   'python-truststore: Verify certificates using OS trust stores'
 )
 source=(
-    "git+https://github.com/Open-Wine-Components/umu-launcher.git#commit=cfa9df7a069b792cb06c5fe5e13a7e6020570010"
-    umu-container-nsenter.patch
+    "git+https://github.com/Open-Wine-Components/umu-launcher.git#commit=292ca9896468631a98cc937fb1147b3fa97a002a"
 )
-sha256sums=('db957da21d1da71238d06b65ecef8837267d9356ffacef6f396b5b4efaf1b618'
-            '5f10e86306e4564d9a6bd362108b11e2722f5faae13a63ead105ebe9b845238e')
+sha256sums=('801b46b7e16b4fc947a57ef8704954961336f132a5f3787bb72c9b0e73fbe146')
 
 
 prepare() {
   cd "$srcdir"/umu-launcher
-  patch -Np1 -i "$srcdir"/umu-container-nsenter.patch
   export RUSTUP_TOOLCHAIN=stable
   export CARGO_HOME="${srcdir}"/umu-cargo
   cargo update
