@@ -1,0 +1,37 @@
+# Maintainer: Maxime Gauduin <alucryd@archlinux.org>
+# Contributor: Fabien Dubosson <fabien.dubosson@gmail.com>
+# Contributor: Konstantin Gizdov <arch@kge.com>
+
+pkgname=xxhash
+pkgver=0.8.3
+pkgrel=1
+pkgdesc='Extremely fast non-cryptographic hash algorithm'
+arch=(x86_64)
+url=https://cyan4973.github.io/xxHash/
+license=(
+  GPL2
+  BSD
+)
+depends=(glibc)
+makedepends=(git)
+provides=(libxxhash.so)
+source=(git+https://github.com/Cyan4973/xxHash.git#tag=v${pkgver} "XXH3_scrambleAcc_avx512dq.patch")
+b2sums=('e8c03ae30da955a0399bbbdee866dcc3f999bd1f780373d28119972a89a6ef3b266097024379c779d4c02ae3ca218728d4843c6085487ec76c5e7e1b393e1ea2'
+        'c11fb581f20feda42f3c0015b12d8ded8c20ec3fbbed342c90be9360f8c819e525a2d982e3fe5ea66bef759dc2c6064ab6ac7d78d5c55791f8af093244fbcf98')
+
+prepare() {
+  cd xxHash/
+  patch -Np1 -i "${srcdir}/XXH3_scrambleAcc_avx512dq.patch"
+}
+
+build() {
+  make PREFIX=/usr DISPATCH=1 -C xxHash
+  
+}
+
+package() {
+  make PREFIX=/usr DISPATCH=1 DESTDIR="${pkgdir}" -C xxHash install
+  install -Dm 644 xxHash/LICENSE -t "${pkgdir}"/usr/share/licenses/xxhash
+}
+
+# vim: ts=2 sw=2 et:
