@@ -3,7 +3,7 @@
 
 pkgname=scx-scheds-git
 _gitname=scx
-pkgver=1.1.0.r102.g8b78969c
+pkgver=1.1.0.r127.g6ec60c06
 pkgrel=1
 pkgdesc='sched_ext schedulers and tools'
 url='https://github.com/sched-ext/scx'
@@ -38,24 +38,6 @@ conflicts=("scx-scheds")
 replaces=('scx-cake')
 
 _backports=(
-3c3bb59057f37189c4c647f25f1a77496e74d1ab # fix: correctness improvements and scx_loader compatibility
-3893e8da5f132eb3122fd90454ac49e952365f4c # cake_stopping: hot-path optimization — -25% insns, -40% spills, -100% divs
-8dafd7d85b81779eca3a180da69398ed9e3a5c9c # cake_stopping: zero-spill architectural decomposition (42→0 spills, 419→30 insns)
-abb85e1638149b8f9d84f78b17e66a7028930906 # scx_cake: zero register spills across all BPF functions
-09e50f2544fa0e42a2ed67bed211d1540c22f6bd # scx_cake: hot-path instruction audit — 30% reduction
-51d10a4a81fca82aae40b11f46ff270bf556211a # scx_cake: cold-path audit — gate init_task tctx writes behind CAKE_STATS_ENABLED
-15ff236ab78feb3f37b496fb4c6b0c2a4b835daf # scx_cake: cold-path audit — remove dead cached_cpumask, fuse stores, branchless PF_KTHREAD
-b0b5e8cb7a6810df8335b5a42c0473c36196dfee # P2: hot path -63 insns (593->530, 10.6%)
-36e3c6695340d27eff25b181defc9e36ab0086bd # fix(cake): anti-starvation — remove p->scx.slice write from stopping
-59f79c7849e9a91112704656e9a6dc52d48d11e3 # scx_cake: lint cleanup — fmt, clippy, trailing whitespace, dead code removal
-f2afa32df02d979975a3d8ffdd78640e8c1ec1ff # scx_cake: add CO-RE compat for cake_select_cpu on kernel 6.12
-9dd459665fb38678fa41577148477c0cc231c0dc # scx_cake: enable ctrlc termination feature for SIGTERM handling
-3499c2043fd0c41da660cdd12e59c138d6777d0f # FunSearch R8-R12: −50 insns (558→508, −9.0%), 0 spills
-cec3b3176f0dca4cc86a99f95208a2cff4d9d49c # cake: fix game swap correctness + reduce stopping_reclassify insns
-4ce1b9777aed242035ecac7c46ba1bbedf16ac67 # cake: per-CPU BSS optimization + cpuperf removal + zero spills
-77493590d98466759923fcbd48b49e7a95a22bf8 # cake: simplify game detection for native Linux games (CS2, Dota 2)
-1b4a76426896d650e34a80389dff2d244d52e9c5 # cake: eliminate all r10 refs from 11 hot-path functions
-202ce748779963c1a1341416c5412fc31d71c95f # fix(bpf): guard CONFIG_SCHEDSTATS bench probes for aarch64 compat
 )
 
 _reverts=(
