@@ -4,7 +4,7 @@
 
 pkgname=xxhash
 pkgver=0.8.3
-pkgrel=1
+pkgrel=2
 pkgdesc='Extremely fast non-cryptographic hash algorithm'
 arch=(x86_64)
 url=https://cyan4973.github.io/xxHash/
@@ -26,7 +26,11 @@ prepare() {
 
 build() {
   make PREFIX=/usr DISPATCH=1 -C xxHash
-  
+}
+
+check() {
+  cd xxHash/
+  make DISPATCH=1 test
 }
 
 package() {
