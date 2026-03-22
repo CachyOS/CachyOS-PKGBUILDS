@@ -2,7 +2,7 @@
 
 pkgname=cachyos-hello
 _pkgname=CachyOS-Welcome
-pkgver=0.20.1
+pkgver=0.21.0
 pkgrel=1
 pkgdesc='Welcome screen for CachyOS'
 arch=('x86_64')
@@ -23,20 +23,11 @@ makedepends=(
   llvm
   meson
 )
-source=("${pkgname}::git+$url.git#tag=v${pkgver}?signed"
-        0001-deps-use-latest-alpm-crate-commit.patch)
-sha512sums=('62739ab73692aa5c429af8ed60e53ff73b7092be1646a0451949614b6eb3ac0da8e4af274260efc22dde4ed4d7c651852cdc5f6683d252724886d490acc9f051'
-            'f29eed07769eaee51c21cf8ed2144dcad9b5815ae0ab1ade1524a20cffc597c37f824abff6d6eb26307851e652c55f41270a59005093367197692b34bb650ec3')
+source=("${pkgname}::git+$url.git#tag=v${pkgver}?signed")
+sha512sums=('8d02377c164ba849c6d3138bc991789ced91c56413d5c5c689bef9ee62db51966acc8eaceb8bae7269f990e1dbd0de0092224022e6da320755680f5251b16dc1')
 validpgpkeys=(
   'B1B70BB1CD56047DEF31DE2EB62C3D10C54D5DA9'  # Vladislav Nepogodin <nepogodin.vlad@gmail.com>
 )
-
-#prepare() {
-#  cd "${srcdir}/${pkgname}"
-#
-#  # patch for pacman 7.1.0
-#  patch -Np1 -i ../0001-deps-use-latest-alpm-crate-commit.patch
-#}
 
 build() {
   cd "${srcdir}/${pkgname}"
