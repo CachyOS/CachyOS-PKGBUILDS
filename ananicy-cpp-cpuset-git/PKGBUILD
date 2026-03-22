@@ -32,9 +32,9 @@ makedepends=(
 optdepends=("cachyos-ananicy-rules-git: community rules"
             "cachyos-ananicy-rules: Rules based for ananicy-cpp")
 source=("${_pkgname}::git+https://gitlab.com/ananicy-cpp/ananicy-cpp.git"
-        https://gitlab.com/ananicy-cpp/ananicy-cpp/-/merge_requests/39.patch)
+        https://gitlab.com/ananicy-cpp/ananicy-cpp/-/merge_requests/40.patch)
 sha512sums=('SKIP'
-            'edcda9c7d3745ddc39cb2ab74ccbb13d6d9fd053f73f6ebfc6c1fb6aa096dd4e655bba63d583be9b1d3cb409085c8201040e72f5abb7bfe34b5041a018392999')
+            'bb11cbe5443ee1e0c9a166d7f7241431852dbb62769cbf514d5e19dea8573977c00acc1709130fa353fca95f68a72bba2d1a033d180bbcad107144b303b53c42')
 provides=('ananicy-cpp')
 conflicts=('ananicy-cpp')
 
@@ -47,8 +47,8 @@ pkgver() {
 prepare() {
   cd "${srcdir}/${_pkgname}"
 
-  # [Feature] Add cpuset CPU affinity rules and AMD X3D support
-  patch -Np1 -i ../39.patch
+  # [Feature] Add full CPU topology detection, named cpuset aliases
+  patch -Np1 -i ../40.patch
 }
 
 build() {
