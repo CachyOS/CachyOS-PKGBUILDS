@@ -125,7 +125,12 @@ force_ru_mirrors() {
 
 # Prefer mirrors that are geographically close, especially in countries that
 # have regional blockages
-country="$(curl --connect-timeout 10 -sSL 'https://geoip.kde.org/v1/ubiquity' | grep -Po '<CountryCode>\K([A-Z]{2})')"
+country="$(curl --connect-timeout 10 -sSL 'https://geoip.kde.org/v1/ubiquity' 2>/dev/null | grep -Po '<CountryCode>\K([A-Z]{2})')"
+
+# Fallback to ifconfig.co if KDE GeoIP is unavailable
+if [ -z "$country" ]; then
+    country="$(curl --connect-timeout 10 -sSL 'https://ifconfig.co/country-iso' 2>/dev/null | grep -Po '^[A-Z]{2}$')"
+fi
 
 if [ -n "$country" ]; then
     export RATE_MIRRORS_ENTRY_COUNTRY="$country"
