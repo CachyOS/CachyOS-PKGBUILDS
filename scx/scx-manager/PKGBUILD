@@ -27,6 +27,7 @@ build() {
   export RANLIB=llvm-ranlib
 
   export RUSTFLAGS="-Cembed-bitcode -C opt-level=3 -Ccodegen-units=1 -Clinker=clang -C link-arg=-flto -Clink-arg=-fuse-ld=/usr/bin/ld.lld"
+  export RUSTUP_TOOLCHAIN=beta
 
   cmake -S . -Bbuild \
         -GNinja \
