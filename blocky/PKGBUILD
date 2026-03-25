@@ -1,0 +1,59 @@
+# Maintainer: Vladislav Nepogodin (vnepogodin) <vnepogodin@cachyos.org>
+# Contributor: Nicola Revelant <nicolarevelant@outlook.com>
+# Contributor: Luis Martinez <luis dot martinez at disroot dot org>
+# Contributor: Andrea Scarpino <andrea@archlinux.org>
+# Contributor: Roman Vishnevsky <aka [dot] x0x01 [at] gmail [dot] com>
+# Contributor: Erikas Rudinskas <erikmnkl@gmail.com>
+
+pkgname=blocky
+pkgver=0.29.0
+pkgrel=2
+pkgdesc="Fast and lightweight DNS proxy as ad-blocker"
+arch=('x86_64')
+url="https://github.com/0xERR0R/blocky"
+license=('Apache-2.0')
+depends=('glibc')
+makedepends=('git' 'go')
+backup=('etc/blocky/blocky.yml')
+source=("$pkgname::git+$url.git#tag=v${pkgver}"
+    'blocky.service'
+    'blocky.sysusers'
+    'blocky.yml'
+)
+b2sums=('4061d86dd36813fda98f2ec71f86834c2f3853ae73f7ed6a16eed87dd9f24099ba4a9d2fff4fb5ba05cb1366990e8e14fbb0b98b8bcb3c8be609c62f3730133d'
+        '15786ea9006210df1e65dfe91e535a0cacaf57ff6c8068169cd5d09630d939a112dda0a4bdb0c963d0c3748472bf0656ea053227a56b972a3dc23ae2298d5fa4'
+        '9641b73253d80a8f64fdd1c10a35ae7631e9eec8d2feda3214836af7634fc0d33d55a5b150912996b3380ef9242b17fbb2a847557b68bf5b657da68eb7d8321c'
+        '6272d0f01cffdca26576034afd4f8e19e3404e7ec25273a60530fde7bb1757dc775f1d47fa32672b816570e44de6f6651608e6b66bdee768367646c5ac910795')
+
+prepare() {
+  cd "${pkgname}"
+  export GOPATH="${srcdir}"
+  go mod download -modcacherw
+}
+
+build() {
+  cd "${pkgname}"
+  export CGO_CPPFLAGS="${CPPFLAGS}"
+  export CGO_CFLAGS="${CFLAGS}"
+  export CGO_CXXFLAGS="${CXXFLAGS}"
+  export CGO_LDFLAGS="${LDFLAGS}"
+  export GOFLAGS="-buildmode=pie -trimpath -ldflags=-linkmode=external -mod=readonly -modcacherw"
+
+  go build .
+}
+
+check() {
+  cd "${pkgname}"
+  # requires docker e2e environment running
+  #go test ./...
+}
+
+package() {
+  install -Dm 644 blocky.yml "$pkgdir"/etc/blocky/blocky.yml
+  install -Dm 644 blocky.service "$pkgdir"/usr/lib/systemd/system/blocky.service
+  install -Dm 644 blocky.sysusers "$pkgdir"/usr/lib/sysusers.d/blocky.conf
+
+  cd "${pkgname}"
+  install -Dm 755 blocky "$pkgdir"/usr/bin/blocky
+  setcap CAP_NET_BIND_SERVICE=+ep "$pkgdir"/usr/bin/blocky
+}
