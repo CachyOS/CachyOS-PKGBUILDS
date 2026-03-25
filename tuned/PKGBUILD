@@ -7,16 +7,16 @@
 pkgbase=tuned-cachy
 pkgname=("${pkgbase}" "${pkgbase}-ppd")
 pkgver=2.27.0
-pkgrel=1
+pkgrel=2
 pkgdesc='Daemon that performs monitoring and adaptive configuration of devices in the system'
 arch=('any')
 url="https://github.com/redhat-performance/tuned"
 license=('GPL-2.0-or-later')
 depends=('ethtool' 'gawk' 'hdparm' 'polkit' 'perf' 'python-configobj'
          'python-dbus' 'python-gobject' 'python-linux-procfs' 'python-pyudev')
-makedepends=('desktop-file-utils')
-source=("git+https://github.com/cachyos/tuned#commit=1aafbc3519a25fb3ef12744eaac25ea304019a71")
-sha512sums=('c3e2bb6cac5b3612e6ca3707b24ddc972fba8e2a358c9f0f0ca161c6c6bf9bfcf3006ecc9e5c532e3c868a81d518b1555048571a215c6b214e812991b011d4dd')
+makedepends=('desktop-file-utils' git)
+source=("git+https://github.com/cachyos/tuned#commit=8e1829346cae8b3b7aec02516556c4179bcfc4d2")
+sha512sums=('aca94f2eca7f6f5423861382e89e2fd579cfd7925510d19ef5e29558f5d35734b3a8a35ceae397832204387dd57054760fbb21ab7641678fd65e367e21706712')
 
 prepare() {
   cd "tuned"
