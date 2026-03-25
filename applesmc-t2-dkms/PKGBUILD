@@ -1,0 +1,37 @@
+# Maintainer: Peter Jung <ptr1337@cachyos.org>
+
+pkgname=applesmc-t2-dkms
+_pkgname=applesmc-t2
+pkgver=r3.4413846
+pkgrel=1
+pkgdesc="Apple SMC driver with T2 chip support (DKMS)"
+arch=('x86_64')
+url="https://github.com/AdityaGarg8/applesmc-t2"
+license=(GPL-2.0-only)
+depends=(
+  dkms
+)
+makedepends=(
+  git
+)
+source=("${_pkgname}::git+https://github.com/AdityaGarg8/applesmc-t2.git#commit=4413846e8751d8916d45c891f71dcaa02831c635")
+sha256sums=('e94cc402be8f912cacbcfa8fc6aea99ca268cdcbcfe1ae0772652b5a1436d962')
+
+pkgver() {
+  cd "${srcdir}/${_pkgname}"
+  printf "r%s.%s" "$(git rev-list --count HEAD)" "$(git rev-parse --short HEAD)"
+}
+
+package() {
+  local _dkmsdir="${pkgdir}/usr/src/${_pkgname}-${pkgver}"
+  cd "${srcdir}/${_pkgname}"
+
+  install -Dm644 dkms.conf "${_dkmsdir}/dkms.conf"
+  install -Dm644 Makefile  "${_dkmsdir}/Makefile"
+  install -Dm644 applesmc.c "${_dkmsdir}/applesmc.c"
+  install -Dm644 LICENSE   "${_dkmsdir}/LICENSE"
+
+  # Patch dkms.conf to reflect the actual built pkgver
+  sed -i "s/PACKAGE_VERSION=\".*\"/PACKAGE_VERSION=\"${pkgver}\"/" \
+    "${_dkmsdir}/dkms.conf"
+}
