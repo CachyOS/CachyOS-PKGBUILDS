@@ -12,7 +12,7 @@ diff --git a/data/devices/msi-claw-intel.toml b/data/devices/msi-claw-intel.toml
 index 3b81d62cc823..d4b461e69621 100644
 --- a/data/devices/msi-claw-intel.toml
 +++ b/data/devices/msi-claw-intel.toml
-@@ -16,8 +16,23 @@ dmi.product_name = "Claw 8 AI+ A2VM"
+@@ -16,8 +16,21 @@ dmi.product_name = "Claw 8 AI+ A2VM"
  device = "claw"
  variant = "Claw 8 AI+ A2VM"
  
@@ -30,9 +30,7 @@ index 3b81d62cc823..d4b461e69621 100644
 +attribute = "msi-wmi-platform"
 +
 +[battery_charge_limit]
-+suggested_minimum_limit = 10
-+hwmon_name = "BAT1"
-+attribute = "device/charge_control_end_threshold"
++method = "acpi_sb"
 +
  [inputplumber]
  target_devices = ["deck-uhid", "keyboard"]
