@@ -1,0 +1,53 @@
+## sudoers file.
+##
+## This file MUST be edited with the 'visudo' command as root.
+## Failure to use 'visudo' may result in syntax or file permission errors
+## that prevent sudo from running.
+##
+## See the sudoers man page for the details on how to write a sudoers file.
+##
+
+##
+## Host alias specification
+##
+## Groups of machines. These may include host names (optionally with wildcards),
+## IP addresses, network numbers or netgroups.
+# Host_Alias	WEBSERVERS = www1, www2, www3
+
+##
+## User alias specification
+##
+## Groups of users.  These may consist of user names, uids, Unix groups,
+## or netgroups.
+# User_Alias	ADMINS = millert, dowdy, mikef
+
+##
+## Cmnd alias specification
+##
+## Groups of commands.  Often used to group related commands together.
+# Cmnd_Alias	PROCESSES = /usr/bin/nice, /bin/kill, /usr/bin/renice, \
+# 			    /usr/bin/pkill, /usr/bin/top
+
+##
+## Defaults specification
+##
+## Preserve editor environment variables for visudo.
+## To preserve these for all commands, remove the "!visudo" qualifier.
+Defaults!/usr/bin/visudo env_keep += "SUDO_EDITOR EDITOR VISUAL"
+##
+## Use a hard-coded PATH instead of the user's to find commands.
+Defaults secure_path="/usr/local/sbin:/usr/local/bin:/usr/bin"
+
+##
+## User privilege specification
+##
+root ALL=(ALL:ALL) ALL
+
+## Uncomment to allow members of group wheel to execute any command
+# %wheel ALL=(ALL:ALL) ALL
+
+## Same thing without a password
+# %wheel ALL=(ALL:ALL) NOPASSWD: ALL
+
+## Read drop-in files from /etc/sudoers.d
+@includedir /etc/sudoers.d
