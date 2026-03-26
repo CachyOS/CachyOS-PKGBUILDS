@@ -95,7 +95,7 @@ rate_repository_mirrors() {
         if [ ! -f "${path}" ]; then
             die "${path} doesn't exist! You must install package $(pacman -Fq "$path" 2>/dev/null || echo "that contains $path")"
         fi
-        cp -f --backup=simple --suffix="-backup" "${TMPFILE}" "${path}"
+        install -m 0644 --backup=simple --suffix="-backup" "${TMPFILE}" "${path}"
         msg "Done [${repo}] ${path}"
     else
         die "rate-mirrors failed [errcode=$?]."
@@ -153,16 +153,10 @@ if [ "$country" = "RU" ]; then
     force_ru_mirrors
 fi
 
-cp -f --backup=simple --suffix="-backup" "${MIRRORS_DEFAULT_DIR}/cachyos-mirrorlist" \
+install -m 0644 --backup=simple --suffix="-backup" "${MIRRORS_DEFAULT_DIR}/cachyos-mirrorlist" \
     "${MIRRORS_DEFAULT_DIR}/cachyos-v3-mirrorlist"
-cp -f --backup=simple --suffix="-backup" "${MIRRORS_DEFAULT_DIR}/cachyos-mirrorlist" \
+install -m 0644 --backup=simple --suffix="-backup" "${MIRRORS_DEFAULT_DIR}/cachyos-mirrorlist" \
     "${MIRRORS_DEFAULT_DIR}/cachyos-v4-mirrorlist"
 
 sed -i 's|/$arch/|/$arch_v3/|g' "${MIRRORS_DEFAULT_DIR}/cachyos-v3-mirrorlist"
 sed -i 's|/$arch/|/$arch_v4/|g' "${MIRRORS_DEFAULT_DIR}/cachyos-v4-mirrorlist"
-
-# In the case of a more restrictive umask setting ( 0077 for example ), give read-permissions back to 'Group/Other'.
-# This fixes a case where the third party package wrapper Aura ( https://github.com/fosskers/aura ) tries to parse
-# /etc/pacman.conf and can't read the "include"ded mirror files. By default, Aura intentionally runs without root
-# permissions for most non-modify operations.
-chmod go+r "${MIRRORS_DEFAULT_DIR}"/*mirrorlist*
