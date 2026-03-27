@@ -1,0 +1,27 @@
+post_install() {
+  # Ensure sudoers.d directory exists
+  if [ ! -d etc/sudoers.d ]; then
+    mkdir -p etc/sudoers.d
+    chmod 0750 etc/sudoers.d
+  fi
+
+  cat <<EOF
+==> NOTE: sudo-rs is a memory-safe reimplementation of sudo written in Rust.
+==> It is compatible with most standard sudoers configurations.
+==>
+==> The following features from original sudo are NOT supported:
+==>   - LDAP-based sudoers (sudoers.ldap)
+==>   - sudo plugins / sudo_plugin.h
+==>   - sudo_logsrvd / sudo_sendlog / sudoreplay
+==>   - cvtsudoers
+==>   - 'logfile' directive (use syslog instead)
+==>   - Regular expressions in sudoers rules
+==>   - INTERCEPT / sudo_intercept.so
+==>
+==> If you rely on any of these features, install the 'sudo' package instead.
+EOF
+}
+
+post_upgrade() {
+  post_install
+}

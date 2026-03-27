@@ -1,0 +1,90 @@
+# Maintainer: Peter Jung <admin@ptr1337.dev>
+
+pkgname=sudo-rs
+pkgver=0.2.13
+pkgrel=1.3
+pkgdesc="A memory-safe implementation of sudo and su"
+arch=('x86_64')
+url="https://github.com/trifectatechfoundation/sudo-rs"
+license=('Apache-2.0 AND MIT')
+depends=(
+  glibc
+  libgcc
+  pam
+)
+makedepends=(
+  cargo
+  git
+)
+checkdepends=(
+  procps-ng
+)
+provides=(
+  'sudo'
+)
+conflicts=(
+  'sudo'
+)
+optdepends=(
+  "apparmor: apparmor support"
+)
+backup=(
+  'etc/pam.d/sudo'
+  'etc/sudoers'
+)
+install=$pkgname.install
+source=(git+https://github.com/trifectatechfoundation/sudo-rs.git#tag=v${pkgver}?signed
+        sudoers
+        sudo.pam
+        tmpfiles.d-sudo.conf)
+sha256sums=('17bdf6a122be2df0c6294d9735823fe7ecb77a53fc1dc100ccea6b887f8e95cf'
+            '31de61b0ed3d08682e4a8ac45c782fee55e18fb3398428072f4af1f861eb0a30'
+            'd1738818070684a5d2c9b26224906aad69a4fea77aabd960fc2675aee2df1fa2'
+            '809bab889cd3c992d15ec3dfd56ab1668d7fd61951feb8c449211cb7638225a9')
+validpgpkeys=(C2E4CAC4B12225DE1C3BB1C9289D082003D01E95) # Marc Schoolderman
+
+prepare() {
+  cd "$pkgname"
+  cargo fetch --locked --target "$(rustc --print host-tuple)"
+}
+
+build() {
+  cd "$pkgname"
+  cargo build --release --frozen --features apparmor
+}
+
+check() {
+  cd "$pkgname"
+  cargo test --frozen --features apparmor
+}
+
+package() {
+  cd "$pkgname"
+
+  # Install binaries at canonical paths (drop-in replacement for sudo)
+  install -Dm4755 target/release/sudo "$pkgdir/usr/bin/sudo"
+  install -Dm0755 target/release/visudo "$pkgdir/usr/bin/visudo"
+
+  # sudoedit is a hardlink to sudo
+  ln "$pkgdir/usr/bin/sudo" "$pkgdir/usr/bin/sudoedit"
+
+  # Configuration files
+  install -Dm0440 "$srcdir/sudoers" "$pkgdir/etc/sudoers"
+  install -dm0750 "$pkgdir/etc/sudoers.d"
+  install -Dm0644 "$srcdir/sudo.pam" "$pkgdir/etc/pam.d/sudo"
+
+  # tmpfiles.d for /run/sudo directories
+  install -Dm0644 "$srcdir/tmpfiles.d-sudo.conf" "$pkgdir/usr/lib/tmpfiles.d/sudo.conf"
+
+  # Man pages at standard paths
+  install -Dm0644 docs/man/sudo.8.man "$pkgdir/usr/share/man/man8/sudo.8"
+  install -Dm0644 docs/man/sudoers.5.man "$pkgdir/usr/share/man/man5/sudoers.5"
+  install -Dm0644 docs/man/visudo.8.man "$pkgdir/usr/share/man/man8/visudo.8"
+  ln "$pkgdir/usr/share/man/man8/sudo.8" "$pkgdir/usr/share/man/man8/sudoedit.8"
+
+  # Licenses and documentation
+  install -Dm644 -t "$pkgdir/usr/share/licenses/$pkgname" LICENSE-*
+  install -Dm644 -t "$pkgdir/usr/share/doc/$pkgname" CHANGELOG.md README.md SECURITY.md
+}
+
+# vim:set ts=2 sw=2 et:
