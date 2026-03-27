@@ -1,13 +1,13 @@
 post_install() {
     systemctl daemon-reload
-    systemctl enable --now cachyos-rate-mirrors.timer
+    systemctl enable cachyos-rate-mirrors.timer
 }
 
 post_upgrade() {
     systemctl daemon-reload
-    systemctl enable --now cachyos-rate-mirrors.timer
+    systemctl enable cachyos-rate-mirrors.timer
 }
 
 pre_remove() {
-    systemctl disable --now cachyos-rate-mirrors.timer
+    systemctl disable cachyos-rate-mirrors.timer
 }
