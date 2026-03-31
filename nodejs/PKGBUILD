@@ -1,6 +1,6 @@
 # Maintainer: Felix Yan <felixonmars@archlinux.org>
 # Maintainer: Daniel M. Capella <polyzen@archlinux.org>
-# Contributor  Bartłomiej Piotrowski <bpiotrowski@archlinux.org>
+# Contributor: Bartłomiej Piotrowski <bpiotrowski@archlinux.org>
 # Contributor: Thomas Dziedzic < gostrc at gmail >
 # Contributor: James Campos <james.r.campos@gmail.com>
 # Contributor: BlackEagle < ike DOT devolder AT gmail DOT com >
@@ -9,8 +9,8 @@
 # Contributor: TIanyi Cui <tianyicui@gmail.com>
 
 pkgname=nodejs
-pkgver=25.8.1
-pkgrel=2
+pkgver=25.8.2
+pkgrel=3
 pkgdesc='Evented I/O for V8 javascript ("Current" release)'
 arch=('x86_64')
 url='https://nodejs.org/'
@@ -41,7 +41,7 @@ makedepends=(
 optdepends=('npm: nodejs package manager')
 options=('!lto')
 source=("git+https://github.com/nodejs/node.git#tag=v$pkgver?signed")
-sha512sums=('184901256260b22d93255084fa174394117c228ecb661ff66ec9615e9d2dee5c5fa8364f2850cc9b143d9817f524fc6a3fb33f08fd6463c92dd83c496fbbd275')
+sha512sums=('3b6722b52a13f0db84ddf94128a59c69ea9369d2c3a55e62f055bb9118f0ae404ca03948799d230841580438afe607cf3910c30693cb83e56954d24d75fa63be')
 validpgpkeys=(
   '8FCCA13FEF1D0C2E91008E09770F7A9A5AE15600' # Michaël Zasso (Targos) <targos@protonmail.com>
   '890C08DB8579162FEE0DF9DB8BEAB4DFCF555EF4' # RafaelGSS <rafael.nunu@hotmail.com>
@@ -84,12 +84,6 @@ _set_flags() {
 
   export CFLAGS+=" ${_common_flags[*]}"
   export CXXFLAGS+=" ${_common_flags[*]}"
-}
-
-prepare() {
-  cd node
-  # Update ICU tests https://github.com/nodejs/node/pull/60523
-  patch -Np1 -i ../update-icu-tests.patch
 }
 
 build() {
