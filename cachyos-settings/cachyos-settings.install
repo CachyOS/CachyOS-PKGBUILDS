@@ -18,7 +18,4 @@ post_upgrade() {
             systemctl restart "$service"
         fi
     done
-    if systemctl is-active "systemd-oomd" >/dev/null; then
-        systemctl disable systemd-oomd
-    fi
 }
