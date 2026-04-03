@@ -25,22 +25,27 @@ enable_enroll_config() {
 post_upgrade() {
     secure_boot_enabled || return 0
 
-    if ! enable_enroll_config; then
-        status=$?
-
+    enable_enroll_config
+    status=$?
+    if [ "$status" -ne 0 ]; then
         if [ "$status" -eq 1 ]; then
             printf '%s\n' '==> Secure Boot is active, but /etc/default/limine was not found.'
             return 0
         fi
 
         printf '%s\n' '==> WARNING: Failed to update /etc/default/limine for Secure Boot.'
-        return 1
+        return 0
     fi
 
     printf '%s\n' '==> Secure Boot is active. Ensured ENABLE_ENROLL_LIMINE_CONFIG=yes in /etc/default/limine.'
 
     if [ -x usr/bin/limine-enroll-config ] && [ -x usr/bin/limine-update ]; then
         printf '%s\n' '==> Secure Boot active: re-enrolling Limine config checksum...'
-        usr/bin/limine-enroll-config && usr/bin/limine-update
+        if ! usr/bin/limine-enroll-config || ! usr/bin/limine-update; then
+            printf '%s\n' '==> WARNING: Failed to re-enroll or update Limine.'
+            printf '%s\n' '==> Ensure the ESP is mounted, then rerun limine-enroll-config and limine-update.'
+        fi
     fi
+
+    return 0
 }
