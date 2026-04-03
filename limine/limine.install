@@ -1,0 +1,46 @@
+#!/bin/sh
+
+secureboot_var='sys/firmware/efi/efivars/SecureBoot-8be4df61-93ca-11d2-aa0d-00e098032b8c'
+limine_defaults='etc/default/limine'
+
+secure_boot_enabled() {
+    [ -r "$secureboot_var" ] || return 1
+    [ "$(od -An -j4 -N1 -t u1 "$secureboot_var" 2>/dev/null | tr -d '[:space:]')" = '1' ]
+}
+
+enable_enroll_config() {
+    [ -f "$limine_defaults" ] || return 1
+
+    if grep -Eq '^[[:space:]]*ENABLE_ENROLL_LIMINE_CONFIG=(")?yes(")?$' "$limine_defaults"; then
+        return 0
+    fi
+
+    if grep -Eq '^[[:space:]]*ENABLE_ENROLL_LIMINE_CONFIG=' "$limine_defaults"; then
+        sed -i 's/^[[:space:]]*ENABLE_ENROLL_LIMINE_CONFIG=.*/ENABLE_ENROLL_LIMINE_CONFIG=yes/' "$limine_defaults"
+    else
+        printf '\nENABLE_ENROLL_LIMINE_CONFIG=yes\n' >> "$limine_defaults"
+    fi
+}
+
+post_upgrade() {
+    secure_boot_enabled || return 0
+
+    if ! enable_enroll_config; then
+        status=$?
+
+        if [ "$status" -eq 1 ]; then
+            printf '%s\n' '==> Secure Boot is active, but /etc/default/limine was not found.'
+            return 0
+        fi
+
+        printf '%s\n' '==> WARNING: Failed to update /etc/default/limine for Secure Boot.'
+        return 1
+    fi
+
+    printf '%s\n' '==> Secure Boot is active. Ensured ENABLE_ENROLL_LIMINE_CONFIG=yes in /etc/default/limine.'
+
+    if [ -x usr/bin/limine-enroll-config ] && [ -x usr/bin/limine-update ]; then
+        printf '%s\n' '==> Secure Boot active: re-enrolling Limine config checksum...'
+        usr/bin/limine-enroll-config && usr/bin/limine-update
+    fi
+}
