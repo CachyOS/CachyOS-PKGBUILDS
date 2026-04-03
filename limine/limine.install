@@ -5,7 +5,7 @@ limine_defaults='etc/default/limine'
 
 secure_boot_enabled() {
     [ -r "$secureboot_var" ] || return 1
-    [ "$(od -An -j4 -N1 -t u1 "$secureboot_var" 2>/dev/null | tr -d '[:space:]')" = '1' ]
+    bootctl status 2>/dev/null | grep -q 'Secure Boot: enabled'
 }
 
 enable_enroll_config() {
