@@ -1,0 +1,56 @@
+#!/bin/bash
+
+SNAP_FILE=/etc/cachyos/installation-snapshot
+
+if [ ! -f "$SNAP_FILE" ]; then
+    echo "No installation snapshot found at $SNAP_FILE." >&2
+    exit 1
+fi
+
+SNAP_ID=$(cat "$SNAP_FILE")
+
+if [ -z "$SNAP_ID" ]; then
+    echo "Installation snapshot ID is empty." >&2
+    exit 1
+fi
+
+# Confirm before proceeding — this is a destructive, irreversible operation.
+CONFIRM_MSG="This will roll back to the original installation snapshot and reboot.\nAll changes since installation will be lost.\n\nContinue?"
+CONFIRM_TITLE="Restore Fresh Installation"
+
+confirmed=false
+if command -v kdialog > /dev/null 2>&1; then
+    kdialog --title "$CONFIRM_TITLE" --warningyesno "$CONFIRM_MSG" && confirmed=true
+elif command -v zenity > /dev/null 2>&1; then
+    zenity --question --title="$CONFIRM_TITLE" --text="$CONFIRM_MSG" --width=400 && confirmed=true
+else
+    echo "No GUI dialog tool found (kdialog or zenity required)." >&2
+    exit 1
+fi
+
+if [ "$confirmed" != true ]; then
+    echo "Aborted by user." >&2
+    exit 0
+fi
+
+# Back up ~/.config for all users so fresh-install defaults are used
+# after the rollback. A timestamp suffix allows multiple rollbacks without
+# losing previous backups.
+TIMESTAMP=$(date +%Y%m%d%H%M%S)
+for home_dir in /home/*/; do
+    if [ -d "${home_dir}.config" ]; then
+        mv "${home_dir}.config" "${home_dir}.config.bak.${TIMESTAMP}"
+    fi
+done
+
+# snapper rollback: snapshots current state as a backup, then sets
+# the installation snapshot as the new default btrfs subvolume for
+# the next boot — bootloader-agnostic.
+snapper -c root rollback "$SNAP_ID"
+
+# Regenerate grub config if grub-btrfs is present
+if command -v grub-mkconfig > /dev/null 2>&1; then
+    grub-mkconfig -o /boot/grub/grub.cfg
+fi
+
+echo "Please reboot now your computer"
