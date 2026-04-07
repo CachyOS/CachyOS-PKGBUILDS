@@ -113,9 +113,35 @@ rate_repository_mirrors() {
         fi
     done
 
-    die "rate-mirrors failed after ${max_retries} attempts for [${repo}]. Please check your network connection and try again."
+    # Insert CN mirrors first for China region (GitHub is DNS tainted, slow intl access)
+    if [ "$country" = "CN" ] && [ "$repo" = "cachyos" ]; then
+        force_cn_mirrors
+        return 0
+    else
+        die "rate-mirrors failed after ${max_retries} attempts for [${repo}]. Please check your network connection and try again."
+    fi
 }
 
+force_cn_mirrors() {
+    local mirror domain index
+    local -a cn_mirrors=(
+        'https://mirror.nju.edu.cn/cachyos/repo/$arch/$repo'
+        'https://mirrors.ustc.edu.cn/cachyos/repo/$arch/$repo'
+    )
+
+    local -i line=1
+    for ((index=0; index < ${#cn_mirrors[@]}; index++)); do
+        mirror="${cn_mirrors[$index]}"
+        domain="${mirror##*://}"
+        domain="${domain%%/*}"
+        if curl -sL --connect-timeout 5 "https://${domain}" &>/dev/null; then
+            sed -i "$((line))iServer = ${mirror}" "${MIRRORS_DEFAULT_DIR}/cachyos-mirrorlist"
+            ((line++))
+        else
+            error "Failed to connect with ${domain} mirror"
+        fi
+    done
+}
 
 force_ru_mirrors() {
     local mirror domain index
