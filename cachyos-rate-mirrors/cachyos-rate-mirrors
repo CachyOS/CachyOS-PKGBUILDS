@@ -111,6 +111,11 @@ if [ -z "$country" ]; then
     country="$(curl --connect-timeout 10 -sSL 'https://ifconfig.co/country-iso' 2>/dev/null | grep -Po '^[A-Z]{2}$')"
 fi
 
+# Fallback to myip.la when none of the above is available
+if [ -z "$country" ]; then
+    country="$(curl --connect-timeout 10 -sSL 'https://api.myip.la/en?json' 2>/dev/null | grep -Po '\"country_code\":\"\K([A-Z]{2})')"
+fi
+
 if [ -n "$country" ]; then
     export RATE_MIRRORS_ENTRY_COUNTRY="$country"
 fi
