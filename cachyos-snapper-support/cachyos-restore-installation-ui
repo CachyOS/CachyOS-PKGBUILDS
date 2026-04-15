@@ -1,0 +1,48 @@
+#!/bin/bash
+
+HELPER=/usr/lib/cachyos/restore-installation
+TITLE="Restore Fresh Installation"
+CONFIRM_MSG="This will roll back to the original installation snapshot and reboot.\nAll changes since installation will be lost.\n\nContinue?"
+SUCCESS_MSG="Rollback complete. Please reboot your computer now."
+FAIL_MSG="Restore failed. Your system has not been rolled back."
+
+# Pick a GUI frontend once, so confirmation, success and error dialogs
+# all use the same tool.
+if command -v kdialog > /dev/null 2>&1; then
+    GUI=kdialog
+elif command -v zenity > /dev/null 2>&1; then
+    GUI=zenity
+else
+    echo "No GUI dialog tool found (kdialog or zenity required)." >&2
+    exit 1
+fi
+
+ask() {
+    case "$GUI" in
+        kdialog) kdialog --title "$TITLE" --warningyesno "$1" ;;
+        zenity)  zenity --question --title="$TITLE" --text="$1" --width=400 ;;
+    esac
+}
+
+info() {
+    case "$GUI" in
+        kdialog) kdialog --title "$TITLE" --msgbox "$1" ;;
+        zenity)  zenity --info --title="$TITLE" --text="$1" --width=400 ;;
+    esac
+}
+
+error() {
+    case "$GUI" in
+        kdialog) kdialog --title "$TITLE" --error "$1" ;;
+        zenity)  zenity --error --title="$TITLE" --text="$1" --width=400 ;;
+    esac
+}
+
+ask "$CONFIRM_MSG" || exit 0
+
+if ! pkexec "$HELPER"; then
+    error "$FAIL_MSG"
+    exit 1
+fi
+
+info "$SUCCESS_MSG"
