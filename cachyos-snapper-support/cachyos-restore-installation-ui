@@ -2,8 +2,9 @@
 
 HELPER=/usr/lib/cachyos/restore-installation
 TITLE="Restore Fresh Installation"
-CONFIRM_MSG="This will roll back to the original installation snapshot and reboot.\nAll changes since installation will be lost.\n\nContinue?"
-SUCCESS_MSG="Rollback complete. Please reboot your computer now."
+# ANSI-C quoting so real newlines reach kdialog/zenity instead of literal \n.
+CONFIRM_MSG=$'This will roll back the system to the original CachyOS installation snapshot.\n\nFiles in /home (including Documents, Pictures, etc.) are preserved.\nYour ~/.config will be renamed to ~/.config.bak.<timestamp> so the restored defaults take effect.\n\nThe change applies on the next reboot. Continue?'
+SUCCESS_MSG=$'Rollback complete.\n\nPlease reboot your computer to boot into the restored installation.'
 FAIL_MSG="Restore failed. Your system has not been rolled back."
 
 # Pick a GUI frontend once, so confirmation, success and error dialogs
