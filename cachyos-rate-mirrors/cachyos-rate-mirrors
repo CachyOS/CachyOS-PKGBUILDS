@@ -18,6 +18,14 @@ set -e
 
 declare -r MIRRORS_DEFAULT_DIR="/etc/pacman.d"
 
+# The environment snippet is already automatically used when using the service unit.
+# Commented out to allow using from command line without this config, but kept for development.
+# if [ -f /etc/conf.d/cachyos-rate-mirrors.env ]; then
+#     set -a
+#     . /etc/conf.d/cachyos-rate-mirrors.env
+#     set +a
+# fi
+
 # Use https only protocol for rating
 export RATE_MIRRORS_PROTOCOL=https
 export RATE_MIRRORS_FETCH_MIRRORS_TIMEOUT="${RATE_MIRRORS_FETCH_MIRRORS_TIMEOUT:-30000}"
@@ -125,13 +133,17 @@ force_ru_mirrors() {
     done
 }
 
-# Prefer mirrors that are geographically close, especially in countries that
-# have regional blockages
-country="$(curl --connect-timeout 10 -sSL 'https://geoip.kde.org/v1/ubiquity' | grep -Po '<CountryCode>\K([A-Z]{2})')"
+if [ -z "$RATE_MIRRORS_ENTRY_COUNTRY" ]; then
+    msg "Entry country not set, trying to detect..."
+    # Prefer mirrors that are geographically close, especially in countries that
+    # have regional blockages
+    country="$(curl --connect-timeout 10 -sSL 'https://geoip.kde.org/v1/ubiquity' | grep -Po '<CountryCode>\K([A-Z]{2})')"
 
-if [ -n "$country" ]; then
-    export RATE_MIRRORS_ENTRY_COUNTRY="$country"
+    if [ -n "$country" ]; then
+        export RATE_MIRRORS_ENTRY_COUNTRY="$country"
+    fi
 fi
+info "Using entry country: $RATE_MIRRORS_ENTRY_COUNTRY"
 
 # China only tests its own mirrors, so disable neighbors
 # and increase the number of tested mirrors to get more results
