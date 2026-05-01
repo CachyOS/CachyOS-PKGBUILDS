@@ -44,9 +44,9 @@ pkgname=(
   libubsan
   lto-dump
 )
-pkgver=15.2.1+r604+g0b99615a8aef
-_commit=0b99615a8aef011cff76c6caa8c09434f46598b3
-pkgrel=2
+pkgver=16.1.1+r18+gb52db041d2be
+_commit=b52db041d2beaf11f31339be36305fc9abcf20e7
+pkgrel=0.4
 pkgdesc='The GNU Compiler Collection'
 arch=(x86_64)
 license=(
@@ -88,9 +88,9 @@ validpgpkeys=(F3691687D867B81B51CE07D9BBE43771487328A9  # bpiotrowski@archlinux.
               86CFFCA918CF3AF47147588051E8B148A9999C34  # foutrelis@archlinux.org
               13975A70E63C361C73AE69EF6EEB81F8981C74C7  # richard.guenther@gmail.com
               D3A93CAD751C2AF4F8C7AD516C35B99309B5FA62) # Jakub Jelinek <jakub@redhat.com>
-sha256sums=('fda170be6da777107c74ad322d51a508edf448b86ce8247755eb0eb1524f38b6'
-            '7b09ec947f90b98315397af675369a1e3dfc527fa70013062e6e85c4be0275ab'
-            '44ea973558842f3f4bd666bdaf6e810fd7b7c7bd36b5cc4c69f93d2cd0124fc7'
+sha256sums=('d5cb4a1744e721f72cd8ce08054c850dc086a00f0f097bc409026fad65b95bab'
+            'a0d73f2a5442be69eb52f3d9ab6c3c8cf617cf12ec52c8b7b6898bffd4701fa1'
+            '7c7303157dfcd8188a3acdcca78adbcdd261980d89ec4a6e6c6eb691178d104e'
             '1773f5137f08ac1f48f0f7297e324d5d868d55201c03068670ee4602babdef2f')
 #pkgver() {
 #  cd gcc
@@ -100,9 +100,6 @@ sha256sums=('fda170be6da777107c74ad322d51a508edf448b86ce8247755eb0eb1524f38b6'
 prepare() {
   [[ ! -d gcc ]] && ln -s gcc-${pkgver/+/-} gcc
   cd gcc
-
-  # Do not run fixincludes
-  sed -i 's@\./fixinc\.sh@-c true@' gcc/Makefile.in
 
   # Arch Linux installs x86_64 libraries /lib
   sed -i '/m64=/s/lib64/lib/' gcc/config/i386/t-linux64
@@ -125,7 +122,6 @@ build() {
       --with-build-config=bootstrap-lto
       --with-linker-hash-style=gnu
       --with-system-zlib
-      --enable-__cxa_atexit
       --enable-cet=auto
       --enable-checking=release
       --enable-clocale=gnu
@@ -144,6 +140,7 @@ build() {
       --disable-libssp
       --disable-libstdcxx-pch
       --disable-werror
+      --disable-fixincludes
   )
 
   cd gcc-build
@@ -259,6 +256,7 @@ package_gcc() {
   make -C $CHOST/libgcc DESTDIR="$pkgdir" install
   make -C $CHOST/32/libgcc DESTDIR="$pkgdir" install
   rm -f "$pkgdir"/usr/lib{,32}/libgcc_s.so*
+  rm -f "$pkgdir"/usr/lib{,32}/libgcc_s_asneeded.so*
 
   make -C $CHOST/libstdc++-v3/src DESTDIR="$pkgdir" install
   make -C $CHOST/libstdc++-v3/include DESTDIR="$pkgdir" install
@@ -543,6 +541,7 @@ package_gcc-m2() {
     "gcc=$pkgver-$pkgrel"
     'glibc>=2.27'
     gmp
+    libgm2
     libisl.so
     libmpc
     mpfr
@@ -799,7 +798,7 @@ package_libgomp() {
 }
 
 package_libgm2() {
-  pkgdesc='Address Sanitizer runtime library shipped by GCC'
+  pkgdesc='Modula-2 runtime libraries shipped by GCC'
   depends=(
     'glibc>=2.27'
   )
