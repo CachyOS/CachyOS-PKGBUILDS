@@ -10,7 +10,7 @@ shopt -s extglob
 pkgbase=python
 pkgname=(python python-tests)
 pkgver=3.14.4
-pkgrel=2
+pkgrel=3
 _pybasever=${pkgver%.*}
 pkgdesc="The Python programming language"
 arch=('x86_64')
@@ -43,7 +43,7 @@ build() {
   CFLAGS="${CFLAGS/-O2/-O3} -ffat-lto-objects"
 
   export CFLAGS+=" -fno-semantic-interposition"
-  export CXXLAGS+=" -fno-semantic-interposition"
+  export CXXFLAGS+=" -fno-semantic-interposition"
 
 
   # Disable bundled pip & setuptools
@@ -55,6 +55,7 @@ build() {
               --with-computed-gotos \
               --enable-optimizations \
               --with-lto \
+              --with-tail-call-interp \
               --enable-ipv6 \
               --with-system-expat \
               --with-dbmliborder=gdbm:ndbm \
