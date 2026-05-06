@@ -26,7 +26,10 @@ source=('nvidia-drm-outputclass.conf'
         "https://download.nvidia.com/XFree86/NVIDIA-kernel-module-source/${_pkg_open}.tar.xz"
         '0002-Add-IBT-support.patch'
         'limit-vram-usage'
-        'cuda-no-stable-perf-limit')
+        'cuda-no-stable-perf-limit'
+        '0001-fix-dsc-correct-RC-parameter-tables-to-match-VESA-DS.patch'
+        '0002-fix-dsc-use-bits_per_component-for-flatnessDetThresh.patch'
+        '0003-fix-dp-add-Bigscreen-Beyond-VR-headset-to-WAR-databa.patch')
 sha256sums=('be99ff3def641bb900c2486cce96530394c5dc60548fc4642f19d3a4c784134d'
             'f77a5247a3ba63e9fad3a3b2822d0fcfa51e0f79b5a90bd79bf08ea34b64ab07'
             '0e54249a7754b668b436f0f7aa7e95fff68edbb12a93dbee4660e09a8c695f84'
@@ -38,7 +41,10 @@ sha256sums=('be99ff3def641bb900c2486cce96530394c5dc60548fc4642f19d3a4c784134d'
             '1f558b1e7d4cd2b7901ee01bdea6f8bd439916bd61fa36bbf736fbe8703414cd'
             'a0088d49d46b699d1727e5944fd9aca5ede93ea3678dd5e91ca58084bc2fa0ee'
             'b14f7a65359c05c373ddfc750cd4cf086a48e815489d93ad5cbe1dbf84bf8f5a'
-            '6264d279bbae8eae6554ed78dd6e562da00cf71ffa5601ce5208099a98cd2c4d')
+            '6264d279bbae8eae6554ed78dd6e562da00cf71ffa5601ce5208099a98cd2c4d'
+            'f6561a5cfbf3bb16cc0f4ecc05fde609c5668f84f4e1e4dc6e2879962e7feca8'
+            '2dbab2b90cd0f0467b9e18628964d2e94ad6bee297bd25d51c70744b41b8e2a3'
+            '17b5a9d3d14bdaac0cb3b04322f3e0b9e8190c8dcdf80bf1db72515f5dac0960')
 
 
 create_links() {
@@ -58,6 +64,9 @@ prepare() {
 
     # NVIDIA-open
     patch -Np1 -i "${srcdir}/0002-Add-IBT-support.patch" -d "${srcdir}/${_pkg_open}/"
+    patch -Np1 -i "${srcdir}/0001-fix-dsc-correct-RC-parameter-tables-to-match-VESA-DS.patch" -d "${srcdir}/${_pkg_open}/"
+    patch -Np1 -i "${srcdir}/0002-fix-dsc-use-bits_per_component-for-flatnessDetThresh.patch" -d "${srcdir}/${_pkg_open}/"
+    patch -Np1 -i "${srcdir}/0003-fix-dp-add-Bigscreen-Beyond-VR-headset-to-WAR-databa.patch" -d "${srcdir}/${_pkg_open}/"
 
     # Attempt to make builds reproducible
     sed -i "s/^  HOSTNAME.*/  HOSTNAME = echo cachyos/" "${srcdir}/${_pkg_open}/utils.mk"
