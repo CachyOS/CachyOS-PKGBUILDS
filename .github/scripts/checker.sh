@@ -28,7 +28,7 @@ create_issue() {
   local title="${2}"
   local description="${3}"
 
-  local issue_data='{"title": "'"${title}"'", "body": "'"${description}"'", "labels": ["out-of-date"]}'
+  local issue_data="$(jq -n --arg title "${title}" --arg body "${description}" '{title: $title, body: $body, labels: ["out-of-date"]}')"
   github_api POST "issues" "${issue_data}" >/dev/null
   echo "Created issue for ${package}: ${title}"
 }
@@ -38,7 +38,7 @@ update_issue() {
   local title="${2}"
   local description="${3}"
 
-  local issue_data='{"title": "'"${title}"'", "body": "'"${description}"'"}'
+  local issue_data="$(jq -n --arg title "${title}" --arg body "${description}" '{title: $title, body: $body}')"
   github_api PATCH "issues/${issue_number}" "${issue_data}" >/dev/null
   echo "Updated issue #${issue_number} with title: ${title}"
 }
@@ -47,7 +47,7 @@ comment_on_issue() {
   local issue_number="${1}"
   local body="${2}"
 
-  local comment_data='{"body": "'"${body}"'"}'
+  local comment_data="$(jq -n --arg body "${body}" '{body: $body}')"
   github_api POST "issues/${issue_number}/comments" "${comment_data}" >/dev/null
   echo "Commented on issue #${issue_number}"
 }
@@ -68,7 +68,7 @@ find_existing_issue() {
   local search_title="${package}: "
 
   local issues_json="$(github_api GET "issues?state=open&labels=out-of-date&sort=created&direction=asc&per_page=100" "")"
-  local issue_number="$(jq -r ".[] | select(.title | startswith(\"${search_title}\")) | .number" <<< "${issues_json}")"
+  local issue_number="$(jq -r --arg search_title "${search_title}" '.[] | select(.title | startswith($search_title)) | .number' <<< "${issues_json}" | head -n1)"
 
   if [[ -n "${issue_number}" ]]; then
     echo "${issue_number}"
