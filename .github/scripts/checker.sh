@@ -108,6 +108,7 @@ check_package() {
     echo "${pkgbase}: upgrade from version ${pkgver} to ${upstream_version}"
     title="${pkgbase}: new version ${upstream_version}"
     description="New upstream version ${upstream_version} is available for package ${pkgbase}.\n\nCurrent version: ${pkgver}\nUpstream version: ${upstream_version}\n\nPlease update the package."
+    description="${description//\\n/$'\n'}"
 
     issue_number="$(find_existing_issue "${pkgbase}")"
     if [[ -n "${issue_number}" ]]; then
