@@ -7,7 +7,7 @@ pkgname=(
   rog-control-center
 )
 pkgver=6.3.7
-pkgrel=1
+pkgrel=2
 pkgdesc="A control daemon, tools, and a collection of crates for interacting with ASUS ROG laptops"
 arch=('x86_64')
 url="https://asus-linux.org"
@@ -81,6 +81,9 @@ package_asusctl() {
     install-data-asusd \
     install-data-asusd_user \
     install-asus-shutdown
+
+  # Required by asusd.service ReadWritePaths=/etc/asusd/
+  install -dm755 "${pkgdir}/etc/asusd"
 }
 
 package_rog-control-center() {
