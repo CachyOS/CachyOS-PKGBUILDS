@@ -1,0 +1,174 @@
+From 5be0cfa3ce73a111a2cef0dc0abdc6b6bad0ff9c Mon Sep 17 00:00:00 2001
+From: morganamilo <morganamilo@archlinux.org>
+Date: Thu, 8 Jan 2026 12:43:02 +0000
+Subject: [PATCH] Fix aur package list no longer being transparently decoded
+
+---
+ Cargo.lock        |  1 +
+ Cargo.toml        |  1 +
+ src/completion.rs | 28 +++++++++++++++++++++-------
+ src/search.rs     |  7 +++++--
+ src/sync.rs       | 18 ++++++++----------
+ 5 files changed, 36 insertions(+), 19 deletions(-)
+
+diff --git a/Cargo.lock b/Cargo.lock
+index 405bdf8..79728ce 100644
+--- a/Cargo.lock
++++ b/Cargo.lock
+@@ -1506,6 +1506,7 @@ dependencies = [
+  "cini",
+  "dirs",
+  "env_logger",
++ "flate2",
+  "futures",
+  "globset",
+  "htmlescape",
+diff --git a/Cargo.toml b/Cargo.toml
+index 5447467..5ed9e39 100644
+--- a/Cargo.toml
++++ b/Cargo.toml
+@@ -57,6 +57,7 @@ regex = "1.11.1"
+ signal-hook = "0.3.18"
+ bitflags = "2.9.1"
+ toml = { version = "0.8.23", features = ["preserve_order"] }
++flate2 = "1.1.2"
+ 
+ [profile.release]
+ codegen-units = 1
+diff --git a/src/completion.rs b/src/completion.rs
+index 2724e96..6a59f68 100644
+--- a/src/completion.rs
++++ b/src/completion.rs
+@@ -1,12 +1,13 @@
+ use crate::config::Config;
+ use crate::print_error;
+ 
+-use std::fs::{create_dir_all, metadata, OpenOptions};
+-use std::io::{stdout, BufRead, BufReader, Write};
++use std::fs::{create_dir_all, metadata, remove_file, OpenOptions};
++use std::io::{stdout, BufRead, BufReader, Read, Write};
+ use std::path::Path;
+ use std::time::{Duration, SystemTime};
+ 
+ use anyhow::{ensure, Context, Result};
++use flate2::read::GzDecoder;
+ use reqwest::get;
+ use tr::tr;
+ use url::Url;
+@@ -20,6 +21,9 @@ async fn save_aur_list(aur_url: &Url, cache_dir: &Path) -> Result<()> {
+     ensure!(success, "get {}: {}", url, resp.status());
+ 
+     let data = resp.bytes().await?;
++    let decoder = GzDecoder::new(&*data);
++    let data =
++        std::io::read_to_string(decoder).with_context(|| tr!("failed to decode package list"))?;
+ 
+     create_dir_all(cache_dir)?;
+     let path = cache_dir.join("packages.aur");
+@@ -30,11 +34,9 @@ async fn save_aur_list(aur_url: &Url, cache_dir: &Path) -> Result<()> {
+         .open(&path);
+     let mut file = file.with_context(|| tr!("failed to open cache file '{}'", path.display()))?;
+ 
+-    for line in data.split(|&c| c == b'\n').skip(1) {
+-        if !line.is_empty() {
+-            file.write_all(line)?;
+-            file.write_all(b"\n")?;
+-        }
++    for line in data.lines().filter(|l| !l.is_empty()) {
++        file.write_all(line.as_bytes())?;
++        file.write_all(b"\n")?;
+     }
+ 
+     Ok(())
+@@ -44,6 +46,18 @@ pub async fn update_aur_cache(aur_url: &Url, cache_dir: &Path, timeout: Option<u
+     let path = cache_dir.join("packages.aur");
+     let metadata = metadata(&path);
+ 
++    if let Ok(mut file) = OpenOptions::new().read(true).open(&path) {
++        let mut buf = vec![0; 1024];
++        if let Ok(n) = file.read(&mut buf) {
++            if buf[0..n].contains(&b'\0') {
++                let _ = std::fs::remove_file(&path);
++                let _ = remove_file(&path);
++                save_aur_list(aur_url, cache_dir).await?;
++                return Ok(());
++            }
++        }
++    }
++
+     let need_refresh = match metadata {
+         Err(err) if err.kind() == std::io::ErrorKind::NotFound => true,
+         Err(err) => return Err(anyhow::Error::new(err)),
+diff --git a/src/search.rs b/src/search.rs
+index a66d14c..71f543f 100644
+--- a/src/search.rs
++++ b/src/search.rs
+@@ -8,6 +8,7 @@ use crate::{info, printtr};
+ 
+ use ansiterm::Style;
+ use anyhow::{ensure, Context, Result};
++use flate2::read::GzDecoder;
+ use indicatif::HumanBytes;
+ use raur::{Raur, SearchBy};
+ use regex::RegexSet;
+@@ -172,13 +173,15 @@ async fn search_aur_regex(config: &Config, targets: &[String]) -> Result<Vec<rau
+     let success = resp.status().is_success();
+     ensure!(success, "get {}: {}", url, resp.status());
+ 
+-    let data = resp.text().await?;
++    let data = resp.bytes().await?;
++    let decoder = GzDecoder::new(&*data);
++    let data =
++        std::io::read_to_string(decoder).with_context(|| tr!("failed to decode package list"))?;
+ 
+     let regex = RegexSet::new(targets)?;
+ 
+     let pkgs = data
+         .lines()
+-        .skip(1)
+         .filter(|pkg| regex.is_match(pkg))
+         .collect::<Vec<_>>();
+     ensure!(pkgs.len() < 2000, "too many packages");
+diff --git a/src/sync.rs b/src/sync.rs
+index ca5ee41..2fa59a6 100644
+--- a/src/sync.rs
++++ b/src/sync.rs
+@@ -2,10 +2,11 @@ use crate::config::Config;
+ use crate::pkgbuild::PkgbuildRepos;
+ use crate::{exec, print_error};
+ 
+-use std::io::Write;
++use std::io::{Read, Write};
+ 
+ use anyhow::{anyhow, ensure, Context, Result};
+ 
++use flate2::read::GzDecoder;
+ use raur::Raur;
+ use tr::tr;
+ 
+@@ -105,19 +106,16 @@ pub async fn list_aur(config: &Config) -> Result<()> {
+     ensure!(success, "get {}: {}", url, resp.status());
+ 
+     let data = resp.bytes().await?;
++    let mut decoder = GzDecoder::new(&*data);
++    let mut data = Vec::new();
++    decoder
++        .read_to_end(&mut data)
++        .with_context(|| tr!("failed to decode package list"))?;
+ 
+     let stdout = std::io::stdout();
+     let mut stdout = stdout.lock();
+ 
+-    let mut lines = data
+-        .split(|&c| c == b'\n')
+-        .skip(1)
+-        .filter(|l| !l.is_empty())
+-        .collect::<Vec<_>>();
+-
+-    lines.sort_unstable();
+-
+-    for line in lines {
++    for line in data.split(|b| *b == b'\n').filter(|l| !l.is_empty()) {
+         print_pkg(config, &mut stdout, line, "aur", "unknown-version");
+     }
+ 
