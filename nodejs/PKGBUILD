@@ -40,7 +40,6 @@ makedepends=(
   'python'
 )
 optdepends=('npm: nodejs package manager')
-options=('!lto')
 source=("git+https://github.com/nodejs/node.git#tag=v$pkgver?signed")
 
 sha512sums=('dde978219d900786ebff9aa7076f3c9d26ed8926089acd5776ec616c3b6e8592ac212a68baea4441c512f9e5cc38e6002a806926db70933de07abfe698c1b2e5')
@@ -60,6 +59,7 @@ _common_flags=(
 
 _configure_args=(
   --ninja
+  --enable-lto
   --prefix=/usr
   --with-intl=system-icu
   --without-npm
