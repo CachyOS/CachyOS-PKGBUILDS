@@ -46,8 +46,9 @@ build() {
   # PGO should be done with -O3
   CFLAGS="${CFLAGS/-O2/-O3} -ffat-lto-objects"
 
-  # Extended PGO runs most of the test suite; exclude known flaky tests and
-  export PROFILE_TASK='-m test --pgo-extended'
+  # Extended PGO runs most of the test suite; exclude known flaky tests
+  # test_socket: https://github.com/python/cpython/issues/79428
+  export PROFILE_TASK='-m test --pgo-extended -x test_socket'
 
   # Disable bundled pip & setuptools
   # BOLT is disabled due LLVM or upstream issue
