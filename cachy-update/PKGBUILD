@@ -2,14 +2,14 @@
 
 pkgname=cachy-update
 pkgver=3.20.0
-pkgrel=1
+pkgrel=2
 pkgdesc="An update notifier & applier that assists you with important pre / post update tasks"
 url="https://github.com/CachyOS/cachy-update"
 arch=('any')
 license=('GPL-3.0-or-later')
 depends=('bash' 'systemd' 'pacman' 'pacman-contrib' 'archlinux-contrib' 'curl' 'fakeroot' 'util-linux'
          'htmlq' 'diffutils' 'hicolor-icon-theme' 'python' 'python-pyqt6' 'qt6-svg' 'glib2' 'xdg-utils')
-makedepends=('scdoc')
+makedepends=('scdoc' 'git')
 checkdepends=('bats')
 conflicts=('arch-update')
 optdepends=('paru: AUR Packages support'
@@ -27,23 +27,23 @@ source=("git+https://github.com/CachyOS/cachy-update#commit=e44389bf270732ad9b7d
 sha256sums=('03323e47b2ab76d13ca190267998cc1e59d6eef84bdba4c9c46e02ecbe48ec1b')
 
 prepare() {
-	cd "${pkgname}"
-	make clean
+    cd "${pkgname}"
+    make clean
 }
 
 build() {
-	cd "${pkgname}"
-	make
+    cd "${pkgname}"
+    make
 }
 
 check() {
-	cd "${pkgname}"
-	make test
+    cd "${pkgname}"
+    make test
 }
 
 package() {
-	cd "${pkgname}"
-	make PREFIX=/usr DESTDIR="${pkgdir}" install
+    cd "${pkgname}"
+    make PREFIX=/usr DESTDIR="${pkgdir}" install
 
-	ln -s arch-update "${pkgdir}/usr/bin/${pkgname}"
+    ln -s arch-update "${pkgdir}/usr/bin/${pkgname}"
 }
