@@ -1,0 +1,18 @@
+post_install() {
+  echo ""
+  echo "  cachy-screen-enhancer installed."
+  echo ""
+  echo "  To apply the ICC profile and gamma correction, run:"
+  echo "    bash /usr/share/cachy-screen-enhancer/safe-install.sh"
+  echo ""
+}
+
+post_upgrade() {
+  post_install
+}
+
+pre_remove() {
+  if [ -f /usr/share/cachy-screen-enhancer/tools/remove-profile.sh ]; then
+    bash /usr/share/cachy-screen-enhancer/tools/remove-profile.sh
+  fi
+}
