@@ -11,21 +11,15 @@ url="https://github.com/galpt/cachy-screen-enhancer"
 depends=('python' 'colord' 'argyllcms')
 makedepends=('git')
 install="$pkgname.install"
-source=("$pkgname::git+$url.git#tag=v$pkgver")
-sha256sums=('f4ead5a448037bf561b5f38e2f0728eba5bf1c4cd6044786486391b444af8857')
+source=("$pkgname::git+$url.git#tag=v$pkgver"
+        "README.cachyos.md")
+sha256sums=('f4ead5a448037bf561b5f38e2f0728eba5bf1c4cd6044786486391b444af8857'
+            '81aada89faac5c7a4acb80e30ee7bbfbcf72bfd33fe66d088e9d1c6d4e7bd7bf')
 
 package() {
   cd "${srcdir}/${pkgname}"
 
   local sharedir="$pkgdir/usr/share/$pkgname"
-
-  install -d "$sharedir"
-  install -d "$sharedir/src"
-  install -d "$sharedir/profiles/icc"
-  install -d "$sharedir/profiles/cal"
-  install -d "$sharedir/tools"
-  install -d "$sharedir/docs"
-  install -d "$sharedir/data/edid"
 
   # Core files
   install -Dm755 safe-install.sh "$sharedir/safe-install.sh"
@@ -68,6 +62,7 @@ package() {
   # Docs
   install -Dm644 docs/HOW_IT_WORKS.md "$sharedir/docs/HOW_IT_WORKS.md"
   install -Dm644 docs/TROUBLESHOOTING.md "$sharedir/docs/TROUBLESHOOTING.md"
+  install -Dm644 "$srcdir/README.cachyos.md" "$sharedir/docs/README.cachyos.md"
 
   # Data
   install -Dm644 data/edid/len156fhd_2026-06-09.bin "$sharedir/data/edid/len156fhd_2026-06-09.bin"
