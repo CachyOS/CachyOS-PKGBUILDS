@@ -1,0 +1,35 @@
+# Maintainer: witchlliee <witchlliee@tuta.io>
+pkgname=fluxer-canary
+pkgver=2026.602.31138
+pkgrel=1
+pkgdesc="Group chat, video, and voice calling app"
+arch=('x86_64')
+options=(!strip)
+url="https://canary.fluxer.app"
+license=('AGPL-3.0')
+depends=('gtk3' 'nss' 'alsa-lib')
+provides=('fluxer-canary')
+conflicts=('fluxer-canary')
+source=(
+  "fluxer-canary-${pkgver}-x64.tar.gz::https://api.fluxer.app/dl/desktop/canary/linux/x64/${pkgver}/tar_gz"
+  "fluxer-canary.desktop"
+)
+sha256sums=('221cc47186827029423bfa88624128d89b132c407e2b4f9c41609a24ed59cfb0'
+            '14bf8d2e88cb86dd2cfe493bc5b0ed0271b8660acf24c0125a8b4303dd762bb5')
+
+package() {
+    _srcdir="Fluxer Canary-${pkgver}-linux-x64"
+
+    cd "$_srcdir"
+
+    install -d "$pkgdir"/opt/$pkgname
+    cp -r . "$pkgdir"/opt/$pkgname/
+
+    install -d "$pkgdir"/usr/bin
+    ln -s /opt/$pkgname/fluxer-canary "$pkgdir"/usr/bin/fluxer-canary
+
+    install -d "$pkgdir"/usr/share/icons/hicolor/{256x256/apps/,512x512/apps/}
+    install -Dm644 "$srcdir"/fluxer-canary.desktop "$pkgdir"/usr/share/applications/fluxer-canary.desktop
+    ln -srv /opt/$pkgname/resources/icons/256x256.png "$pkgdir"/usr/share/icons/hicolor/256x256/apps/fluxer-canary.png
+    ln -srv /opt/$pkgname/resources/icons/512x512.png "$pkgdir"/usr/share/icons/hicolor/512x512/apps/fluxer-canary.png
+}
