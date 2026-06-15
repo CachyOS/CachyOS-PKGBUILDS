@@ -25,13 +25,13 @@ prepare() {
   cd "$pkgname"
 
   # archlinux: use cachyos proxy mirrorlist
-  patch -Np1 -i ../d772bcada9290c3512410bbf6bb337d014a96c42
+  patch -Np1 -i ../d772bcada9290c3512410bbf6bb337d014a96c42.patch
 
   # cachyos: add proxy mirrorlist as primary
-  patch -Np1 -i ../c7f7f0c9d35bd3b490cd2bb95609707038829b25
+  patch -Np1 -i ../c7f7f0c9d35bd3b490cd2bb95609707038829b25.patch
 
   # archlinux: fall back to upstream mirror status on proxy failure
-  patch -Np1 -i ../0fb7535bee84ec798b710a8c6941be4947317ead
+  patch -Np1 -i ../0fb7535bee84ec798b710a8c6941be4947317ead.patch
 
   cargo fetch --locked --target "$CARCH-unknown-linux-gnu"
 }
