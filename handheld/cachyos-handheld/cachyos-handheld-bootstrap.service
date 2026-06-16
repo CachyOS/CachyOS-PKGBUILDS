@@ -1,0 +1,16 @@
+[Unit]
+Description=CachyOS Handheld first-boot SteamOS bootstrap
+Wants=network-online.target
+After=network-online.target
+# Skip once the bootstrap has been successfully installed.
+ConditionPathExists=!/var/lib/cachyos-handheld-bootstrap-done
+
+[Service]
+Type=oneshot
+ExecStart=/usr/lib/cachyos-handheld/cachyos-handheld-bootstrap.sh
+# Stamp only on success, so a failed download retries on the next boot.
+ExecStartPost=/usr/bin/touch /var/lib/cachyos-handheld-bootstrap-done
+RemainAfterExit=no
+
+[Install]
+WantedBy=multi-user.target
