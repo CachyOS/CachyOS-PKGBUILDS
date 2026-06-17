@@ -5,7 +5,7 @@
 # Maintainer: Eric Naim <dnaim@cachyos.org>
 
 pkgname=steamos-manager
-pkgver=26.1.0
+pkgver=26.3.0
 pkgrel=1
 pkgdesc='SteamOS Manager daemon for running various system management tasks'
 arch=('x86_64')
@@ -23,21 +23,18 @@ depends=(
 optdepends=('jupiter-hw-support: jupiter support')  # Needed for jupiter-get-als-gain, jupiter-biosupdate, steamos-format-device, steamos-trim-devices
 makedepends=('git' 'cargo' 'clang')
 source=("git+https://gitlab.steamos.cloud/holo/steamos-manager.git#tag=v${pkgver}"
-        "support-gamescope-session-steam.patch"
-        "msi-claw.patch"
-        "64.patch")
-sha256sums=('3ce12ee66a6c44adc0079975dacb5f74ffa12e26ebfa987785e4b7d037b4ebe2'
-            '7eb26772b2d6ce474ce4469816ee224bba8cd68c6847487b14e09865194238d8'
-            'fcc270b72ebc2eb48aeaec9b71e53cd6ff5ad5218327f0a2fb3685d59c87a792'
-            '00b96f9b1b218627f5ef2efa16801e9680793581134cfe54e29d5b1df08e2bc5')
+        "support-gamescope-session-steam.patch")
+sha256sums=('aa1fdab11b18515d4bfabc7a0b18dece17c51ad32da85111d97c881222f5da3a'
+            '7eb26772b2d6ce474ce4469816ee224bba8cd68c6847487b14e09865194238d8')
 install='steamos-manager.install'
 
 prepare() {
     cd "${pkgname}"
 
+    # MSI Claw support
+    git cherry-pick -n 2f4aff12edfb041efb7928a5013f798a7e57decf
+
     patch -Np1 -i ../support-gamescope-session-steam.patch
-    patch -Np1 -i ../msi-claw.patch
-    patch -Np1 -i ../64.patch
 
     cargo fetch --locked --target "x86_64-unknown-linux-gnu"
 }
