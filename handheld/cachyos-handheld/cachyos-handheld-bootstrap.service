@@ -1,0 +1,22 @@
+[Unit]
+Description=CachyOS Handheld first-boot SteamOS bootstrap
+Wants=network-online.target
+After=network-online.target
+# Finish the bootstrap before the desktop/gaming session comes up so Steam
+# finds it on first run. Ordering only (not a hard requirement): if the
+# download fails or times out the desktop still starts.
+Before=display-manager.service
+# Skip once the bootstrap has been successfully installed.
+ConditionPathExists=!/var/lib/cachyos-handheld-bootstrap-done
+
+[Service]
+Type=oneshot
+# Bound the wait so a slow/hung download cannot block boot indefinitely.
+TimeoutStartSec=120
+ExecStart=/usr/lib/cachyos-handheld/cachyos-handheld-bootstrap.sh
+# Stamp only on success, so a failed download retries on the next boot.
+ExecStartPost=/usr/bin/touch /var/lib/cachyos-handheld-bootstrap-done
+RemainAfterExit=no
+
+[Install]
+WantedBy=multi-user.target
