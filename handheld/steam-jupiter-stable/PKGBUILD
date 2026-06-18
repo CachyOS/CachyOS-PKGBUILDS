@@ -7,7 +7,7 @@
 _basename=steam
 pkgname=steam-jupiter-stable
 pkgver=1.0.0.85
-pkgrel=9
+pkgrel=10
 pkgdesc="Valve's digital software delivery system - Jupiter bootstrapped packaging"
 url='https://steampowered.com/'
 arch=('x86_64')
@@ -37,6 +37,7 @@ depends=(
   libxcrypt
   libxcrypt-compat
   gcc-libs
+  steam-devices # for the udev rules
 )
 depends_x86_64=(
   # Holo
@@ -113,11 +114,6 @@ package() {
 
   # blank steamdeps because apt-get
   ln -sf /usr/bin/true "${pkgdir}/usr/bin/steamdeps"
-
-  install -Dm 644 subprojects/steam-devices/60-steam-input.rules \
-    "${pkgdir}/usr/lib/udev/rules.d/60-steam-input.rules"
-  install -Dm 644 subprojects/steam-devices/60-steam-vr.rules \
-    "${pkgdir}/usr/lib/udev/rules.d/60-steam-vr.rules"
 
   # Additional wakeup rules for fremont. These should be upstreamed
   install -Dm 644 "${srcdir}/99-power-wakeup.rules" \
