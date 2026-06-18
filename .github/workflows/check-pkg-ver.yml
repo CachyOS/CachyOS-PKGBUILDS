@@ -7,10 +7,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Set up dependencies
-        run: sudo apt install -y jq nvchecker pacman-package-manager
+        run: |
+          sudo apt update
+          sudo apt install -y jq nvchecker pacman-package-manager
 
       - name: Run version checker
         run: .github/scripts/checker.sh --ci

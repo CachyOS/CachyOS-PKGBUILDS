@@ -2,8 +2,8 @@
 
 _gitname=CachyOS-Settings
 pkgname=cachyos-settings
-pkgver=1.3.4
-pkgrel=2
+pkgver=1.3.5
+pkgrel=1
 epoch=1
 groups=(cachyos)
 arch=('any')
@@ -13,7 +13,7 @@ pkgdesc='CachyOS - Settings'
 url="https://github.com/CachyOS/$_gitname"
 source=("git+$url.git?signed#tag=$pkgver")
 install="$pkgname.install"
-sha256sums=('f4d0eb4b611f75c33f42e924f1247b86a088008a09047491368dc1ddd4a99393')
+sha256sums=('7fb5ed29939691b3263183c504e9e638a6ee2a03de93a6e525b74cfb8e4f8a8f')
 validpgpkeys=(
   E8B9AA39F054E30E8290D492C3C4820857F654FE  # Peter Jung <admin@ptr1337.dev>
   B1B70BB1CD56047DEF31DE2EB62C3D10C54D5DA9  # Vladislav Nepogodin <nepogodin.vlad@gmail.com>
@@ -33,7 +33,6 @@ optdepends=('libluv: for topmem'
 provides=('ntsync-common')
 prepare() {
   cd $_gitname
-  git cherry-pick -n d20a4d72150ffceccb4085fc5645c9208792e77b
 }
 package() {
   install -d "$pkgdir/etc"

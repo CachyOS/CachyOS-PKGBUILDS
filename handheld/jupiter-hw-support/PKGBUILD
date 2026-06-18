@@ -1,8 +1,8 @@
 # Maintainer: Peter Jung <admin@ptr1337.dev>
 
 pkgname=jupiter-hw-support
-pkgver=20260327.1
-pkgrel=3
+pkgver=20260413.1
+pkgrel=1
 arch=('any')
 license=('MIT')
 depends=(
@@ -27,14 +27,15 @@ source=("git+https://github.com/evlaV/jupiter-hw-support.git#tag=jupiter-${pkgve
         "cachyos-bios.patch")
 #install="$pkgname.install"
 options=(!strip !debug)
-sha256sums=('2d6ba9efdba8367c998df748b2572feb176efb5b7c132707758f7fb7670b1238'
-            'fe064240bf77dabfa4d161b10c33c82385a0ca22a49350e70ab9301b0e98dc7b'
-            'c7db0e977fb0c3a1526b8482e349f73304fc6397d7337c48fe0c990bde64412c'
-            'd6b5636eb09d2190b10eb665238c30960babba96424fc9768e36966495fa795e'
-            'd3098f26eaa26d9eccfedeac792e47a03317bdd16b17ba03be0fbd1ed6621c5d'
+sha256sums=('b4cb40ac1d61c1ebbc05a0106f7c0fec1c278cd50ae5c9b0fcbc51cbd97b2895'
+            'b56443748e059dfc61122f2324b6ca6b1be32e4cf9c08884249a89f1e6438964'
+            'cb839c99b9338eebb4f2b73af97f32ccf1684facf9c4b4c181f09247a4af19a4'
+            '48bf1ff6957c23b37ed0054ac863a08fdc2c9f80ff11b2a27233af93b443e755'
+            '1e4a352bbff01ca68ac9c5f1e9581db458b1b7f663f4e46089be0ebd9d1f7463'
             'f3ca66a1b9ef5d929e925c0a8a07e91d0d7874e47cc549297480bdcf9cb15237')
 prepare() {
   cd "${pkgname}"
+  git revert -n 8e870e11fb98094dff7ae3d695fcb47efd38e63e
 
   patch --forward --strip=1 --input=../steamos-btrfs-automount.patch
   patch --forward --strip=1 --input=../cachyos-automount.patch
@@ -46,8 +47,8 @@ prepare() {
 package() {
   rsync -a "$srcdir"/jupiter-hw-support/* "$pkgdir"
 
-  cd $pkgdir/usr/share/steamos/
-  xcursorgen $pkgdir/usr/share/steamos/steamos-cursor-config $pkgdir/usr/share/icons/steam/cursors/default
+  cd $pkgdir/usr/share/holo
+  xcursorgen $pkgdir/usr/share/holo/holo-cursor-config $pkgdir/usr/share/icons/steam/cursors/default
 
   cd "$pkgdir/usr/share/jupiter_bios_updater"
 

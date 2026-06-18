@@ -94,6 +94,10 @@ license=('custom')
 
 _sourceurl="mesa::git+${_mesa_source}${_mesa_version}"
 _mesa_srcdir="mesa"
+# In-tree build dirs: bindgen's output_inline_wrapper emits broken #include paths when
+# the build directory is a sibling of the source tree (meson#13227, mesa#11178).
+_build64="${_mesa_srcdir}/_build64"
+_build32="${_mesa_srcdir}/_build32"
 
 source=("$_sourceurl"
         'LICENSE'
@@ -307,18 +311,18 @@ prepare() {
 
     # although removing _build folder in build() function feels more natural,
     # that interferes with the spirit of makepkg --noextract
-    if [  -d _build64 ] && [ "$_NUKR" != "false" ]; then
+    if [  -d "$_build64" ] && [ "$_NUKR" != "false" ]; then
       if [[ "$_additional_meson_flags" = *-Db_pgo=use* ]]; then
-        find ./_build64 -type f ! -name '*.gcda' -delete
+        find "$_build64" -type f ! -name '*.gcda' -delete
       else
-        rm -rf _build64
+        rm -rf "$_build64"
       fi
     fi
-    if [  -d _build32 ] && [ "$_NUKR" != "false" ]; then
+    if [  -d "$_build32" ] && [ "$_NUKR" != "false" ]; then
       if [[ "$_additional_meson_flags" = *-Db_pgo=use* ]]; then
-        find ./_build32 -type f ! -name '*.gcda' -delete
+        find "$_build32" -type f ! -name '*.gcda' -delete
       else
-        rm -rf _build32
+        rm -rf "$_build32"
       fi
     fi
     cd "$_where"
@@ -466,7 +470,7 @@ build () {
       if [[ "$_lib32" == "true" ]]; then
          _intel_clc_32="-D intel-clc=system"
         # Workaround cross compilation error by using intel_clc binary from _build64
-        export PATH=$srcdir/_build64/src/intel/compiler:${PATH}
+        export PATH=$srcdir/$_build64/src/intel/compiler:${PATH}
       fi
     fi
 
@@ -527,7 +531,7 @@ build () {
       _rusticladditions="-D rust_std=2021 -D llvm=enabled"
     fi
 
-    arch-meson $_mesa_srcdir _build64 \
+    arch-meson $_mesa_srcdir $_build64 \
        --wrap-mode=nofallback \
        --force-fallback-for=syn,paste,rustc-hash \
        -D b_ndebug=true \
@@ -550,22 +554,22 @@ build () {
        -D zstd=auto \
        -D valgrind=${_enabled_} $_legacy_switches $_dri3 $_omx $_dri_inc $_microsoft_clc $_osmesa $_xvmc $_layers $_optional_codecs $_android_libbacktrace $_intel_rt $_galliumnine $_galliumxa $_sharedglapi $_galliumopencl $_gallium_vdpau $_mediafoundation $_rusticladditions $_lto $_additional_meson_flags $_additional_meson_flags_64
 
-    meson configure _build64 --no-pager
+    meson configure $_build64 --no-pager
 
     # quoted from https://www.mesa3d.org/meson.html
     # Note: autotools automatically updated translation files (used by the DRI configuration tool) as part of the build process, Meson does not do this.
     # Instead, you will need do this:
     if ( cd "$srcdir/$_mesa_srcdir" && ! git merge-base --is-ancestor 2ef983dca61b549a9242afd9008200b231a26e90 HEAD ); then
-      ninja $NINJAFLAGS -C _build64 xmlpool-pot xmlpool-update-po xmlpool-gmo
+      ninja $NINJAFLAGS -C $_build64 xmlpool-pot xmlpool-update-po xmlpool-gmo
     fi
     #
-    ninja $NINJAFLAGS -C _build64
+    ninja $NINJAFLAGS -C $_build64
 
     if [ "$_localglesv2pc" == "true" ]; then
-      echo -e "prefix=/usr\nlibdir=\${prefix}/lib\nincludedir=\${prefix}/include\n\nName: glesv2\nDescription: Mesa OpenGL ES 2.0 library\nVersion: ${pkgver}\nLibs: -L\${libdir} -lGLESv2\nLibs.private: -lpthread -pthread -lm -ldl\nCflags: -I\${includedir}" > "$srcdir"/_build64/glesv2.pc
+      echo -e "prefix=/usr\nlibdir=\${prefix}/lib\nincludedir=\${prefix}/include\n\nName: glesv2\nDescription: Mesa OpenGL ES 2.0 library\nVersion: ${pkgver}\nLibs: -L\${libdir} -lGLESv2\nLibs.private: -lpthread -pthread -lm -ldl\nCflags: -I\${includedir}" > "$srcdir"/$_build64/glesv2.pc
     fi
     if [ "$_localeglpc" == "true" ]; then
-      echo -e "prefix=/usr\nlibdir=\${prefix}/lib\nincludedir=\${prefix}/include\n\nName: egl\nDescription: Mesa EGL Library\nVersion: ${pkgver}\nRequires.private: x11, xext, xdamage >=  1.1, xfixes, x11-xcb, xcb, xcb-glx >=  1.8.1, xcb-dri2 >=  1.8, xxf86vm, libdrm >=  2.4.75\nLibs: -L\${libdir} -lEGL\nLibs.private: -lpthread -pthread -lm -ldl\nCflags: -I\${includedir}" > "$srcdir"/_build64/egl.pc
+      echo -e "prefix=/usr\nlibdir=\${prefix}/lib\nincludedir=\${prefix}/include\n\nName: egl\nDescription: Mesa EGL Library\nVersion: ${pkgver}\nRequires.private: x11, xext, xdamage >=  1.1, xfixes, x11-xcb, xcb, xcb-glx >=  1.8.1, xcb-dri2 >=  1.8, xxf86vm, libdrm >=  2.4.75\nLibs: -L\${libdir} -lEGL\nLibs.private: -lpthread -pthread -lm -ldl\nCflags: -I\${includedir}" > "$srcdir"/$_build64/egl.pc
     fi
 
     if [ "$_lib32" == "true" ]; then
@@ -596,7 +600,7 @@ build () {
       export PKG_CONFIG=/usr/bin/i686-pc-linux-gnu-pkg-config
       export BINDGEN_EXTRA_CLANG_ARGS="--target=i686-unknown-linux-gnu"
 
-      arch-meson $_mesa_srcdir _build32 \
+      arch-meson $_mesa_srcdir $_build32 \
           ${_crossfile_flag} \
           --libdir=/usr/lib32 \
           --wrap-mode=nofallback \
@@ -620,22 +624,22 @@ build () {
           -D zstd=auto \
           -D valgrind=${_disabled_} $_legacy_switches $_dri3 $_omx_32 $_dri_inc $_microsoft_clc $_osmesa $_xvmc $_layers $_optional_codecs $_android_libbacktrace $_intel_rt_32 $_intel_clc_32 $_galliumnine $_galliumxa $_sharedglapi $_galliumopencl $_gallium_vdpau $_mediafoundation $_rusticladditions $_lto $_additional_meson_flags $_additional_meson_flags_32
 
-      meson configure _build32 --no-pager
+      meson configure $_build32 --no-pager
 
       # quoted from https://www.mesa3d.org/meson.html
       # Note: autotools automatically updated translation files (used by the DRI configuration tool) as part of the build process, Meson does not do this.
       # Instead, you will need do this:
       if ( cd "$srcdir/$_mesa_srcdir" && ! git merge-base --is-ancestor 2ef983dca61b549a9242afd9008200b231a26e90 HEAD ); then
-        ninja $NINJAFLAGS -C _build32 xmlpool-pot xmlpool-update-po xmlpool-gmo
+        ninja $NINJAFLAGS -C $_build32 xmlpool-pot xmlpool-update-po xmlpool-gmo
       fi
       #
-      ninja $NINJAFLAGS -C _build32
+      ninja $NINJAFLAGS -C $_build32
 
       if [ "$_localglesv2pc" == "true" ]; then
-        echo -e "prefix=/usr\nlibdir=\${prefix}/lib32\nincludedir=\${prefix}/include\n\nName: glesv2\nDescription: Mesa OpenGL ES 2.0 library\nVersion: ${pkgver}\nLibs: -L\${libdir} -lGLESv2\nLibs.private: -lpthread -pthread -lm -ldl\nCflags: -I\${includedir}" > "$srcdir"/_build32/glesv2.pc
+        echo -e "prefix=/usr\nlibdir=\${prefix}/lib32\nincludedir=\${prefix}/include\n\nName: glesv2\nDescription: Mesa OpenGL ES 2.0 library\nVersion: ${pkgver}\nLibs: -L\${libdir} -lGLESv2\nLibs.private: -lpthread -pthread -lm -ldl\nCflags: -I\${includedir}" > "$srcdir"/$_build32/glesv2.pc
       fi
       if [ "$_localeglpc" == "true" ]; then
-        echo -e "prefix=/usr\nlibdir=\${prefix}/lib32\nincludedir=\${prefix}/include\n\nName: egl\nDescription: Mesa EGL Library\nVersion: ${pkgver}\nRequires.private: x11, xext, xdamage >=  1.1, xfixes, x11-xcb, xcb, xcb-glx >=  1.8.1, xcb-dri2 >=  1.8, xxf86vm, libdrm >=  2.4.75\nLibs: -L\${libdir} -lEGL\nLibs.private: -lpthread -pthread -lm -ldl\nCflags: -I\${includedir}" > "$srcdir"/_build32/egl.pc
+        echo -e "prefix=/usr\nlibdir=\${prefix}/lib32\nincludedir=\${prefix}/include\n\nName: egl\nDescription: Mesa EGL Library\nVersion: ${pkgver}\nRequires.private: x11, xext, xdamage >=  1.1, xfixes, x11-xcb, xcb, xcb-glx >=  1.8.1, xcb-dri2 >=  1.8, xxf86vm, libdrm >=  2.4.75\nLibs: -L\${libdir} -lEGL\nLibs.private: -lpthread -pthread -lm -ldl\nCflags: -I\${includedir}" > "$srcdir"/$_build32/egl.pc
       fi
     fi
 }
@@ -647,7 +651,7 @@ package_mesa-git() {
   provides=(mesa=$pkgver-$pkgrel vulkan-intel=$pkgver-$pkgrel vulkan-radeon=$pkgver-$pkgrel vulkan-nouveau=$pkgver-$pkgrel vulkan-mesa-layers=$pkgver-$pkgrel mesa-vulkan-layers=$pkgver-$pkgrel libva-mesa-driver=$pkgver-$pkgrel mesa-vdpau=$pkgver-$pkgrel vulkan-driver opencl-mesa=$pkgver-$pkgrel opengl-driver opencl-driver ati-dri intel-dri nouveau-dri svga-dri mesa-dri mesa-libgl vulkan-mesa-device-select vulkan-swrast)
   conflicts=('mesa' 'opencl-mesa' 'vulkan-intel' 'vulkan-radeon' 'vulkan-nouveau' 'vulkan-mesa-device-select' 'vulkan-mesa-layers' 'mesa-vulkan-layers' 'libva-mesa-driver' 'mesa-vdpau' 'vulkan-swrast')
 
-  DESTDIR="$pkgdir" ninja $NINJAFLAGS -C _build64 install
+  DESTDIR="$pkgdir" ninja $NINJAFLAGS -C $_build64 install
 
   # remove script file from /usr/bin
   # https://gitlab.freedesktop.org/mesa/mesa/issues/2230
@@ -658,11 +662,11 @@ package_mesa-git() {
 
   if [ "$_localglesv2pc" == "true" ]; then
     # bring back glesv2.pc
-    install -m644 -Dt "$pkgdir"/usr/lib/pkgconfig "$srcdir"/_build64/glesv2.pc
+    install -m644 -Dt "$pkgdir"/usr/lib/pkgconfig "$srcdir"/$_build64/glesv2.pc
   fi
   if [ "$_localeglpc" == "true" ]; then
     # bring back egl.pc
-    install -m644 -Dt "$pkgdir"/usr/lib/pkgconfig "$srcdir"/_build64/egl.pc
+    install -m644 -Dt "$pkgdir"/usr/lib/pkgconfig "$srcdir"/$_build64/egl.pc
   fi
 
   install -Dt "$pkgdir"/usr/share/licenses/$pkgname "$srcdir"/LICENSE
@@ -676,7 +680,7 @@ package_lib32-mesa-git() {
   provides=(lib32-mesa=$pkgver-$pkgrel lib32-vulkan-intel=$pkgver-$pkgrel lib32-vulkan-radeon=$pkgver-$pkgrel lib32-vulkan-nouveau=$pkgver-$pkgrel lib32-vulkan-mesa-layers=$pkgver-$pkgrel lib32-mesa-vulkan-layers=$pkgver-$pkgrel lib32-libva-mesa-driver=$pkgver-$pkgrel lib32-mesa-vdpau=$pkgver-$pkgrel lib32-opencl-mesa=$pkgver-$pkgrel lib32-opengl-driver lib32-opencl-driver lib32-vulkan-driver lib32-ati-dri lib32-intel-dri lib32-nouveau-dri lib32-mesa-dri lib32-mesa-libgl lib32-vulkan-mesa-device-select lib32-vulkan-swrast)
   conflicts=('lib32-mesa' 'lib32-opencl-mesa' 'lib32-vulkan-intel' 'lib32-vulkan-radeon' 'lib32-vulkan-nouveau' 'lib32-vulkan-mesa-device-select' 'lib32-vulkan-mesa-layers' 'lib32-mesa-vulkan-layers' 'lib32-libva-mesa-driver' 'lib32-mesa-vdpau' 'lib32-vulkan-swrast')
 
-  DESTDIR="$pkgdir" ninja $NINJAFLAGS -C _build32 install
+  DESTDIR="$pkgdir" ninja $NINJAFLAGS -C $_build32 install
 
   # remove files provided by mesa-git
   rm -rf "$pkgdir"/etc
@@ -692,11 +696,11 @@ package_lib32-mesa-git() {
 
   if [ "$_localglesv2pc" == "true" ]; then
     # bring back glesv2.pc
-    install -m644 -Dt "$pkgdir"/usr/lib32/pkgconfig "$srcdir"/_build32/glesv2.pc
+    install -m644 -Dt "$pkgdir"/usr/lib32/pkgconfig "$srcdir"/$_build32/glesv2.pc
   fi
   if [ "$_localeglpc" == "true" ]; then
     # bring back egl.pc
-    install -m644 -Dt "$pkgdir"/usr/lib32/pkgconfig "$srcdir"/_build32/egl.pc
+    install -m644 -Dt "$pkgdir"/usr/lib32/pkgconfig "$srcdir"/$_build32/egl.pc
   fi
 
   install -Dt "$pkgdir"/usr/share/licenses/$pkgname "$srcdir"/LICENSE

@@ -1,6 +1,6 @@
 # Maintainer: Felix Yan <felixonmars@archlinux.org>
 # Maintainer: Daniel M. Capella <polyzen@archlinux.org>
-# Contributor: Bartłomiej Piotrowski <bpiotrowski@archlinux.org>
+# Contributor  Bartłomiej Piotrowski <bpiotrowski@archlinux.org>
 # Contributor: Thomas Dziedzic < gostrc at gmail >
 # Contributor: James Campos <james.r.campos@gmail.com>
 # Contributor: BlackEagle < ike DOT devolder AT gmail DOT com >
@@ -9,7 +9,7 @@
 # Contributor: TIanyi Cui <tianyicui@gmail.com>
 
 pkgname=nodejs
-pkgver=25.9.0
+pkgver=26.3.0
 pkgrel=2
 pkgdesc='Evented I/O for V8 javascript ("Current" release)'
 arch=('x86_64')
@@ -20,6 +20,7 @@ depends=(
   'brotli'
   'c-ares'
   'icu'
+  'libffi'
   'libnghttp2'
   'libnghttp3'
   'libngtcp2'
@@ -39,10 +40,9 @@ makedepends=(
   'python'
 )
 optdepends=('npm: nodejs package manager')
-options=('!lto')
 source=("git+https://github.com/nodejs/node.git#tag=v$pkgver?signed")
 
-sha512sums=('9b8a7ed65c3ccf9769a4d355be84e60799bc24636510aea7b34bdc022c7a972b867d657670a9e70ef8d9d279d130010b39852f57eb93abfe72fda258d307fdf5')
+sha512sums=('dda0560acfffd42aedf086bf069eee5918328164d656386336f23e00d525f4bad37f932f85d80edc2c712e1d0d2e8de9778fe83e1d93e52fbc1286f3d80d6c68')
 validpgpkeys=(
   '8FCCA13FEF1D0C2E91008E09770F7A9A5AE15600' # Michaël Zasso (Targos) <targos@protonmail.com>
   '890C08DB8579162FEE0DF9DB8BEAB4DFCF555EF4' # RafaelGSS <rafael.nunu@hotmail.com>
@@ -59,12 +59,14 @@ _common_flags=(
 
 _configure_args=(
   --ninja
+  --enable-lto
   --prefix=/usr
   --with-intl=system-icu
   --without-npm
   --shared-ada
   --shared-brotli
   --shared-cares
+  --shared-libffi
   --shared-libuv
   --shared-nghttp2
   --shared-nghttp3

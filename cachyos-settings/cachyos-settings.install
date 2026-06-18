@@ -11,7 +11,7 @@ post_install() {
 }
 
 post_upgrade() {
-    echo "Enabling services..."
+    echo "restarting services..."
 
     for service in "${SERVICES[@]}"; do
         if systemctl is-active "$service" >/dev/null; then

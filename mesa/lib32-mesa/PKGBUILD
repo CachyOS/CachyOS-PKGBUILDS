@@ -14,7 +14,6 @@ pkgname=(
   lib32-vulkan-freedreno
   lib32-vulkan-gfxstream
   lib32-vulkan-intel
-  lib32-vulkan-kosmickrisp
   lib32-vulkan-nouveau
   lib32-vulkan-panfrost
   lib32-vulkan-powervr
@@ -24,9 +23,9 @@ pkgname=(
   lib32-vulkan-mesa-implicit-layers
   lib32-vulkan-mesa-layers
 )
-pkgver=26.0.5
+pkgver=26.1.2
 _pkgver=${pkgver/[a-z]/-&}
-pkgrel=2
+pkgrel=1
 epoch=2
 pkgdesc="Open-source OpenGL drivers - 32-bit"
 url="https://www.mesa3d.org/"
@@ -91,8 +90,6 @@ options=(
 source=(
   "https://archive.mesa3d.org/mesa-$_pkgver.tar.xz"
   "gamescope-fps-limiter.patch"
-  # Fix build on i686
-  0001-kk-Fix-debug-printf-specifier.patch
 )
 validpgpkeys=(
   946D09B5E4C9845E63075FF1D961C596A7203456 # Andres Gomez <tanty@igalia.com>
@@ -104,6 +101,7 @@ validpgpkeys=(
 )
 
 # Rust crates for NVK, used as Meson subprojects
+# shellcheck disable=SC2190
 declare -A _crates=(
   bitflags         2.9.1
   cfg-if           1.0.0
@@ -146,13 +144,12 @@ _gencrates() {
 for _crate in "${!_crates[@]}"; do
   _ver="${_crates[$_crate]}"
   source+=(
-    "$_crate-$_ver.tar.gz::https://crates.io/api/v1/crates/$_crate/$_ver/download"
+    "$_crate-$_ver.tar.gz::https://static.crates.io/crates/$_crate/$_crate-$_ver.crate"
   )
 done
 
-sha256sums=('d229c9937d9a25ca0a8958c59f425174563d300ec42acbea2dbe84a055023368'
+sha256sums=('bac2bca9121897a2b8162e79636b50ac998fca799c8e6cf914edd85962babdf0'
             '9c40bf44608a52c354c13508dec435fcd4ecccc6e34eaee9dbbba2ba0ce05ffc'
-            '9403978c33030ce35e306d2e11fc5418257497ee16d2ccd2b0579360bfb5ef16'
             '67914ab451f3bfd2e69e5e9d2ef3858484e7074d63f204fd166ec391b54de21d'
             'ed646292ffc8188ef8ea4d1e0e0150fb15a5c2e12ad9b8fc191ae7a8a7f3c4b9'
             '7f9f832470494906d1fca5329f8ab5791cc60beb230c74815dff541cbd2b5ca0'
@@ -182,9 +179,8 @@ sha256sums=('d229c9937d9a25ca0a8958c59f425174563d300ec42acbea2dbe84a055023368'
             'db7d01726be8ab66ab32f9df467ae8b1148906685bbe75c82d1e65d7f5b3f841'
             '692fcb63b64b1758029e0a96ee63e049ce8c5948587f2f7208df04625e5f6b56'
             '25aa4ce346d03a6dcd68dd8b4010bcb74e54e62c90c573f394c46eae99aba32d')
-b2sums=('594e0737ff10853eac91a45c81db8738874e2d4f61ca2f02229bf62df9d3c133c4e1b605d90c17d17d91df97b78bfdb8051a6e1927b8d7759e4528de0a939f02'
+b2sums=('d78778c2905db11f95d09a0b29eb35fe0fe4eb83cf64746d423b28047720c11f9bae9cdac50dea5c3b22889a7bda137a6a44e2a9db6c71621266ee6929210ab9'
         '593511ab3028bfd00d74fc622aef8dc7cc79929f16e997228f52546aa69a3e3bf346b9702b4be4e45511e2bab8589f6fcb701062c90b2f5d5e7dd4b34d43e626'
-        'd216b9c9b719b6cb846b7598a89ebb0dd63e87f8678f060562d7a2f4746952fa4533372827f7745c99a03bed344104ad9595b95a4c173a1f3e9500bc57c384a6'
         '431439d31632d177aeb15f910b4f546efa76d54fc74fc8e140399dc5e54eca33fd606f11dbfb48fa83067c8474ee512e62751895d5948367b65ab08b984284e5'
         'a6d47c903be6094423d89b8ec3ca899d0a84df6dbd6e76632bb6c9b9f40ad9c216f8fa400310753d392f85072756b43ac3892e0a2c4d55f87ab6463002554823'
         '9a73962e1e38b84131ab2350b69a1f5d611c549533eec73e898c394a9b9442f357bb5d5f59e1be12270dd29bdf237dc2d21786c0c2210736e224ef5d48300dcf'
@@ -237,6 +233,7 @@ prepare() {
 }
 
 build() {
+  # shellcheck disable=SC2054
   local meson_options=(
     --cross-file lib32
     -D amdgpu-virtio=true
@@ -251,12 +248,12 @@ build() {
     -D gles1=disabled
     -D html-docs=disabled
     -D intel-rt=disabled
+    -D intel-virtio-experimental=true
     -D libunwind=disabled
     -D microsoft-clc=disabled
-    -D sysprof=false
     -D valgrind=disabled
     -D video-codecs=all
-    -D vulkan-drivers=all
+    -D vulkan-drivers=amd,intel,intel_hasvk,swrast,freedreno,panfrost,virtio,broadcom,imagination,microsoft-experimental,nouveau,asahi,gfxstream
     -D vulkan-layers=device-select,intel-nullhw,overlay,screenshot,anti-lag,vram-report-limit
     -D vulkan-manifest-per-architecture=false
   )
@@ -341,8 +338,6 @@ package_lib32-mesa() {
     _pick vkgfxstr $libdir/libvulkan_gfxstream.so
 
     _pick vkintel $libdir/libvulkan_intel{,_hasvk}.so
-
-    _pick vkkosmic $libdir/libvulkan_kosmickrisp.so
 
     _pick vknvidia $libdir/libvulkan_nouveau.so
 
@@ -576,36 +571,6 @@ package_lib32-vulkan-intel() {
   provides=(lib32-vulkan-driver)
 
   mv vkintel/* "$pkgdir"
-
-  install -Dm644 mesa-$_pkgver/docs/license.rst -t "$pkgdir/usr/share/licenses/$pkgname"
-}
-
-package_lib32-vulkan-kosmickrisp() {
-  pkgdesc="Open-source Vulkan driver for Metal - 32-bit"
-  depends=(
-    lib32-expat
-    lib32-gcc-libs
-    lib32-glibc
-    lib32-libdisplay-info
-    lib32-libdrm
-    lib32-libx11
-    lib32-libxcb
-    lib32-libxshmfence
-    lib32-spirv-tools
-    lib32-systemd
-    lib32-vulkan-icd-loader
-    lib32-vulkan-mesa-implicit-layers
-    lib32-wayland
-    lib32-xcb-util-keysyms
-    lib32-zlib
-    lib32-zstd
-
-    vulkan-kosmickrisp
-  )
-  optdepends=("lib32-vulkan-mesa-layers: additional vulkan layers")
-  provides=(lib32-vulkan-driver)
-
-  mv vkkosmic/* "$pkgdir"
 
   install -Dm644 mesa-$_pkgver/docs/license.rst -t "$pkgdir/usr/share/licenses/$pkgname"
 }

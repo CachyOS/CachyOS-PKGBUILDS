@@ -4,17 +4,14 @@
 
 pkgname=scx-scheds
 _gitname=scx
-pkgver=1.1.0
-pkgrel=1
+pkgver=1.1.1
+pkgrel=2
 pkgdesc='sched_ext schedulers and tools'
 url='https://github.com/sched-ext/scx'
 arch=('x86_64' 'aarch64')
 backup=('etc/default/scx')
 license=('GPL-2.0-only')
 depends=(
-  bpf
-  jq
-  libbpf
   libelf
   libseccomp
   protobuf
@@ -22,24 +19,30 @@ depends=(
   zlib
 )
 makedepends=(
+  cargo
   clang
   git
   llvm
   llvm-libs
-  python
-  rust
 )
 options=(!lto)
 source=("git+https://github.com/sched-ext/scx?signed#tag=v$pkgver")
-sha256sums=('cbd1df221238afe9163c04ed76ebeffdb9cb7ee3cc83c98098fcc627c929c343')
+sha256sums=('200c3245c08ced6d2d37300216f6d85ca1f9a516011d3d24e9cedabc31225ab8')
 validpgpkeys=(
   697C63013E65270255EBC2608744DC1EB26B5A9A  # Tejun Heo <tj@kernel.org>
   F5504C7B7B8107B40EF9E97AA1148BB3207BCC33  # David Vernet <void@manifault.com>
   A8775C60262EEF2AA34A864F5DAD005C4BFEA770  # Jake Hilton <jake@hillion.co.uk>
   EE2B8DAB1F6D1AA9DD1A4475AD851C1B71DF8FBF  # Andrea Righi <andrea.righi@linux.dev>
+  49F2D1CB86447DFD1F14B27A8B61A0894BDB3A92  # Ryan Rhodes Newton <rrnewton@gmail.com>
 )
 
 _backports=(
+d71ea02ca942b02bd0f0d35c66e735334fd055a4 # scxcash: Remove tool
+61885671d5a6db8b37291ad3bfaf20886a5292c6 # scx_characterize: Add workload characterization CLI
+95c92c825edc7b05e94833c78931b575a97693e0 # scx_characterize: Record perf profiles
+6fbe8f0b47ce455a80c81f8bd0641e7049d1a9e5 # scx_characterize: Process perf profiles
+7d55d5628832fede72f55a9b037bb843d0915877 # scx_characterize: Extract memory configs
+028c0aa6450d7b539395fc5d424a36ba32900f28 # scx_characterize: Extract scheduler utilization
 )
 
 _reverts=(
@@ -83,9 +86,8 @@ build() {
      --all-features \
      --workspace \
      --exclude scx_rlfifo \
-     --exclude scx_wd40 \
      --exclude scx_mitosis \
-     --exclude scxcash \
+     --exclude scx_characterize \
      --exclude xtask \
      --exclude vmlinux_docify \
      --exclude scx_arena_selftests
