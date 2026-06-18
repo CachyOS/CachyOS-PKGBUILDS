@@ -18,13 +18,11 @@ set -e
 
 declare -r MIRRORS_DEFAULT_DIR="/etc/pacman.d"
 
-# The environment snippet is already automatically used when using the service unit.
-# Commented out to allow using from command line without this config, but kept for development.
-# if [ -f /etc/conf.d/cachyos-rate-mirrors.env ]; then
-#     set -a
-#     . /etc/conf.d/cachyos-rate-mirrors.env
-#     set +a
-# fi
+if [ -f /etc/conf.d/cachyos-rate-mirrors.env ]; then
+    set -a
+    . /etc/conf.d/cachyos-rate-mirrors.env
+    set +a
+fi
 
 # Use https only protocol for rating
 export RATE_MIRRORS_PROTOCOL=https
