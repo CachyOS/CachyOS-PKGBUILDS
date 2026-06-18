@@ -137,7 +137,7 @@ if [ -z "$RATE_MIRRORS_ENTRY_COUNTRY" ]; then
     msg "Entry country not set, trying to detect..."
     # Prefer mirrors that are geographically close, especially in countries that
     # have regional blockages
-    country="$(curl --connect-timeout 10 -sSL 'https://geoip.kde.org/v1/ubiquity' | grep -Po '<CountryCode>\K([A-Z]{2})')"
+    country="$(curl --connect-timeout 10 -sSL 'https://geoip.kde.org/v1/ubiquity' | grep -Po '<CountryCode>\K([A-Z]{2})' || true)"
 
     if [ -n "$country" ]; then
         export RATE_MIRRORS_ENTRY_COUNTRY="$country"
