@@ -35,12 +35,11 @@ depends=(
   xz
   zlib
 )
-makedepends=('git')
-source=(git+https://github.com/cachyos/cachyos-benchmarker.git#tag=$pkgver)
-sha512sums=('SKIP')
+source=("$pkgname-$pkgver.tar.gz::https://github.com/cachyos/cachyos-benchmarker/archive/refs/tags/$pkgver.tar.gz")
+sha512sums=('6c4474e2c8872aa693a7e486f3c24de6dbecaf1a15b73803168e0023e8f7187d8c5f7d1a16225654eb542613662187ba47b19916acf115b6571591ca3414c340')
 
 package() {
-    cd $pkgname
+    cd "$srcdir/$pkgname-$pkgver"
     install -Dm755 $pkgname "$pkgdir/usr/bin/$pkgname"
     install -Dm755 benchmark_scraper.py "$pkgdir/usr/bin/benchmark_scraper.py"
 }
