@@ -33,4 +33,4 @@ REGISTRY_BAK="$HOME"/.local/share/steam_registry_oobe.vdf
     fi
   fi
 )
-exec /usr/lib/steam/steam -steamdeck -pipewire "$@"
+exec /usr/lib/steam/steam -steamdeck "$@"
