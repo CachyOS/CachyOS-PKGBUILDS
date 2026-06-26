@@ -18,7 +18,6 @@ migrate_keyboard_layout() {
     options=$(awk -F'"' '/^[[:space:]]*Option[[:space:]]+"XkbOptions"/ { gsub(/^[[:space:]]+|[[:space:]]+$/, "", $4); print $4; exit }' "$x11_conf")
 
     [[ -n "$layout" ]] || return 0
-    [[ -n "$model" ]] || model="pc105"
 
     localectl set-x11-keymap "$layout" "$model" "$variant" "$options" || return 0
         localectl set-x11-keymap "$layout" "$model" "$variant" || return 0
