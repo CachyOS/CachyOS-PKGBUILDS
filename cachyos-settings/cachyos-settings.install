@@ -28,8 +28,7 @@ migrate_keyboard_layout() {
         localectl set-x11-keymap "$layout" "$model" || return 0
     fi
 
-    install -d /var/lib/cachyos
-    : > "$marker"
+    install -Dm644 /dev/null "$marker" 2>/dev/null || return 0
 }
 
 post_install() {
