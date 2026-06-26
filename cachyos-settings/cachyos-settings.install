@@ -20,7 +20,7 @@ migrate_keyboard_layout() {
     [[ -n "$layout" ]] || return 0
     [[ -n "$model" ]] || model="pc105"
 
-        localectl set-x11-keymap "$layout" "$model" "$variant" "$options" || return 0
+    localectl set-x11-keymap "$layout" "$model" "$variant" "$options" || return 0
     elif [[ -n "$variant" ]]; then
         localectl set-x11-keymap "$layout" "$model" "$variant" || return 0
     else
