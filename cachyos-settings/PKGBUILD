@@ -6,14 +6,16 @@ pkgver=1.3.5
 pkgrel=1
 epoch=1
 groups=(cachyos)
-arch=('any')
+arch=('x86_64' 'aarch64')
 license=(GPL-1.0-only)
-makedepends=('coreutils' 'git')
+makedepends=('coreutils' 'git' 'rust' 'libgcc')
 pkgdesc='CachyOS - Settings'
 url="https://github.com/CachyOS/$_gitname"
-source=("git+$url.git?signed#tag=$pkgver")
+source=("git+$url.git?signed#tag=$pkgver"
+        'migrate-keyboard.rs')
 install="$pkgname.install"
-sha256sums=('7fb5ed29939691b3263183c504e9e638a6ee2a03de93a6e525b74cfb8e4f8a8f')
+sha256sums=('7fb5ed29939691b3263183c504e9e638a6ee2a03de93a6e525b74cfb8e4f8a8f'
+            'fdb85445e0d63d09863c04fae9ee38098f14cecca4af5d16f208fbab04f4738f')
 validpgpkeys=(
   E8B9AA39F054E30E8290D492C3C4820857F654FE  # Peter Jung <admin@ptr1337.dev>
   B1B70BB1CD56047DEF31DE2EB62C3D10C54D5DA9  # Vladislav Nepogodin <nepogodin.vlad@gmail.com>
@@ -34,9 +36,16 @@ provides=('ntsync-common')
 prepare() {
   cd $_gitname
 }
+
+build() {
+  rustc --edition 2024 -C opt-level=z -C lto=true -C codegen-units=1 -C panic=abort \
+        -C strip=symbols -o "${srcdir}/migrate-keyboard" "${srcdir}/migrate-keyboard.rs"
+}
+
 package() {
   install -d "$pkgdir/etc"
   cp -rf "${srcdir}/${_gitname}/etc" "$pkgdir"
   install -d "$pkgdir/usr"
   cp -rf "${srcdir}/${_gitname}/usr" "$pkgdir"
+  install -Dm755 "${srcdir}/migrate-keyboard" "${pkgdir}/usr/lib/cachyos/migrate-keyboard"
 }

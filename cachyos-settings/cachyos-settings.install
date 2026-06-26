@@ -1,5 +1,9 @@
 SERVICES=("ananicy-cpp" "systemd-resolved" )
 
+migrate_keyboard_layout() {
+    /usr/lib/cachyos/migrate-keyboard || return 0
+}
+
 post_install() {
     echo "Enabling services..."
     for service in "${SERVICES[@]}"; do
@@ -18,4 +22,8 @@ post_upgrade() {
             systemctl restart "$service"
         fi
     done
+
+    if (( $(vercmp "$2" 1:1.3.5-2) < 0 )) && (( $(vercmp "$2" 1:1.3.5-1) >= 0 )); then
+        migrate_keyboard_layout
+    fi
 }
