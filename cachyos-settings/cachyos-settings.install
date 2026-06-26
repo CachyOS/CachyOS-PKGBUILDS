@@ -20,7 +20,6 @@ migrate_keyboard_layout() {
     [[ -n "$layout" ]] || return 0
 
     localectl set-x11-keymap "$layout" "$model" "$variant" "$options" || return 0
-        localectl set-x11-keymap "$layout" "$model" "$variant" || return 0
 
     install -Dm644 /dev/null "$marker" 2>/dev/null || return 0
 }
