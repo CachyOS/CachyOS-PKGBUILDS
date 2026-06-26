@@ -2,10 +2,8 @@ SERVICES=("ananicy-cpp" "systemd-resolved" )
 
 migrate_keyboard_layout() {
     local x11_conf="/etc/X11/xorg.conf.d/00-keyboard.conf"
-    local marker="/var/lib/cachyos/keyboard-layout-migrated"
     local status layout model variant options
 
-    [[ -e "$marker" ]] && return 0
     [[ -r "$x11_conf" ]] || return 0
     status=$(localectl status 2>/dev/null) || return 0
     if ! grep -q '^[[:space:]]*X11 Layout:[[:space:]]*(unset)' <<< "$status"; then
@@ -20,8 +18,6 @@ migrate_keyboard_layout() {
     [[ -n "$layout" ]] || return 0
 
     localectl set-x11-keymap "$layout" "$model" "$variant" "$options" || return 0
-
-    install -Dm644 /dev/null "$marker" 2>/dev/null || return 0
 }
 
 post_install() {
