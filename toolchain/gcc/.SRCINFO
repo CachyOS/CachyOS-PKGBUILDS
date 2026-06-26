@@ -1,7 +1,7 @@
 pkgbase = gcc
 	pkgdesc = The GNU Compiler Collection
-	pkgver = 16.1.1+r12+g301eb08fa2c5
-	pkgrel = 1.1
+	pkgver = 16.1.1+r346+g4e03491b401d
+	pkgrel = 1
 	url = https://gcc.gnu.org
 	arch = x86_64
 	license = GPL-3.0-or-later WITH GCC-exception-3.1
@@ -16,8 +16,8 @@ pkgbase = gcc
 	makedepends = gcc-ada
 	makedepends = gcc-d
 	makedepends = git
-	makedepends = lib32-glibc
 	makedepends = lib32-gcc-libs
+	makedepends = lib32-glibc
 	makedepends = libisl
 	makedepends = libmpc
 	makedepends = python
@@ -25,10 +25,11 @@ pkgbase = gcc
 	makedepends = zstd
 	options = !emptydirs
 	options = !lto
-	source = git+https://sourceware.org/git/gcc.git#commit=301eb08fa2c5b6f3045260bf1294c2e2bacbcd90
+	source = git+https://sourceware.org/git/gcc.git#commit=4e03491b401dce0658543dd90524ddb92063836e
 	source = c89
 	source = c99
 	source = gcc-ada-repro.patch
+	source = gcc-16-52cd02606b90.patch
 	validpgpkeys = F3691687D867B81B51CE07D9BBE43771487328A9
 	validpgpkeys = 86CFFCA918CF3AF47147588051E8B148A9999C34
 	validpgpkeys = 13975A70E63C361C73AE69EF6EEB81F8981C74C7
@@ -37,15 +38,17 @@ pkgbase = gcc
 	sha256sums = de48736f6e4153f03d0a5d38ceb6c6fdb7f054e8f47ddd6af0a3dbf14f27b931
 	sha256sums = 2513c6d9984dd0a2058557bf00f06d8d5181734e41dcfe07be7ed86f2959622a
 	sha256sums = 1773f5137f08ac1f48f0f7297e324d5d868d55201c03068670ee4602babdef2f
+	sha256sums = 09c0fcfb370399270adb7905becc4fc395aa1d5f59c8d6169a1f021182600386
 
 pkgname = gcc
 	pkgdesc = The GNU Compiler Collection - C and C++ frontends
-	depends = libasan=16.1.1+r12+g301eb08fa2c5-1.1
-	depends = libgcc=16.1.1+r12+g301eb08fa2c5-1.1
-	depends = liblsan=16.1.1+r12+g301eb08fa2c5-1.1
-	depends = libstdc++=16.1.1+r12+g301eb08fa2c5-1.1
-	depends = libtsan=16.1.1+r12+g301eb08fa2c5-1.1
-	depends = libubsan=16.1.1+r12+g301eb08fa2c5-1.1
+	depends = libasan=16.1.1+r346+g4e03491b401d-1
+	depends = libgcc=16.1.1+r346+g4e03491b401d-1
+	depends = libhwasan=16.1.1+r346+g4e03491b401d-1
+	depends = liblsan=16.1.1+r346+g4e03491b401d-1
+	depends = libstdc++=16.1.1+r346+g4e03491b401d-1
+	depends = libtsan=16.1.1+r346+g4e03491b401d-1
+	depends = libubsan=16.1.1+r346+g4e03491b401d-1
 	depends = binutils>=2.28
 	depends = glibc>=2.27
 	depends = gmp
@@ -62,7 +65,7 @@ pkgname = gcc
 
 pkgname = gcc-ada
 	pkgdesc = Ada front-end for GCC (GNAT)
-	depends = gcc=16.1.1+r12+g301eb08fa2c5-1.1
+	depends = gcc=16.1.1+r346+g4e03491b401d-1
 	depends = glibc>=2.27
 	depends = gmp
 	depends = libgcc
@@ -78,7 +81,7 @@ pkgname = gcc-ada
 
 pkgname = gcc-d
 	pkgdesc = D frontend for GCC
-	depends = gcc=16.1.1+r12+g301eb08fa2c5-1.1
+	depends = gcc=16.1.1+r346+g4e03491b401d-1
 	depends = glibc>=2.27
 	depends = gmp
 	depends = libgphobos
@@ -94,7 +97,7 @@ pkgname = gcc-d
 
 pkgname = gcc-fortran
 	pkgdesc = Fortran front-end for GCC
-	depends = gcc=16.1.1+r12+g301eb08fa2c5-1.1
+	depends = gcc=16.1.1+r346+g4e03491b401d-1
 	depends = glibc>=2.27
 	depends = gmp
 	depends = libgfortran
@@ -108,7 +111,7 @@ pkgname = gcc-fortran
 
 pkgname = gcc-gcobol
 	pkgdesc = Cobol frontend for GCC
-	depends = gcc=16.1.1+r12+g301eb08fa2c5-1.1
+	depends = gcc=16.1.1+r346+g4e03491b401d-1
 	depends = glibc>=2.27
 	depends = gmp
 	depends = libgcobol
@@ -120,7 +123,7 @@ pkgname = gcc-gcobol
 
 pkgname = gcc-go
 	pkgdesc = Go front-end for GCC
-	depends = gcc=16.1.1+r12+g301eb08fa2c5-1.1
+	depends = gcc=16.1.1+r346+g4e03491b401d-1
 	depends = glibc>=2.27
 	depends = gmp
 	depends = libgo
@@ -142,6 +145,7 @@ pkgname = gcc-libs
 	depends = libgcc
 	depends = libgfortran
 	depends = libgomp
+	depends = libhwasan
 	depends = liblsan
 	depends = libobjc
 	depends = libquadmath
@@ -152,7 +156,7 @@ pkgname = gcc-libs
 
 pkgname = gcc-m2
 	pkgdesc = Modula-2 frontend for GCC
-	depends = gcc=16.1.1+r12+g301eb08fa2c5-1.1
+	depends = gcc=16.1.1+r346+g4e03491b401d-1
 	depends = glibc>=2.27
 	depends = gmp
 	depends = libgm2
@@ -164,7 +168,7 @@ pkgname = gcc-m2
 
 pkgname = gcc-objc
 	pkgdesc = Objective-C front-end for GCC
-	depends = gcc=16.1.1+r12+g301eb08fa2c5-1.1
+	depends = gcc=16.1.1+r346+g4e03491b401d-1
 	depends = glibc>=2.27
 	depends = gmp
 	depends = libisl.so
@@ -178,7 +182,7 @@ pkgname = gcc-objc
 
 pkgname = gcc-rust
 	pkgdesc = Rust frontend for GCC
-	depends = gcc=16.1.1+r12+g301eb08fa2c5-1.1
+	depends = gcc=16.1.1+r346+g4e03491b401d-1
 	depends = glibc>=2.27
 	depends = gmp
 	depends = libisl.so
@@ -222,7 +226,7 @@ pkgname = libgcc
 
 pkgname = libgccjit
 	pkgdesc = Just-In-Time Compilation with GCC backend
-	depends = gcc=16.1.1+r12+g301eb08fa2c5-1.1
+	depends = gcc=16.1.1+r346+g4e03491b401d-1
 	depends = glibc>=2.27
 	depends = gmp
 	depends = libisl.so
@@ -272,6 +276,13 @@ pkgname = libgphobos
 	provides = libgdruntime.so
 	provides = libgphobos.so
 
+pkgname = libhwasan
+	pkgdesc = Hardware-assisted Address Sanitizer runtime library shipped by GCC
+	depends = glibc>=2.27
+	depends = libgcc
+	depends = libstdc++
+	provides = libhwasan.so
+
 pkgname = libitm
 	pkgdesc = GNU Transactional Memory library shipped by GCC
 	depends = glibc>=2.27
@@ -319,7 +330,7 @@ pkgname = libubsan
 
 pkgname = lto-dump
 	pkgdesc = Dump link time optimization object files
-	depends = gcc=16.1.1+r12+g301eb08fa2c5-1.1
+	depends = gcc=16.1.1+r346+g4e03491b401d-1
 	depends = glibc>=2.27
 	depends = gmp
 	depends = libisl.so
