@@ -12,7 +12,7 @@ migrate_keyboard_layout() {
         return 0
     fi
 
-    layout=$(awk -F'"' '/^[[:space:]]*Option[[:space:]]+"XkbLayout"/ { print $4; exit }' "$x11_conf")
+    layout=$(awk -F'"' '/^[[:space:]]*Option[[:space:]]+"XkbLayout"/ { gsub(/^[[:space:]]+|[[:space:]]+$/, "", $4); print $4; exit }' "$x11_conf")
     model=$(awk -F'"' '/^[[:space:]]*Option[[:space:]]+"XkbModel"/ { print $4; exit }' "$x11_conf")
     variant=$(awk -F'"' '/^[[:space:]]*Option[[:space:]]+"XkbVariant"/ { print $4; exit }' "$x11_conf")
     options=$(awk -F'"' '/^[[:space:]]*Option[[:space:]]+"XkbOptions"/ { print $4; exit }' "$x11_conf")
