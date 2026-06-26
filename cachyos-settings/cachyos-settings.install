@@ -42,5 +42,7 @@ post_upgrade() {
             systemctl restart "$service"
         fi
     done
-    migrate_keyboard_layout
+    if (( $(vercmp "$2" 1:1.3.5-2) < 0 )) && (( $(vercmp "$2" 1:1.3.5-1) >= 0 )); then
+        migrate_keyboard_layout
+    fi
 }
