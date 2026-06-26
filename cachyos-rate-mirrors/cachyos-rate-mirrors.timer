@@ -1,12 +1,11 @@
 [Unit]
-Description=Automatically refresh arch / cachyos mirror lists
+Description=CachyOS - Rate mirrors timer
 Wants=network-online.target
 After=network-online.target
 
 [Timer]
-OnCalendar=*-*-01..21/10 00:00:00
+OnCalendar=*-*-01,11,21 00:00:00
 RandomizedOffsetSec=10d
-RandomizedDelaySec=1h
 Persistent=true
 
 [Install]
