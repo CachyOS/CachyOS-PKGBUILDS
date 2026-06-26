@@ -1,5 +1,37 @@
 SERVICES=("ananicy-cpp" "systemd-resolved" )
 
+migrate_keyboard_layout() {
+    local x11_conf="/etc/X11/xorg.conf.d/00-keyboard.conf"
+    local marker="/var/lib/cachyos/keyboard-layout-migrated"
+    local status layout model variant options
+
+    [[ -e "$marker" ]] && return 0
+    [[ -r "$x11_conf" ]] || return 0
+    status=$(localectl status 2>/dev/null) || return 0
+    if ! grep -q '^[[:space:]]*X11 Layout:[[:space:]]*(unset)' <<< "$status"; then
+        return 0
+    fi
+
+    layout=$(awk -F'"' '/^[[:space:]]*Option[[:space:]]+"XkbLayout"/ { print $4; exit }' "$x11_conf")
+    model=$(awk -F'"' '/^[[:space:]]*Option[[:space:]]+"XkbModel"/ { print $4; exit }' "$x11_conf")
+    variant=$(awk -F'"' '/^[[:space:]]*Option[[:space:]]+"XkbVariant"/ { print $4; exit }' "$x11_conf")
+    options=$(awk -F'"' '/^[[:space:]]*Option[[:space:]]+"XkbOptions"/ { print $4; exit }' "$x11_conf")
+
+    [[ -n "$layout" ]] || return 0
+    [[ -n "$model" ]] || model="pc105"
+
+    if [[ -n "$options" ]]; then
+        localectl set-x11-keymap "$layout" "$model" "$variant" "$options" || return 0
+    elif [[ -n "$variant" ]]; then
+        localectl set-x11-keymap "$layout" "$model" "$variant" || return 0
+    else
+        localectl set-x11-keymap "$layout" "$model" || return 0
+    fi
+
+    install -d /var/lib/cachyos
+    : > "$marker"
+}
+
 post_install() {
     echo "Enabling services..."
     for service in "${SERVICES[@]}"; do
@@ -8,6 +40,7 @@ post_install() {
     if command -v iw >/dev/null 2>&1; then
         systemctl enable cachyos-iw-set-regdomain.path
     fi
+    migrate_keyboard_layout
 }
 
 post_upgrade() {
@@ -18,4 +51,5 @@ post_upgrade() {
             systemctl restart "$service"
         fi
     done
+    migrate_keyboard_layout
 }
