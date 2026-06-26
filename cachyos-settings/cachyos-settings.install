@@ -22,7 +22,6 @@ migrate_keyboard_layout() {
     localectl set-x11-keymap "$layout" "$model" "$variant" "$options" || return 0
         localectl set-x11-keymap "$layout" "$model" "$variant" || return 0
     else
-    fi
 
     install -Dm644 /dev/null "$marker" 2>/dev/null || return 0
 }
