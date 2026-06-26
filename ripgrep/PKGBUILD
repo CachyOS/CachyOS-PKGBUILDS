@@ -1,17 +1,26 @@
 # Maintainer: Sven-Hendrik Haase <svenstaro@archlinux.org>
-# Maintainer: Maxim Baz <archlinux at maximbaz dot com>
+# Maintainer: Carl Smedstad <carsme@archlinux.org>
+# Contributor: Maxim Baz <archlinux at maximbaz dot com>
 # Contributor: Andrew Gallant <jamslam@gmail.com>
 # PGO Version: Laio Seman <laio@ieee.org>
 
 pkgname=ripgrep
 pkgver=15.1.0
-pkgrel=2
+pkgrel=3
 pkgdesc="A search tool that combines the usability of ag with the raw speed of grep"
 arch=('x86_64')
-url='https://github.com/BurntSushi/ripgrep'
-license=('MIT' 'custom')
-depends=('gcc-libs' 'glibc' 'pcre2')
-makedepends=('rust' 'hyperfine' 'llvm')
+url="https://github.com/BurntSushi/ripgrep"
+license=('MIT OR Unlicense')
+depends=(
+  'glibc'
+  'libgcc'
+  'pcre2'
+)
+makedepends=(
+  'rust'
+  'hyperfine'
+  'llvm'
+)
 source=("$url/archive/$pkgver/$pkgname-$pkgver.tar.gz"
         optimize.patch
         https://cdn.kernel.org/pub/linux/kernel/v6.x/linux-6.10.9.tar.xz)
@@ -20,71 +29,70 @@ sha512sums=('3e54683ceaaa79e6e1b52f7e1b92aefaf0b8f721daf2ab6433e1f45931878904ca2
             'e383ce1b999555888c6dd2efa806efb6f6673517000f074b4170a5461c85d4d83757193d4e7e18a1bb7ca166a793ab104ec7313bc6b147a0456e615eb006557e')
 
 prepare() {
-    cd "$pkgname-$pkgver"
-    patch -p1 -i ../optimize.patch
+  cd "$pkgname-$pkgver"
+  patch -p1 -i ../optimize.patch
+  cargo fetch --locked --target host-tuple
 }
 
 build() {
+  cd "$pkgname-$pkgver"
+  export MALLOC_CONF="thp:always,metadata_thp:always"
 
-    cd "$pkgname-$pkgver"
-    export MALLOC_CONF="thp:always,metadata_thp:always"
+  # define PGO_PROFILE_DIR to use a custom directory for the profile data
+  export PGO_PROFILE_DIR=/tmp/pgo-data
 
-    # define PGO_PROFILE_DIR to use a custom directory for the profile data
-    export PGO_PROFILE_DIR=/tmp/pgo-data
+  # clean up the profile data
+  mkdir -p ${PGO_PROFILE_DIR}
+  rm -f ${PGO_PROFILE_DIR}/*
 
-    # clean up the profile data
-    mkdir -p ${PGO_PROFILE_DIR}
-    rm -f ${PGO_PROFILE_DIR}/*
+  # append -Cprofile-generate=${PGO_PROFILE_DIR} to the rustflags
+  export RUSTFLAGS+=" -Cprofile-generate=${PGO_PROFILE_DIR}"
 
-    # append -Cprofile-generate=${PGO_PROFILE_DIR} to the rustflags
-    export RUSTFLAGS+=" -Cprofile-generate=${PGO_PROFILE_DIR}"
+  cargo build --release --frozen --features pcre2
 
-    cargo build --features 'pcre2' --release --target-dir target
+  # clean up the profile data
+  rm -f ${PGO_PROFILE_DIR}/*
 
-    # clean up the profile data
-    rm -f ${PGO_PROFILE_DIR}/*
+  # run the benchmark
+  hyperfine --warmup 5 --min-runs 10 'target/release/rg -n "PM_RESUME" ../linux-6.10.9'
 
-    # run the benchmark
-    hyperfine --warmup 5 --min-runs 10 'target/release/rg -n "PM_RESUME" ../linux-6.10.9'
+  # run the tests
+  cargo test --frozen --features pcre2
 
-    # run the tests
-    cargo test
+  # remove -Cprofile-generate=${PGO_PROFILE_DIR} from the rustflags
+  export RUSTFLAGS="${RUSTFLAGS//-Cprofile-generate=${PGO_PROFILE_DIR}/}"
 
-    # remove -Cprofile-generate=${PGO_PROFILE_DIR} from the rustflags
-    export RUSTFLAGS="${RUSTFLAGS//-Cprofile-generate=${PGO_PROFILE_DIR}/}"
+  # merge the profile data
+  llvm-profdata merge -o ${PGO_PROFILE_DIR}/merged.profdata ${PGO_PROFILE_DIR}
 
-    # merge the profile data
-    llvm-profdata merge -o ${PGO_PROFILE_DIR}/merged.profdata ${PGO_PROFILE_DIR}
+  # append -Cprofile-use=${PGO_PROFILE_DIR} to the rustflags
+  export RUSTFLAGS+=" -Cprofile-use=${PGO_PROFILE_DIR}/merged.profdata"
 
-    # append -Cprofile-use=${PGO_PROFILE_DIR} to the rustflags
-    export RUSTFLAGS+=" -Cprofile-use=${PGO_PROFILE_DIR}/merged.profdata"
-
-    cargo build --features 'pcre2' --release --target-dir target
-
+  cargo build --release --frozen --features pcre2
 }
 
 check() {
-    cd "$pkgname-$pkgver"
+  cd "$pkgname-$pkgver"
 
-    cargo test --release --locked --features 'pcre2'
+  cargo test --frozen --features pcre2
 }
 
 package() {
-    cd "$pkgname-$pkgver"
+  cd "$pkgname-$pkgver"
 
-    install -vDm755 -t "$pkgdir/usr/bin" target/release/rg
+  install -vDm755 -t "$pkgdir/usr/bin" target/release/rg
 
-    mkdir -vp "$pkgdir/usr/share/zsh/site-functions"
-    target/release/rg --generate complete-zsh >"$pkgdir/usr/share/zsh/site-functions/_rg"
+  mkdir -vp "$pkgdir/usr/share/zsh/site-functions"
+  target/release/rg --generate complete-zsh > "$pkgdir/usr/share/zsh/site-functions/_rg"
 
-    mkdir -vp "$pkgdir/usr/share/bash-completion/completions"
-    target/release/rg --generate complete-bash >"$pkgdir/usr/share/bash-completion/completions/rg"
+  mkdir -vp "$pkgdir/usr/share/bash-completion/completions"
+  target/release/rg --generate complete-bash > "$pkgdir/usr/share/bash-completion/completions/rg"
 
-    mkdir -vp "$pkgdir/usr/share/fish/vendor_completions.d"
-    target/release/rg --generate complete-fish >"$pkgdir/usr/share/fish/vendor_completions.d/rg.fish"
+  mkdir -vp "$pkgdir/usr/share/fish/vendor_completions.d"
+  target/release/rg --generate complete-fish > "$pkgdir/usr/share/fish/vendor_completions.d/rg.fish"
 
-    mkdir -vp "$pkgdir/usr/share/man/man1"
-    target/release/rg --generate man >"$pkgdir/usr/share/man/man1/rg.1"
+  mkdir -vp "$pkgdir/usr/share/man/man1"
+  target/release/rg --generate man > "$pkgdir/usr/share/man/man1/rg.1"
 
   install -vDm644 -t "$pkgdir/usr/share/doc/$pkgname" README.md
   install -vDm644 -t "$pkgdir/usr/share/licenses/$pkgname" COPYING
