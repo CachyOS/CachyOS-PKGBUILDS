@@ -1,0 +1,24 @@
+pkgname=protopedal
+_name=protopedal-release
+pkgver=2.5
+pkgrel=1
+pkgdesc="Compatibility tool for sim racing pedals and force feedback steering wheels"
+arch=('x86_64')
+url="https://gitlab.com/openirseny/protopedal/"
+license=('EUPL')
+makedepends=()
+depends=()
+conflicts=('protopedal-git')
+source=(${url}/-/archive/release-${pkgver}/${_name}-${pkgver}.tar.gz)
+sha256sums=('473f94cfab7f393b3a9df95a7bc5073b55f0d8f36a494d7b68c59e240900671f')
+
+build() {
+  export CFLAGS=""
+  export CXXFLAGS="${CFLAGS}"
+  cd "$srcdir/$_name-$pkgver"
+  make all
+}
+
+package() {
+  install -D -m755 "$srcdir/$_name-$pkgver/protopedal" "$pkgdir/usr/bin/protopedal"
+}
