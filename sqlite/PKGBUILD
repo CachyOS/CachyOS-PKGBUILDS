@@ -4,11 +4,11 @@
 
 pkgbase="sqlite"
 pkgname=('sqlite' 'sqlite-tcl' 'sqlite-analyzer' 'lemon' 'sqlite-doc')
-pkgver=3.53.2
+pkgver=3.53.3
 _srcver=$(echo "$pkgver" | awk -F. '{ printf "%d%02d%02d00", $1, $2, $3 }')
 _docver=${_srcver}
 #_docver=3440000
-pkgrel=2
+pkgrel=1
 pkgdesc="A C library that implements an SQL database engine"
 arch=('x86_64')
 license=('LicenseRef-Sqlite')
@@ -20,11 +20,10 @@ source=(https://www.sqlite.org/2026/sqlite-src-${_srcver}.zip
         sqlite-lemon-system-template.patch
         license.txt
         git+https://github.com/ClickHouse/ClickBench.git
-        https://datasets.clickhouse.com/hits_compatible/hits.csv.gz
-        remove-header-in-command.patch)
+        https://datasets.clickhouse.com/hits_compatible/hits.csv.gz)
 # upstream now switched to sha3sums - currently not supported by makepkg
-sha256sums=('cafff764c03f6d720968f746e2f47a986bbf12bf4c18904f1eb131c0b0b592d3'
-            '30c5488926e72a0b958d64377c91c975a35a8f16d285cbb83cfad31f4af71c6d'
+sha256sums=('bb80bf8a3bffc19241ce8aba5a4bc74e9c3980013cb0b5f0f0976a99516942af'
+            '168f99869876bcf4db8d93efa2a483a9c81536537d01900c58cd75d0a67cca27'
             'ce0083835e458236c83d4f74ad398816e29859cd2f940c7aad9080835b50dcec'
             '4e57d9ac979f1c9872e69799c2597eeef4c6ce7224f3ede0bf9dc8d217b1e65d'
             'SKIP'
