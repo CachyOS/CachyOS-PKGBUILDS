@@ -7,7 +7,7 @@
 pkgbase=nvidia-utils
 pkgname=('nvidia-utils' 'opencl-nvidia' 'nvidia-open-dkms')
 pkgver=610.43.02
-pkgrel=3
+pkgrel=4
 arch=('x86_64')
 url="http://www.nvidia.com/"
 license=('custom')
@@ -25,7 +25,8 @@ source=('nvidia-drm-outputclass.conf'
         "https://us.download.nvidia.com/XFree86/Linux-x86_64/${pkgver}/${_pkg}.run"
         "https://download.nvidia.com/XFree86/NVIDIA-kernel-module-source/${_pkg_open}.tar.xz"
         'limit-vram-usage'
-        'cuda-no-stable-perf-limit')
+        'cuda-no-stable-perf-limit'
+        '0001-make-Add-support-for-7.2-Kernel.patch')
 sha256sums=('be99ff3def641bb900c2486cce96530394c5dc60548fc4642f19d3a4c784134d'
             'f77a5247a3ba63e9fad3a3b2822d0fcfa51e0f79b5a90bd79bf08ea34b64ab07'
             '0e54249a7754b668b436f0f7aa7e95fff68edbb12a93dbee4660e09a8c695f84'
@@ -36,7 +37,8 @@ sha256sums=('be99ff3def641bb900c2486cce96530394c5dc60548fc4642f19d3a4c784134d'
             '3034a054bb4cdf7752ff8dc272564cb105513804bff53538945901b16ca77463'
             '9609d2c47aba779afca994f171cb5bf2236a6bdc81eb5b008c10fc8972bc9cef'
             'b14f7a65359c05c373ddfc750cd4cf086a48e815489d93ad5cbe1dbf84bf8f5a'
-            '6264d279bbae8eae6554ed78dd6e562da00cf71ffa5601ce5208099a98cd2c4d')
+            '6264d279bbae8eae6554ed78dd6e562da00cf71ffa5601ce5208099a98cd2c4d'
+            '85d925cde698d2cff444c13e0ad42875dc0eb9391287efe335d0c3eadedc0b8f')
 
 
 create_links() {
@@ -54,6 +56,7 @@ prepare() {
     cd "${_pkg}"
     bsdtar -xf nvidia-persistenced-init.tar.bz2
 
+     patch -Np1 -i "${srcdir}/0001-make-Add-support-for-7.2-Kernel.patch" -d "${srcdir}/${_pkg_open}/"
 #    patch -Np1 -i "${srcdir}/0001-fix-dsc-correct-RC-parameter-tables-to-match-VESA-DS.patch" -d "${srcdir}/${_pkg_open}/"
 #    patch -Np1 -i "${srcdir}/0002-fix-dsc-use-bits_per_component-for-flatnessDetThresh.patch" -d "${srcdir}/${_pkg_open}/"
 #    patch -Np1 -i "${srcdir}/0003-fix-dp-add-Bigscreen-Beyond-VR-headset-to-WAR-databa.patch" -d "${srcdir}/${_pkg_open}/"
