@@ -1,0 +1,71 @@
+# Maintainer: Galih Tama <galpt@v.recipes>
+
+pkgname=cachy-screen-enhancer
+pkgver=1.0.0
+pkgrel=1
+pkgdesc='ICC color profiles that correct sRGB to pure gamma 2.2 for CachyOS/Linux'
+groups=('cachyos')
+arch=('any')
+license=('BSD-3-Clause')
+url="https://github.com/galpt/cachy-screen-enhancer"
+depends=('python' 'colord' 'argyllcms')
+makedepends=('git')
+install="$pkgname.install"
+source=("$pkgname::git+$url.git#tag=v$pkgver"
+        "README.cachyos.md")
+sha256sums=('d0873e8752e30ac73536686409a3f4e1be13906170cba2e79e94e438cf7c2c69'
+            '81aada89faac5c7a4acb80e30ee7bbfbcf72bfd33fe66d088e9d1c6d4e7bd7bf')
+
+package() {
+  cd "${srcdir}/${pkgname}"
+
+  local sharedir="$pkgdir/usr/share/$pkgname"
+
+  # Core files
+  install -Dm755 safe-install.sh "$sharedir/safe-install.sh"
+  install -Dm644 README.md "$sharedir/README.md"
+  install -Dm644 LICENSE "$sharedir/LICENSE"
+  install -Dm644 pyproject.toml "$sharedir/pyproject.toml"
+
+  # Python library
+  install -Dm644 src/cse-gen.py "$sharedir/src/cse-gen.py"
+  install -Dm644 src/cse_lib/__init__.py "$sharedir/src/cse_lib/__init__.py"
+  install -Dm644 src/cse_lib/gamma_math.py "$sharedir/src/cse_lib/gamma_math.py"
+  install -Dm644 src/cse_lib/edid_parser.py "$sharedir/src/cse_lib/edid_parser.py"
+  install -Dm644 src/cse_lib/gpu_detect.py "$sharedir/src/cse_lib/gpu_detect.py"
+  install -Dm644 src/cse_lib/vcgt_builder.py "$sharedir/src/cse_lib/vcgt_builder.py"
+  install -Dm644 src/cse_lib/icc_builder.py "$sharedir/src/cse_lib/icc_builder.py"
+
+  # Profiles
+  install -Dm644 profiles/icc/cse_080nits_amd.icc "$sharedir/profiles/icc/cse_080nits_amd.icc"
+  install -Dm644 profiles/icc/cse_100nits_amd.icc "$sharedir/profiles/icc/cse_100nits_amd.icc"
+  install -Dm644 profiles/icc/cse_120nits_amd.icc "$sharedir/profiles/icc/cse_120nits_amd.icc"
+  install -Dm644 profiles/icc/cse_200nits_amd.icc "$sharedir/profiles/icc/cse_200nits_amd.icc"
+  install -Dm644 profiles/icc/cse_300nits_amd.icc "$sharedir/profiles/icc/cse_300nits_amd.icc"
+  install -Dm644 profiles/icc/cse_400nits_amd.icc "$sharedir/profiles/icc/cse_400nits_amd.icc"
+  install -Dm644 profiles/icc/cse_480nits_amd.icc "$sharedir/profiles/icc/cse_480nits_amd.icc"
+  install -Dm644 profiles/cal/cse_080nits_amd.cal "$sharedir/profiles/cal/cse_080nits_amd.cal"
+  install -Dm644 profiles/cal/cse_100nits_amd.cal "$sharedir/profiles/cal/cse_100nits_amd.cal"
+  install -Dm644 profiles/cal/cse_120nits_amd.cal "$sharedir/profiles/cal/cse_120nits_amd.cal"
+  install -Dm644 profiles/cal/cse_200nits_amd.cal "$sharedir/profiles/cal/cse_200nits_amd.cal"
+  install -Dm644 profiles/cal/cse_300nits_amd.cal "$sharedir/profiles/cal/cse_300nits_amd.cal"
+  install -Dm644 profiles/cal/cse_400nits_amd.cal "$sharedir/profiles/cal/cse_400nits_amd.cal"
+  install -Dm644 profiles/cal/cse_480nits_amd.cal "$sharedir/profiles/cal/cse_480nits_amd.cal"
+
+  # Tools
+  install -Dm755 tools/install-profile.sh "$sharedir/tools/install-profile.sh"
+  install -Dm755 tools/remove-profile.sh "$sharedir/tools/remove-profile.sh"
+  install -Dm755 tools/dump-edid.sh "$sharedir/tools/dump-edid.sh"
+  install -Dm755 tools/inspect-profile.sh "$sharedir/tools/inspect-profile.sh"
+  install -Dm755 tools/verify.sh "$sharedir/tools/verify.sh"
+
+  # Docs
+  install -Dm644 docs/HOW_IT_WORKS.md "$sharedir/docs/HOW_IT_WORKS.md"
+  install -Dm644 docs/TROUBLESHOOTING.md "$sharedir/docs/TROUBLESHOOTING.md"
+  install -Dm644 "$srcdir/README.cachyos.md" "$sharedir/docs/README.cachyos.md"
+
+  # Data
+  install -Dm644 data/edid/len156fhd_2026-06-09.bin "$sharedir/data/edid/len156fhd_2026-06-09.bin"
+}
+
+# vim:set sw=2 sts=2 et:
