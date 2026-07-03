@@ -1,0 +1,19 @@
+pkgname=boxflat
+pkgver=1.36.1
+pkgrel=1
+pkgdesc="Adjust your Moza Racing gear settings"
+arch=('x86_64')
+url="https://github.com/Lawstorant/boxflat"
+license=('GPL3')
+makedepends=('git')
+depends=('gtk4' 'libadwaita' 'python' 'python-evdev' 'python-gobject' 'python-psutil' 'python-pyserial' 'python-trayer' 'python-yaml')
+conflicts=('boxflat-git')
+source=(git+${url}.git#tag=v${pkgver})
+sha256sums=('79368889feadcdab751bdb8037d8368a80bfe9704a1ee11adf30ae64b037bdde')
+
+package() {
+  cd "$srcdir/$pkgname"
+  ./install.sh add-prefix "${pkgdir}" no-udev
+}
+
+install=boxflat.install
