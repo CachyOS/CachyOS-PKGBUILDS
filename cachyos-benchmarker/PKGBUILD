@@ -2,7 +2,7 @@
 # Maintainer: Tor Vic <torvic9 AT mailbox DOT org>
 
 pkgname='cachyos-benchmarker'
-pkgver=0.6.0
+pkgver=0.7.1
 pkgrel=1
 pkgdesc='A simple benchmarking script using stress-ng, perf, blender etc. (CachyOS Version)'
 url="https://github.com/cachyos/cachyos-benchmarker"
@@ -13,6 +13,7 @@ depends=(
   bc
   blender
   cmake
+  curl
   gcc
   geekbench
   git
@@ -25,6 +26,7 @@ depends=(
   primesieve
   python
   python-matplotlib
+  python-numpy
   stress-ng
   time
   unzip
@@ -33,12 +35,11 @@ depends=(
   xz
   zlib
 )
-makedepends=('git')
-source=(git+https://github.com/cachyos/cachyos-benchmarker.git#tag=$pkgver)
-sha512sums=('90d6b55e65d9bc781ef060bc68b05ed9869b9b493d21fb61f285b259d48ed247a12c97259c8b81eba39a07725dfeb7f280c8493acbf42f21ab56e6c3af21242e')
+source=("$pkgname-$pkgver.tar.gz::https://github.com/cachyos/cachyos-benchmarker/archive/refs/tags/$pkgver.tar.gz")
+sha512sums=('2f5a502dc41d652f3e21178a1fbaf0704d90979b3ddaa4db8a3912959b04700fb192461d7780f97ebc0c6930e822837aa814678f9cef505a56207661b920b722')
 
 package() {
-    cd $pkgname
+    cd "$srcdir/$pkgname-$pkgver"
     install -Dm755 $pkgname "$pkgdir/usr/bin/$pkgname"
     install -Dm755 benchmark_scraper.py "$pkgdir/usr/bin/benchmark_scraper.py"
 }

@@ -2,16 +2,19 @@
 
 pkgname=cachyos-cli-installer-new-git
 _pkgname=New-Cli-Installer
-pkgver=0.9.4.r72.g3df4689
+pkgver=0.11.0.r103.g32bfd03
 pkgrel=1
 pkgdesc='New CLI installer for CachyOS'
 arch=('x86_64')
 license=(GPL-3.0-or-later)
 url="https://github.com/cachyos/new-cli-installer"
 license=(GPL-3.0-or-later)
-depends=('fzf' 'gawk' 'chwd' 'cachyos-rate-mirrors' 'curl' 'coreutils' 'util-linux' 'gptfdisk')
-makedepends=('cmake' 'ninja' 'git' 'lld' 'clang' 'llvm')
-source=("${pkgname}::git+$url.git")
+depends=(
+  'fzf' 'gawk' 'chwd' 'cachyos-rate-mirrors' 'curl' 'coreutils' 'util-linux' 'gptfdisk'
+  'cryptsetup' 'qt6-imageformats' 'qt6-base' 'qt6-declarative' 'qt6-svg' 'qt6-wayland'
+)
+makedepends=('cmake' 'ninja' 'git' 'lld' 'clang' 'llvm' 'qt6-tools')
+source=("${pkgname}::git+$url.git#branch=feat/qml-gui")
 sha256sums=('SKIP')
 provides=('cachyos-cli-installer-new')
 conflicts=('cachyos-cli-installer-new')
@@ -40,6 +43,8 @@ build() {
         -DCMAKE_INSTALL_PREFIX=/usr \
         -DCMAKE_INSTALL_LIBDIR=lib \
         -DENABLE_DEVENV=OFF \
+        -DBUILD_GUI=ON \
+        -DGUCC_BUILD_TOOLS=ON \
         -DCOS_BUILD_STATIC=ON
   cmake --build build
 }
