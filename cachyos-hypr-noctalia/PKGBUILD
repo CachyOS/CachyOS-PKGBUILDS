@@ -11,7 +11,7 @@ arch=('any')
 url="https://github.com/cachyos/$pkgname"
 license=(GPL-1.0-only)
 makedepends=('coreutils')
-source=("$pkgname-noctv5-$pkgver.tar.gz::$url/archive/$pkgver-noctv5.tar.gz")
+source=("$pkgname-$pkgver-noctv5.tar.gz::$url/archive/$pkgver-noctv5.tar.gz")
 sha256sums=('eccc868cc21e2b65d88c6b8538fd710fcda865957559ee66020c5c630a41bfae')
 depends=(
 	adw-gtk-theme
@@ -48,5 +48,5 @@ conflicts=('cachyos-desktop-settings')
 
 package() {
   install -d $pkgdir/etc
-  cp -rf $srcdir/$pkgname-$pkgver/etc $pkgdir
+  cp -rf $srcdir/$pkgname-$pkgver-noctv5/etc $pkgdir
 }
