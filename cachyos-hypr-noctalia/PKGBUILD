@@ -5,14 +5,14 @@
 
 pkgname=cachyos-hypr-noctalia
 pkgdesc='CachyOS Hyprland Noctalia settings'
-pkgver=1.0
+pkgver=1.1
 pkgrel=1
 arch=('any')
 url="https://github.com/cachyos/$pkgname"
 license=(GPL-1.0-only)
 makedepends=('coreutils')
-source=("$pkgname-$pkgver-noctv5.tar.gz::$url/archive/$pkgver-noctv5.tar.gz")
-sha256sums=('7dc89c66d7b88968cb611304f612c27e83548c38c3abc2129926dcbcf3805ca6')
+source=("$pkgname-$pkgver.tar.gz::$url/archive/$pkgver.tar.gz")
+sha256sums=('50f9ef25b65051c48a8df4f69e8329cf2c056800dba0a8c4b62acc2379e70689')
 depends=(
 	adw-gtk-theme
 	awesome-terminal-fonts
@@ -23,7 +23,6 @@ depends=(
 	dolphin
 	gnome-calculator
 	gnome-text-editor
-	gpu-screen-recorder
 	grim
 	hyprland
 	hyprpicker
@@ -48,5 +47,5 @@ conflicts=('cachyos-desktop-settings')
 
 package() {
   install -d $pkgdir/etc
-  cp -rf $srcdir/$pkgname-$pkgver-noctv5/etc $pkgdir
+  cp -rf $srcdir/$pkgname-$pkgver/etc $pkgdir
 }
