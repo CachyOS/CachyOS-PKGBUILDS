@@ -1,0 +1,25 @@
+# Maintainer: witchlliee <witchlliee@tuta.io>
+
+pkgname=qview
+pkgver=7.1
+pkgrel=1
+pkgdesc="qView is a Qt image viewer designed with minimalism and usability in mind."
+arch=('any')
+url="https://interversehq.com/qview/"
+license=('GPL-3.0-only')
+depends=('qt6-base' 'hicolor-icon-theme')
+optdepends=('qt6-imageformats: Extra image format support' 'kimageformats: Support for even more extra formats' 'qt6-svg: SVG support')
+makedepends=('qt6-tools')
+source=("https://github.com/jurplel/qView/archive/refs/tags/$pkgver.tar.gz")
+sha256sums=('89189b508b60526af09a15bc7b467eecb7f3d074f5dd21d251afe23406b24e8a')
+
+build() {
+    cd qView-$pkgver
+    qmake6 PREFIX=/usr
+	make
+}
+
+package() {
+    cd qView-$pkgver
+	make INSTALL_ROOT="$pkgdir/" install
+}
