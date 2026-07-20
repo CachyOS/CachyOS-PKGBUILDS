@@ -4,8 +4,8 @@
 
 pkgname=scx-scheds
 _gitname=scx
-pkgver=1.1.1
-pkgrel=3
+pkgver=1.1.2
+pkgrel=1
 pkgdesc='sched_ext schedulers and tools'
 url='https://github.com/sched-ext/scx'
 arch=('x86_64' 'aarch64')
@@ -27,7 +27,7 @@ makedepends=(
 )
 options=(!lto)
 source=("git+https://github.com/sched-ext/scx?signed#tag=v$pkgver")
-sha256sums=('200c3245c08ced6d2d37300216f6d85ca1f9a516011d3d24e9cedabc31225ab8')
+sha256sums=('4474c253ee6440f37574cdbfa6a162cdc5d383d0768269ffe484c5c1388da167')
 validpgpkeys=(
   697C63013E65270255EBC2608744DC1EB26B5A9A  # Tejun Heo <tj@kernel.org>
   F5504C7B7B8107B40EF9E97AA1148BB3207BCC33  # David Vernet <void@manifault.com>
@@ -37,12 +37,6 @@ validpgpkeys=(
 )
 
 _backports=(
-d71ea02ca942b02bd0f0d35c66e735334fd055a4 # scxcash: Remove tool
-61885671d5a6db8b37291ad3bfaf20886a5292c6 # scx_characterize: Add workload characterization CLI
-95c92c825edc7b05e94833c78931b575a97693e0 # scx_characterize: Record perf profiles
-6fbe8f0b47ce455a80c81f8bd0641e7049d1a9e5 # scx_characterize: Process perf profiles
-7d55d5628832fede72f55a9b037bb843d0915877 # scx_characterize: Extract memory configs
-028c0aa6450d7b539395fc5d424a36ba32900f28 # scx_characterize: Extract scheduler utilization
 )
 
 _reverts=(

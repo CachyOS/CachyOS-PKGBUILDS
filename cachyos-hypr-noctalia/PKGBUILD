@@ -5,54 +5,46 @@
 
 pkgname=cachyos-hypr-noctalia
 pkgdesc='CachyOS Hyprland Noctalia settings'
-pkgver=1.0
-pkgrel=2
+pkgver=1.2.2
+pkgrel=1
 arch=('any')
 url="https://github.com/cachyos/$pkgname"
 license=(GPL-1.0-only)
 makedepends=('coreutils')
 source=("$pkgname-$pkgver.tar.gz::$url/archive/$pkgver.tar.gz")
-sha512sums=('3b5cb9cd7f097c54437943429a8182807ca1adde3b54f9ce7f13c94c1e7262aba3611eb0c9feac85a416a144b29ece57184f9895dcdc90e961d290a24feae106')
+sha256sums=('e019262f43c12612aaf63e5a1ed9973d8c8d250d7bd6542d7801713646476013')
 depends=(
 	adw-gtk-theme
 	awesome-terminal-fonts
 	brightnessctl
 	cachyos-alacritty-config
-	cachyos-wallpapers
 	curl
 	dolphin
-	ffmpeg
 	gnome-calculator
 	gnome-text-editor
 	grim
 	hyprland
 	hyprpicker
-	imagemagick
-	jq
 	kde-cli-tools
 	kitty
-	network-manager-applet
-	noctalia-shell
+	noctalia
 	noto-fonts
 	noto-fonts-emoji
+	nwg-look
 	python3
 	qt6ct
-	sddm
+	satty
 	slurp
-	tesseract
-	tesseract-data-eng
 	uwsm
 	wf-recorder
 	wl-clipboard
-	xdg-desktop-portal
 	xdg-desktop-portal-hyprland
   	xorg-xhost
-	xorg-xwayland
-	zbar
 )
 provides=('cachyos-desktop-settings')
 conflicts=('cachyos-desktop-settings')
 
+install=cachyos-hypr-noctalia.install
 package() {
   install -d $pkgdir/etc
   cp -rf $srcdir/$pkgname-$pkgver/etc $pkgdir

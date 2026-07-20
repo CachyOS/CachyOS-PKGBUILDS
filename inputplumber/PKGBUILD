@@ -1,0 +1,50 @@
+# Maintainer: Peter Jung <ptr1337@archlinux.org>
+# Contributor: Denis Benato <benato.denis96@gmail.com>
+# Contributor: William Edwards <shadowapex@gmail.com>
+
+pkgname=inputplumber
+pkgver=0.77.7
+pkgrel=2
+pkgdesc="Open source input router and remapper daemon for Linux"
+arch=('x86_64')
+options=(!lto)
+url="https://github.com/ShadowBlip/InputPlumber"
+license=('GPL-3.0-only')
+depends=(
+  dbus
+  libgcc
+  glibc
+  libevdev
+  libiio
+  systemd-libs
+)
+makedepends=(
+  clang
+  cmake
+  git
+  make
+  rust
+)
+source=(
+  "git+https://github.com/ShadowBlip/InputPlumber.git#tag=v${pkgver}"
+  "620.patch::https://github.com/ShadowBlip/InputPlumber/commit/cc6e02b57528b9de11af7986d1df22d87f478bf7.patch"
+)
+sha256sums=(
+  'fcb5e0ffe4ee69ad11a3f4f26724eef482e237048be25939b7b93490701d1cd3'
+  '6320a41661c13d651bfbc0d39719786a576b008ef87489743fa7056473a3ac37'
+)
+
+prepare() {
+  cd "$srcdir/InputPlumber"
+  patch -Np1 -i "$srcdir/620.patch"
+}
+
+build() {
+  cd "$srcdir/InputPlumber"
+  make build
+}
+
+package() {
+  cd "$srcdir/InputPlumber"
+  make install PREFIX=${pkgdir}/usr NO_RELOAD=true
+}
