@@ -1,0 +1,70 @@
+From fb9912e239fd6c55f3d51b8392077c090807e9f1 Mon Sep 17 00:00:00 2001
+From: Stelios Tsampas <loathingkernel@gmail.com>
+Date: Fri, 24 Jul 2026 19:22:16 +0300
+Subject: [PATCH 1/2] umu_runtime: use cdn-friendly version file url
+
+---
+ umu/umu_runtime.py | 6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/umu/umu_runtime.py b/umu/umu_runtime.py
+index 0a12bf943..c3823267c 100644
+--- a/umu/umu_runtime.py
++++ b/umu/umu_runtime.py
+@@ -274,9 +274,9 @@ def setup_umu(
+     _, http_pool = session_pools
+     codename, variant, _ = runtime_ver
+     host: str = "repo.steampowered.com"
+-    endpoint: str = f"/{variant.removesuffix('-arm64')}/images/latest-public-beta"
+-    url: str = f"https://{host}{endpoint}/VERSION.txt"
+-    log.debug("Sending request to '%s' for 'VERSION.txt'...", url)
++    endpoint: str = f"/{variant.removesuffix('-arm64')}/images"
++    url: str = f"https://{host}{endpoint}/latest-public-beta.txt"
++    log.debug("Sending request to '%s' for 'latest-public-beta.txt'...", url)
+     resp = http_pool.request(HTTPMethod.GET.value, url)
+     if resp.status != HTTPStatus.OK:
+         log.error("%s returned the status: %s", host, resp.status)
+
+From f6154e0dd82d06c556d3c5321235c994846d0c8b Mon Sep 17 00:00:00 2001
+From: Stelios Tsampas <loathingkernel@gmail.com>
+Date: Fri, 24 Jul 2026 19:47:09 +0300
+Subject: [PATCH 2/2] chore: fix e2e tests
+
+---
+ tests/test_offline.sh | 3 ++-
+ tests/test_resume.sh  | 6 ++++--
+ 2 files changed, 6 insertions(+), 3 deletions(-)
+
+diff --git a/tests/test_offline.sh b/tests/test_offline.sh
+index a8140a555..7ddaa0a66 100644
+--- a/tests/test_offline.sh
++++ b/tests/test_offline.sh
+@@ -7,7 +7,8 @@ name=$(curl -L "https://api.github.com/repos/Open-Wine-Components/umu-proton/rel
+ rm "$name"
+ 
+ # Download runtime
+-curl -LJO "https://repo.steampowered.com/steamrt3/images/latest-container-runtime-public-beta/SteamLinuxRuntime_sniper.tar.xz"
++version=$(curl -L "https://repo.steampowered.com/steamrt3/images/latest-container-runtime-public-beta.txt" | tr -d "\n")
++curl -LJO "https://repo.steampowered.com/steamrt3/images/$version/SteamLinuxRuntime_sniper.tar.xz"
+ url=$(curl -L "https://api.github.com/repos/Open-Wine-Components/umu-proton/releases/latest" | jq .assets[1].browser_download_url | tr -d '"')
+ 
+ # Download Proton
+diff --git a/tests/test_resume.sh b/tests/test_resume.sh
+index 84f8b2b98..8dfec5f08 100644
+--- a/tests/test_resume.sh
++++ b/tests/test_resume.sh
+@@ -1,10 +1,12 @@
+ #!/usr/bin/env sh
+ 
+ tmp=$(mktemp)
++# Get the latest version
++version=$(curl -L "https://repo.steampowered.com/steamrt3/images/latest-container-runtime-public-beta.txt" | tr -d "\n")
+ # Request the BUILD_ID.txt value. We append this to the working file to ID it
+-id=$(curl -L "https://repo.steampowered.com/steamrt3/images/latest-container-runtime-public-beta/BUILD_ID.txt" | tr -d "\n")
++id=$(curl -L "https://repo.steampowered.com/steamrt3/images/$version/BUILD_ID.txt" | tr -d "\n")
+ # Request the first 100MB of the runtime archive
+-curl -LJO --range 0-104857599 "https://repo.steampowered.com/steamrt3/images/latest-container-runtime-public-beta/SteamLinuxRuntime_sniper.tar.xz"
++curl -LJO --range 0-104857599 "https://repo.steampowered.com/steamrt3/images/$version/SteamLinuxRuntime_sniper.tar.xz"
+ mkdir -p "$HOME"/.cache/umu
+ # Move to our cache so it can be picked up then resumed.
+ # Note: Must include the *.parts extension
