@@ -88,18 +88,59 @@ trap 'rm -f -- "$TMPFILE"' EXIT
 rate_repository_mirrors() {
     local repo="$1"
     local path="$2"
+    local max_retries=3
+    local retry_count=0
+    local wait_time=3
 
     info "Ranking mirrors for ${repo} repository in ${path}..."
 
-    if rate-mirrors --save "$TMPFILE" "$repo"; then
-        if [ ! -f "${path}" ]; then
-            die "${path} doesn't exist! You must install package $(pacman -Fq "$path" 2>/dev/null || echo "that contains $path")"
+    while [ $retry_count -lt $max_retries ]; do
+        if rate-mirrors --save "$TMPFILE" "$repo"; then
+            if [ ! -f "${path}" ]; then
+                die "${path} doesn't exist! You must install package $(pacman -Fq "$path" 2>/dev/null || echo "that contains $path")"
+            fi
+            install -m 0644 --backup=simple --suffix="-backup" "${TMPFILE}" "${path}"
+            msg "Done [${repo}] ${path}"
+            return 0
         fi
-        install -m 0644 --backup=simple --suffix="-backup" "${TMPFILE}" "${path}"
-        msg "Done [${repo}] ${path}"
+
+        # If rate-mirrors fails, wait for a while before retrying
+        retry_count=$((retry_count + 1))
+        if [ $retry_count -lt $max_retries ]; then
+            error "rate-mirrors failed [errcode=$?] for [${repo}]. Retrying in ${wait_time} seconds... (${retry_count}/${max_retries})"
+            sleep "$wait_time"
+            wait_time=$((wait_time * 2)) # Exponential backoff
+        fi
+    done
+
+    # Insert CN mirrors first for China region (GitHub is DNS tainted, slow intl access)
+    if [ "$country" = "CN" ] && [ "$repo" = "cachyos" ]; then
+        force_cn_mirrors
+        return 0
     else
-        die "rate-mirrors failed [errcode=$?]."
+        die "rate-mirrors failed after ${max_retries} attempts for [${repo}]. Please check your network connection and try again."
     fi
+}
+
+force_cn_mirrors() {
+    local mirror domain index
+    local -a cn_mirrors=(
+        'https://mirror.nju.edu.cn/cachyos/repo/$arch/$repo'
+        'https://mirrors.ustc.edu.cn/cachyos/repo/$arch/$repo'
+    )
+
+    local -i line=1
+    for ((index=0; index < ${#cn_mirrors[@]}; index++)); do
+        mirror="${cn_mirrors[$index]}"
+        domain="${mirror##*://}"
+        domain="${domain%%/*}"
+        if curl -sL --connect-timeout 5 "https://${domain}" &>/dev/null; then
+            sed -i "$((line))iServer = ${mirror}" "${MIRRORS_DEFAULT_DIR}/cachyos-mirrorlist"
+            ((line++))
+        else
+            error "Failed to connect with ${domain} mirror"
+        fi
+    done
 }
 
 force_ru_mirrors() {
