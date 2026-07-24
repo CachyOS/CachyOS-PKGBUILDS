@@ -7,7 +7,7 @@
 pkgbase=nvidia-utils
 pkgname=('nvidia-utils' 'opencl-nvidia' 'nvidia-open-dkms')
 pkgver=610.43.03
-pkgrel=1
+pkgrel=2
 arch=('x86_64')
 url="http://www.nvidia.com/"
 license=('custom')
@@ -25,6 +25,7 @@ source=('nvidia-drm-outputclass.conf'
         "https://us.download.nvidia.com/XFree86/Linux-x86_64/${pkgver}/${_pkg}.run"
         "https://download.nvidia.com/XFree86/NVIDIA-kernel-module-source/${_pkg_open}.tar.xz"
         '0001-make-Add-support-for-7.2-Kernel.patch'
+        '0002-Replace-obsolete-use-of-screen_info-symbol.patch'
         'limit-vram-usage'
         'cuda-no-stable-perf-limit')
 sha256sums=('be99ff3def641bb900c2486cce96530394c5dc60548fc4642f19d3a4c784134d'
@@ -37,6 +38,7 @@ sha256sums=('be99ff3def641bb900c2486cce96530394c5dc60548fc4642f19d3a4c784134d'
             '45e2d4c134a23c35e50f253a4aa63e7e5e8d17e3d185d4a07c8a58e9612ed392'
             '7e118923c7a23edc36114d63273a46e3e04e9af98695a42203e7ac2dfe9fc1dc'
             '85d925cde698d2cff444c13e0ad42875dc0eb9391287efe335d0c3eadedc0b8f'
+            'd83ffe80aee6c6ac62e1022b15c76659d16dae9ac5557f7e0adb736cca1a1b23'
             'b14f7a65359c05c373ddfc750cd4cf086a48e815489d93ad5cbe1dbf84bf8f5a'
             '6264d279bbae8eae6554ed78dd6e562da00cf71ffa5601ce5208099a98cd2c4d')
 
@@ -60,6 +62,7 @@ prepare() {
 #    patch -Np1 -i "${srcdir}/0002-fix-dsc-use-bits_per_component-for-flatnessDetThresh.patch" -d "${srcdir}/${_pkg_open}/"
 #    patch -Np1 -i "${srcdir}/0003-fix-dp-add-Bigscreen-Beyond-VR-headset-to-WAR-databa.patch" -d "${srcdir}/${_pkg_open}/"
     patch -Np1 -i "${srcdir}/0001-make-Add-support-for-7.2-Kernel.patch" -d "${srcdir}/${_pkg_open}/"
+    patch -Np1 -i "${srcdir}/0002-Replace-obsolete-use-of-screen_info-symbol.patch" -d "${srcdir}/${_pkg_open}/kernel-open"
 
     # Attempt to make builds reproducible
     sed -i "s/^  HOSTNAME.*/  HOSTNAME = echo cachyos/" "${srcdir}/${_pkg_open}/utils.mk"
