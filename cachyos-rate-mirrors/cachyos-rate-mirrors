@@ -18,6 +18,12 @@ set -e
 
 declare -r MIRRORS_DEFAULT_DIR="/etc/pacman.d"
 
+if [ -f /etc/conf.d/cachyos-rate-mirrors.env ]; then
+    set -a
+    . /etc/conf.d/cachyos-rate-mirrors.env
+    set +a
+fi
+
 # Use https only protocol for rating
 export RATE_MIRRORS_PROTOCOL=https
 export RATE_MIRRORS_FETCH_MIRRORS_TIMEOUT="${RATE_MIRRORS_FETCH_MIRRORS_TIMEOUT:-30000}"
@@ -45,6 +51,7 @@ enable_colors() {
         YELLOW="${BOLD}\e[33m"
         BLUE="${BOLD}\e[34m"
     fi
+    # shellcheck disable=SC2034
     readonly ALL_OFF BOLD BLUE GREEN RED YELLOW
 }
 
@@ -56,16 +63,19 @@ fi
 
 msg() {
     local mesg="$1"; shift
+    # shellcheck disable=SC2059
     printf "${GREEN}==>${ALL_OFF}${BOLD} ${mesg}${ALL_OFF}\n" "$@" >&2
 }
 
 info() {
     local mesg="$1"; shift
+    # shellcheck disable=SC2059
     printf "${YELLOW} -->${ALL_OFF}${BOLD} ${mesg}${ALL_OFF}\n" "$@" >&2
 }
 
 error() {
     local mesg="$1"; shift
+    # shellcheck disable=SC2059
     printf "${RED}==> ERROR:${ALL_OFF}${BOLD} ${mesg}${ALL_OFF}\n" "$@" >&2
 }
 
@@ -82,6 +92,8 @@ if [ "$EUID" -ne 0 ]; then
     die "Please, run script as root"
 fi
 
+# We declare and assign as a r/o variable.
+# shellcheck disable=SC2155
 declare -r TMPFILE="$(mktemp)"
 trap 'rm -f -- "$TMPFILE"' EXIT
 
@@ -104,6 +116,7 @@ rate_repository_mirrors() {
 
 force_ru_mirrors() {
     local mirror domain index
+    # shellcheck disable=SC2016
     local -a ru_mirrors=(
         'https://archlinux.gay/cachy/repo/$arch/$repo'
         'https://mirror.jura12.ru/repo/$arch/$repo'
@@ -125,13 +138,17 @@ force_ru_mirrors() {
     done
 }
 
-# Prefer mirrors that are geographically close, especially in countries that
-# have regional blockages
-country="$(curl --connect-timeout 10 -sSL 'https://geoip.kde.org/v1/ubiquity' | grep -Po '<CountryCode>\K([A-Z]{2})')"
+if [ -z "$RATE_MIRRORS_ENTRY_COUNTRY" ]; then
+    msg "Entry country not set, trying to detect..."
+    # Prefer mirrors that are geographically close, especially in countries that
+    # have regional blockages
+    country="$(curl --connect-timeout 10 -sSL 'https://geoip.kde.org/v1/ubiquity' | grep -Po '<CountryCode>\K([A-Z]{2})' || true)"
 
-if [ -n "$country" ]; then
-    export RATE_MIRRORS_ENTRY_COUNTRY="$country"
+    if [ -n "$country" ]; then
+        export RATE_MIRRORS_ENTRY_COUNTRY="$country"
+    fi
 fi
+info "Using entry country: $RATE_MIRRORS_ENTRY_COUNTRY"
 
 # China only tests its own mirrors, so disable neighbors
 # and increase the number of tested mirrors to get more results
@@ -145,6 +162,7 @@ rate_repository_mirrors arch "${MIRRORS_DEFAULT_DIR}/mirrorlist"
 
 # Always insert CDN77 mirror to the start, unless RU and CN region is detected
 if [ "$country" != "RU" ] && [ "$country" != "CN" ]; then
+    # shellcheck disable=SC2016
     sed -i '1iServer = https://archlinux.cachyos.org/repo/$repo/os/$arch' "${MIRRORS_DEFAULT_DIR}/mirrorlist"
 fi
 
@@ -160,5 +178,7 @@ install -m 0644 --backup=simple --suffix="-backup" "${MIRRORS_DEFAULT_DIR}/cachy
 install -m 0644 --backup=simple --suffix="-backup" "${MIRRORS_DEFAULT_DIR}/cachyos-mirrorlist" \
     "${MIRRORS_DEFAULT_DIR}/cachyos-v4-mirrorlist"
 
+# shellcheck disable=SC2016
 sed -i 's|/$arch/|/$arch_v3/|g' "${MIRRORS_DEFAULT_DIR}/cachyos-v3-mirrorlist"
+# shellcheck disable=SC2016
 sed -i 's|/$arch/|/$arch_v4/|g' "${MIRRORS_DEFAULT_DIR}/cachyos-v4-mirrorlist"
