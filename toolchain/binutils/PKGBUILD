@@ -99,7 +99,7 @@ build() {
 
   "${srcdir}"/binutils-gdb/configure \
     --prefix=/usr \
-    --sysconfdir="${pkgdir}"/etc \
+    --sysconfdir=/etc \
     --with-lib-path=/usr/lib:/usr/local/lib \
     --with-bugurl=https://gitlab.archlinux.org/archlinux/packaging/packages/binutils/-/issues \
     --enable-cet \
@@ -150,7 +150,7 @@ check() {
 
 package() {
   cd binutils-build
-  make prefix="${pkgdir}"/usr tooldir="${pkgdir}"/usr install
+  make DESTDIR="${pkgdir}" tooldir=/usr install
 
   # install PIC version of libiberty
   install -m644 libiberty/pic/libiberty.a "${pkgdir}"/usr/lib

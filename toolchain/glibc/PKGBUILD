@@ -13,9 +13,9 @@ _optimize_v4=${_optimize_v4-}
 
 pkgbase=glibc
 pkgname=(glibc lib32-glibc glibc-locales)
-pkgver=2.43+r37+gfdf10644d6ee
-_commit=fdf10644d6ee345c7b5277c3fa009c1bedb92d60
-pkgrel=2
+pkgver=2.44+r3+g0b05bc142249
+_commit=0b05bc142249ac47e72be5cad5c37f33f4bb68d4
+pkgrel=1
 arch=(x86_64 aarch64)
 url='https://www.gnu.org/software/libc'
 license=(GPL-2.0-or-later LGPL-2.1-or-later)
@@ -34,23 +34,32 @@ source=(
   sdt.h
   sdt-config.h
   clearlinux.patch
+  10-glibc-locale-gen.hook
+  10-glibc-remove-locale-archive.hook
+  11-glibc-ldconfig.hook
+  11-glibc-remove-ldconfig-cache.hook
+  12-glibc-iconvconfig.hook
+  12-glibc-remove-iconvconfig-cache.hook
+  12-lib32-glibc-iconvconfig.hook
+  12-lib32-glibc-remove-iconvconfig-cache.hook
 )
 validpgpkeys=(7273542B39962DF7B299931416792B4EA25340F8 # Carlos O'Donell
               BC7C7372637EC10C57D7AA6579C43DFBF1CF2187) # Siddhesh Poyarekar
-b2sums=('c893e7a2cbe3a130936ed6e9dbeaeb956cba306399fa75f9f26680864fb5f679e28db97ae5c8312bb6bffd3ac1a5b3aa2c7f93c387b701949d7bc6bc37b6e2c1'
+b2sums=('43cfed60ea2fd6f560be0dc0cea5fce8accaa8dde30f80a9c5a0cb57f82968e7c59dae21520c2a9eca9097e75a28af57e5a988c5e47889cb90e3d4831821bf83'
         'c859bf2dfd361754c9e3bbd89f10de31f8e81fd95dc67b77d10cb44e23834b096ba3caa65fbc1bd655a8696c6450dfd5a096c476b3abf5c7e125123f97ae1a72'
         '04fbb3b0b28705f41ccc6c15ed5532faf0105370f22133a2b49867e790df0491f5a1255220ff6ebab91a462f088d0cf299491b3eb8ea53534cb8638a213e46e3'
         '7c265e6d36a5c0dff127093580827d15519b6c7205c2e1300e82f0fb5b9dd00b6accb40c56581f18179c4fbbc95bd2bf1b900ace867a83accde0969f7b609f8a'
         'a6a5e2f2a627cc0d13d11a82458cfd0aa75ec1c5a3c7647e5d5a3bb1d4c0770887a3909bfda1236803d5bc9801bfd6251e13483e9adf797e4725332cd0d91a0e'
         '214e995e84b342fe7b2a7704ce011b7c7fc74c2971f98eeb3b4e677b99c860addc0a7d91b8dc0f0b8be7537782ee331999e02ba48f4ccc1c331b60f27d715678'
         'df6dc7f96125c2c869574394576d820bfd2d24765f73314401d750222d717ee48bac0fc65eecfb2058ea3ea891ddc95e72c338fd22cac0d1a574207efed51fc6'
-        '78b7cbfca90d76f3462a5f7180785b271c91d08a8db2b8b78842d6b225f2192d7656f4fdffa69fb79aac87adeb29b81f17571651ca082e57e807e5d6940a96af'
-        '050d0c07c0212e1aa64ba229209604fe9e0f1439e0dabaf883365e44627131f6a6df405f3e951f15a2158b0a5f2563dd1c5e2aba851ade557ca93e843319c318'
-        '46ecfed21f8592700800230d15ac7eef89d3b172b4993c8546992cf25ec579ac8834269c9752b8ff50da3e65d932536b2a86ab6421575455ee78f7bbb81eda9e'
-        '92c586a1011085d646c3156e01cf6d057954174b808be1b2c0481ab315d4cbbc14e6b73df9875d3917e3215cde7692e6169eda2467aa61be3c760b88ab45c428'
-        '4618ef1ca2fd466f6e8d2ebea69c011e88c8714aba2a95da1470717ed42918a6da409d9d48c44752ef48d09d6349f8502cf66677efd184cc475f333a64933980'
-        '4bc108097f07e9a0561c577f9dbd6cd69e7c297b09b3b123d5eaa2d0ccb43616a04626c76d03f0a9c6d3e7380a52535dbe4d5acc34ff03c90d78280217b75d50'
-        '5dc1f2bafca27eeb992e57fa1d51e3204078e891d6aed55b2e65aff90a0d8ab6eab04b5dd12912a6e1ac708e5d749d270089b384c9ea2c155028bb8bf7a3644c')
+        '88b36b26d8ee8ac0d2034106d3ba9595296e6d474d5b892f165701865ff790515f979693897b6c23bb421e7e091b3e7367ec1065a7e9dbaab3b0546e1b037009'
+        '9aea685518e63377b745c83ce51c36434f2a3c181440d108ecad915ec6162087302710c1bd95a1097af4ad66468a7fae485881fb030bc2dd886882864b36bdfe'
+        '13bab5a9c018a6e274663f36f4ac1c02742fd25bc805465be74b35181beab044a0e8c00d00c7fff6cb50587fd399c8c8740246987088dd1c18c0f2a5d2638636'
+        'c18f52b188ecde915a0d3b69fd87391fdf4a8800a3cd5332456f3009d5c1161944d7ab10a7f2a68fb0b035b69ae1576cb80c1a81ce94ae410066ad19f3d5c196'
+        '8537d5d673e73c3656c474ad46d30fce23a317ee6758e304875e3099f1a2250da8a7fb358fb1785dfde704d06c5ab7cdf18e213f7906cdcafa586d3d7b60d085'
+        '55ca66ad10e5e8ecb7f205acd009a3ca945c27894047e1ace20866a14d5dd9f2b97e23e6da678877363c2963a6fc2ef83030b4f5de6d7bf84da88bd7434c5596'
+        'a6fa4b559b4b701b8fcee294d0a30371de233ba5cb3a08f915b9aa9be42e08e70814a71f74b9e87e8936a847b621fac0b282e8260ea3d728a26ce879953ff17f'
+        '8836f747a59cab143679eb751bc67f79b2bd1057f2108a984e63905b8404caeeec5f2e01bfbb42e83e1c7d24e2b10731a9abab4b8b472588e9196c1d519ac3e2')
 
 #pkgver() {
 #  cd glibc
@@ -99,7 +108,6 @@ build() {
   # locale-gen segfaults without this on glibc 2.42
   if [[ ${CARCH} = "aarch64" ]]; then
      CFLAGS=${CFLAGS/-fno-plt/}
-     _configure_flags+=(--enable-memory-tagging)
   fi
 
   (
@@ -167,15 +175,18 @@ check() (
   # The following tests fail due to restrictions in the Arch build system
   # The correct fix is to add the following to the systemd-nspawn call:
   # --system-call-filter="@clock @memlock @pkey"
-  _skip_test test-errno-linux        sysdeps/unix/sysv/linux/Makefile
-  _skip_test tst-mlock2              sysdeps/unix/sysv/linux/Makefile
-  _skip_test tst-ntp_gettime         sysdeps/unix/sysv/linux/Makefile
-  _skip_test tst-ntp_gettimex        sysdeps/unix/sysv/linux/Makefile
-  _skip_test tst-pkey                sysdeps/unix/sysv/linux/Makefile
-  _skip_test tst-mseal-pkey          sysdeps/unix/sysv/linux/Makefile
-  _skip_test tst-process_mrelease    sysdeps/unix/sysv/linux/Makefile
-  _skip_test tst-shstk-legacy-1g     sysdeps/x86_64/Makefile
-  _skip_test tst-adjtime             time/Makefile
+  _skip_test tst-ldconfig-cache             elf/Makefile
+  _skip_test tst-pthread-gdb-attach         nptl/Makefile
+  _skip_test tst-pthread-gdb-attach-static  nptl/Makefile
+  _skip_test test-errno-linux               sysdeps/unix/sysv/linux/Makefile
+  _skip_test tst-mlock2                     sysdeps/unix/sysv/linux/Makefile
+  _skip_test tst-ntp_gettime                sysdeps/unix/sysv/linux/Makefile
+  _skip_test tst-ntp_gettimex               sysdeps/unix/sysv/linux/Makefile
+  _skip_test tst-pkey                       sysdeps/unix/sysv/linux/Makefile
+  _skip_test tst-mseal-pkey                 sysdeps/unix/sysv/linux/Makefile
+  _skip_test tst-process_mrelease           sysdeps/unix/sysv/linux/Makefile
+  _skip_test tst-shstk-legacy-1g            sysdeps/x86_64/Makefile
+  _skip_test tst-adjtime                    time/Makefile
 
   make -O check
 )
@@ -185,7 +196,6 @@ package_glibc() {
   depends=('linux-api-headers>=4.10' tzdata filesystem)
   optdepends=('gd: for memusagestat'
               'perl: for mtrace')
-  install=glibc.install
   backup=(etc/gai.conf
           etc/locale.gen)
 
@@ -224,13 +234,20 @@ package_glibc() {
   # libraries too. Useful for gdb's catch command.
   install -Dm644 "${srcdir}"/sdt.h "${pkgdir}"/usr/include/sys/sdt.h
   install -Dm644 "${srcdir}"/sdt-config.h "${pkgdir}"/usr/include/sys/sdt-config.h
+
+  # Install relevant pre- and post-transaction hooks.
+  install -vDm 644 ../10-glibc-locale-gen.hook -t "${pkgdir}"/usr/share/libalpm/hooks/
+  install -vDm 644 ../10-glibc-remove-locale-archive.hook -t "${pkgdir}"/usr/share/libalpm/hooks/
+  install -vDm 644 ../11-glibc-ldconfig.hook -t "${pkgdir}"/usr/share/libalpm/hooks/
+  install -vDm 644 ../11-glibc-remove-ldconfig-cache.hook -t "${pkgdir}"/usr/share/libalpm/hooks/
+  install -vDm 644 ../12-glibc-iconvconfig.hook -t "${pkgdir}"/usr/share/libalpm/hooks/
+  install -vDm 644 ../12-glibc-remove-iconvconfig-cache.hook -t "${pkgdir}"/usr/share/libalpm/hooks/
 }
 
 package_lib32-glibc() {
   pkgdesc='GNU C Library (32-bit)'
   depends=("glibc=$pkgver")
   options+=('!emptydirs')
-  install=lib32-glibc.install
   arch=(x86_64)
 
   cd lib32-glibc-build
@@ -250,6 +267,10 @@ package_lib32-glibc() {
 
   # Symlink /usr/lib32/locale to /usr/lib/locale
   ln -s ../lib/locale "${pkgdir}"/usr/lib32/locale
+
+  # Install relevant pre- and post-transaction hooks.
+  install -vDm 644 ../12-lib32-glibc-iconvconfig.hook -t "${pkgdir}"/usr/share/libalpm/hooks/
+  install -vDm 644 ../12-lib32-glibc-remove-iconvconfig-cache.hook -t "${pkgdir}"/usr/share/libalpm/hooks/
 }
 
 package_glibc-locales() {
