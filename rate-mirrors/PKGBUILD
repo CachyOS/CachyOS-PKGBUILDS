@@ -8,8 +8,8 @@ pkgdesc="Everyday-use client-side map-aware mirror ranking tool"
 arch=(x86_64)
 url="https://github.com/westandskif/rate-mirrors"
 license=('CC-BY-NC-SA-3.0')
-depends=('glibc' 'gcc-libs' 'openssl')
-makedepends=('git' 'cargo')
+depends=('glibc' 'gcc-libs' 'librustls')
+makedepends=('git' 'cargo' 'lld' 'clang' 'llvm')
 source=(
     "${pkgname}::git+$url.git#tag=v${pkgver}"
     "https://github.com/CachyOS/rate-mirrors/commit/2c35ea7affd2c4f3a22de5cc258dcf61ca977cbf.patch"
@@ -38,7 +38,16 @@ prepare() {
 
 build() {
   cd "$pkgname"
-  OPENSSL_NO_VENDOR=true cargo build --release --frozen
+  # Compile with clang
+  export AR=llvm-ar
+  export CC=clang
+  export CXX=clang++
+  export NM=llvm-nm
+  export RANLIB=llvm-ranlib
+
+  export RUSTFLAGS="-Cembed-bitcode -C opt-level=3 -Ccodegen-units=1 -Clinker=clang -C link-arg=-flto -Clink-arg=-fuse-ld=/usr/bin/ld.lld"
+
+  cargo build --release --frozen
 }
 
 package() {
