@@ -2,7 +2,7 @@
 # Contributor: Nikita Almakov <nikita.almakov@gmail.com>
 
 pkgname=rate-mirrors
-pkgver=0.29.0
+pkgver=0.30.0
 pkgrel=1
 pkgdesc="Everyday-use client-side map-aware mirror ranking tool"
 arch=(x86_64)
@@ -12,26 +12,26 @@ depends=('glibc' 'gcc-libs' 'openssl')
 makedepends=('git' 'cargo')
 source=(
     "${pkgname}::git+$url.git#tag=v${pkgver}"
-    "https://github.com/CachyOS/rate-mirrors/commit/d772bcada9290c3512410bbf6bb337d014a96c42.patch"
-    "https://github.com/CachyOS/rate-mirrors/commit/c7f7f0c9d35bd3b490cd2bb95609707038829b25.patch"
-    "https://github.com/CachyOS/rate-mirrors/commit/0fb7535bee84ec798b710a8c6941be4947317ead.patch"
+    "https://github.com/CachyOS/rate-mirrors/commit/2c35ea7affd2c4f3a22de5cc258dcf61ca977cbf.patch"
+    "https://github.com/CachyOS/rate-mirrors/commit/a4d651079a9269adc7ff6b376026a0e39da452fc.patch"
+    "https://github.com/CachyOS/rate-mirrors/commit/850413fc990da0fd714bcf336e05654b07f605c4.patch"
 )
-sha256sums=('18b0640e2fcff7d2b50ef3d39f91b1ec458a7324e85b0dd5fce0e9d85f025494'
-            'c396c0133c17f0b478a2e01940015a04a1e8b5d747781fe6c682b12fa1972cd4'
-            'fcc787f0dedb03efaaf61df399892b24cfb1bcb09275709d0618b2103d1ce7ca'
-            'bb1f3a8e154c3bc3c94e0c0164977d7f07db961c33fe2f3455e8cd238d1e1851')
+sha256sums=('9f797b628f3640d3df04c0a36de94a10aed07fc20021185796e73f0750526b38'
+            '1af82f32b5be51e6981d0b29179bb926af9b3585e471710a424183ad17c6de5e'
+            'a299c7f0b6b78dfb2e48c5254bea8baa8d7efbd63a1d207ea600d37aca68be6e'
+            '0f8910500430c19fc7525cb234bc0b09bcd18e59b59d34d46cdf09b642b77958')
 
 prepare() {
   cd "$pkgname"
 
-  # archlinux: use cachyos proxy mirrorlist
-  patch -Np1 -i ../d772bcada9290c3512410bbf6bb337d014a96c42.patch
+  # cachyos: use mirrorlist API
+  patch -Np1 -i ../2c35ea7affd2c4f3a22de5cc258dcf61ca977cbf.patch
 
   # cachyos: add proxy mirrorlist as primary
-  patch -Np1 -i ../c7f7f0c9d35bd3b490cd2bb95609707038829b25.patch
+  patch -Np1 -i ../a4d651079a9269adc7ff6b376026a0e39da452fc.patch
 
-  # archlinux: fall back to upstream mirror status on proxy failure
-  patch -Np1 -i ../0fb7535bee84ec798b710a8c6941be4947317ead.patch
+  # archlinux: use cachyos proxy mirrorlist
+  patch -Np1 -i ../850413fc990da0fd714bcf336e05654b07f605c4.patch
 
   cargo fetch --locked --target "$CARCH-unknown-linux-gnu"
 }
