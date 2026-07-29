@@ -6,7 +6,7 @@
 
 pkgname=steamos-manager
 pkgver=26.3.0
-pkgrel=1
+pkgrel=2
 pkgdesc='SteamOS Manager daemon for running various system management tasks'
 arch=('x86_64')
 url='https://store.steampowered.com/steamos/'
@@ -23,9 +23,11 @@ depends=(
 optdepends=('jupiter-hw-support: jupiter support')  # Needed for jupiter-get-als-gain, jupiter-biosupdate, steamos-format-device, steamos-trim-devices
 makedepends=('git' 'cargo' 'clang')
 source=("git+https://gitlab.steamos.cloud/holo/steamos-manager.git#tag=v${pkgver}"
-        "support-gamescope-session-steam.patch")
+        "support-gamescope-session-steam.patch"
+        "use-cachyos-gamescope-session-and-plasmalogin.patch")
 sha256sums=('aa1fdab11b18515d4bfabc7a0b18dece17c51ad32da85111d97c881222f5da3a'
-            '7eb26772b2d6ce474ce4469816ee224bba8cd68c6847487b14e09865194238d8')
+            '7eb26772b2d6ce474ce4469816ee224bba8cd68c6847487b14e09865194238d8'
+            'b1feebe4267773ccdc79425c967b4aee623261d76c5d11310892bf64eb177093')
 install='steamos-manager.install'
 
 prepare() {
@@ -35,6 +37,7 @@ prepare() {
     git cherry-pick -n 2f4aff12edfb041efb7928a5013f798a7e57decf
 
     patch -Np1 -i ../support-gamescope-session-steam.patch
+    patch -Np1 -i ../use-cachyos-gamescope-session-and-plasmalogin.patch
 
     cargo fetch --locked --target "x86_64-unknown-linux-gnu"
 }
@@ -47,4 +50,7 @@ build() {
 package () {
     cd "${pkgname}"
     make install DESTDIR="${pkgdir}"
+    # this file below is required to register the session management interface
+    install -d -m755 "${pkgdir}/usr/lib/plasmalogin/plasmalogin.conf.d"
+    install -m644 /dev/null "${pkgdir}/usr/lib/plasmalogin/plasmalogin.conf.d/holo.conf"
 }
