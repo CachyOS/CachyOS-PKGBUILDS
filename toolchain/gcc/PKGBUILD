@@ -45,8 +45,8 @@ pkgname=(
   libubsan
   lto-dump
 )
-pkgver=16.1.1+r581+gb73ad535acaa
-_commit=b73ad535acaa2381bce1edb6f78b7dc65d0d5d1f
+pkgver=16.1.1+r595+g171d15ac6959
+_commit=171d15ac6959a911a5e9a44642516d1d26ca724d
 pkgrel=1
 pkgdesc='The GNU Compiler Collection'
 arch=(x86_64)
@@ -86,15 +86,11 @@ source=(git+https://sourceware.org/git/gcc.git#commit=$_commit
         gcc-ada-repro.patch
         gcc-16-52cd02606b90.patch
 )
-validpgpkeys=(F3691687D867B81B51CE07D9BBE43771487328A9  # bpiotrowski@archlinux.org
-              86CFFCA918CF3AF47147588051E8B148A9999C34  # foutrelis@archlinux.org
-              13975A70E63C361C73AE69EF6EEB81F8981C74C7  # richard.guenther@gmail.com
-              D3A93CAD751C2AF4F8C7AD516C35B99309B5FA62) # Jakub Jelinek <jakub@redhat.com>
-sha256sums=('e7641bfddebaada298ca0a631183ef8d81bb3c5dfd3aef30bc7d4223f1c0e450'
-            'de48736f6e4153f03d0a5d38ceb6c6fdb7f054e8f47ddd6af0a3dbf14f27b931'
-            '2513c6d9984dd0a2058557bf00f06d8d5181734e41dcfe07be7ed86f2959622a'
+sha256sums=('584e7bdb53885dacaa8e98f7aeabf1cdd90e5d63a5ea96a769b199d909238bab'
+            '7b09ec947f90b98315397af675369a1e3dfc527fa70013062e6e85c4be0275ab'
+            '44ea973558842f3f4bd666bdaf6e810fd7b7c7bd36b5cc4c69f93d2cd0124fc7'
             '1773f5137f08ac1f48f0f7297e324d5d868d55201c03068670ee4602babdef2f'
-            '09c0fcfb370399270adb7905becc4fc395aa1d5f59c8d6169a1f021182600386')
+            '838e14d4ef76079107a5373316598025915eaf747a10522ec9f8842125ca9a8e')
 #pkgver() {
 #  cd gcc
 #  echo "$(cat gcc/BASE-VER)+$(git describe --abbrev=12 --tags | sed 's/[^-]*-[^-]*-//;s/[^-]*-/r&/;s/-/+/g;s/_/./')"
