@@ -1,7 +1,7 @@
 # Maintainer: Peter Jung ptr1337 <admin@ptr1337.dev>
 
 pkgname=llvm-propeller
-pkgver=20250715.d487a23b42b
+pkgver=20260727.e81e4fe45bf
 pkgrel=1
 pkgdesc="Profile-guided, relinking optimizer for warehouse-scale applications built on LLVM"
 arch=('x86_64')
@@ -9,8 +9,9 @@ url="https://github.com/google/llvm-propeller"
 license=('Apache-2.0')
 depends=('libelf' 'openssl' 'zstd' 'gcc-libs' 'glibc')
 makedepends=('git' 'cmake' 'ninja' 'clang>=19.0.0' 'llvm>=19.0.0' 'python')
-source=("${pkgname}::git+https://github.com/google/llvm-propeller.git#commit=d487a23")
-sha256sums=('20fc7d735b143f4bc4fb8146022f99a7e34c26ca8772d5054f9db6bf1524308d')
+options=('!lto')
+source=("${pkgname}::git+https://github.com/google/llvm-propeller.git#commit=e81e4fe45bf")
+sha256sums=('b1587dfe442c87249b9fe9384e2dda20c2d513a5745cac7a2a2b5582adedbf8e')
 
 pkgver() {
   cd "${pkgname}"
