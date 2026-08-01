@@ -13,8 +13,8 @@ makedepends=('git')
 install="$pkgname.install"
 source=("$pkgname::git+$url.git#tag=v$pkgver"
         "README.cachyos.md")
-sha256sums=('90f1a79e5961e4cab7fbd405b0b04d25025db9156f0029b059f71e3a01b39278'
-            '81aada89faac5c7a4acb80e30ee7bbfbcf72bfd33fe66d088e9d1c6d4e7bd7bf')
+sha256sums=('4e61bb40dadedb7fa756b29da7d372ea8929462c86c07e9af9b57cc5806fbfd1'
+            'ad8bf4f25435a9fc17c9db7922779f72678b08b6495e59f2a77df14d9d116f01')
 
 package() {
   cd "${srcdir}/${pkgname}"
@@ -28,7 +28,7 @@ package() {
   install -Dm644 pyproject.toml "$sharedir/pyproject.toml"
 
   # Python library
-  install -Dm644 src/cse-gen.py "$sharedir/src/cse-gen.py"
+  install -Dm644 src/cse_gen.py "$sharedir/src/cse_gen.py"
   install -Dm644 src/cse_lib/__init__.py "$sharedir/src/cse_lib/__init__.py"
   install -Dm644 src/cse_lib/gamma_math.py "$sharedir/src/cse_lib/gamma_math.py"
   install -Dm644 src/cse_lib/edid_parser.py "$sharedir/src/cse_lib/edid_parser.py"
