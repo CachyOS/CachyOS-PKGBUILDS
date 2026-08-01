@@ -1159,7 +1159,7 @@ index 8bc8203cceca..e8b2c1c28d5b 100644
          env.insert(QStringLiteral("XDG_SEAT_PATH"), daemonApp->displayManager()->seatPath(m_display->seat()->name()));
          env.insert(QStringLiteral("XDG_SESSION_PATH"), daemonApp->displayManager()->sessionPath(QStringLiteral("Session%1").arg(daemonApp->newSessionId())));
 diff --git a/src/daemon/Seat.cpp b/src/daemon/Seat.cpp
-index 2ed32a8f13e9..3247cb18b84b 100644
+index 43af0d8f175a..3247cb18b84b 100644
 --- a/src/daemon/Seat.cpp
 +++ b/src/daemon/Seat.cpp
 @@ -17,20 +17,14 @@
@@ -1168,8 +1168,8 @@ index 2ed32a8f13e9..3247cb18b84b 100644
  
 +#include "Configuration.h"
  #include "DaemonApp.h"
+-#include "MainConfigLoader.h"
  #include "VirtualTerminal.h"
--#include "mainconfig.h"
  
  #include <QDebug>
  #include <QFile>
@@ -1184,12 +1184,14 @@ index 2ed32a8f13e9..3247cb18b84b 100644
  #include <Login1Manager.h>
  #include <Login1Seat.h>
  #include <Login1Session.h>
-@@ -54,6 +48,9 @@ const QString &Seat::name() const
+@@ -54,8 +48,9 @@ const QString &Seat::name() const
  
  void Seat::createDisplay()
  {
+-    PlasmaLogin::config()->load();
 +    // reload config if needed
 +    mainConfig.load();
+-
 +
      // create a new display
      qDebug() << "Adding new display...";
@@ -2013,4 +2015,3 @@ index 000000000000..cb74cf039f41
 +someString="Pie/180"
 -- 
 2.54.0
-
