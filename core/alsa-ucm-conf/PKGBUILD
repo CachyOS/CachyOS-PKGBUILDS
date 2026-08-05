@@ -27,7 +27,7 @@ prepare() {
 }
 
 package() {
-  cd $pkgname-$pkgver
+  cd "$pkgname-$pkgver"
   install -vdm 755 "$pkgdir/usr/share/alsa/"
   cp -av ucm2 "$pkgdir/usr/share/alsa/"
   install -vDm 644 LICENSE -t "$pkgdir/usr/share/licenses/$pkgname"
