@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # cachyos-refresh — Windows-style refresh for KDE Plasma
+# SPDX-License-Identifier: GPL-3.0-or-later
 set -euo pipefail
 
 PLASMA_SERVICE="plasma-plasmashell.service"
@@ -31,6 +32,10 @@ refresh_desktop() {
 }
 
 refresh_dolphin() {
+    if ! command -v qdbus6 >/dev/null 2>&1; then
+        echo "Error: qdbus6 not found (install qt6-tools)." >&2
+        exit 1
+    fi
     local services found=0
     services=$(qdbus6 2>/dev/null | grep '^ org\.kde\.dolphin-' | awk '{print $1}') || true
     for service in $services; do
