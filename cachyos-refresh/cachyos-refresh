@@ -32,7 +32,7 @@ refresh_desktop() {
 
 refresh_dolphin() {
     local services found=0
-    services=$(qdbus6 2>/dev/null | grep '^ org\.kde\.dolphin-' | awk '{print $1}')
+    services=$(qdbus6 2>/dev/null | grep '^ org\.kde\.dolphin-' | awk '{print $1}') || true
     for service in $services; do
         if qdbus6 "$service" /dolphin/Dolphin_1 \
             org.kde.KMainWindow.activateAction view_redisplay >/dev/null 2>&1; then
