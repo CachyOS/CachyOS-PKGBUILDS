@@ -1,0 +1,29 @@
+# Contributor: Dharmik Lathiya <dharmiklathiya.it@gmail.com>
+
+pkgname='cachyos-refresh'
+pkgver=1.0.0
+pkgrel=1
+pkgdesc='Windows-style refresh for KDE Plasma: reload desktop, Dolphin windows and thumbnail caches'
+arch=('any')
+license=('GPL-3.0-or-later')
+depends=(
+  'bash'
+  'coreutils'
+  'dolphin'
+  'kconfig'
+  'plasma-workspace'
+  'qt6-tools'
+  'systemd'
+)
+source=('cachyos-refresh'
+        'cachyos-refresh.desktop'
+        'cachyos-refresh-command.desktop')
+sha512sums=('SKIP'
+            'SKIP'
+            'SKIP')
+
+package() {
+    install -Dm755 "$srcdir/cachyos-refresh" "$pkgdir/usr/bin/cachyos-refresh"
+    install -Dm644 "$srcdir/cachyos-refresh.desktop" "$pkgdir/usr/share/kio/servicemenus/cachyos-refresh.desktop"
+    install -Dm644 "$srcdir/cachyos-refresh-command.desktop" "$pkgdir/usr/share/applications/cachyos-refresh-command.desktop"
+}
