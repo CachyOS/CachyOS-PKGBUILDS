@@ -1,0 +1,85 @@
+#!/usr/bin/env bash
+# cachyos-refresh — Windows-style refresh for KDE Plasma
+set -euo pipefail
+
+PLASMA_SERVICE="plasma-plasmashell.service"
+
+usage() {
+    cat <<'EOF'
+Usage: cachyos-refresh [COMMAND]
+
+Commands:
+  desktop            Reload the Plasma desktop and panels
+  dolphin            Reload all open Dolphin windows
+  icons              Clear thumbnail caches
+  all                Run desktop, dolphin and icons in sequence
+  --setup-shortcut   Bind Meta+R to "cachyos-refresh all" (idempotent)
+  -h, --help         Show this help
+
+Examples:
+  cachyos-refresh all
+EOF
+}
+
+refresh_desktop() {
+    if systemctl --user is-active "$PLASMA_SERVICE" >/dev/null 2>&1; then
+        systemctl --user restart "$PLASMA_SERVICE"
+        echo "Desktop refreshed."
+    else
+        echo "Plasma shell is not running; nothing to refresh."
+    fi
+}
+
+refresh_dolphin() {
+    local services found=0
+    services=$(qdbus6 2>/dev/null | grep '^ org\.kde\.dolphin-' | awk '{print $1}')
+    for service in $services; do
+        if qdbus6 "$service" /dolphin/Dolphin_1 \
+            org.kde.KMainWindow.activateAction view_redisplay >/dev/null 2>&1; then
+            found=1
+        fi
+    done
+    if [[ $found -eq 0 ]]; then
+        echo "No open Dolphin windows to refresh."
+    else
+        echo "Dolphin refreshed."
+    fi
+}
+
+refresh_icons() {
+    local cache="${XDG_CACHE_HOME:-$HOME/.cache}/thumbnails"
+    if [[ -d "$cache" ]]; then
+        rm -rf "$cache"/*
+        echo "Thumbnail cache cleared."
+    else
+        echo "No thumbnail cache found."
+    fi
+}
+
+setup_shortcut() {
+    if ! command -v kwriteconfig6 >/dev/null 2>&1; then
+        echo "Error: kwriteconfig6 not found (install kconfig)." >&2
+        exit 1
+    fi
+    kwriteconfig6 --file kglobalshortcutsrc \
+        --group cachyos-refresh-command.desktop --key _k_friendly_name "cachyos-refresh"
+    kwriteconfig6 --file kglobalshortcutsrc \
+        --group cachyos-refresh-command.desktop \
+        --key _launch "Meta+R,None,Meta+R,cachyos-refresh all"
+    echo "Shortcut installed: Meta+R -> cachyos-refresh all"
+    echo "It becomes active on next login (or restart kglobalaccel)."
+}
+
+case "${1:-}" in
+    desktop)          refresh_desktop ;;
+    dolphin)          refresh_dolphin ;;
+    icons)            refresh_icons ;;
+    all)              refresh_desktop; refresh_dolphin; refresh_icons ;;
+    --setup-shortcut) setup_shortcut ;;
+    -h|--help)        usage ;;
+    *)
+        echo "Error: unknown command '${1:-}'" >&2
+        usage >&2
+        exit 1
+        ;;
+esac
