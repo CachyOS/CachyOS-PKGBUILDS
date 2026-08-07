@@ -1,0 +1,27 @@
+diff --git a/ucm2/sof-soundwire/sof-soundwire.conf b/ucm2/sof-soundwire/sof-soundwire.conf
+index 3ccf493..04a5f8b 100644
+--- a/ucm2/sof-soundwire/sof-soundwire.conf
++++ b/ucm2/sof-soundwire/sof-soundwire.conf
+@@ -23,7 +23,7 @@ Define {
+ 
+ DefineRegex {
+ 	SpeakerCodec {
+-		Regex " spk:([a-z0-9]+((-sdca)|(-spk)|(-bridge))?(\\+[a-z0-9]+((-spk)?))?)"
++		Regex " spk:([[:alnum:]]+((-sdca)|(-spk)|(-bridge))?(\\+[[:alnum:]]+((-spk)?))?)"
+ 		String "${CardComponents}"
+ 	}
+ 	SpeakerChannels {
+@@ -35,11 +35,11 @@ DefineRegex {
+ 		String "${CardComponents}"
+ 	}
+ 	HeadsetCodec {
+-		Regex " hs:([a-z0-9]+(-sdca)?)"
++		Regex " hs:([[:alnum:]]+(-sdca)?)"
+ 		String "${CardComponents}"
+ 	}
+ 	MicCodec {
+-		Regex " mic:([a-z0-9]+(-dmic)?+(-sdca)?)"
++		Regex " mic:([[:alnum:]]+(-dmic)?+(-sdca)?)"
+ 		String "${CardComponents}"
+ 	}
+ 	Mics {
