@@ -1,0 +1,44 @@
+pkgbase = libtool
+	pkgdesc = A generic library support script
+	pkgver = 2.6.2
+	pkgrel = 3
+	url = https://www.gnu.org/software/libtool
+	arch = aarch64
+	arch = x86_64
+	license = LGPL-2.0-or-later WITH Libtool-exception
+	checkdepends = gcc-fortran
+	makedepends = gcc>=16
+	makedepends = git
+	makedepends = glibc
+	makedepends = help2man
+	depends = sh
+	depends = tar
+	source = git+https://git.savannah.gnu.org/git/libtool.git#commit=309bb53a8adfb22c6e5869cc8da049bf123e5438
+	source = git+https://git.savannah.gnu.org/git/gnulib.git
+	source = gnulib-bootstrap::git+https://github.com/gnulib-modules/bootstrap.git
+	b2sums = feab7320948202806bb4fa96b3a8724faf24f4033cc4fc34fe6342f31e1f93edca04980138e9bbd2d21c7d412cbd7ac276fb28f0423e138df3bc889657264a0d
+	b2sums = SKIP
+	b2sums = SKIP
+	makedepends_x86_64 = lib32-gcc-libs
+	makedepends_x86_64 = lib32-glibc
+
+pkgname = libtool
+	depends = sh
+	depends = tar
+	depends = glibc
+	provides = libltdl=2.6.2
+	provides = libtool-multilib=2.6.2
+	conflicts = libltdl
+	conflicts = libtool-multilib
+	replaces = libltdl
+	replaces = libtool-multilib
+
+pkgname = lib32-libltdl
+	arch = x86_64
+	depends = sh
+	depends = tar
+	depends = lib32-glibc
+	depends = libtool
+	provides = lib32-libtool=2.6.2
+	conflicts = lib32-libtool
+	replaces = lib32-libtool

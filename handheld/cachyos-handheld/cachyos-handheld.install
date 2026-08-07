@@ -30,29 +30,6 @@ EOF
   fi
 }
 
-bootstrap_setup() {
-  # Use SteamOS bootstrap to speed up first boot setup.
-  URL="https://steamdeck-packages.steamos.cloud/archlinux-mirror/jupiter-main/os/x86_64/steam-jupiter-stable-1.0.0.85-2-x86_64.pkg.tar.zst"
-  BOOTSTRAP_SHA512=a013473d28a9d10a865b543ee1c42fa514c4af383b63f7dbf8e38d18e358ebdbc247caff1e39cc372a71b05fdd506f2356e1af0c5404a95f6615191d994e0fbf
-
-  echo "Downloading SteamOS bootstrap"
-  curl -o /tmp/steam-jupiter-stable.tar.zst "$URL"
-
-  echo "Extracting /tmp/bootstraplinux_ubuntu12_32.tar.xz"
-  tar -I zstd -xOf /tmp/steam-jupiter-stable.tar.zst usr/lib/steam/bootstraplinux_ubuntu12_32.tar.xz > /tmp/bootstraplinux_ubuntu12_32.tar.xz
-
-  echo "$BOOTSTRAP_SHA512  /tmp/bootstraplinux_ubuntu12_32.tar.xz" | sha512sum -c - >/dev/null 2>&1 || {
-    echo "Extraction failed!"
-    exit 1
-  }
-
-  # Move to Steam path
-  mv -f /tmp/bootstraplinux_ubuntu12_32.tar.xz /usr/lib/steam/bootstraplinux_ubuntu12_32.tar.xz
-
-  # Cleanup
-  rm -f /tmp/steam-jupiter-stable.tar.zst /tmp/bootstraplinux_ubuntu12_32.tar.xz
-}
-
 post_install() {
   # Use scx_lavd as default scheduler
   scx_lavd_default
@@ -66,7 +43,6 @@ post_install() {
   ln -sf /usr/lib/systemd/system/plasmalogin.service /etc/systemd/system/display-manager.service
 
   # First boot setup
-  bootstrap_setup
   touch /etc/handheld-first-boot
 
   # Update users plasmalogin config to reflect the changes

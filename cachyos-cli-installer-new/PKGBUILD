@@ -2,16 +2,16 @@
 
 pkgname=cachyos-cli-installer-new
 _pkgname=New-Cli-Installer
-pkgver=0.11.0
+pkgver=0.12.4
 pkgrel=1
 pkgdesc='New CLI installer for CachyOS'
 arch=(x86_64)
 license=(GPL-3.0-or-later)
 url="https://github.com/cachyos/new-cli-installer"
-depends=('fzf' 'gawk' 'chwd' 'cachyos-rate-mirrors' 'curl' 'coreutils' 'util-linux' 'gptfdisk')
+depends=('fzf' 'gawk' 'chwd' 'cachyos-rate-mirrors' 'curl' 'coreutils' 'util-linux' 'gptfdisk' 'cryptsetup')
 makedepends=('cmake' 'ninja' 'git' 'lld' 'clang' 'llvm')
 source=("$pkgname::git+$url.git#tag=${pkgver}?signed")
-sha256sums=('8f7f9f07d1d4d521d923d40bcdc574d170e84a54d38b9ef0a0782c5eeb4eae5b')
+sha256sums=('432fce52877b2d525d8c22e3966b7bc23f7791d4df3121826eba32f35edaf34f')
 validpgpkeys=(
   'B1B70BB1CD56047DEF31DE2EB62C3D10C54D5DA9'  # Vladislav Nepogodin <nepogodin.vlad@gmail.com>
 )
@@ -35,6 +35,7 @@ build() {
         -DCMAKE_INSTALL_PREFIX=/usr \
         -DCMAKE_INSTALL_LIBDIR=lib \
         -DENABLE_DEVENV=OFF \
+        -DGUCC_BUILD_TOOLS=ON \
         -DCOS_BUILD_STATIC=ON
   cmake --build build
 }
@@ -43,7 +44,8 @@ package() {
   cd "$srcdir/$pkgname"
   DESTDIR="${pkgdir}" cmake --build build --target install
 
-  install -Dm644 net-profiles.toml "${pkgdir}/var/lib/cachyos-installer/net-profiles.toml"
+  install -Dm644 net-profiles.toml "$pkgdir/var/lib/cachyos-installer/net-profiles.toml"
+  install -Dm644 server-profiles.toml "$pkgdir/var/lib/cachyos-installer/server-profiles.toml"
 }
 
 # vim:set sw=2 sts=2 et:

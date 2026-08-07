@@ -2,38 +2,47 @@
 # Contributor: Nikita Almakov <nikita.almakov@gmail.com>
 
 pkgname=rate-mirrors
-pkgver=0.28.3
+pkgver=0.31.0
 pkgrel=1
 pkgdesc="Everyday-use client-side map-aware mirror ranking tool"
 arch=(x86_64)
 url="https://github.com/westandskif/rate-mirrors"
 license=('CC-BY-NC-SA-3.0')
-depends=('glibc' 'gcc-libs' 'openssl')
-makedepends=('git' 'cargo')
+depends=('glibc' 'gcc-libs' 'librustls')
+makedepends=('git' 'cargo' 'lld' 'clang' 'llvm')
 source=(
     "${pkgname}::git+$url.git#tag=v${pkgver}"
-    https://github.com/CachyOS/rate-mirrors/commit/29d2f3beb572187d0ece1e81e78b4e5612b563b2.patch
-    https://github.com/CachyOS/rate-mirrors/commit/c221115b27bf98285c84fc07caa00b72146e2ce8.patch
+    "https://github.com/CachyOS/rate-mirrors/commit/a4d651079a9269adc7ff6b376026a0e39da452fc.patch"
+    "https://github.com/CachyOS/rate-mirrors/commit/850413fc990da0fd714bcf336e05654b07f605c4.patch"
 )
-sha256sums=('529dedced887e6c064eb449c187f69998427c5cbb19a549fbda6a954d1bf3af3'
-            '10ffe2092e2f7bd19ad3e842d82734817276e3bca19344c778504b812c357b21'
-            '416a4fe6d0e49dcea0189a9e965328e4402827eec16038b9647983768a001eca')
+sha256sums=('5169d06aa8acbf5759de5e888b6567f5824cd5955d6e7d5510c52f7c31d2f04a'
+            'a299c7f0b6b78dfb2e48c5254bea8baa8d7efbd63a1d207ea600d37aca68be6e'
+            '0f8910500430c19fc7525cb234bc0b09bcd18e59b59d34d46cdf09b642b77958')
 
 prepare() {
   cd "$pkgname"
 
-  # archlinux: use cachyos proxy mirrorlist
-  patch -Np1 -i ../29d2f3beb572187d0ece1e81e78b4e5612b563b2.patch
-
   # cachyos: add proxy mirrorlist as primary
-  patch -Np1 -i ../c221115b27bf98285c84fc07caa00b72146e2ce8.patch
+  patch -Np1 -i ../a4d651079a9269adc7ff6b376026a0e39da452fc.patch
+
+  # archlinux: use cachyos proxy mirrorlist
+  patch -Np1 -i ../850413fc990da0fd714bcf336e05654b07f605c4.patch
 
   cargo fetch --locked --target "$CARCH-unknown-linux-gnu"
 }
 
 build() {
   cd "$pkgname"
-  OPENSSL_NO_VENDOR=true cargo build --release --frozen
+  # Compile with clang
+  export AR=llvm-ar
+  export CC=clang
+  export CXX=clang++
+  export NM=llvm-nm
+  export RANLIB=llvm-ranlib
+
+  export RUSTFLAGS="-Cembed-bitcode -C opt-level=3 -Ccodegen-units=1 -Clinker=clang -C link-arg=-flto -Clink-arg=-fuse-ld=/usr/bin/ld.lld"
+
+  cargo build --release --frozen
 }
 
 package() {

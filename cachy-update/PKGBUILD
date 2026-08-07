@@ -1,15 +1,15 @@
 # Maintainer: Robin Candau <antiz@archlinux.org>
 
 pkgname=cachy-update
-pkgver=3.20.0
-pkgrel=2
-pkgdesc="An update notifier & applier that assists you with important pre / post update tasks"
+pkgver=4.1.3
+pkgrel=1
+pkgdesc="An interactive update notifier & applier that assists you with important pre / post update tasks"
 url="https://github.com/CachyOS/cachy-update"
-arch=('any')
+arch=('x86_64' 'aarch64')
 license=('GPL-3.0-or-later')
 depends=('bash' 'systemd' 'pacman' 'pacman-contrib' 'archlinux-contrib' 'curl' 'fakeroot' 'util-linux'
-         'htmlq' 'diffutils' 'hicolor-icon-theme' 'python' 'python-pyqt6' 'qt6-svg' 'glib2' 'xdg-utils')
-makedepends=('scdoc' 'git')
+         'htmlq' 'diffutils' 'hicolor-icon-theme' 'glibc' 'libgcc' 'glib2' 'xdg-utils')
+makedepends=('cargo' 'scdoc' 'git')
 checkdepends=('bats')
 conflicts=('arch-update')
 optdepends=('paru: AUR Packages support'
@@ -23,8 +23,8 @@ optdepends=('paru: AUR Packages support'
             'sudo: Privilege elevation'
             'sudo-rs: Privilege elevation'
             'opendoas: Privilege elavation')
-source=("git+https://github.com/CachyOS/cachy-update#commit=e44389bf270732ad9b7d5d41c732336897d42340")
-sha256sums=('03323e47b2ab76d13ca190267998cc1e59d6eef84bdba4c9c46e02ecbe48ec1b')
+source=("git+https://github.com/CachyOS/cachy-update#commit=2f4a7261ef6e71a11d34fb63e516786b8cbc993f")
+sha256sums=('982c4b65e024d487fc4a4af368eebbe31d87a0371f76a4da2cb5d90abffe4682')
 
 prepare() {
     cd "${pkgname}"
@@ -45,5 +45,6 @@ package() {
     cd "${pkgname}"
     make PREFIX=/usr DESTDIR="${pkgdir}" install
 
+    install -Dm 644 res/desktop/arch-update-tray.desktop "${pkgdir}/etc/xdg/autostart/arch-update-tray.desktop"
     ln -s arch-update "${pkgdir}/usr/bin/${pkgname}"
 }

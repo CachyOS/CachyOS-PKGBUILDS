@@ -2,7 +2,7 @@
 
 pkgname=cachyos-hello
 _pkgname=CachyOS-Welcome
-pkgver=0.24.0
+pkgver=0.28.0
 pkgrel=1
 pkgdesc='Welcome screen for CachyOS'
 arch=('x86_64')
@@ -25,7 +25,7 @@ makedepends=(
   meson
 )
 source=("${pkgname}::git+$url.git#tag=v${pkgver}?signed")
-sha512sums=('9ccd5fb130d19b97da96e58347c5db3c572cde6858b10e65b88a1e1cd7efa3043bb57f9c19d967b13cf8e81fdebcc13c9310f0d8c2aabf39009be4a5664b4a47')
+sha512sums=('26bbfa69b715743e7f076b7593996990db05a7c1ceebd6697fc53f671dd9328f715519ddacd1de64aa70ac18604c76dc76e470f77784729d3bf874ef63cf8bbf')
 validpgpkeys=(
   'B1B70BB1CD56047DEF31DE2EB62C3D10C54D5DA9'  # Vladislav Nepogodin <nepogodin.vlad@gmail.com>
 )
@@ -42,6 +42,11 @@ build() {
 
   export RUSTFLAGS="-Cembed-bitcode -C opt-level=3 -Ccodegen-units=1 -Clinker=clang -C link-arg=-flto -Clink-arg=-fuse-ld=/usr/bin/ld.lld"
 
+  # aws-lc-sys emits -Wa,--debug-prefix-map for its .S files at opt-level 3,
+  # which clang's integrated assembler rejects. Or we use opt-level 2...
+  export CFLAGS+=" -fno-integrated-as"
+  export CXXFLAGS+=" -fno-integrated-as"
+
   meson setup --buildtype=release --prefix=/usr build
   meson compile -C build
 }
@@ -57,6 +62,12 @@ package() {
   export RANLIB=llvm-ranlib
 
   export RUSTFLAGS="-Cembed-bitcode -C opt-level=3 -Ccodegen-units=1 -Clinker=clang -C link-arg=-flto -Clink-arg=-fuse-ld=/usr/bin/ld.lld"
+
+  # aws-lc-sys emits -Wa,--debug-prefix-map for its .S files at opt-level 3,
+  # which clang's integrated assembler rejects. Or we use opt-level 2...
+  export CFLAGS+=" -fno-integrated-as"
+  export CXXFLAGS+=" -fno-integrated-as"
+
   DESTDIR="${pkgdir}" meson install
 
   install -Dvm644 ../$pkgname.desktop \

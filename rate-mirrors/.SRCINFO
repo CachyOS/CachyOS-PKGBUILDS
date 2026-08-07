@@ -1,20 +1,23 @@
 pkgbase = rate-mirrors
 	pkgdesc = Everyday-use client-side map-aware mirror ranking tool
-	pkgver = 0.28.3
+	pkgver = 0.31.0
 	pkgrel = 1
 	url = https://github.com/westandskif/rate-mirrors
 	arch = x86_64
 	license = CC-BY-NC-SA-3.0
 	makedepends = git
 	makedepends = cargo
+	makedepends = lld
+	makedepends = clang
+	makedepends = llvm
 	depends = glibc
 	depends = gcc-libs
-	options = !lto
-	source = rate-mirrors::git+https://github.com/westandskif/rate-mirrors.git#tag=v0.28.3
-	source = https://github.com/CachyOS/rate-mirrors/commit/29d2f3beb572187d0ece1e81e78b4e5612b563b2.patch
-	source = https://github.com/CachyOS/rate-mirrors/commit/c221115b27bf98285c84fc07caa00b72146e2ce8.patch
-	sha256sums = 529dedced887e6c064eb449c187f69998427c5cbb19a549fbda6a954d1bf3af3
-	sha256sums = 10ffe2092e2f7bd19ad3e842d82734817276e3bca19344c778504b812c357b21
-	sha256sums = 416a4fe6d0e49dcea0189a9e965328e4402827eec16038b9647983768a001eca
+	depends = librustls
+	source = rate-mirrors::git+https://github.com/westandskif/rate-mirrors.git#tag=v0.31.0
+	source = https://github.com/CachyOS/rate-mirrors/commit/a4d651079a9269adc7ff6b376026a0e39da452fc.patch
+	source = https://github.com/CachyOS/rate-mirrors/commit/850413fc990da0fd714bcf336e05654b07f605c4.patch
+	sha256sums = 5169d06aa8acbf5759de5e888b6567f5824cd5955d6e7d5510c52f7c31d2f04a
+	sha256sums = a299c7f0b6b78dfb2e48c5254bea8baa8d7efbd63a1d207ea600d37aca68be6e
+	sha256sums = 0f8910500430c19fc7525cb234bc0b09bcd18e59b59d34d46cdf09b642b77958
 
 pkgname = rate-mirrors
