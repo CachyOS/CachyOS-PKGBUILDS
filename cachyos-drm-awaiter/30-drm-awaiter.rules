@@ -1,0 +1,6 @@
+# Remove SimpleDRM device when some real DRM driver loads.
+ACTION=="add", SUBSYSTEM=="module", KERNEL=="amdgpu|radeon|nvidia_drm|i915|xe|nouveau", \
+    TEST=="/sys/devices/platform/simple-framebuffer.0/drm/card0", RUN+="/bin/rm /dev/dri/card0"
+
+# Creates device units for most DRM modules
+ACTION=="add", SUBSYSTEM=="module", KERNEL=="amdgpu|radeon|nvidia_drm|i915|xe|nouveau", TAG+="systemd"
