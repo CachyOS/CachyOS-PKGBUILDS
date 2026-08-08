@@ -1,0 +1,140 @@
+#!/usr/bin/env bash
+# Copyright (C) 2026 Vasiliy Stelmachenok for CachyOS
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License along
+# with this program; if not, write to the Free Software Foundation, Inc.,
+# 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+
+# Get generator normal directory
+generator_dir="$1"
+
+# NVIDIA driver can be in a race state with additional driver like amdgpu,
+# especially on laptops. This configuration forces NVIDIA driver to load later
+# than the iGPU one, which eliminates this issue.
+function postpone_nvidia_module() {
+    local module="$1"
+
+    mkdir -p /run/modprobe.d
+    if [[ "$nvidia_module" == "nvidia_drm" ]]; then
+        cat <<EOF >"/run/modprobe.d/30-$module-load-reorder.conf"
+softdep $module post: nvidia nvidia_drm nvidia_modeset nvidia_uvm
+softdep nvidia pre: $module post:
+softdep nvidia_drm pre: $module post:
+softdep nvidia_modeset pre: $module post:
+softdep nvidia_uvm pre: $module post:
+EOF
+    elif [[ "$nvidia_module" == "nouveau" ]]; then
+        cat <<EOF >"/run/modprobe.d/30-$module-load-reorder.conf"
+softdep $module post: nouveau
+softdep nouveau pre: $module post:
+EOF
+    fi
+}
+
+function is_module_forced() {
+    local module="$1"
+
+    while IFS= read -r value; do
+        [[ "${value,,}" == "!${device}" ]] && return 1
+        [[ "${value,,}" == "${device}" ]] && return 0
+    done < <(modprobe --showconfig \
+        | grep -Po "^options ${module} force_probe=\K(.*)$" \
+        | tr ',' '\n')
+
+    return 1
+}
+
+function is_module_blacklisted() {
+    local module="$1"
+    modprobe --showconfig | grep -q "blacklist $1" && return 0
+    return 1
+}
+
+function is_module_loadable() {
+    local module="$1"
+    is_module_blacklisted "$module" && return 1
+    modinfo "$module" 2>/dev/null | grep -q "$modalias" || return 1
+    return 0
+}
+
+function generate_load_target() {
+    local device class vendor sysfs modalias nvidia_module
+    local -a modules=()
+
+    while read -r class; do
+        sysfs="${class%%/class}"
+        device="$(cat "${sysfs}/device" | sed 's/0x//')"
+        vendor="$(cat "${sysfs}/vendor")"
+        modalias="$(cat "${sysfs}/modalias" | head -c24)"
+
+        case "$vendor" in
+            0x10de)
+                if modinfo "nvidia" &>/dev/null && ! is_module_blacklisted "nvidia"; then
+                    nvidia_module="nvidia_drm"
+                elif is_module_loadable "nouveau"; then
+                    nvidia_module="nouveau"
+                fi
+                ;;
+            0x1002)
+                if is_module_loadable "amdgpu"; then
+                    modules+=(amdgpu)
+                elif is_module_loadable "radeon"; then
+                    modules+=(radeon)
+                fi
+                ;;
+            0x8086)
+                if is_module_loadable "i915" && ! is_module_forced "xe" "$device"; then
+                    modules+=(i915)
+                elif is_module_loadable "xe" && ! is_module_forced "i915" "$device"; then
+                    modules+=(xe)
+                fi
+                ;;
+        esac
+    done < <(grep -l "0x030[0-9]00" /sys/bus/pci/devices/*/class)
+
+    if [ -z "${modules[0]}" ]; then
+        return 0
+    fi
+
+    if [ -n "$nvidia_module" ]; then
+        modules+=("$nvidia_module")
+        for module in "${modules[@]}"; do
+            if [[ "$module" != "$nvidia_module" ]]; then
+                postpone_nvidia_module "$module" "$nvidia_module"
+            fi
+        done
+    fi
+
+    local -a devices=()
+    for module in "${modules[@]}"; do
+        devices+=("sys-module-${module}.device")
+    done
+
+    cat <<EOF >"$generator_dir"/drm-module-load.target
+[Unit]
+Description=DRM module load target
+Documentation=man:systemd.special(7)
+JobTimeoutSec=10s
+
+Before=getty@tty1.service display-manager.service
+After=${devices[@]} plymouth-quit.service
+Wants=${devices[@]}
+EOF
+
+    mkdir -p "$generator_dir"/getty@tty1.service.wants "$generator_dir"/display-manager.service.wants
+    ln -s ../drm-module-load.target "$generator_dir"/getty@tty1.service.wants/drm-module-load.target
+    ln -s ../drm-module-load.target "$generator_dir"/display-manager.service.wants/drm-module-load.target
+}
+
+generate_load_target
+exit 0
