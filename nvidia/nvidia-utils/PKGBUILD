@@ -31,13 +31,12 @@ sha256sums=('be99ff3def641bb900c2486cce96530394c5dc60548fc4642f19d3a4c784134d'
             '0e54249a7754b668b436f0f7aa7e95fff68edbb12a93dbee4660e09a8c695f84'
             'c5aa7b8abe69e72bfdc6b9ee8afbfd350bcc557e894558f2e6e4087fa9aa0dd8'
             '1d053c5078387021338cfc3a732bed61be1a20a549775573788e9134775c8149'
-            '2d330006867a91f451be6ecb430933584c8fa67b418c31202c37373698b23117'
+            '7d2300d62480cfc92be125d1dd628d97555e0dd7dd7667248036dc4f7c81d096'
             'd9251519fcd5570525b04dbea40278abbe16b35eb958c8f5cf251dacb6b52ed7'
             'b2e935c66b83bb00c0c857bc8e0ee0fd52de9286b40c9cc1eec29a7ce7eb116d'
             '0be1ce1905f579e68c1701c1286e15ddf02f5243e625773f5a997a8325dc856d'
             'b14f7a65359c05c373ddfc750cd4cf086a48e815489d93ad5cbe1dbf84bf8f5a'
             '6264d279bbae8eae6554ed78dd6e562da00cf71ffa5601ce5208099a98cd2c4d')
-
 
 create_links() {
     # create soname links
@@ -285,13 +284,6 @@ package_nvidia-utils() {
     install -Dm644 "${srcdir}/nvidia-utils.sysusers" "${pkgdir}/usr/lib/sysusers.d/$pkgname.conf"
 
     install -Dm644 "${srcdir}/nvidia.rules" "$pkgdir"/usr/lib/udev/rules.d/60-nvidia.rules
-
-    # Blacklist nouveau and nova
-    install -Dm644 /dev/stdin "${pkgdir}/usr/lib/modprobe.d/${pkgname}.conf" <<END
-blacklist nouveau
-blacklist nova_core
-blacklist nova_drm
-END
 
     # Enable kernel suspend notifiers for open modules and override TemporaryFilePath
     # from default /tmp to /var/tmp
