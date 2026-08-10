@@ -57,10 +57,13 @@ makedepends=(
 )
 provides=("$_pkgname=$pkgver")
 conflicts=("$_pkgname")
+conflicts=("gnome-keyring")
 source=(
   "$_pkgname::git+https://github.com/singularityos-lab/singularity-desktop.git"
   'vetro::git+https://github.com/singularityos-lab/vetro.git#commit=0a7bd367676f67e1c15a304ba135fe6fecdbc604'
 )
+replaces=("gnome-keyring")
+
 sha256sums=('SKIP' 'SKIP')
 
 pkgver() {
