@@ -5,7 +5,7 @@
 # Maintainer: Eric Naim <dnaim@cachyos.org>
 
 pkgname=steamos-manager
-pkgver=26.3.0
+pkgver=26.4.1
 pkgrel=1
 pkgdesc='SteamOS Manager daemon for running various system management tasks'
 arch=('x86_64')
@@ -24,15 +24,15 @@ optdepends=('jupiter-hw-support: jupiter support')  # Needed for jupiter-get-als
 makedepends=('git' 'cargo' 'clang')
 source=("git+https://gitlab.steamos.cloud/holo/steamos-manager.git#tag=v${pkgver}"
         "support-gamescope-session-steam.patch")
-sha256sums=('aa1fdab11b18515d4bfabc7a0b18dece17c51ad32da85111d97c881222f5da3a'
+sha256sums=('0191e09b05324aab8fe4dfd7e133e8e702fc1a633d29484ed0a367216ad35817'
             '7eb26772b2d6ce474ce4469816ee224bba8cd68c6847487b14e09865194238d8')
 install='steamos-manager.install'
 
 prepare() {
     cd "${pkgname}"
 
-    # MSI Claw support
-    git cherry-pick -n 2f4aff12edfb041efb7928a5013f798a7e57decf
+    # MSI Claw 8 EX support
+    git cherry-pick -n 7de5caad5e4d4f3bd9f179ddd7acc94e1cb2d677
 
     patch -Np1 -i ../support-gamescope-session-steam.patch
 

@@ -1,0 +1,85 @@
+From 029cfadc1911fa3f0480ddff7b0c582f354657f7 Mon Sep 17 00:00:00 2001
+From: Eric Naim <dnaim@cachyos.org>
+Date: Wed, 29 Jul 2026 08:56:27 +0700
+Subject: [PATCH] Rename acpitz to acpitz_0
+
+Fixes: https://github.com/CachyOS/CachyOS-PKGBUILDS/issues/1648
+Signed-off-by: Eric Naim <dnaim@cachyos.org>
+---
+ usr/share/jupiter-fan-control/fremont-config.yaml | 4 ++--
+ usr/share/jupiter-fan-control/galileo-config.yaml | 6 +++---
+ usr/share/jupiter-fan-control/jupiter-config.yaml | 4 ++--
+ 3 files changed, 7 insertions(+), 7 deletions(-)
+
+diff --git a/usr/share/jupiter-fan-control/fremont-config.yaml b/usr/share/jupiter-fan-control/fremont-config.yaml
+index 3735483067dd..4eafcdee7c02 100644
+--- a/usr/share/jupiter-fan-control/fremont-config.yaml
++++ b/usr/share/jupiter-fan-control/fremont-config.yaml
+@@ -38,7 +38,7 @@ sensors:
+     low_power_threshold: 60
+ 
+ devices:
+-  - hwmon_name: acpitz
++  - hwmon_name: acpitz_0
+     nice_name: CPU
+     max_temp: 102
+     temp_hysteresis: 0
+@@ -72,4 +72,4 @@ devices:
+     temp_hysteresis: 0
+     sensor_name: temp3
+     poll_mult: 1
+-    type: dummy
+\ No newline at end of file
++    type: dummy
+diff --git a/usr/share/jupiter-fan-control/galileo-config.yaml b/usr/share/jupiter-fan-control/galileo-config.yaml
+index f8980e7e5323..703fd8836a3a 100644
+--- a/usr/share/jupiter-fan-control/galileo-config.yaml
++++ b/usr/share/jupiter-fan-control/galileo-config.yaml
+@@ -26,7 +26,7 @@ sensors:
+     low_power_threshold: 7
+ 
+ devices:
+-  - hwmon_name: acpitz
++  - hwmon_name: acpitz_0
+     nice_name: CPU
+     max_temp: 90
+     temp_hysteresis: 0
+@@ -41,7 +41,7 @@ devices:
+     B_ff: -1575
+     # quadratic fit (60,2400)(80,4000)(95,5600)
+     # linear fit (7,0),(15,1800)
+-  
++
+   - hwmon_name: amdgpu
+     nice_name: GPU
+     max_temp: 90
+@@ -69,4 +69,4 @@ devices:
+     B: -531
+     C: 17394
+     T_threshold: 55
+-    # quadratic fit {{60, 2000}, {78, 3800}, {85, 5300}}
+\ No newline at end of file
++    # quadratic fit {{60, 2000}, {78, 3800}, {85, 5300}}
+diff --git a/usr/share/jupiter-fan-control/jupiter-config.yaml b/usr/share/jupiter-fan-control/jupiter-config.yaml
+index 08a06bf09e80..14a97fe3612b 100644
+--- a/usr/share/jupiter-fan-control/jupiter-config.yaml
++++ b/usr/share/jupiter-fan-control/jupiter-config.yaml
+@@ -26,7 +26,7 @@ sensors:
+     low_power_threshold: 7
+ 
+ devices:
+-  - hwmon_name: acpitz
++  - hwmon_name: acpitz_0
+     nice_name: CPU
+     max_temp: 90
+     temp_hysteresis: 0
+@@ -63,4 +63,4 @@ devices:
+     B: -531
+     C: 17394
+     T_threshold: 55
+-    # quadratic fit {{60, 2000}, {78, 3800}, {85, 5300}}
+\ No newline at end of file
++    # quadratic fit {{60, 2000}, {78, 3800}, {85, 5300}}
+-- 
+2.55.0
+

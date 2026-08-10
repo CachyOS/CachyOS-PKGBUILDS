@@ -8,9 +8,9 @@
 
 pkgbase=libtool
 pkgname=(libtool lib32-libltdl)
-pkgver=2.6.1
-_commit=79de7bb71bc0a1167f4c4ae8bd897976a0ff2b51
-pkgrel=2
+pkgver=2.6.2
+_commit=309bb53a8adfb22c6e5869cc8da049bf123e5438
+pkgrel=3
 _gccver=16
 pkgdesc='A generic library support script'
 arch=(aarch64 x86_64)
@@ -24,9 +24,11 @@ makedepends=(
   "gcc>=$_gccver"
   git
   glibc
+  help2man
+)
+makedepends_x86_64=(
   lib32-gcc-libs
   lib32-glibc
-  help2man
 )
 checkdepends=(
   gcc-fortran
@@ -36,7 +38,7 @@ source=(
   git+https://git.savannah.gnu.org/git/gnulib.git
   gnulib-bootstrap::git+https://github.com/gnulib-modules/bootstrap.git
 )
-b2sums=('a72353c18c9ddb8a6a77efeb85e4cb2a310c0098c47abe21be13b477591af6cc828958ff371b066f20e3fcd0176b0da6323dc7486c3416edeec16f0057a3048d'
+b2sums=('feab7320948202806bb4fa96b3a8724faf24f4033cc4fc34fe6342f31e1f93edca04980138e9bbd2d21c7d412cbd7ac276fb28f0423e138df3bc889657264a0d'
         'SKIP'
         'SKIP')
 

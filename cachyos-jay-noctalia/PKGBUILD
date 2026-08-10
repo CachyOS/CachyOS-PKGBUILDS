@@ -1,0 +1,36 @@
+# Maintainer: witchlliee <witchlliee@tuta.io>
+
+pkgname=cachyos-jay-noctalia
+pkgdesc='CachyOS Jay (+Noctalia) settings'
+pkgver=1.1.0
+pkgrel=1
+arch=('any')
+url="https://github.com/cachyos/$pkgname"
+license=(GPL-3.0-only)
+makedepends=('coreutils' 'git')
+source=(
+  git+https://github.com/cachyos/cachyos-jay-noctalia#tag=${pkgver}
+)
+sha512sums=('8644be120e260321455f795f57b15507c90da4b9f73cbaf20540da7047095ed69de8695daf9f398de7b5f33489d24bb51e94ffeddca8c94ea84b836d74d2584c')
+depends=(
+  adw-gtk-theme
+  breeze
+  cachyos-alacritty-config
+  capitaine-cursors
+  dolphin
+  gnome-keyring
+  jay
+  noctalia
+  noto-fonts
+  noto-fonts-emoji
+  qt6ct
+  wl-clipboard
+  xdg-desktop-portal-gtk
+)
+provides=('cachyos-desktop-settings')
+conflicts=('cachyos-desktop-settings')
+
+package() {
+  install -d "${pkgdir}/etc"
+  cp -rf "${srcdir}/${pkgname}/etc" "${pkgdir}"
+}

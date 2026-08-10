@@ -1,0 +1,38 @@
+# Maintainer: witchlliee <witchlliee@tuta.io>
+
+pkgname=cachyos-mango-noctalia
+pkgdesc='CachyOS Mango (+Noctalia) settings'
+pkgver=1.2.0
+pkgrel=1
+arch=('any')
+url="https://github.com/cachyos/$pkgname"
+license=(GPL-3.0-only)
+makedepends=('coreutils' 'git')
+source=(
+    git+https://github.com/cachyos/cachyos-mango-noctalia#tag=$pkgver
+)
+sha512sums=('c8a4f49bdeffe5eb43d8469d20a53918d435a67191b8f643019946de60636977ef5798cc1c3f5b154a9dbaf84502b541bb25ee4347085e985a79b492b4a52acf')
+depends=(
+  adw-gtk-theme
+  breeze
+  cachyos-alacritty-config
+  capitaine-cursors
+  dolphin
+  gnome-keyring
+  mangowm
+  noctalia
+  noto-fonts
+  noto-fonts-emoji
+  qt6ct
+  wl-clipboard
+  wlr-randr
+  xdg-desktop-portal-gtk
+  xdg-desktop-portal-wlr
+)
+provides=('cachyos-desktop-settings')
+conflicts=('cachyos-desktop-settings')
+
+package() {
+  install -d "${pkgdir}/etc"
+  cp -rf "${srcdir}/${pkgname}/etc" "${pkgdir}"
+}

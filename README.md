@@ -16,7 +16,7 @@ In order to use these PKGBUILD scripts, you will need to have the following tool
 - [make](https://www.gnu.org/software/make/)
 - [gcc](https://gcc.gnu.org/)
 - [binutils](https://www.gnu.org/software/binutils/)
-- [fakeroot](https://wiki.archlinux.org/index.php/Fakeroot)
+- [fakeroot](https://man.archlinux.org/man/fakeroot.1)
 
 ## Usage
 
