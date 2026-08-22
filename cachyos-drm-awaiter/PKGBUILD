@@ -1,0 +1,23 @@
+# Maintainer: Vasiliy Stelmachenok <ventureo@cachyos.org>
+pkgname=cachyos-drm-awaiter
+pkgver=1
+pkgrel=1
+pkgdesc="Configuration for proper systemd chain-loading of DRM modules"
+arch=('any')
+license=('GPL-3.0-or-later')
+url="https://github.com/CachyOS/CachyOS-PKGBUILDS/tree/master/$pkgname"
+depends=('systemd')
+makedepends=('coreutils')
+source=(
+    drm-module-awaiter-generator
+    30-drm-awaiter.rules
+)
+sha256sums=(
+    'a2f6e87c96113fb995cd51f70c0042e55bae790a4ee3aa8be870c00b3208907d'
+    '4457ec33251aa019a83a4637e24851aef6fbb4828c74126fad74b7203b1c3f13'
+)
+
+package() {
+    install -Dm755 drm-module-awaiter-generator "${pkgdir}/usr/lib/systemd/system-generators/drm-module-awaiter-generator"
+    install -Dm644 30-drm-awaiter.rules "${pkgdir}/usr/lib/udev/rules.d/30-drm-awaiter.rules"
+}
