@@ -3,7 +3,7 @@
 
 pkgname=rate-mirrors
 pkgver=0.31.0
-pkgrel=1
+pkgrel=2
 pkgdesc="Everyday-use client-side map-aware mirror ranking tool"
 arch=(x86_64)
 url="https://github.com/westandskif/rate-mirrors"
@@ -14,10 +14,12 @@ source=(
     "${pkgname}::git+$url.git#tag=v${pkgver}"
     "https://github.com/CachyOS/rate-mirrors/commit/a4d651079a9269adc7ff6b376026a0e39da452fc.patch"
     "https://github.com/CachyOS/rate-mirrors/commit/850413fc990da0fd714bcf336e05654b07f605c4.patch"
+    "https://github.com/CachyOS/rate-mirrors/commit/44925188286e4935eec3ca6652454fb0c148659e.patch"
 )
 sha256sums=('5169d06aa8acbf5759de5e888b6567f5824cd5955d6e7d5510c52f7c31d2f04a'
             'a299c7f0b6b78dfb2e48c5254bea8baa8d7efbd63a1d207ea600d37aca68be6e'
-            '0f8910500430c19fc7525cb234bc0b09bcd18e59b59d34d46cdf09b642b77958')
+            '0f8910500430c19fc7525cb234bc0b09bcd18e59b59d34d46cdf09b642b77958'
+            '4aa7bdecd9be306e1bcc77d5c56e247408e9a1b4c2b2b08e35ee525110507afc')
 
 prepare() {
   cd "$pkgname"
@@ -27,6 +29,9 @@ prepare() {
 
   # archlinux: use cachyos proxy mirrorlist
   patch -Np1 -i ../850413fc990da0fd714bcf336e05654b07f605c4.patch
+
+  # cachyos: use mirrorlist API from zyner
+  patch -Np1 -i ../44925188286e4935eec3ca6652454fb0c148659e.patch
 
   cargo fetch --locked --target "$CARCH-unknown-linux-gnu"
 }
