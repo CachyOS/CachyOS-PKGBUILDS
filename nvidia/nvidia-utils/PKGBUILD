@@ -7,7 +7,7 @@
 pkgbase=nvidia-utils
 pkgname=('nvidia-utils' 'opencl-nvidia' 'nvidia-open-dkms')
 pkgver=610.57.04
-pkgrel=1
+pkgrel=3
 arch=('x86_64')
 url="http://www.nvidia.com/"
 license=('custom')
@@ -20,7 +20,7 @@ source=('nvidia-drm-outputclass.conf'
         'nvidia.rules'
         'systemd-homed-override.conf'
         'systemd-suspend-override.conf'
-        'nvidia-sleep.conf'
+        'nvidia-utils.conf'
         '50-nvidia-cuda-disable-perf-boost.conf'
         "https://us.download.nvidia.com/XFree86/Linux-x86_64/${pkgver}/${_pkg}.run"
         "https://download.nvidia.com/XFree86/NVIDIA-kernel-module-source/${_pkg_open}.tar.xz"
@@ -28,16 +28,15 @@ source=('nvidia-drm-outputclass.conf'
         'cuda-no-stable-perf-limit')
 sha256sums=('be99ff3def641bb900c2486cce96530394c5dc60548fc4642f19d3a4c784134d'
             'f77a5247a3ba63e9fad3a3b2822d0fcfa51e0f79b5a90bd79bf08ea34b64ab07'
-            '0e54249a7754b668b436f0f7aa7e95fff68edbb12a93dbee4660e09a8c695f84'
+            'e30714f9b473d810c28763d067e0b85c75f86f23618d968b49b9d1fced9a1dd6'
             'c5aa7b8abe69e72bfdc6b9ee8afbfd350bcc557e894558f2e6e4087fa9aa0dd8'
             '1d053c5078387021338cfc3a732bed61be1a20a549775573788e9134775c8149'
-            '8ef63570d2d48cf96979c32fb46827a1ef0ec432512cdaebc5116bab1f2a461f'
+            '7d2300d62480cfc92be125d1dd628d97555e0dd7dd7667248036dc4f7c81d096'
             'd9251519fcd5570525b04dbea40278abbe16b35eb958c8f5cf251dacb6b52ed7'
             'b2e935c66b83bb00c0c857bc8e0ee0fd52de9286b40c9cc1eec29a7ce7eb116d'
             '0be1ce1905f579e68c1701c1286e15ddf02f5243e625773f5a997a8325dc856d'
             'b14f7a65359c05c373ddfc750cd4cf086a48e815489d93ad5cbe1dbf84bf8f5a'
             '6264d279bbae8eae6554ed78dd6e562da00cf71ffa5601ce5208099a98cd2c4d')
-
 
 create_links() {
     # create soname links
@@ -286,17 +285,9 @@ package_nvidia-utils() {
 
     install -Dm644 "${srcdir}/nvidia.rules" "$pkgdir"/usr/lib/udev/rules.d/60-nvidia.rules
 
-    # Blacklist nouveau and nova
-    install -Dm644 /dev/stdin "${pkgdir}/usr/lib/modprobe.d/${pkgname}.conf" <<END
-blacklist nouveau
-blacklist nova_core
-blacklist nova_drm
-END
-    echo "nvidia-uvm" | install -Dm644 /dev/stdin "${pkgdir}/usr/lib/modules-load.d/${pkgname}.conf"
-
     # Enable kernel suspend notifiers for open modules and override TemporaryFilePath
     # from default /tmp to /var/tmp
-    install -Dm644 "${srcdir}/nvidia-sleep.conf" "${pkgdir}/usr/lib/modprobe.d/nvidia-sleep.conf"
+    install -Dm644 "${srcdir}/nvidia-utils.conf" "${pkgdir}/usr/lib/modprobe.d/nvidia-utils.conf"
 
     # Reduce idle power usage caused by CUDA contexts (NVDEC/NVENC, etc.)
     install -Dm644 "${srcdir}/50-nvidia-cuda-disable-perf-boost.conf" "${pkgdir}/usr/lib/environment.d/50-nvidia-cuda-disable-perf-boost.conf"

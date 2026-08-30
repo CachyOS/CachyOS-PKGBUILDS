@@ -4,8 +4,8 @@
 
 pkgname=scx-scheds
 _gitname=scx
-pkgver=1.1.2
-pkgrel=1
+pkgver=1.1.3
+pkgrel=3
 pkgdesc='sched_ext schedulers and tools'
 url='https://github.com/sched-ext/scx'
 arch=('x86_64' 'aarch64')
@@ -27,7 +27,7 @@ makedepends=(
 )
 options=(!lto)
 source=("git+https://github.com/sched-ext/scx?signed#tag=v$pkgver")
-sha256sums=('4474c253ee6440f37574cdbfa6a162cdc5d383d0768269ffe484c5c1388da167')
+sha256sums=('282b4a9365fc2635ba554ee46f6decbe78f1d06340a8dee3f1573931e8a3973a')
 validpgpkeys=(
   697C63013E65270255EBC2608744DC1EB26B5A9A  # Tejun Heo <tj@kernel.org>
   F5504C7B7B8107B40EF9E97AA1148BB3207BCC33  # David Vernet <void@manifault.com>
@@ -37,6 +37,9 @@ validpgpkeys=(
 )
 
 _backports=(
+6624f0f178e233b2f733825e5e08549048ca3700 # scx_cake: nightly squash — R.28 per-task geometry + veto trade priced (2026-08-19)
+bdbf5eec541fdd48ed825d8e07cebdf5aad10e63 # scx_cake: remove build-host topology baking — one binary runs on all hardware
+18dbe236217a907a4f165bb89e8f75a3fda9ab46 # PANDEMONIUMv5.19.0:
 )
 
 _reverts=(

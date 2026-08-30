@@ -7,23 +7,22 @@
 
 shopt -s extglob
 
-pkgbase=python
-pkgname=(python python-tests)
-pkgver=3.14.7
-pkgrel=2
+pkgname=(python313 python313-tests)
+pkgver=3.13.15
+pkgrel=1
 _pybasever=${pkgver%.*}
-pkgdesc="The Python programming language"
+_pymajver=${pkgver%%.*}
+pkgdesc="The Python programming language, version 3.13"
 arch=('x86_64')
 license=('PSF-2.0')
 url="https://www.python.org/"
 depends=('bzip2' 'expat' 'gdbm' 'libffi' 'libnsl' 'libxcrypt' 'openssl' 'zlib' 'tzdata' 'mpdecimal')
-makedepends=('tk' 'sqlite' 'bluez-libs' 'llvm' 'gdb' 'xorg-server-xvfb' 'ttf-font' 'llvm-bolt')
-source=("https://www.python.org/ftp/python/${pkgver%rc*}/Python-${pkgver}.tar.xz"
-        EXTERNALLY-MANAGED
-        profiled-build.patch)
-sha512sums=('3d4e2e2f983b320dec47005c408d7178d3656a6de0c4430ce21514797174b972f461200898b25d3dfac2a455019ef87e45d0fb2bb6ec2ca887124d10037a2a07'
-            '62a6fbfbaeaa3ba7c54e109d9c3b7f67e73bb21986da4c1fcc5d28cca83d71e0fcae28e1fc70ee8ddce7dea8cd0b64e18d1031dae3a2eae5eaa379c53efd53a0'
-            '6beeb03da2be9df9f13f8c214df0e83d2c733d5d19629a2484a722acf4803928d1ce6918b21ecac0c06f30aa025e854c63ac313427b106c269409029c5ac0b56')
+makedepends=('tk' 'sqlite' 'bluez-libs' 'llvm' 'gdb' 'xorg-server-xvfb' 'ttf-font')
+source=("https://www.python.org/ftp/python/${pkgver%rc*}/Python-${pkgver}.tar.xz"{,.asc}
+        EXTERNALLY-MANAGED)
+sha512sums=('b0ab766a3de0b4cfdbf0b93300d7330c734d3f7057577bb03e95e39da4cdade81993e769c7fa6dfdcc13b9d43a3b399d9cd89b5477b413662e9e691c1b7886b8'
+            'SKIP'
+            '62a6fbfbaeaa3ba7c54e109d9c3b7f67e73bb21986da4c1fcc5d28cca83d71e0fcae28e1fc70ee8ddce7dea8cd0b64e18d1031dae3a2eae5eaa379c53efd53a0')
 validpgpkeys=('0D96DF4D4110E5C43FBFB17F2D347EA6AA65421D'  # Ned Deily (Python release signing key) <nad@python.org>
               'E3FF2839C048B25C084DEBE9B26995E310250568'  # Łukasz Langa (GPG langa.pl) <lukasz@langa.pl>
               'A035C8C19219BA821ECEA86B64E628F8D684696D'  # Pablo Galindo Salgado <pablogsal@gmail.com>
@@ -36,30 +35,23 @@ prepare() {
   # rather than copies shipped in the tarball
   rm -r Modules/expat
   rm -r Modules/_decimal/libmpdec
-
-  patch -Np1 -i "$srcdir/profiled-build.patch"
 }
 
 build() {
   cd Python-${pkgver}
 
   # PGO should be done with -O3
-  CFLAGS="${CFLAGS/-O2/-O3} -ffat-lto-objects"
-
-  # Extended PGO runs most of the test suite; exclude known flaky tests
-  # test_socket: https://github.com/python/cpython/issues/79428
-  export PROFILE_TASK='-m test --pgo-extended -x test_socket'
+  # Also included the -fno-semantic-interposition optimization:
+  # https://fedoraproject.org/wiki/Changes/PythonNoSemanticInterpositionSpeedup
+  CFLAGS="${CFLAGS/-O2/-O3} -fno-semantic-interposition -ffat-lto-objects"
+  LDFLAGS="$LDFLAGS -fno-semantic-interposition"
 
   # Disable bundled pip & setuptools
-  # BOLT is disabled due LLVM or upstream issue
-  # retest pending with 3.14
-  # https://github.com/python/cpython/issues/124948
   ./configure --prefix=/usr \
               --enable-shared \
               --with-computed-gotos \
               --enable-optimizations \
               --with-lto \
-              --with-tail-call-interp \
               --enable-ipv6 \
               --with-system-expat \
               --with-dbmliborder=gdbm:ndbm \
@@ -102,15 +94,13 @@ check() {
       -x test_tkinter -x test_pyexpat -x test_socket -x test_unittest -x test_ssl
 }
 
-package_python() {
+package_python313() {
   optdepends=('python-setuptools: for building Python packages using tooling that is usually bundled with Python'
               'python-pip: for installing Python packages using tooling that is usually bundled with Python'
               'python-pipx: for installing Python software not packaged on Arch Linux'
               'sqlite: for a default database integration'
               'xz: for lzma'
               'tk: for tkinter')
-  provides=('python3' 'python-externally-managed')
-  replaces=('python3' 'python-externally-managed')
 
   cd Python-${pkgver}
 
@@ -120,14 +110,12 @@ package_python() {
   # PGO should be done with -O3
   CFLAGS="${CFLAGS/-O2/-O3}"
 
-  make DESTDIR="${pkgdir}" EXTRA_CFLAGS="$CFLAGS" install
+  # altinstall: /usr/bin/pythonX.Y but not /usr/bin/python or /usr/bin/pythonX
+  make DESTDIR="${pkgdir}" EXTRA_CFLAGS="$CFLAGS" altinstall maninstall
 
-  # Why are these not done by default...
-  ln -s python3               "${pkgdir}"/usr/bin/python
-  ln -s python3-config        "${pkgdir}"/usr/bin/python-config
-  ln -s idle3                 "${pkgdir}"/usr/bin/idle
-  ln -s pydoc3                "${pkgdir}"/usr/bin/pydoc
-  ln -s python${_pybasever}.1 "${pkgdir}"/usr/share/man/man1/python.1
+  # Avoid conflicts with the main 'python' package.
+  rm -f "${pkgdir}/usr/lib/libpython${_pymajver}.so"
+  rm -f "${pkgdir}/usr/share/man/man1/python${_pymajver}.1"
 
   # some useful "stuff" FS#46146
   install -dm755 "${pkgdir}"/usr/lib/python${_pybasever}/Tools/{i18n,scripts}
@@ -142,9 +130,9 @@ package_python() {
   rm -r {test,idlelib/idle_test}
 }
 
-package_python-tests() {
+package_python313-tests() {
   pkgdesc="Regression tests packages for Python"
-  depends=('python')
+  depends=('python313')
 
   cd Python-${pkgver}
 

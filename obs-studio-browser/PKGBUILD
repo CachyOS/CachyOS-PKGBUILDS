@@ -6,8 +6,8 @@
 # Contributor: ledti <antergist at gmail dot com>
 
 pkgname=obs-studio-browser
-pkgver=32.2.1
-pkgrel=2
+pkgver=32.2.2
+pkgrel=1
 pkgdesc="Free and open source software for video recording and live streaming. With everything except service integration"
 arch=("x86_64")
 url="https://github.com/obsproject/obs-studio"
@@ -16,7 +16,7 @@ license=('GPL-2.0-or-later')
 _qtver=6.11
 _libajantv2ver=17.5.0
 _libdatachannelver=0.24
-_mbedtlsver=3.6.5
+_mbedtlsver=3.6.7
 _pythonver=3.14
 depends=(
   "alsa-lib" # Deps of ALSA plugin and CEF
@@ -43,7 +43,7 @@ depends=(
   "libxcomposite" # Deps of the X11 capture plugin
   "libxkbcommon" # Deps of libobs, OBS Studio and CEF
   "luajit" # Deps of Scripting plugin
-  "mbedtls>=$_mbedtlsver" # Deps of OBS Studio and Outputs plugin
+  "mbedtls3>=$_mbedtlsver" # Deps of OBS Studio and Outputs plugin
   "pciutils" # Deps of FFmpeg plugin
   "python>=$_pythonver" # Deps of Scripting plugin
   "qrcodegencpp-cmake" # Deps of Websocket plugin
@@ -106,7 +106,7 @@ source=(
   "obs-websocket::git+https://github.com/obsproject/obs-websocket.git"
 )
 source_x86_64=("https://cdn-fastly.obsproject.com/downloads/cef_binary_6533_linux_x86_64_v6.tar.xz")
-sha256sums=('5b11ccf5468654d19537db108443812db12767084eba295ee532d81c4834492a'
+sha256sums=('18edf1162e6cc37c192c4532ccfb902a07c5891d5929e95c4f028c6ad5d762d5'
             'SKIP'
             'SKIP')
 sha256sums_x86_64=('7963335519a19ccdc5233f7334c5ab023026e2f3e9a0cc417007c09d86608146')
@@ -123,6 +123,11 @@ prepare() {
 
   # Keep sentinel file functional without messing with compile flags
   sed -i "s|#ifndef NDEBUG|#if 0|" frontend/utility/CrashHandler.cpp
+
+  # Ensure MbedTLS 3 is picked
+  sed -i "s|find_package(MbedTLS|find_package(MbedTLS 3...<4|" frontend/cmake/feature-whatsnew.cmake
+  sed -i "s|find_package(MbedTLS|find_package(MbedTLS 3...<4|" plugins/obs-outputs/CMakeLists.txt
+  rm cmake/finders/FindMbedTLS.cmake
 }
 
 build() {
@@ -137,6 +142,8 @@ build() {
     -DCEF_ROOT_DIR="$srcdir/cef_binary_6533_linux_${CARCH/%_v?/}" \
     -DOBS_VERSION_OVERRIDE="$pkgver" \
     -DOBS_COMPILE_DEPRECATION_AS_WARNING=ON \
+    -DCMAKE_INCLUDE_PATH="/usr/include/mbedtls3;/usr/include" \
+    -DMbedTLS_ROOT="/usr/lib/mbedtls3/cmake/MbedTLS" \
     -Wno-dev
 
   cmake --build build
@@ -145,3 +152,5 @@ build() {
 package() {
   DESTDIR="$pkgdir" cmake --install build
 }
+
+# vim:set ts=2 sw=2 et:
