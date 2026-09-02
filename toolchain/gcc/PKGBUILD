@@ -177,7 +177,9 @@ build() {
     "${_confflags[@]:?_confflags unset}"
 
   # see https://bugs.archlinux.org/task/71777 for rationale re *FLAGS handling
-  make -O STAGE1_CFLAGS="-O3" \
+  # afdo_create correlates samples against the stage1 compiler binaries and
+  # therefore requires their DWARF information.
+  make -O STAGE1_CFLAGS="-O3 -g" \
           BOOT_CFLAGS="$CFLAGS" \
           BOOT_LDFLAGS="$LDFLAGS" \
           LDFLAGS_FOR_TARGET="$LDFLAGS" \
