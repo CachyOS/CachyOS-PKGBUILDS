@@ -1,7 +1,8 @@
 # Maintainer: Matt Quintanilla <matt @ matt quintanilla .xyz>
 pkgname=winboat
-pkgver=0.9.0
-pkgrel=9
+pkgver=0.9.2
+pkgrel=1
+_commit=ce73d18
 pkgdesc="Run Windows apps on Linux with seamless integration"
 arch=('x86_64')
 url="https://www.winboat.app"
@@ -13,7 +14,6 @@ depends=(
   'nss'
 )
 makedepends=(
-  'git'
   'libxcrypt-compat'
   'npm'
   'go'
@@ -22,15 +22,22 @@ makedepends=(
 )
 optdepends=('docker: To use docker as a container runtime' 'podman-compose: To use podman as a container runtime')
 options=('!strip')
-source=("git+https://github.com/TibixDev/winboat.git#tag=v$pkgver" "winboat.install")
-sha256sums=('11051ae91c399ccc75ef69910d4e8a526f6cc50210f9c70525829d5017715cce'
+source=("$pkgname-$pkgver.tar.gz::https://github.com/winboat-org/winboat/archive/refs/tags/v$pkgver.tar.gz"
+        "winboat.install")
+sha256sums=('8db3e1c2ed196ef0ef7c9e4c15b9557db46ee2840e870ec77e4e1ad8f30d3e82'
             '28a16c9651a8283793d4ed0f8a8358ada22a467cd1a1a4ed091eb6a9674da41d')
-prepare(){
-cd "$pkgname"
-sed -i 's/"rpm",//g' electron-builder.json
+
+prepare() {
+  cd "$pkgname-$pkgver"
+  # rpm target needs rpm tooling that is not available in the build environment
+  sed -i 's/"rpm",//g' electron-builder.json
+  # the guest server build script derives the commit hash from git, which is
+  # unavailable when building from a release tarball
+  sed -i "s|\$(git rev-parse --short HEAD)|$_commit|" build-guest-server.sh
 }
+
 build() {
-  cd "$pkgname"
+  cd "$pkgname-$pkgver"
   export npm_config_cache="$srcdir/npm_cache"
   export GOPATH="$srcdir/gopath"
   export CGO_CPPFLAGS="${CPPFLAGS}"
@@ -46,7 +53,7 @@ build() {
 }
 
 package() {
-  cd "$pkgname"
+  cd "$pkgname-$pkgver"
   install -d "$pkgdir/opt/$pkgname/"
   cp -a dist/linux-unpacked/* "$pkgdir/opt/$pkgname/"
 
