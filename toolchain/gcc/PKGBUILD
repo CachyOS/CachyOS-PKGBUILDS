@@ -16,6 +16,7 @@ _optimize_v4=${_optimize_v4-}
 pkgname=(
   gcc
   gcc-ada
+  gcc-autofdo-tools
   gcc-d
   gcc-fortran
   gcc-gcobol
@@ -47,7 +48,7 @@ pkgname=(
 )
 pkgver=16.2.1+r23+gd564253eb6c8
 _commit=d564253eb6c859e266d3cae18e82fb4db9a88316
-pkgrel=1
+pkgrel=2
 pkgdesc='The GNU Compiler Collection'
 arch=(x86_64)
 license=(
@@ -63,8 +64,10 @@ makedepends=(
   git
   lib32-gcc-libs
   lib32-glibc
+  libelf
   libisl
   libmpc
+  perf
   python
   rust
   zstd
@@ -85,12 +88,14 @@ source=(git+https://sourceware.org/git/gcc.git#commit=$_commit
         c89 c99
         gcc-ada-repro.patch
         gcc-16-52cd02606b90.patch
+        autofdo.patch
 )
 sha256sums=('c4def1816bc86f2bb981deb958a572ca63eb0ef784418f0414f1071a4efee44d'
-            '7b09ec947f90b98315397af675369a1e3dfc527fa70013062e6e85c4be0275ab'
-            '44ea973558842f3f4bd666bdaf6e810fd7b7c7bd36b5cc4c69f93d2cd0124fc7'
+            'de48736f6e4153f03d0a5d38ceb6c6fdb7f054e8f47ddd6af0a3dbf14f27b931'
+            '2513c6d9984dd0a2058557bf00f06d8d5181734e41dcfe07be7ed86f2959622a'
             '1773f5137f08ac1f48f0f7297e324d5d868d55201c03068670ee4602babdef2f'
-            '838e14d4ef76079107a5373316598025915eaf747a10522ec9f8842125ca9a8e')
+            '09c0fcfb370399270adb7905becc4fc395aa1d5f59c8d6169a1f021182600386'
+            '8f0bc63c06b174ab0015413fa2c488f212419d0d620506b29415d016b747db55')
 #pkgver() {
 #  cd gcc
 #  echo "$(cat gcc/BASE-VER)+$(git describe --abbrev=12 --tags | sed 's/[^-]*-[^-]*-//;s/[^-]*-/r&/;s/-/+/g;s/_/./')"
@@ -108,7 +113,8 @@ prepare() {
 
   # Backport x86 generic tuning branch misprediction cost update
   patch -Np1 < "$srcdir/gcc-16-52cd02606b90.patch"
-
+  # Backport in-tree AutoFDO tools and compiler integration
+  patch -Np1 < "$srcdir/autofdo.patch"
   mkdir -p "$srcdir"/gcc-build
   mkdir -p "$srcdir"/libgccjit-build
 }
@@ -167,14 +173,17 @@ build() {
   ../gcc/configure \
     --enable-languages=ada,c,c++,d,fortran,go,lto,m2,objc,obj-c++,rust,cobol \
     --enable-bootstrap \
+    --enable-afdo_tools \
     "${_confflags[@]:?_confflags unset}"
 
   # see https://bugs.archlinux.org/task/71777 for rationale re *FLAGS handling
-  make -O STAGE1_CFLAGS="-O3" \
+  # afdo_create correlates samples against the stage1 compiler binaries and
+  # therefore requires their DWARF information.
+  make -O STAGE1_CFLAGS="-O3 -g" \
           BOOT_CFLAGS="$CFLAGS" \
           BOOT_LDFLAGS="$LDFLAGS" \
           LDFLAGS_FOR_TARGET="$LDFLAGS" \
-          profiledbootstrap
+          autoprofiledbootstrap
 
   # make documentation
   make -O -C $CHOST/libstdc++-v3/doc doc-man-doxygen
@@ -241,6 +250,7 @@ package_gcc() {
     zstd
   )
   optdepends=(
+    'gcc-autofdo-tools: for creating, merging and inspecting AutoFDO profiles'
     'lib32-gcc-libs: for generating code for 32-bit ABI'
   )
   provides=(
@@ -273,6 +283,8 @@ package_gcc() {
     _pick gcc-ada $_libdir/{,32/}ada{include,lib}/
     _pick gcc-ada $_libdir/gnat1
     _pick gcc-ada usr/share/info/gnat{-style,_rm,_ugn}.info
+
+    _pick gcc-autofdo-tools usr/bin/{afdo_create,afdo_dump,afdo_merge}
 
     _pick gcc-d usr/bin/{gdc,$CHOST-gdc}
     _pick gcc-d $_libdir/d21
@@ -424,6 +436,18 @@ package_gcc() {
   python -O -m compileall "$pkgdir"/usr/share/gcc-${pkgver%%.*}/
 
   _install_runtime_library_exception
+}
+
+package_gcc-autofdo-tools() {
+  pkgdesc='Tools for creating, merging and inspecting GCC AutoFDO profiles'
+  depends=(
+    'glibc>=2.27'
+    libelf
+    zlib
+  )
+  license=(GPL-3.0-or-later)
+
+  mv -v $pkgname/* "$pkgdir"
 }
 
 package_gcc-ada() {
