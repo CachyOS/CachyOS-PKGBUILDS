@@ -27,9 +27,10 @@ optdepends=('cava: Audio visualizer'
             'wtype: Paste from clipboard history and plugins')
 makedepends=(git
 			 go)
-source=("git+$url.git#tag=v$pkgver")
-sha256sums=('SKIP')
-
+source=("$_pkg1::git+$url.git#tag=v$pkgver"
+        "dank-qml-common::git+https://github.com/AvengeMedia/dank-qml-common.git")
+sha256sums=('SKIP'
+            'SKIP')
 prepare() {
     cd "$_pkg1"
     git submodule update --init --recursive
