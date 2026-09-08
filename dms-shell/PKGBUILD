@@ -17,7 +17,7 @@ depends=(accountsservice
 optdepends=('cava: Audio visualizer'
             'cups-pk-helper: Printer Management'
             'i2c-tools: External monitor brightness control'
-            'iwd: Required for network managementa via iwd'
+            'iwd: Required for network management via iwd'
             'matugen: Dynamic wallpaper-based theming'
             'networkmanager: Required for network management via networkmanager'
             'power-profiles-daemon: Set power profile'
@@ -25,7 +25,8 @@ optdepends=('cava: Audio visualizer'
             'qt6ct: Qt6 application theming'
             'systemd: Required for network management via systemd-networkd'
             'wtype: Paste from clipboard history and plugins')
-makedepends=(go)
+makedepends=(git
+			 go)
 source=("git+$url.git#tag=v$pkgver")
 sha256sums=('SKIP')
 
@@ -51,7 +52,7 @@ build() {
 }
 
 _completion() {
-	cd "$_pkg1"
+	cd "$srcdir/$_pkg1"
 	core/dms completion $1
 }
 
