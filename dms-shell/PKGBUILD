@@ -9,8 +9,7 @@ pkgdesc='A Quickshell-based desktop shell with Material 3 design principles'
 arch=(x86_64)
 url="https://github.com/AvengeMedia/$_pkg1"
 license=(MIT)
-depends=(dgop
-         accountsservice
+depends=(accountsservice
          hicolor-icon-theme
          python
          qt6-declarative
@@ -20,24 +19,30 @@ optdepends=('cava: Audio visualizer'
             'i2c-tools: External monitor brightness control'
             'iwd: Required for network managementa via iwd'
             'matugen: Dynamic wallpaper-based theming'
-            'networkmanager: Required for network managementa via networkmanager'
+            'networkmanager: Required for network management via networkmanager'
             'power-profiles-daemon: Set power profile'
             'qt6-multimedia: Sound effect support'
             'qt6ct: Qt6 application theming'
-            'systemd: Required for network managementa via systemd-networkd'
+            'systemd: Required for network management via systemd-networkd'
             'wtype: Paste from clipboard history and plugins')
 makedepends=(go)
 _archive="$_pkg1-$pkgver"
-source=("$url/archive/v$pkgver/$_archive.tar.gz")
-sha256sums=('abd50f97df1a4714526089825e5ba4bba2850e5d635f7618511c68a4a6276bbd')
+source=("git+$url.git#tag=v$pkgver")
+sha256sums=('SKIP')
+
+prepare() {
+    cd "$_pkg1"
+    git submodule update --init --recursive
+}
 
 build() {
 	cd "$_archive/core"
 	export CGO_CPPFLAGS="$CPPFLAGS"
 	export CGO_CFLAGS="$CFLAGS"
 	export CGO_CXXFLAGS="$CXXFLAGS"
+	make sync-shell
 	go build -v \
-		-tags distro_binary \
+		-tags distro_binary, withshell \
 		-trimpath \
 		-buildmode=pie \
 		-mod=readonly \
@@ -54,8 +59,6 @@ _completion() {
 package() {
 	cd "$_archive"
 	install -Dm0755 -t "$pkgdir/usr/bin/" core/dms
-	install -dm0755 "$pkgdir/usr/share/quickshell/dms"
-	cp -r "quickshell/"* "$pkgdir/usr/share/quickshell/dms/"
 	install -Dm0644 -t "$pkgdir/usr/share/doc/$pkgname/" README.md
 	cp -r "docs/"* "$pkgdir/usr/share/doc/$pkgname/"
 	install -Dm0644 -t "$pkgdir/usr/lib/systemd/user/" assets/systemd/dms.service
