@@ -26,7 +26,6 @@ optdepends=('cava: Audio visualizer'
             'systemd: Required for network management via systemd-networkd'
             'wtype: Paste from clipboard history and plugins')
 makedepends=(go)
-_archive="$_pkg1-$pkgver"
 source=("git+$url.git#tag=v$pkgver")
 sha256sums=('SKIP')
 
@@ -57,7 +56,7 @@ _completion() {
 }
 
 package() {
-	cd "$_archive"
+	cd "$_pkg1"
 	install -Dm0755 -t "$pkgdir/usr/bin/" core/dms
 	install -Dm0644 -t "$pkgdir/usr/share/doc/$pkgname/" README.md
 	cp -r "docs/"* "$pkgdir/usr/share/doc/$pkgname/"
