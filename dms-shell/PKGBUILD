@@ -42,7 +42,7 @@ build() {
 	export CGO_CXXFLAGS="$CXXFLAGS"
 	make sync-shell
 	go build -v \
-		-tags distro_binary, withshell \
+		-tags "distro_binary,withshell" \
 		-trimpath \
 		-buildmode=pie \
 		-mod=readonly \
