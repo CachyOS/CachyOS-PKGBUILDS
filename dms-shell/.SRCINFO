@@ -23,7 +23,8 @@ pkgbase = dms-shell
 	optdepends = qt6ct: Qt6 application theming
 	optdepends = systemd: Required for network management via systemd-networkd
 	optdepends = wtype: Paste from clipboard history and plugins
-	source = https://github.com/AvengeMedia/DankMaterialShell/archive/v1.6.1/DankMaterialShell-1.6.0.tar.gz
-	sha256sums = abd50f97df1a4714526089825e5ba4bba2850e5d635f7618511c68a4a6276bbd
-
-pkgname = dms-shell
+	source=("$_pkg1::git+$url.git#tag=v$pkgver"
+        "dank-qml-common::git+https://github.com/AvengeMedia/dank-qml-common.git")
+	sha256sums=('SKIP'
+				'SKIP')
+	pkgname = dms-shell
