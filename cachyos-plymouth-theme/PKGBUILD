@@ -2,7 +2,7 @@
 
 pkgname=cachyos-plymouth-theme
 pkgver=1
-pkgrel=1
+pkgrel=2
 groups=("cachyos")
 arch=("any")
 url="https://github.com/CachyOS/${pkgname}"
@@ -11,7 +11,9 @@ pkgdesc="CachyOS plymouth theme"
 depends=("plymouth")
 makedepends=('git')
 optdepends=("plymouth-kcm: for KDE settings integration")
-source=("${pkgname}::git+${url}.git")
+# Pin the source so the packaged theme is reproducible.  This revision includes
+# the corrected keymap-render.png used by Plymouth's password prompt.
+source=("${pkgname}::git+${url}.git#commit=27c453a1d65597d9773af349836bd67665267e87")
 sha256sums=("SKIP")
 
 package() {
