@@ -3,24 +3,17 @@
 pkgname=jupiter-fan-control
 _srctag=20260422.2
 pkgver=${_srctag//-/.}
-pkgrel=2
+pkgrel=3
 arch=('any')
 license=('GPL-3.0-later')
 pkgdesc='CachyOS - Deckify Steam Deck Fan Control'
-source=("git+https://github.com/evlaV/jupiter-fan-control.git#tag=$_srctag"
-        "0001-Rename-acpitz-to-acpitz_0.patch")
+source=("git+https://github.com/evlaV/jupiter-fan-control.git#tag=$_srctag")
 #install="$pkgname.install"
 options=(!strip !debug)
-sha256sums=('7a6d05b6831cceca8513bf0c1bb991e9d86200b8215fc1662a9368fc1e332b2b'
-            'f63ca6e2df168da66a544f702e4bec9f87f27d441aaf06e27f7d55bdd0afdb71')
-sha512sums=('fd875e2f18e106d552f513a50642253f0303266540df0751354d1840f345a6043921b72af960768ffcd4d828a93895f2625ca4c6e65e31a9ccbbe941e9e1f02f'
-            '88b521b87613e316734150ebcb5d0253e645be2583914d7d6e88ab9a28bb7b3c21766dba5deb1bb626e80c9c809ae176b4d9dcc511a83fb450403766daf17982')
+sha256sums=('7a6d05b6831cceca8513bf0c1bb991e9d86200b8215fc1662a9368fc1e332b2b')
+sha512sums=('fd875e2f18e106d552f513a50642253f0303266540df0751354d1840f345a6043921b72af960768ffcd4d828a93895f2625ca4c6e65e31a9ccbbe941e9e1f02f')
 depends=('python3' 'python-pyaml')
 makedepends=('git' 'rsync' 'openssh')
-
-prepare() {
-    patch -p1 -i "$srcdir"/0001-Rename-acpitz-to-acpitz_0.patch -d jupiter-fan-control
-}
 
 package() {
    rsync -a --exclude 'README.md' "$srcdir"/jupiter-fan-control/* "$pkgdir"

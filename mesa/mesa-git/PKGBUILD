@@ -49,7 +49,7 @@ pkgdesc="an open-source implementation of the OpenGL specification, git version"
 pkgver=0
 pkgrel=1
 arch=('x86_64')
-makedepends=('git' 'python-mako' 'python-ply' 'xorgproto' 'libxml2' 'libx11' 'libvdpau' 'libva'
+makedepends=('git' 'python-mako' 'python-ply' 'xorgproto' 'libxml2' 'libx11' 'libva'
              'elfutils' 'libomxil-bellagio' 'libxrandr' 'libdisplay-info' 'ocl-icd' 'libgcrypt'  'wayland'
              'wayland-protocols' 'meson' 'ninja' 'libdrm' 'xorgproto' 'libdrm' 'libxshmfence'
              'libxxf86vm' 'libxdamage' 'libclc' 'libglvnd' 'libunwind' 'lm_sensors' 'libxrandr'
@@ -58,9 +58,9 @@ makedepends=('git' 'python-mako' 'python-ply' 'xorgproto' 'libxml2' 'libx11' 'li
 
 if [ "$_lib32" == "true" ]; then
   makedepends+=('lib32-libdisplay-info' 'lib32-libxml2' 'lib32-libx11' 'lib32-libdrm' 'lib32-libxshmfence'
-                'lib32-libxxf86vm' 'lib32-gcc-libs' 'lib32-libvdpau' 'lib32-libelf' 'lib32-libgcrypt'
+                'lib32-libxxf86vm' 'lib32-gcc-libs' 'lib32-libelf' 'lib32-libgcrypt'
                 'lib32-lm_sensors' 'lib32-libxdamage' 'gcc-multilib' 'lib32-libunwind' 'lib32-libglvnd'
-                'lib32-libva' 'lib32-wayland' 'lib32-libvdpau' 'lib32-libxrandr' 'lib32-expat'
+                'lib32-libva' 'lib32-wayland' 'lib32-libxrandr' 'lib32-expat'
                 'lib32-spirv-llvm-translator' 'lib32-rust-libs')
 fi
 
@@ -366,14 +366,10 @@ build () {
       _gallium_xa="${_enabled_}"
     fi
 
-    # gallium_vdpau requires either r300, r600, radeonsi or nouveau
+    # VDPAU was removed from Mesa in 4b54277d2e9. Disable it explicitly when
+    # building an older revision so libvdpau is not required.
     if ( cd "$srcdir/$_mesa_srcdir" && ! git merge-base --is-ancestor 4b54277d2e9420e37cdce98b3a09e6cecf87300d HEAD ); then
-      if [[ $_gallium_drivers != *r300* ]] && [[ $_gallium_drivers != *r600* ]] && [[ $_gallium_drivers != *radeonsi* ]] && [[ $_gallium_drivers != *nouveau* ]]; then
-        warning "Gallium VDPAU disabled (gallium driver r300, r600, radeonsi or nouveau required)"
-        _gallium_vdpau="-D gallium-vdpau=${_disabled_}"
-      else
-        _gallium_vdpau="-D gallium-vdpau=${_enabled_}"
-      fi
+      _gallium_vdpau="-D gallium-vdpau=${_disabled_}"
     fi
 
     # gallium_va requires either r600, radeonsi or nouveau
@@ -648,8 +644,8 @@ package_mesa-git() {
   depends=('libdrm' 'wayland' 'libxxf86vm' 'libxdamage' 'libxshmfence' 'libelf'
            'libomxil-bellagio' 'libunwind' 'lm_sensors' 'libglvnd'
            'expat' 'libclc' 'libx11' $_llvm 'spirv-tools')
-  provides=(mesa=$pkgver-$pkgrel vulkan-intel=$pkgver-$pkgrel vulkan-radeon=$pkgver-$pkgrel vulkan-nouveau=$pkgver-$pkgrel vulkan-mesa-layers=$pkgver-$pkgrel mesa-vulkan-layers=$pkgver-$pkgrel libva-mesa-driver=$pkgver-$pkgrel mesa-vdpau=$pkgver-$pkgrel vulkan-driver opencl-mesa=$pkgver-$pkgrel opengl-driver opencl-driver ati-dri intel-dri nouveau-dri svga-dri mesa-dri mesa-libgl vulkan-mesa-device-select vulkan-swrast)
-  conflicts=('mesa' 'opencl-mesa' 'vulkan-intel' 'vulkan-radeon' 'vulkan-nouveau' 'vulkan-mesa-device-select' 'vulkan-mesa-layers' 'mesa-vulkan-layers' 'libva-mesa-driver' 'mesa-vdpau' 'vulkan-swrast')
+  provides=(mesa=$pkgver-$pkgrel vulkan-intel=$pkgver-$pkgrel vulkan-radeon=$pkgver-$pkgrel vulkan-nouveau=$pkgver-$pkgrel vulkan-mesa-layers=$pkgver-$pkgrel mesa-vulkan-layers=$pkgver-$pkgrel libva-mesa-driver=$pkgver-$pkgrel vulkan-driver opencl-mesa=$pkgver-$pkgrel opengl-driver opencl-driver ati-dri intel-dri nouveau-dri svga-dri mesa-dri mesa-libgl vulkan-mesa-device-select vulkan-swrast)
+  conflicts=('mesa' 'opencl-mesa' 'vulkan-intel' 'vulkan-radeon' 'vulkan-nouveau' 'vulkan-mesa-device-select' 'vulkan-mesa-layers' 'mesa-vulkan-layers' 'libva-mesa-driver' 'vulkan-swrast')
 
   DESTDIR="$pkgdir" ninja $NINJAFLAGS -C $_build64 install
 
@@ -677,8 +673,8 @@ package_lib32-mesa-git() {
            'lib32-lm_sensors' 'lib32-libelf' 'lib32-wayland'
            'lib32-libglvnd' 'lib32-libx11' 'mesa' $_lib32_llvm 'lib32-spirv-tools'
            'lib32-libdisplay-info')
-  provides=(lib32-mesa=$pkgver-$pkgrel lib32-vulkan-intel=$pkgver-$pkgrel lib32-vulkan-radeon=$pkgver-$pkgrel lib32-vulkan-nouveau=$pkgver-$pkgrel lib32-vulkan-mesa-layers=$pkgver-$pkgrel lib32-mesa-vulkan-layers=$pkgver-$pkgrel lib32-libva-mesa-driver=$pkgver-$pkgrel lib32-mesa-vdpau=$pkgver-$pkgrel lib32-opencl-mesa=$pkgver-$pkgrel lib32-opengl-driver lib32-opencl-driver lib32-vulkan-driver lib32-ati-dri lib32-intel-dri lib32-nouveau-dri lib32-mesa-dri lib32-mesa-libgl lib32-vulkan-mesa-device-select lib32-vulkan-swrast)
-  conflicts=('lib32-mesa' 'lib32-opencl-mesa' 'lib32-vulkan-intel' 'lib32-vulkan-radeon' 'lib32-vulkan-nouveau' 'lib32-vulkan-mesa-device-select' 'lib32-vulkan-mesa-layers' 'lib32-mesa-vulkan-layers' 'lib32-libva-mesa-driver' 'lib32-mesa-vdpau' 'lib32-vulkan-swrast')
+  provides=(lib32-mesa=$pkgver-$pkgrel lib32-vulkan-intel=$pkgver-$pkgrel lib32-vulkan-radeon=$pkgver-$pkgrel lib32-vulkan-nouveau=$pkgver-$pkgrel lib32-vulkan-mesa-layers=$pkgver-$pkgrel lib32-mesa-vulkan-layers=$pkgver-$pkgrel lib32-libva-mesa-driver=$pkgver-$pkgrel lib32-opencl-mesa=$pkgver-$pkgrel lib32-opengl-driver lib32-opencl-driver lib32-vulkan-driver lib32-ati-dri lib32-intel-dri lib32-nouveau-dri lib32-mesa-dri lib32-mesa-libgl lib32-vulkan-mesa-device-select lib32-vulkan-swrast)
+  conflicts=('lib32-mesa' 'lib32-opencl-mesa' 'lib32-vulkan-intel' 'lib32-vulkan-radeon' 'lib32-vulkan-nouveau' 'lib32-vulkan-mesa-device-select' 'lib32-vulkan-mesa-layers' 'lib32-mesa-vulkan-layers' 'lib32-libva-mesa-driver' 'lib32-vulkan-swrast')
 
   DESTDIR="$pkgdir" ninja $NINJAFLAGS -C $_build32 install
 
