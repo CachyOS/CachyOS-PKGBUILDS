@@ -6,8 +6,8 @@
 
 pkgbase=nvidia-utils
 pkgname=('nvidia-utils' 'opencl-nvidia' 'nvidia-open-dkms')
-pkgver=610.57.04
-pkgrel=3
+pkgver=615.71.09
+pkgrel=1
 arch=('x86_64')
 url="http://www.nvidia.com/"
 license=('custom')
@@ -33,8 +33,8 @@ sha256sums=('be99ff3def641bb900c2486cce96530394c5dc60548fc4642f19d3a4c784134d'
             '1d053c5078387021338cfc3a732bed61be1a20a549775573788e9134775c8149'
             '7d2300d62480cfc92be125d1dd628d97555e0dd7dd7667248036dc4f7c81d096'
             'd9251519fcd5570525b04dbea40278abbe16b35eb958c8f5cf251dacb6b52ed7'
-            'b2e935c66b83bb00c0c857bc8e0ee0fd52de9286b40c9cc1eec29a7ce7eb116d'
-            '0be1ce1905f579e68c1701c1286e15ddf02f5243e625773f5a997a8325dc856d'
+            'cdceed22bbeb61248d1a6deabc2596673e3a6501698ee71ac8d2fdc28f3b70fe'
+            'b038fe5d70e7c3209459a8121f231543939895145f0ad0d58d34f170e7eaf7e9'
             'b14f7a65359c05c373ddfc750cd4cf086a48e815489d93ad5cbe1dbf84bf8f5a'
             '6264d279bbae8eae6554ed78dd6e562da00cf71ffa5601ce5208099a98cd2c4d')
 
@@ -162,6 +162,8 @@ package_nvidia-utils() {
     install -Dm755 "libnvidia-encode.so.${pkgver}" "${pkgdir}/usr/lib/libnvidia-encode.so.${pkgver}"
     install -Dm755 "libnvidia-cfg.so.${pkgver}" "${pkgdir}/usr/lib/libnvidia-cfg.so.${pkgver}"
     install -Dm755 "libnvidia-ml.so.${pkgver}" "${pkgdir}/usr/lib/libnvidia-ml.so.${pkgver}"
+    install -Dm755 "libnvidia-fmdrv.so.${pkgver}" "${pkgdir}/usr/lib/libnvidia-fmdrv.so.${pkgver}"
+    install -Dm755 "libnvidia-imex.so.${pkgver}" "${pkgdir}/usr/lib/libnvidia-imex.so.${pkgver}"
     install -Dm755 "libnvidia-glvkspirv.so.${pkgver}" "${pkgdir}/usr/lib/libnvidia-glvkspirv.so.${pkgver}"
     install -Dm755 "libnvidia-allocator.so.${pkgver}" "${pkgdir}/usr/lib/libnvidia-allocator.so.${pkgver}"
     install -Dm755 "libnvidia-gpucomp.so.${pkgver}" "${pkgdir}/usr/lib/libnvidia-gpucomp.so.${pkgver}"
