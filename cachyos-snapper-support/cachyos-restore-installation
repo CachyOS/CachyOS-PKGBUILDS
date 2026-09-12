@@ -1,0 +1,53 @@
+#!/bin/bash
+set -euo pipefail
+
+SNAP_FILE=/etc/cachyos/installation-snapshot
+
+if [ ! -f "$SNAP_FILE" ]; then
+    echo "No installation snapshot found at $SNAP_FILE." >&2
+    exit 1
+fi
+
+# Trim whitespace/newlines so `snapper rollback "<ID>"` gets a clean value.
+SNAP_ID=$(tr -d '[:space:]' < "$SNAP_FILE")
+
+if [ -z "$SNAP_ID" ]; then
+    echo "Installation snapshot ID is empty." >&2
+    exit 1
+fi
+
+if ! [[ "$SNAP_ID" =~ ^[0-9]+$ ]]; then
+    echo "Installation snapshot ID '$SNAP_ID' is not a valid numeric ID." >&2
+    exit 1
+fi
+
+# snapper rollback: snapshots current state as a backup, then sets
+# the installation snapshot as the new default btrfs subvolume for
+# the next boot — bootloader-agnostic. Abort if it fails so we don't
+# falsely report success or regenerate bootloader configs against a
+# rollback that never happened.
+if ! snapper -c root rollback "$SNAP_ID"; then
+    echo "snapper rollback to snapshot $SNAP_ID failed." >&2
+    exit 1
+fi
+
+# Back up ~/.config for all users so fresh-install defaults are used
+# after the rollback. /home is a separate subvolume and is not rolled
+# back, so the backup survives the reboot. A timestamp suffix allows
+# multiple rollbacks without losing previous backups.
+TIMESTAMP=$(date +%Y%m%d%H%M%S)
+for home_dir in /home/*/; do
+    if [ -d "${home_dir}.config" ]; then
+        mv "${home_dir}.config" "${home_dir}.config.bak.${TIMESTAMP}"
+    fi
+done
+
+# Best-effort bootloader menu refresh. The subvol swap above is what
+# actually takes effect on reboot; these just keep menu entries in sync
+# on setups that render them from a config file.
+if [ -f /boot/grub/grub.cfg ] && command -v grub-mkconfig > /dev/null 2>&1; then
+    grub-mkconfig -o /boot/grub/grub.cfg || true
+fi
+if command -v limine-update > /dev/null 2>&1; then
+    limine-update || true
+fi
