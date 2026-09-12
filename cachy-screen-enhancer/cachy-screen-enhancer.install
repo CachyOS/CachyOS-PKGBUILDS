@@ -1,0 +1,31 @@
+post_install() {
+  echo ""
+  echo "  cachy-screen-enhancer installed."
+  echo ""
+  echo "  To apply the ICC profile and gamma correction, run:"
+  echo "    /usr/share/cachy-screen-enhancer/safe-install.sh"
+  echo ""
+}
+
+post_upgrade() {
+  post_install
+}
+
+pre_remove() {
+  CLEANUP="/usr/share/cachy-screen-enhancer/tools/remove-profile.sh"
+  [ -x "$CLEANUP" ] || return 0
+
+  # When pacman runs this hook, we're root. Detect the real desktop
+  # user so $HOME resolves correctly for user-local colord profiles.
+  REAL_USER="$(logname 2>/dev/null || echo "")"
+  if [ -n "$REAL_USER" ]; then
+    REAL_HOME="$(getent passwd "$REAL_USER" 2>/dev/null | cut -d: -f6 || echo "")"
+    if [ -n "$REAL_HOME" ]; then
+      HOME="$REAL_HOME" "$CLEANUP" || true
+      return 0
+    fi
+  fi
+
+  # Fallback: run as-is (system-wide cleanup only may miss user-local files)
+  "$CLEANUP" || true
+fi
