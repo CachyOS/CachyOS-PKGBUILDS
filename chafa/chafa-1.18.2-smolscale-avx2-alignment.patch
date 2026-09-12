@@ -1,0 +1,171 @@
+diff --git a/chafa/internal/smolscale/smolscale-avx2.c b/chafa/internal/smolscale/smolscale-avx2.c
+index a7165b4..598c5ea 100644
+--- a/chafa/internal/smolscale/smolscale-avx2.c
++++ b/chafa/internal/smolscale/smolscale-avx2.c
+@@ -1134,7 +1134,7 @@ SMOL_REPACK_ROW_DEF (1234, 128, 64, PREMUL16,      COMPRESSED,
+     while (dest_row != dest_row_max)
+     {
+         uint64_t t [2];
+-        uint8_t alpha = src_row [1];
++        uint8_t alpha = src_row [1] >> 8;
+         unpremul_p16_to_u_128bpp (src_row, t, alpha);
+         t [1] = (t [1] & 0xffffffff00000000ULL) | alpha;
+         *(dest_row++) = t [0] >> 32;
+diff --git a/chafa/internal/smolscale/smolscale-private.h b/chafa/internal/smolscale/smolscale-private.h
+index 93f8aec..368d254 100644
+--- a/chafa/internal/smolscale/smolscale-private.h
++++ b/chafa/internal/smolscale/smolscale-private.h
+@@ -88,6 +88,12 @@ typedef unsigned int SmolBool;
+ 
+ #define SMOL_ALIGNMENT 64
+ 
++#ifdef _MSC_VER
++# define SMOL_ALIGN __declspec (align (SMOL_ALIGNMENT))
++#else
++# define SMOL_ALIGN __attribute__((aligned (SMOL_ALIGNMENT)))
++#endif
++
+ #ifdef SMOL_DISABLE_ASSUME_ALIGNED
+ # define SMOL_ASSIGN_ALIGNED_TO(x, t, n) (t) (x)
+ #else
+@@ -99,11 +105,26 @@ typedef unsigned int SmolBool;
+ #define SMOL_ASSUME_ALIGNED_TO(x, t, n) (x) = SMOL_ASSIGN_ALIGNED_TO ((x), t, (n))
+ #define SMOL_ASSUME_ALIGNED(x, t) SMOL_ASSUME_ALIGNED_TO ((x), t, SMOL_ALIGNMENT)
+ 
+-/* Pointer to beginning of storage is stored in *r. This must be passed to smol_free() later. */
+-#define smol_alloc_aligned_to(s, a, r) \
+-  ({ void *p; *(r) = _SMOL_ALLOC ((s) + (a)); p = (void *) (((uintptr_t) (*(r)) + (a)) & ~((a) - 1)); (p); })
+-#define smol_alloc_aligned(s, r) smol_alloc_aligned_to ((s), SMOL_ALIGNMENT, (r))
+-#define smol_free(p) _SMOL_FREE(p)
++/* Allocates size bytes aligned to at least the requested power-of-two
++ * alignment. The pointer to the beginning of the storage is stored in
++ * *storage_out; that pointer must be passed to free() later. On
++ * allocation failure, both the returned pointer and *storage_out are
++ * NULL. */
++static inline void *
++smol_alloc_aligned_to (size_t size, size_t alignment, void **storage_out)
++{
++    void *m = malloc (size + alignment - 1);
++
++    *storage_out = m;
++    return (void *) (((uintptr_t) m + alignment - 1) & ~((uintptr_t) alignment - 1));
++}
++
++static inline void *
++smol_alloc_aligned (size_t size, void **storage_out)
++{
++    return smol_alloc_aligned_to (size, SMOL_ALIGNMENT, storage_out);
++}
++#define smol_free(p) free(p)
+ 
+ typedef enum
+ {
+@@ -204,9 +225,9 @@ typedef struct
+ {
+     uint32_t src_ofs;
+     uint64_t *parts_row [4];
+-    uint64_t *row_storage [4];
++    void *row_storage [4];
+     uint32_t *src_aligned;
+-    uint32_t *src_aligned_storage;
++    void *src_aligned_storage;
+ }
+ SmolLocalCtx;
+ 
+@@ -336,6 +357,9 @@ struct SmolScaleCtx
+ {
+     /* <private> */
+ 
++    /* Actual start of this SmolScaleCtx' allocation, so we can align within */
++    void *self_storage;
++
+     const char *src_pixels;
+     char *dest_pixels;
+ 
+@@ -381,7 +405,7 @@ struct SmolScaleCtx
+     /* A batch of color pixels in dest storage format. The batch size
+      * is in bytes, and chosen as an even multiple of 3, allowing 32 bytes wide
+      * operations (e.g. AVX2) to be used to clear packed RGB pixels. */
+-    unsigned char color_pixels_clear_batch [SMOL_CLEAR_BATCH_SIZE];
++    SMOL_ALIGN unsigned char color_pixels_clear_batch [SMOL_CLEAR_BATCH_SIZE];
+ };
+ 
+ /* Number of pixels to convert per batch. For some conversions, we perform
+diff --git a/chafa/internal/smolscale/smolscale.c b/chafa/internal/smolscale/smolscale.c
+index a7c152a..b21b364 100644
+--- a/chafa/internal/smolscale/smolscale.c
++++ b/chafa/internal/smolscale/smolscale.c
+@@ -878,7 +878,7 @@ out:
+ static void
+ populate_clear_batch (SmolScaleCtx *scale_ctx)
+ {
+-    uint8_t dest_color [16];
++    SMOL_ALIGN uint8_t dest_color [16];
+     int pixel_stride;
+     int i;
+ 
+@@ -1235,6 +1235,22 @@ smol_scale_finalize (SmolScaleCtx *scale_ctx)
+     free (scale_ctx->precalc_storage);
+ }
+ 
++/* SmolScaleCtx must be aligned */
++static SmolScaleCtx *
++alloc_scale_ctx (void)
++{
++    SmolScaleCtx *scale_ctx;
++    void *storage;
++
++    scale_ctx = smol_alloc_aligned (sizeof (SmolScaleCtx), &storage);
++    if (!storage)
++        return NULL;
++
++    memset (scale_ctx, 0, sizeof (SmolScaleCtx));
++    scale_ctx->self_storage = storage;
++    return scale_ctx;
++}
++
+ /* ---------- *
+  * Public API *
+  * ---------- */
+@@ -1254,7 +1270,10 @@ smol_scale_new_simple (const void *src_pixels,
+ {
+     SmolScaleCtx *scale_ctx;
+ 
+-    scale_ctx = calloc (1,sizeof (SmolScaleCtx));
++    scale_ctx = alloc_scale_ctx ();
++    if (!scale_ctx)
++        return NULL;
++
+     smol_scale_init (scale_ctx,
+                      src_pixels,
+                      src_pixel_type,
+@@ -1292,7 +1311,7 @@ smol_scale_simple (const void *src_pixels,
+                    uint32_t dest_rowstride,
+                    SmolFlags flags)
+ {
+-    SmolScaleCtx scale_ctx = { 0 };
++    SMOL_ALIGN SmolScaleCtx scale_ctx = { 0 };
+     int first_row, n_rows;
+ 
+     smol_scale_init (&scale_ctx,
+@@ -1354,7 +1373,10 @@ smol_scale_new_full (const void *src_pixels,
+ {
+     SmolScaleCtx *scale_ctx;
+ 
+-    scale_ctx = calloc (1, sizeof (SmolScaleCtx));
++    scale_ctx = alloc_scale_ctx ();
++    if (!scale_ctx)
++        return NULL;
++
+     smol_scale_init (scale_ctx,
+                      src_pixels,
+                      src_pixel_type,
+@@ -1383,7 +1405,7 @@ void
+ smol_scale_destroy (SmolScaleCtx *scale_ctx)
+ {
+     smol_scale_finalize (scale_ctx);
+-    free (scale_ctx);
++    free (scale_ctx->self_storage);
+ }
+ 
+ void
