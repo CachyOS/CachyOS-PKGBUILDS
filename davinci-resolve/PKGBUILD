@@ -1,97 +1,75 @@
 # Maintainer: Psygreg https://github.com/psygreg
+# Contributor: Muflone http://www.muflone.com/contacts/english/
 # Contributor: Alex S. <shantanna_at_hotmail_dot_com>
 # Contributor: Jonathon Fernyhough <jonathon_at_manjaro_dot_org>
+# Contributor: Marco Scardovi <scardracs_at_disroot_dot_org>
 
 # Hardware support is limited. Nvidia cards should work fine.
 # If you're running a hybrid setup, try with primusrun/optirun.
 
-# This was originally written by Daniel Bermond in blackmagic-decklink-sdk pkgbuild
-# It is sufficient to just replace _downloadid to correspond new release version
-# It can be obtained from chromium -> Developer Tools -> Network -> XHR -> click latest-version and copy downloadId
+# Download IDs are version-specific; update _downloadid and _releaseid with pkgver.
+# Find them in https://www.blackmagicdesign.com/api/support/us/downloads.json
 
 _pkgname=resolve
 pkgname=davinci-resolve
-pkgver=20.3.3
+pkgver=21.1.0
+# Blackmagic omits the trailing .0 in archive and installer names.
+_archivever=${pkgver%.0}
 pkgrel=1
 pkgdesc='Professional A/V post-production software suite from Blackmagic Design'
 arch=('x86_64')
 url="https://www.blackmagicdesign.com/support/family/davinci-resolve-and-fusion"
-license=('LicenseRef-Commercial')
-depends=('glu' 'gtk2' 'libpng12' 'fuse2' 'opencl-driver' 'qt5-x11extras' 'qt5-svg' 'qt5-webengine'
-         'qt5-websockets' 'qt5-quickcontrols2' 'qt5-multimedia' 'libxcrypt-compat' 'xmlsec'
+license=('LicenseRef-scancode-commercial-license')
+depends=('glu' 'fuse2' 'opencl-driver' 'qt5-x11extras' 'qt5-svg'
+         'qt5-quickcontrols2' 'qt5-multimedia' 'libxcrypt-compat' 'xmlsec'
          'java-runtime' 'ffmpeg4.4' 'gst-plugins-bad-libs' 'python-numpy'
          'tbb' 'apr-util' 'luajit' 'libc++' 'libc++abi')
 makedepends=('libarchive' 'xdg-user-dirs' 'patchelf')
 conflicts=('davinci-resolve-studio' 'davinci-resolve-beta' 'davinci-resolve-studio-beta')
+_downloadid=9ecf221a3a1f47cca35a4e4c34133865
+_releaseid=59dd4eef1f4941c29fb8dc48b33f5c87
+_useragent='Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36'
+_reqjson='{
+  "firstname": "Arch",
+  "lastname": "Linux",
+  "email": "someone@archlinux.org",
+  "phone": "202-555-0194",
+  "country": "us",
+  "street": "Bowery 146",
+  "state": "New York",
+  "city": "AUR",
+  "product": "DaVinci Resolve",
+  "platform": "Linux",
+  "policy": true,
+  "origin": "www.blackmagicdesign.com"
+}'
+_srcurl=$(curl --fail --silent --show-error --location --retry 3 --max-time 60 \
+  --user-agent "${_useragent}" \
+  --header 'Content-Type: application/json;charset=UTF-8' \
+  --header 'Accept: application/json, text/plain, */*' \
+  --header 'Origin: https://www.blackmagicdesign.com' \
+  --referer "https://www.blackmagicdesign.com/support/download/${_releaseid}/Linux" \
+  --data "${_reqjson}" \
+  "https://www.blackmagicdesign.com/api/register/us/download/${_downloadid}") || return 1
+
+# Do not silently save an API error page as the source archive.
+case "${_srcurl}" in
+  https://sw.blackmagicdesign.com/*/DaVinci_Resolve_${_archivever}_Linux.zip\?*|\
+  https://swr.cloud.blackmagicdesign.com/*/DaVinci_Resolve_${_archivever}_Linux.zip\?*) ;;
+  *) printf '%s\n' 'Failed to obtain the expected DaVinci Resolve download URL.' >&2; return 1 ;;
+esac
+DLAGENTS=('https::/usr/bin/curl --fail --location --continue-at - --retry 3 --retry-delay 3 --output %o %u')
+
+source=("DaVinci_Resolve_${_archivever}_Linux.zip::${_srcurl}"
+        "davinci-control-panels-setup.sh")
+sha256sums=('4133e2c38072758a93e9a959504c251178134040096edad79cf0e87813019a2b'
+            'f17236fd68cead727c647bc31404e402922cdd491df5526f4b62364cbef9d3b8')
 install="${pkgname}.install"
 options=('!strip')
 
-_product="DaVinci Resolve"
-_referid='ee1da4f13df74d72b6da783ead2ed875'
-_siteurl="https://www.blackmagicdesign.com/api/support/latest-stable-version/davinci-resolve/linux"
-
-_useragent="User-Agent: Mozilla/5.0 (X11; Linux ${CARCH}) \
-                        AppleWebKit/537.36 (KHTML, like Gecko) \
-                        Chrome/77.0.3865.75 \
-                        Safari/537.36"
-_releaseinfo=$(curl -Ls "$_siteurl")
-
-_downloadId=$(printf "%s" $_releaseinfo | sed -n 's/.*"downloadId":"\([^"]*\).*/\1/p')
-_pkgver=$(printf "%s" $_releaseinfo | awk -F'[,:]' '{for(i=1;i<=NF;i++){if($i~/"major"/){print $(i+1)} if($i~/"minor"/){print $(i+1)} if($i~/"releaseNum"/){print $(i+1)}}}' | sed 'N;s/\n/./;N;s/\n/./')
-
-_reqjson="{ \
-  \"firstname\": \"Arch\", \
-  \"lastname\": \"Linux\", \
-  \"email\": \"someone@archlinux.org\", \
-  \"phone\": \"202-555-0194\", \
-  \"country\": \"us\", \
-  \"street\": \"Bowery 146\", \
-  \"state\": \"New York\", \
-  \"city\": \"AUR\", \
-  \"product\": \"$_product\" \
-}"
-
-_reqjson="$(  printf '%s' "$_reqjson"   | sed 's/[[:space:]]\+/ /g')"
-_useragent="$(printf '%s' "$_useragent" | sed 's/[[:space:]]\+/ /g')"
-_useragent_escaped="${_useragent// /\\ }"
-
-_siteurl="https://www.blackmagicdesign.com/api/register/us/download/${_downloadId}"
-_srcurl="$(curl \
-           -s \
-           -H 'Host: www.blackmagicdesign.com' \
-           -H 'Accept: application/json, text/plain, */*' \
-           -H 'Origin: https://www.blackmagicdesign.com' \
-           -H "$_useragent" \
-           -H 'Content-Type: application/json;charset=UTF-8' \
-           -H "Referer: https://www.blackmagicdesign.com/support/download/${_referid}/Linux" \
-           -H 'Accept-Encoding: gzip, deflate, br' \
-           -H 'Accept-Language: en-US,en;q=0.9' \
-           -H 'Authority: www.blackmagicdesign.com' \
-           -H 'Cookie: _ga=GA1.2.1849503966.1518103294; _gid=GA1.2.953840595.1518103294' \
-           --data-ascii "$_reqjson" \
-           --compressed \
-           "$_siteurl")"
-
-DLAGENTS=("https::/usr/bin/curl \
-           -gqb '' -C - --retry 3 --retry-delay 3 \
-           -H Upgrade-Insecure-Requests:\ 1 \
-           -H ${_useragent_escaped} \
-           -H Accept:\ text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8 \
-           -H Accept-Language:\ en-US,en;q=0.9 \
-           -o %o \
-           --compressed \
-           %u")
-
-_archive_name=DaVinci_Resolve_${pkgver}_Linux
-_archive=${_archive_name}.zip
-source=("${_archive}"::"$_srcurl"
-        "davinci-control-panels-setup.sh")
-sha256sums=('SKIP'
-            'f17236fd68cead727c647bc31404e402922cdd491df5526f4b62364cbef9d3b8')
-
 prepare() {
-  chmod u+x "./DaVinci_Resolve_${pkgver}_Linux.run"
-  "./DaVinci_Resolve_${pkgver}_Linux.run" --appimage-extract
+  chmod u+x "./DaVinci_Resolve_${_archivever}_Linux.run"
+  "./DaVinci_Resolve_${_archivever}_Linux.run" --appimage-extract
 
   # Fix permission to all files and dirs
   chmod -R u+rwX,go+rX,go-w "squashfs-root"
@@ -103,7 +81,7 @@ prepare() {
   mv lib/* "${srcdir}/squashfs-root/libs"
   popd
 
-  rm -rf squashfs-root/installer squashfs-root/installer* squashfs-root/AppRun squashfs-root/AppRun*
+  rm -rf squashfs-root/{installer*,AppRun*,CentOSUpdate}
 
   while IFS= read -r -d '' _file; do
     chmod 0755 "${_file}"
@@ -115,37 +93,20 @@ prepare() {
   done < <(find "squashfs-root" -type f -print0)
 
   # Prepare list of paths for patchelf
-  _patchelf_paths=("libs"
-                   "libs/plugins/sqldrivers"
-                   "libs/plugins/xcbglintegrations"
-                   "libs/plugins/imageformats"
-                   "libs/plugins/platforms"
-                   "libs/Fusion"
-                   "plugins"
-                   "bin"
-                   "BlackmagicRAWSpeedTest/BlackmagicRawAPI"
-                   "BlackmagicRAWSpeedTest/plugins/platforms"
-                   "BlackmagicRAWSpeedTest/plugins/imageformats"
-                   "BlackmagicRAWSpeedTest/plugins/mediaservice"
-                   "BlackmagicRAWSpeedTest/plugins/audio"
-                   "BlackmagicRAWSpeedTest/plugins/xcbglintegrations"
-                   "BlackmagicRAWSpeedTest/plugins/bearer"
-                   "BlackmagicRAWPlayer/BlackmagicRawAPI"
-                   "BlackmagicRAWPlayer/plugins/mediaservice"
-                   "BlackmagicRAWPlayer/plugins/imageformats"
-                   "BlackmagicRAWPlayer/plugins/audio"
-                   "BlackmagicRAWPlayer/plugins/platforms"
-                   "BlackmagicRAWPlayer/plugins/xcbglintegrations"
-                   "BlackmagicRAWPlayer/plugins/bearer"
-                   "Onboarding/plugins/xcbglintegrations"
-                   "Onboarding/plugins/qtwebengine"
-                   "Onboarding/plugins/platforms"
-                   "Onboarding/plugins/imageformats"
-                   "DaVinci Control Panels Setup/plugins/platforms"
-                   "DaVinci Control Panels Setup/plugins/imageformats"
-                   "DaVinci Control Panels Setup/plugins/bearer"
-                   "DaVinci Control Panels Setup/AdminUtility/PlugIns/DaVinciKeyboards"
-                   "DaVinci Control Panels Setup/AdminUtility/PlugIns/DaVinciPanels")
+  _patchelf_paths=(
+    "libs"
+    "libs/plugins/"{sqldrivers,xcbglintegrations,imageformats,platforms}
+    "libs/Fusion"
+    "plugins"
+    "bin"
+    "BlackmagicRAWSpeedTest/BlackmagicRawAPI"
+    "BlackmagicRAWSpeedTest/plugins/"{platforms,imageformats,mediaservice,audio,xcbglintegrations,bearer}
+    "BlackmagicRAWPlayer/BlackmagicRawAPI"
+    "BlackmagicRAWPlayer/plugins/"{mediaservice,imageformats,audio,platforms,xcbglintegrations,bearer}
+    "Onboarding/plugins/"{xcbglintegrations,qtwebengine,platforms,imageformats}
+    "DaVinci Control Panels Setup/plugins/"{platforms,imageformats,bearer}
+    "DaVinci Control Panels Setup/AdminUtility/PlugIns/"{DaVinciKeyboards,DaVinciPanels}
+  )
   for _index in "${!_patchelf_paths[@]}"
   do
     _patchelf_paths[${_index}]="/opt/${_pkgname}/${_patchelf_paths[${_index}]}"
@@ -159,14 +120,17 @@ prepare() {
     sed -i "s|RESOLVE_INSTALL_LOCATION|/opt/${_pkgname}|g" "${_file}"
   done < <(find . -type f '(' -name "*.desktop" -o -name "*.directory" -o -name "*.directory" -o -name "*.menu" ')' -print0)
 
-  rm "squashfs-root/libs/libglib-2.0.so.0" \
-     "squashfs-root/libs/libgio-2.0.so.0" \
-     "squashfs-root/libs/libgmodule-2.0.so.0"
+  rm squashfs-root/libs/libglib-2.0.so.0{,.6800.4} \
+     squashfs-root/libs/libgio-2.0.so.0{,.6800.4} \
+     squashfs-root/libs/libgmodule-2.0.so.0{,.6800.4} \
+     squashfs-root/libs/libgobject-2.0.so.0{,.6800.4} \
+     squashfs-root/libs/libc++.so.1{,.0} \
+     squashfs-root/libs/libc++abi.so.1{,.0}
   ln -s "../BlackmagicRAWPlayer/BlackmagicRawAPI" "squashfs-root/bin/"
-  ln -s /usr/lib/libglib-2.0.so.0 "squashfs-root/libs/libglib-2.0.so.0"
-  ln -s /usr/lib/libgio-2.0.so.0 "squashfs-root/libs/libgio-2.0.so.0"
-  ln -s /usr/lib/libgmodule-2.0.so.0 "squashfs-root/libs/libgmodule-2.0.so.0"
-  ln -s /usr/lib/libgdk_pixbuf-2.0.so.0 "squashfs-root/libs/libgdk_pixbuf-2.0.so.0"
+  ln -s -t squashfs-root/libs/ \
+    /usr/lib/lib{glib,gio,gmodule,gobject}-2.0.so.0 \
+    /usr/lib/libgdk_pixbuf-2.0.so.0 \
+    /usr/lib/lib{c++,c++abi}.so.1
 
   echo "StartupWMClass=resolve" >> "squashfs-root/share/DaVinciResolve.desktop"
 
@@ -197,12 +161,14 @@ package() {
   # Distribute files into other directories
   pushd "${pkgdir}/opt/${_pkgname}"
   install -D -m 0644 -t "${pkgdir}/opt/${_pkgname}/configs" \
-    "share/default-config.dat" \
-    "share/log-conf.xml"
+    share/{default-config.dat,log-conf.xml}
   install -D -m 0644 -t "${pkgdir}/opt/${_pkgname}/DolbyVision" \
     "share/default_cm_config.bin"
   install -d -m 0755 "${pkgdir}/opt/${_pkgname}/.license"
   install -d -m 0755 "${pkgdir}/opt/${_pkgname}/Apple Immersive/Calibration"
+  # Install licenses
+  install -d -m 0755 "${pkgdir}/usr/share/licenses/${pkgname}"
+  ln -s "/opt/resolve/docs/License.html" "${pkgdir}/usr/share/licenses/${pkgname}"
   # Install Desktop files and menu
   install -D -m 0644 -t "${pkgdir}/usr/share/applications" \
     "share/DaVinciResolve.desktop" \
