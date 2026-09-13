@@ -120,12 +120,10 @@ prepare() {
     sed -i "s|RESOLVE_INSTALL_LOCATION|/opt/${_pkgname}|g" "${_file}"
   done < <(find . -type f '(' -name "*.desktop" -o -name "*.directory" -o -name "*.directory" -o -name "*.menu" ')' -print0)
 
-  rm squashfs-root/libs/libglib-2.0.so.0{,.6800.4} \
-     squashfs-root/libs/libgio-2.0.so.0{,.6800.4} \
-     squashfs-root/libs/libgmodule-2.0.so.0{,.6800.4} \
-     squashfs-root/libs/libgobject-2.0.so.0{,.6800.4} \
-     squashfs-root/libs/libc++.so.1{,.0} \
-     squashfs-root/libs/libc++abi.so.1{,.0}
+  # Replace bundled libraries, including unversioned links and versioned files.
+  # The bundled GLib version changes between Resolve releases.
+  rm squashfs-root/libs/lib{glib,gio,gmodule,gobject}-2.0.so* \
+     squashfs-root/libs/lib{c++,c++abi}.so*
   ln -s "../BlackmagicRAWPlayer/BlackmagicRawAPI" "squashfs-root/bin/"
   ln -s -t squashfs-root/libs/ \
     /usr/lib/lib{glib,gio,gmodule,gobject}-2.0.so.0 \
