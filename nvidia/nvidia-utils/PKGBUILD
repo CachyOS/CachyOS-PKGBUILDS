@@ -7,7 +7,7 @@
 pkgbase=nvidia-utils
 pkgname=('nvidia-utils' 'opencl-nvidia' 'nvidia-open-dkms')
 pkgver=615.71.09
-pkgrel=1
+pkgrel=2
 arch=('x86_64')
 url="http://www.nvidia.com/"
 license=('custom')
@@ -25,7 +25,8 @@ source=('nvidia-drm-outputclass.conf'
         "https://us.download.nvidia.com/XFree86/Linux-x86_64/${pkgver}/${_pkg}.run"
         "https://download.nvidia.com/XFree86/NVIDIA-kernel-module-source/${_pkg_open}.tar.xz"
         'limit-vram-usage'
-        'cuda-no-stable-perf-limit')
+        'cuda-no-stable-perf-limit'
+        '0003-Pass-dmem_cgroup_init-to-dmem_cgroup_register_region.patch')
 sha256sums=('be99ff3def641bb900c2486cce96530394c5dc60548fc4642f19d3a4c784134d'
             'f77a5247a3ba63e9fad3a3b2822d0fcfa51e0f79b5a90bd79bf08ea34b64ab07'
             'e30714f9b473d810c28763d067e0b85c75f86f23618d968b49b9d1fced9a1dd6'
@@ -36,7 +37,8 @@ sha256sums=('be99ff3def641bb900c2486cce96530394c5dc60548fc4642f19d3a4c784134d'
             'cdceed22bbeb61248d1a6deabc2596673e3a6501698ee71ac8d2fdc28f3b70fe'
             'b038fe5d70e7c3209459a8121f231543939895145f0ad0d58d34f170e7eaf7e9'
             'b14f7a65359c05c373ddfc750cd4cf086a48e815489d93ad5cbe1dbf84bf8f5a'
-            '6264d279bbae8eae6554ed78dd6e562da00cf71ffa5601ce5208099a98cd2c4d')
+            '6264d279bbae8eae6554ed78dd6e562da00cf71ffa5601ce5208099a98cd2c4d'
+            '97d226aaddd54bdd2d4e3ae8e28f8eb23d053c48845cf8d051d2342e97546d9c')
 
 create_links() {
     # create soname links
@@ -52,6 +54,9 @@ prepare() {
     sh "${_pkg}.run" --extract-only
     cd "${_pkg}"
     bsdtar -xf nvidia-persistenced-init.tar.bz2
+
+    # Linux 7.3 support
+    patch -Np1 -i "${srcdir}/0003-Pass-dmem_cgroup_init-to-dmem_cgroup_register_region.patch" -d "${srcdir}/${_pkg_open}/"
 
 #    patch -Np1 -i "${srcdir}/0001-fix-dsc-correct-RC-parameter-tables-to-match-VESA-DS.patch" -d "${srcdir}/${_pkg_open}/"
 #    patch -Np1 -i "${srcdir}/0002-fix-dsc-use-bits_per_component-for-flatnessDetThresh.patch" -d "${srcdir}/${_pkg_open}/"
