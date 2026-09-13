@@ -102,17 +102,15 @@ function generate_load_target() {
         esac
     done < <(grep -l "0x030[0-9]00" /sys/bus/pci/devices/*/class)
 
-    if [ -z "${modules[0]}" ]; then
-        return 0
+    if [ -n "$nvidia_module" ]; then
+        for module in "${modules[@]}"; do
+            postpone_nvidia_module "$module" "$nvidia_module"
+        done
+        modules+=("$nvidia_module")
     fi
 
-    if [ -n "$nvidia_module" ]; then
-        modules+=("$nvidia_module")
-        for module in "${modules[@]}"; do
-            if [[ "$module" != "$nvidia_module" ]]; then
-                postpone_nvidia_module "$module" "$nvidia_module"
-            fi
-        done
+    if [ -z "${modules[0]}" ]; then
+        return 0
     fi
 
     local -a devices=()
