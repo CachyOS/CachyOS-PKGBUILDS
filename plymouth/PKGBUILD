@@ -1,0 +1,113 @@
+# Maintainer: Vasiliy Stelmachenok <ventureo@cachyos.org>
+# Contributor: Balló György <ballogyor+arch at gmail dot com>
+# Contributor: Taijian <taijian@posteo.de>
+# Contributor: Sebastian Lau <lauseb644@gmail.com>
+# Contributor: Damian01w <damian01w@gmail.com>
+# Contributor: Padfoot <padfoot@exemail.com.au>
+
+pkgname=plymouth
+pkgver=26.134.222
+pkgrel=3
+pkgdesc='Graphical boot splash screen'
+arch=(x86_64)
+url='https://www.freedesktop.org/wiki/Software/Plymouth/'
+license=(GPL-2.0-or-later)
+depends=(
+  adwaita-fonts
+  bash
+  cairo
+  filesystem
+  fontconfig
+  freetype2
+  glib2
+  glibc
+  libdrm
+  libevdev
+  libpng
+  libx11
+  libxkbcommon
+  pango
+  systemd-libs
+  xkeyboard-config
+)
+makedepends=(
+  docbook-xsl
+  git
+  gtk3
+  meson
+)
+optdepends=('gtk3: x11 renderer')
+backup=(
+  etc/logrotate.d/bootlog
+  etc/plymouth/plymouthd.conf
+)
+install='plymouth.install'
+source=(
+  "git+https://gitlab.freedesktop.org/plymouth/$pkgname.git#tag=$pkgver"
+  plymouth.initcpio_hook
+  plymouth.initcpio_install
+  plymouth-shutdown.initcpio_install
+  50-plymouth.conf
+  386.patch
+  Stop-waiting-for-new-device-on-plymouth-quit.patch
+)
+b2sums=(
+    '5130dbb16d4634915b7f68542b6c29d664bd8c26f4508adf536833e93f2c78aee287208e88dc3bcf8298979c6f9811657ab5a30c1563b1e5307b7e886b6bffa2'
+    'afb2449b542aa3e971eab6b953c907347fdf4e499b4140a5e6736a7c99557c0d8d2fed28dbee56d84c8c619335c59bd382457d85e51145884ad0616e9095f232'
+    'e9efbfd924a07005e883c4cd21d25c520288daf8bf611ee20a245b8b8f925bc90188dfcbb9e13da883479c5214562795717bb4404dd7ef1444eb04ab69dad4a9'
+    '063448411de837ed38ece935719f07fd17b18830680c9fa95b7bd39a097778186c40373590504c9b44144125986304311f528c73592c29d19043b8395e6f99c2'
+    '5ab47942d222c311b495d056f24bdd9d08438162fef1ca6e51982fc00018acbf0c31e4c61164b40950fe2511e17ba2a4635894d145d83a9b349e5a8a83f8c026'
+    '340a728dd8576eac152d9a692492506444c0386fdb8c6964b286e81ff2c1fbdd79048e309da14e08188124ea927e5f6771b846d9adf9df9fa9c6cab832db94af'
+    '57cfd3d79ddc44bce75099edc6f0972460c45f699a6b5229d35c9e871fadc325ccba354814a437b80e11cac0a06be979920685a3e8f7c28832bb58f05150834b'
+)
+
+prepare() {
+  cd $pkgname
+
+  # Fix default XKB keymap fallback overriding KEYMAP
+  # https://gitlab.freedesktop.org/plymouth/plymouth/-/merge_requests/388
+  #git cherry-pick -n cea90be39d263e388003a07d125b469c0803d55c
+
+  # Use mkinitcpio to update initrd
+  sed -i 's/^dracut -f$/mkinitcpio -P/' scripts/plymouth-update-initrd
+
+  # Change default theme
+  sed -i 's/^Theme=spinner$/Theme=bgrt/' src/plymouthd.defaults
+
+  # Switch from Cantarell to Adwaita Sans; set monospace font to Adwaita Mono
+  sed -i 's/Cantarell/Adwaita Sans/
+          /TitleFont=Adwaita/a MonospaceFont=Adwaita Mono 12' scripts/keymap-render.py themes/*/*.plymouth.desktop
+
+  # plugins: Restore device name after failed attempt
+  # https://gitlab.freedesktop.org/plymouth/plymouth/-/merge_requests/386
+  patch -Np1 -i "${srcdir}/386.patch"
+
+  # Fixes: plymouthd does not quit when new DRM devices are probed during end animation
+  # https://gitlab.freedesktop.org/plymouth/plymouth/-/work_items/349
+  patch -Np1 -i "${srcdir}/Stop-waiting-for-new-device-on-plymouth-quit.patch"
+}
+
+build() {
+  arch-meson $pkgname build \
+    -D logo=/usr/share/pixmaps/archlinux-logo.png
+  meson compile -C build
+
+  # Convert logo for the spinner theme
+  rsvg-convert '/usr/share/pixmaps/archlinux-logo-text-dark.svg' -o archlinux-logo-text-dark.png
+}
+
+package() {
+  meson install -C build --destdir "$pkgdir"
+  rm -r "$pkgdir/run"
+
+  # Install mkinitcpio hook
+  install -Dm644 plymouth.initcpio_hook "$pkgdir/usr/lib/initcpio/hooks/$pkgname"
+  install -Dm644 plymouth.initcpio_install "$pkgdir/usr/lib/initcpio/install/$pkgname"
+
+  # Install mkinitcpio shutdown hook and systemd drop-in snippet
+  install -Dm644 plymouth-shutdown.initcpio_install "$pkgdir/usr/lib/initcpio/install/$pkgname-shutdown"
+  install -Dm644 50-plymouth.conf "$pkgdir/usr/lib/tmpfiles.d/50-plymouth.conf"
+
+  # Install logo for the spinner theme
+  install -Dm644 archlinux-logo-text-dark.png "$pkgdir/usr/share/$pkgname/themes/spinner/watermark.png"
+}
