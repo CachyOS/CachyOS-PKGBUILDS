@@ -1,0 +1,46 @@
+#!/usr/bin/env bash
+# Copyright (C) 2026 Vasiliy Stelmachenok for CachyOS
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License along
+# with this program; if not, write to the Free Software Foundation, Inc.,
+# 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+
+logs_directory="/var/log/drm-awaiter"
+
+if [ ! -d "${logs_directory}" ]; then
+    mkdir -m700 -p "${logs_directory}"
+fi
+
+export LOG_FILENAME="${logs_directory}/cachyos-bugreport-$(date +%y%m%d-%H-%M).log"
+
+echo "Failed to load your GPU driver(s)."
+echo "It could be because of the following reasons:"
+echo ""
+echo "1) The recent system update contains bug and you need to roll it back to bring the system into working state."
+echo "On filesystems with snapshots you can do this from bootloader by selecting proper boot entry."
+echo ""
+echo "2) Driver is not compatible with the current kernel version or has not been installed."
+echo ""
+echo "3) Your GPU is broken (which is highly unlikely)"
+echo ""
+echo "You can't get into desktop environment right now."
+echo "Instead, you should type password below and use the command shell"
+echo "to fix your system depending on your situation."
+echo ""
+echo "If you don't know what to do, power off your system and ask for support"
+echo "in a offical distribution community."
+echo ""
+echo "For further investigation of the incident, a bug report log was saved in ${LOG_FILENAME}"
+
+echo "N" | cachyos-bugreport.sh &>/dev/null
+exit 0
