@@ -1,0 +1,90 @@
+From 1ce2a04a54718e8dac4ee2dac6ff11d04aef79d0 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Joan=20Bruguera=20Mic=C3=B3?= <joanbrugueram@gmail.com>
+Date: Sun, 21 Jun 2026 20:46:45 +0000
+Subject: [PATCH] Tentative patch for broadcom-wl 6.30.223.271 driver for Linux
+ 7.2-rc1
+
+---
+ src/shared/linux_osl.c | 11 +++++++++++
+ src/wl/sys/wl_linux.c  | 15 +++++++++++++++
+ 2 files changed, 26 insertions(+)
+
+diff --git a/src/shared/linux_osl.c b/src/shared/linux_osl.c
+index c7b350c..e178132 100644
+--- a/src/shared/linux_osl.c
++++ b/src/shared/linux_osl.c
+@@ -471,8 +471,13 @@ osl_debug_malloc(osl_t *osh, uint size, int line, const char* file)
+ 	if (!basename)
+ 		basename = file;
+ 
++	// Rel. commit "string: Remove strncpy() from the kernel" (Kees Cook, 23 Mar 2026)
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(7, 2, 0)
++	strscpy(p->file, basename, BCM_MEM_FILENAME_LEN);
++#else
+ 	strncpy(p->file, basename, BCM_MEM_FILENAME_LEN);
+ 	p->file[BCM_MEM_FILENAME_LEN - 1] = '\0';
++#endif
+ 
+ 	if (osh) {
+ 		p->prev = NULL;
+@@ -860,7 +865,13 @@ osl_strcpy(char *d, const char *s)
+ char*
+ osl_strncpy(char *d, const char *s, uint n)
+ {
++	// Rel. commit "string: Remove strncpy() from the kernel" (Kees Cook, 23 Mar 2026)
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(7, 2, 0)
++	strscpy_pad(d, s, n);
++	return (d);
++#else
+ 	return (strncpy(d, s, n));
++#endif
+ }
+ 
+ char*
+diff --git a/src/wl/sys/wl_linux.c b/src/wl/sys/wl_linux.c
+index df00e46..fbf5c75 100644
+--- a/src/wl/sys/wl_linux.c
++++ b/src/wl/sys/wl_linux.c
+@@ -1315,8 +1315,13 @@ wl_alloc_linux_if(wl_if_t *wlif)
+ 	bzero(dev, sizeof(struct net_device));
+ 	ether_setup(dev);
+ 
++	// Rel. commit "string: Remove strncpy() from the kernel" (Kees Cook, 23 Mar 2026)
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(7, 2, 0)
++	strscpy(dev->name, intf_name, IFNAMSIZ);
++#else
+ 	strncpy(dev->name, intf_name, IFNAMSIZ-1);
+ 	dev->name[IFNAMSIZ-1] = '\0';
++#endif
+ 
+ 	priv_link = MALLOC(wl->osh, sizeof(priv_link_t));
+ 	if (!priv_link) {
+@@ -1533,8 +1538,13 @@ wl_get_driver_info(struct net_device *dev, struct ethtool_drvinfo *info)
+ #endif
+ 	bzero(info, sizeof(struct ethtool_drvinfo));
+ 	snprintf(info->driver, sizeof(info->driver), "wl%d", wl->pub->unit);
++	// Rel. commit "string: Remove strncpy() from the kernel" (Kees Cook, 23 Mar 2026)
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(7, 2, 0)
++	strscpy(info->version, EPI_VERSION_STR, sizeof(info->version));
++#else
+ 	strncpy(info->version, EPI_VERSION_STR, sizeof(info->version));
+ 	info->version[(sizeof(info->version))-1] = '\0';
++#endif
+ }
+ 
+ static int
+@@ -3021,7 +3031,12 @@ _wl_add_monitor_if(wl_task_t *task)
+ 	}
+ 
+ 	ASSERT(strlen(wlif->name) > 0);
++	// Rel. commit "string: Remove strncpy() from the kernel" (Kees Cook, 23 Mar 2026)
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(7, 2, 0)
++	memcpy(wlif->dev->name, wlif->name, strlen(wlif->name));
++#else
+ 	strncpy(wlif->dev->name, wlif->name, strlen(wlif->name));
++#endif
+ 
+ 	wl->monitor_dev = dev;
+ 	if (wl->monitor_type == 1)
+-- 
+2.54.0

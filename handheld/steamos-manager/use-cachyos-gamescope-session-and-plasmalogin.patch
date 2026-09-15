@@ -1,0 +1,144 @@
+From f1bf9641b60790673e36b32673a6965149cc787f Mon Sep 17 00:00:00 2001
+From: Sid Pranjale <sidpranjale127@protonmail.com>
+Date: Thu, 18 Jun 2026 12:33:02 +0200
+Subject: [PATCH] use cachyos gamescope-session and plasmalogin
+
+---
+ Makefile                            |  4 ++--
+ data/system/reset-oneshot-boot.conf |  4 ++--
+ steamos-manager/src/session.rs      | 22 +++++++++++-----------
+ 3 files changed, 15 insertions(+), 15 deletions(-)
+
+diff --git a/Makefile b/Makefile
+index 7bc72d5..f12539d 100644
+--- a/Makefile
++++ b/Makefile
+@@ -22,7 +22,7 @@ install: target/release/steamos-manager target/release/steamosctl
+ 	install -d -m0755 "$(DESTDIR)/usr/share/dbus-1/system.d/"
+ 	install -d -m0755 "$(DESTDIR)/usr/share/steamos-manager/remotes.d/"
+ 	install -d -m0755 "$(DESTDIR)/usr/lib/systemd/system/"
+-	install -d -m0755 "$(DESTDIR)/usr/lib/systemd/system/sddm.service.d/"
++	install -d -m0755 "$(DESTDIR)/usr/lib/systemd/system/plasmalogin.service.d/"
+ 	install -d -m0755 "$(DESTDIR)/usr/lib/systemd/user/"
+ 	install -d -m0755 "$(DESTDIR)/etc/steamos-manager/remotes.d/"
+ 
+@@ -38,7 +38,7 @@ install: target/release/steamos-manager target/release/steamosctl
+ 	install -m644 "data/system/com.steampowered.SteamOSManager1.service" "$(DESTDIR)/usr/share/dbus-1/system-services/"
+ 	install -m644 "data/system/com.steampowered.SteamOSManager1.conf" "$(DESTDIR)/usr/share/dbus-1/system.d/"
+ 	install -m644 "data/system/steamos-manager.service" "$(DESTDIR)/usr/lib/systemd/system/"
+-	install -m644 "data/system/reset-oneshot-boot.conf" "$(DESTDIR)/usr/lib/systemd/system/sddm.service.d/"
++	install -m644 "data/system/reset-oneshot-boot.conf" "$(DESTDIR)/usr/lib/systemd/system/plasmalogin.service.d/"
+ 
+ 	install -m644 "data/user/com.steampowered.SteamOSManager1.service" "$(DESTDIR)/usr/share/dbus-1/services/"
+ 	install -m644 "data/user/steamos-manager.service" "$(DESTDIR)/usr/lib/systemd/user/"
+diff --git a/data/system/reset-oneshot-boot.conf b/data/system/reset-oneshot-boot.conf
+index 2ffc4e2..77eba04 100644
+--- a/data/system/reset-oneshot-boot.conf
++++ b/data/system/reset-oneshot-boot.conf
+@@ -2,5 +2,5 @@
+ # This is a failsafe to reset the login mode back to default after a reboot
+ # It shouldn't be strictly needed
+ # It's a fallback in case a login fails between boot and starting
+-ExecStartPre=-rm /etc/sddm.conf.d/zzt-steamos-temp-login.conf
+-ExecStartPre=-rm /etc/sddm.conf.d/zzt-holo-temp-login.conf
++ExecStartPre=-rm /etc/plasmalogin.conf.d/zzt-steamos-temp-login.conf
++ExecStartPre=-rm /etc/plasmalogin.conf.d/zzt-holo-temp-login.conf
+diff --git a/steamos-manager/src/session.rs b/steamos-manager/src/session.rs
+index 1754f46..36e1cf0 100644
+--- a/steamos-manager/src/session.rs
++++ b/steamos-manager/src/session.rs
+@@ -32,8 +32,8 @@ use crate::manager::root::RootManagerProxy;
+ use crate::systemd::{ActiveState, JobMode, SystemdUnit};
+ use crate::{Service, path};
+ 
+-const CONFIG_PREFIX_USR: &str = "/usr/lib/sddm/sddm.conf.d";
+-const CONFIG_PREFIX: &str = "/etc/sddm.conf.d";
++const CONFIG_PREFIX_USR: &str = "/usr/lib/plasmalogin/plasmalogin.conf.d";
++const CONFIG_PREFIX: &str = "/etc/plasmalogin.conf.d";
+ const SESSION_CHECK_PATH_LEGACY: &str = "steamos.conf";
+ const CONFIG_PATH_LEGACY: &str = "zz-steamos-autologin.conf";
+ const TEMPORARY_CONFIG_PATH_LEGACY: &str = "zzt-steamos-temp-login.conf";
+@@ -70,7 +70,7 @@ impl ConfigPaths {
+     }
+ 
+     // Check for the existence of the legacy naming convention file before using the new naming as
+-    // these will take precedence when sddm parses the config files.
++    // these will take precedence when plasmalogin parses the config files.
+     async fn config(&self) -> Result<PathBuf> {
+         let legacy = path(CONFIG_PREFIX).join(CONFIG_PATH_LEGACY);
+         if try_exists(&legacy).await? {
+@@ -360,7 +360,7 @@ impl SessionManager {
+ 
+     pub(crate) async fn session_for_mode(&self, mode: LoginMode) -> Result<String> {
+         match mode {
+-            LoginMode::Game => Ok(String::from("gamescope-wayland.desktop")),
++            LoginMode::Game => Ok(String::from("gamescope-session.desktop")),
+             LoginMode::Desktop => self.default_desktop_session().await,
+         }
+     }
+@@ -528,7 +528,7 @@ mod test {
+         assert!(is_valid_desktop_session_name("plasma.desktop"));
+         assert!(!is_valid_desktop_session_name(".plasma.desktop"));
+         assert!(!is_valid_desktop_session_name("plasma"));
+-        assert!(!is_valid_desktop_session_name("gamescope.desktop"));
++        assert!(!is_valid_desktop_session_name("gamescope-session.desktop"));
+     }
+ 
+     #[tokio::test]
+@@ -543,7 +543,7 @@ mod test {
+         write(path("/usr/share/wayland-sessions/plasma.desktop"), b"")
+             .await
+             .unwrap();
+-        write(path("/usr/share/wayland-sessions/gamescope.desktop"), b"")
++        write(path("/usr/share/wayland-sessions/gamescope-session.desktop"), b"")
+             .await
+             .unwrap();
+         write(path("/usr/share/xsessions/plasmax11.desktop"), b"")
+@@ -572,7 +572,7 @@ mod test {
+         write(path("/usr/share/wayland-sessions/plasma.desktop"), b"")
+             .await
+             .unwrap();
+-        write(path("/usr/share/wayland-sessions/gamescope.desktop"), b"")
++        write(path("/usr/share/wayland-sessions/gamescope-session.desktop"), b"")
+             .await
+             .unwrap();
+         write(path("/usr/share/xsessions/plasmax11.desktop"), b"")
+@@ -585,7 +585,7 @@ mod test {
+ 
+         assert!(is_valid_desktop_session("plasma.desktop").await.unwrap());
+         assert!(is_valid_desktop_session("plasmax11.desktop").await.unwrap());
+-        assert!(!is_valid_desktop_session("gamescope.desktop").await.unwrap());
++        assert!(!is_valid_desktop_session("gamescope-session.desktop").await.unwrap());
+         assert!(
+             !is_valid_desktop_session("doesnotexist.desktop")
+                 .await
+@@ -673,7 +673,7 @@ mod test {
+         write(path("/usr/share/xsessions/plasmax11.desktop"), b"")
+             .await
+             .unwrap();
+-        write(path("/usr/share/wayland-sessions/gamescope.desktop"), b"")
++        write(path("/usr/share/wayland-sessions/gamescope-session.desktop"), b"")
+             .await
+             .unwrap();
+         let manager = SessionManager::new(connection.clone(), &connection, tx)
+@@ -788,7 +788,7 @@ mod test {
+             .await
+             .unwrap();
+         write(
+-            path("/usr/share/wayland-sessions/gamescope-wayland.desktop"),
++            path("/usr/share/wayland-sessions/gamescope-session.desktop"),
+             b"",
+         )
+         .await
+@@ -819,7 +819,7 @@ mod test {
+         notify.notified().await;
+         assert_eq!(
+             root_manager.get().await.temporary_session,
+-            "gamescope-wayland.desktop"
++            "gamescope-session.desktop"
+         );
+         {
+             let mut unit = unit.get_mut().await;
+-- 
+2.54.0
+

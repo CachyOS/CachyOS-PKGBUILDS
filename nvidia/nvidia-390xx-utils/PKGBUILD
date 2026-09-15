@@ -9,7 +9,7 @@
 pkgbase=nvidia-390xx-utils
 pkgname=('nvidia-390xx-utils' 'opencl-nvidia-390xx' 'nvidia-390xx-dkms')
 pkgver=390.157
-pkgrel=24
+pkgrel=26
 arch=('x86_64')
 url="https://www.nvidia.com/"
 license=('custom')
@@ -18,6 +18,7 @@ _pkg="NVIDIA-Linux-x86_64-${pkgver}"
 source=('nvidia-drm-outputclass.conf'
         'nvidia-390xx-utils.sysusers'
         'nvidia-390xx.rules'
+        'nvidia-390xx-utils.conf'
         'systemd-homed-override.conf'
         'systemd-suspend-override.conf'
         "https://us.download.nvidia.com/XFree86/Linux-x86_64/${pkgver}/${_pkg}.run"
@@ -36,11 +37,13 @@ source=('nvidia-drm-outputclass.conf'
         kernel-6.15.patch
         kernel-6.17.patch
         kernel-6.19.patch
+        kernel-7.0.patch
         kernel-4.16+-memory-encryption.patch
         clang.patch)
 b2sums=('bdd68a8bf9550a107528c8a494d58fbc54014ddeef3c440c97e7d89793f6dade0cd0ec8f05f8ee8ccfe41a4163eec07845885a960c6b93635143f2bd7f831d62'
         'c1da4ce5784e43385465913a95053a3e54f800aac6f1b49f33e2a77504d76da5e6db6ec7074fbe7ba5f52dcef9e1ebaa620942c33ff825a56caba5c9c8b0d1be'
-        '3878bb7828089dc84d62484af5a7265e0412c9524b733ec695a3879fd88d2768437239f62b5e45e7ffb702b2764dc06e97efcd534c9b5ee48894a13166bfe513'
+        'ca80bfba630a79f567c0833bda5e29a69a65fda26c9cf8e39cb9173f9c192d4ea18bc9965563ea2bfbd3ff803f4c694719aabce39b025af958f42cf3adc3dd74'
+        '87675c2e3524c5b6409b330ffb7520f05554ff4c07045d26724840055b1042ecc15a5348f6645e5aa4d604ddb65b4e6abff7ced3d06eaad8bc67a40653f6db09'
         'a797a5bca65281ba35ed535f625dd997e649b91064226b59f3288c833f2f358fd3dea32674e0f5968de1eb025e4872e4b8b7883c5dfdb1f7116257ddfae4fe22'
         'b8ada501cc9a88d440d91efaeddb52b4bba7582d2dbc6fdefcf109a8a8a2a030070aa8567569eacaa30b1bb9447c0a90b4907a9bba850bed4a4ad284c6f0f575'
         '44b855cd11f3b2f231f9fb90492ae2e67a67ea3ea83c413e7c90956d38c9730a8bd0321281ae03c6afce633d102f5b499aed25622b9bfd31bdd2c98f0717e95b'
@@ -59,8 +62,10 @@ b2sums=('bdd68a8bf9550a107528c8a494d58fbc54014ddeef3c440c97e7d89793f6dade0cd0ec8
         '68345d8fb2ea00bd7042fe6cf1c8e63c8f9be411a710eb4f40734ca109f278466d9de1f4b3a2676767b7c16d179ce9b382ebe49c181d081f157304d220d69b12'
         'efaed80af94533496ea77293ce48e383d836559316b8a2c9dd36a73c5ea3170f8ee61ec9a4151db13e4a28a167d3b9d7773baad9c082596e8f043de92b4c1932'
         '81bcb76be322badb3e06f34a9002de3df2c5ca260fa839b8a0bb0831ccd2278102612247fa086d7d4ac9003ca8c58800f6e51fb4c76b379c7fd707a5b6f96e5d'
+        '6b07e090110c9d4de654b4cd082ab1fb3b78261630db52c468abdbe402d427b65876e16568aae6cb6504e8b5b6be536e02c35d7c7501bad9ea2c1563f1c43fe6'
         'a8234f542c2324ad698443e3decf7b6eacf3cb420b7aded787f102a8d32b64c2a8d45ea58e37a5e3b6f2f060f0cccd63d3a182065f57c606006d0ff8c7f6bb05'
         'c12c250ab339209dd6abeed85c0f0ce34bbc9ceccaf47765b7e434398601f5c1bdc96da5dc2eb29cbcb187b32ff01ea039db263a1c096d792598c170c5abf7fa')
+
 
 create_links() {
     # create soname links
@@ -132,6 +137,10 @@ prepare() {
     # https://github.com/joanbm/nvidia-470xx-linux-mainline/blob/master/patches/nvidia-470xx-fix-linux-6.19-part1.patch
     # https://github.com/joanbm/nvidia-470xx-linux-mainline/blob/master/patches/nvidia-470xx-fix-linux-6.19-part2.patch
     patch -Np1 -i ../kernel-6.19.patch
+
+    # From AUR, based on patch from Joan Bruguera:
+    # https://github.com/joanbm/nvidia-470xx-linux-mainline/blob/master/patches/nvidia-470xx-fix-linux-7.0.patch
+    patch -Np1 -i ../kernel-7.0.patch
 
     cd kernel
 

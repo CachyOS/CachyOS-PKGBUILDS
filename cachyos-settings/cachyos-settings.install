@@ -1,5 +1,25 @@
 SERVICES=("ananicy-cpp" "systemd-resolved" )
 
+migrate_keyboard_layout() {
+    local x11_conf="/etc/X11/xorg.conf.d/00-keyboard.conf"
+    local status layout model variant options
+
+    [[ -r "$x11_conf" ]] || return 0
+    status=$(localectl status 2>/dev/null) || return 0
+    if ! grep -q '^[[:space:]]*X11 Layout:[[:space:]]*(unset)' <<< "$status"; then
+        return 0
+    fi
+
+    layout=$(awk -F'"' '/^[[:space:]]*Option[[:space:]]+"XkbLayout"/ { gsub(/^[[:space:]]+|[[:space:]]+$/, "", $4); print $4; exit }' "$x11_conf")
+    model=$(awk -F'"' '/^[[:space:]]*Option[[:space:]]+"XkbModel"/ { gsub(/^[[:space:]]+|[[:space:]]+$/, "", $4); print $4; exit }' "$x11_conf")
+    variant=$(awk -F'"' '/^[[:space:]]*Option[[:space:]]+"XkbVariant"/ { gsub(/^[[:space:]]+|[[:space:]]+$/, "", $4); print $4; exit }' "$x11_conf")
+    options=$(awk -F'"' '/^[[:space:]]*Option[[:space:]]+"XkbOptions"/ { gsub(/^[[:space:]]+|[[:space:]]+$/, "", $4); print $4; exit }' "$x11_conf")
+
+    [[ -n "$layout" ]] || return 0
+
+    localectl set-x11-keymap "$layout" "$model" "$variant" "$options" || return 0
+}
+
 post_install() {
     echo "Enabling services..."
     for service in "${SERVICES[@]}"; do
@@ -18,4 +38,7 @@ post_upgrade() {
             systemctl restart "$service"
         fi
     done
+    if (( $(vercmp "$2" 1:1.3.5-2) < 0 )) && (( $(vercmp "$2" 1:1.3.5-1) >= 0 )); then
+        migrate_keyboard_layout
+    fi
 }

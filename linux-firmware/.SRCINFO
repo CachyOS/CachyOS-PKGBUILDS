@@ -1,6 +1,6 @@
 pkgbase = linux-firmware
 	pkgdesc = Firmware files for Linux
-	pkgver = 20260519
+	pkgver = 20260910
 	pkgrel = 1
 	epoch = 1
 	url = https://gitlab.com/kernel-firmware/linux-firmware
@@ -12,13 +12,14 @@ pkgbase = linux-firmware
 	makedepends = rdfind
 	options = !debug
 	options = !strip
-	source = git+https://gitlab.com/kernel-firmware/linux-firmware.git?signed#tag=20260519
+	source = git+https://gitlab.com/kernel-firmware/linux-firmware.git?signed#tag=20260910
 	validpgpkeys = 4CDE8575E547BF835FE15807A31B6BD72486CFD6
-	b2sums = 8d2e6a84208d927c249a257069d401164713bfdd849f528d62b2daa952f1c98a44717e81f83a7439dc3275dc8e1371dc206a6d9cc7f359f06bb600bf5b11b1ad
+	b2sums = edb6c64cb4c839dba1330e0929d8b82ea67a55f8016c0c914deb5fbc2db201cd898d18753a0867aabbf2f6f066cec2d4a78f7cf0940c692d1e75674c79e9a6ba
 
 pkgname = linux-firmware
 	pkgdesc = Firmware files for Linux - Default set
 	license = CC0-1.0
+	depends = linux-firmware-amd
 	depends = linux-firmware-amdgpu
 	depends = linux-firmware-atheros
 	depends = linux-firmware-broadcom
@@ -29,6 +30,7 @@ pkgname = linux-firmware
 	depends = linux-firmware-other
 	depends = linux-firmware-radeon
 	depends = linux-firmware-realtek
+	depends = linux-firmware-ti
 	optdepends = linux-firmware-liquidio: Firmware for Cavium LiquidIO server adapters
 	optdepends = linux-firmware-marvell: Firmware for Marvell devices
 	optdepends = linux-firmware-mellanox: Firmware for Mellanox Spectrum switches
@@ -45,6 +47,12 @@ pkgname = linux-firmware-other
 pkgname = amd-ucode
 	pkgdesc = Microcode update image for AMD CPUs
 	license = LicenseRef-amd-ucode
+
+pkgname = linux-firmware-amd
+	pkgdesc = Firmware files for Linux - Firmware for non-GPU AMD devices
+	license = LicenseRef-WHENCE
+	license = LicenseRef-amd
+	depends = linux-firmware-whence
 
 pkgname = linux-firmware-amdgpu
 	pkgdesc = Firmware files for Linux - Firmware for AMD Radeon GPUs
@@ -141,4 +149,11 @@ pkgname = linux-firmware-realtek
 	pkgdesc = Firmware files for Linux - Firmware for Realtek devices
 	license = LicenseRef-WHENCE
 	license = LicenseRef-realtek
+	depends = linux-firmware-whence
+
+pkgname = linux-firmware-ti
+	pkgdesc = Firmware files for Linux - Firmware for Texas Instruments devices
+	license = LicenseRef-WHENCE
+	license = GPL-2.0-or-later
+	license = LicenseRef-ti
 	depends = linux-firmware-whence

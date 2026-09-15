@@ -4,7 +4,7 @@
 # Contributor: Iacopo Isimbaldi <isiachi@rhye.it>
 
 pkgname=zfs-utils
-pkgver=2.4.2
+pkgver=2.4.4
 pkgrel=2
 pkgdesc="Userspace utilities for the Zettabyte File System."
 arch=("i686" "x86_64" "aarch64")
@@ -12,13 +12,13 @@ url="https://zfsonlinux.org/"
 license=('CDDL')
 makedepends=('git')
 optdepends=('python: for arcstat/arc_summary/dbufstat')
-_commit=6330a45b06d20125de679aae5f63ba14082671ef
+_commit=71a9f9578616a90c3c14bb59629fb4d31bfd68d1
 source=("git+https://github.com/cachyos/zfs.git#commit=$_commit"
         "zfs-node-permission.conf"
         "zfs.initcpio.install"
         "zfs.initcpio.hook"
         "zfs.initcpio.zfsencryptssh.install")
-sha256sums=('13ba129e0c9f45b81c8915292c6cc534e336dfb70564e56c094d350e9208c9f5'
+sha256sums=('6774962dfcf1e4f815e278e9ef70ffb616fc0b2ac476520181a6fffe188cb4f5'
             '7ad45fd291aa582639725f14d88d7da5bd3d427012b25bddbe917ca6d1a07c1a'
             '2f09c742287f4738c7c09a9669f8055cd63d3b9474cd1f6d9447152d11a1b913'
             '15b5acea44225b4364ec6472a08d3d48666d241fe84c142e1171cd3b78a5584f'
@@ -74,7 +74,6 @@ package() {
 
     # Remove uneeded files
     rm -r "${pkgdir}"/etc/init.d
-    rm -r "${pkgdir}"/etc/sudoers.d #???
     # We're experimenting with dracut in [extra], so start installing this.
     #rm -r "${pkgdir}"/usr/lib/dracut
     rm -r "${pkgdir}"/usr/lib/modules-load.d

@@ -1,15 +1,15 @@
 # Maintainer: Robin Candau <antiz@archlinux.org>
 
 pkgname=cachy-update
-pkgver=3.19.7
+pkgver=4.4.0
 pkgrel=1
-pkgdesc="An update notifier & applier that assists you with important pre / post update tasks"
+pkgdesc="An interactive update notifier & applier that assists you with important pre / post update tasks"
 url="https://github.com/CachyOS/cachy-update"
-arch=('any')
+arch=('x86_64' 'aarch64')
 license=('GPL-3.0-or-later')
-depends=('bash' 'systemd' 'pacman' 'pacman-contrib' 'archlinux-contrib' 'curl' 'fakeroot'
-         'htmlq' 'diffutils' 'hicolor-icon-theme' 'python' 'python-pyqt6' 'qt6-svg' 'glib2' 'xdg-utils')
-makedepends=('scdoc')
+depends=('bash' 'systemd' 'pacman' 'pacman-contrib' 'archlinux-contrib' 'curl' 'fakeroot' 'util-linux'
+         'htmlq' 'diffutils' 'hicolor-icon-theme' 'glibc' 'libgcc' 'glib2' 'xdg-utils')
+makedepends=('cargo' 'scdoc' 'git')
 checkdepends=('bats')
 conflicts=('arch-update')
 optdepends=('paru: AUR Packages support'
@@ -23,27 +23,28 @@ optdepends=('paru: AUR Packages support'
             'sudo: Privilege elevation'
             'sudo-rs: Privilege elevation'
             'opendoas: Privilege elavation')
-source=("git+https://github.com/CachyOS/cachy-update#commit=7f88f5f4d4a3aa6ee829481bd2016b34b0acb238")
-sha256sums=('1c23143177e617bc3e348863f724dec41d96db201673f74ff3043df2c4c5d9db')
+source=("git+https://github.com/CachyOS/cachy-update#commit=01c4f422407d88ea30d425eb31a9acc0021613cf")
+sha256sums=('1491e4f85244091bcec10fdfeb4f5211e9b9f6445a78b0e744702cc700d4b1e4')
 
 prepare() {
-	cd "${pkgname}"
-	make clean
+    cd "${pkgname}"
+    make clean
 }
 
 build() {
-	cd "${pkgname}"
-	make
+    cd "${pkgname}"
+    make
 }
 
 check() {
-	cd "${pkgname}"
-	make test
+    cd "${pkgname}"
+    make test
 }
 
 package() {
-	cd "${pkgname}"
-	make PREFIX=/usr DESTDIR="${pkgdir}" install
+    cd "${pkgname}"
+    make PREFIX=/usr DESTDIR="${pkgdir}" install
 
-	ln -s arch-update "${pkgdir}/usr/bin/${pkgname}"
+    install -Dm 644 res/desktop/arch-update-tray.desktop "${pkgdir}/etc/xdg/autostart/arch-update-tray.desktop"
+    ln -s arch-update "${pkgdir}/usr/bin/${pkgname}"
 }

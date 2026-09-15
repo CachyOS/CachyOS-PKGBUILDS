@@ -9,8 +9,8 @@
 # Contributor: TIanyi Cui <tianyicui@gmail.com>
 
 pkgname=nodejs
-pkgver=26.3.0
-pkgrel=2
+pkgver=26.8.2
+pkgrel=1
 pkgdesc='Evented I/O for V8 javascript ("Current" release)'
 arch=('x86_64')
 url='https://nodejs.org/'
@@ -42,7 +42,7 @@ makedepends=(
 optdepends=('npm: nodejs package manager')
 source=("git+https://github.com/nodejs/node.git#tag=v$pkgver?signed")
 
-sha512sums=('dda0560acfffd42aedf086bf069eee5918328164d656386336f23e00d525f4bad37f932f85d80edc2c712e1d0d2e8de9778fe83e1d93e52fbc1286f3d80d6c68')
+sha512sums=('6baad670479ab67e87f826240e8b9cf7b67c2d0f5669ab80bf7deb05975f548b531ded404181c57981c5945a41c0cbfab490f068291fdd0fbc81fcf2f394a3f2')
 validpgpkeys=(
   '8FCCA13FEF1D0C2E91008E09770F7A9A5AE15600' # Michaël Zasso (Targos) <targos@protonmail.com>
   '890C08DB8579162FEE0DF9DB8BEAB4DFCF555EF4' # RafaelGSS <rafael.nunu@hotmail.com>
@@ -66,7 +66,7 @@ _configure_args=(
   --shared-ada
   --shared-brotli
   --shared-cares
-  --shared-libffi
+  --shared-ffi
   --shared-libuv
   --shared-nghttp2
   --shared-nghttp3
@@ -89,9 +89,18 @@ _set_flags() {
   export CXXFLAGS+=" ${_common_flags[*]}"
 }
 
+prepare() {
+  cd node
+
+  # Fix the CCM empty-message test with newer OpenSSL behavior:
+  # https://github.com/nodejs/node/commit/7e2254fc8ba5ac88fe6f35715e7bb6e78597846b
+  git cherry-pick -n 7e2254fc8ba5ac88fe6f35715e7bb6e78597846b
+}
+
 build() {
   _set_flags
   cd node
+
 
   # PGO: instrumented build
   ./configure "${_configure_args[@]}" --enable-pgo-generate
@@ -163,4 +172,3 @@ package() {
 }
 
 # vim:set ts=2 sw=2 et:
-
