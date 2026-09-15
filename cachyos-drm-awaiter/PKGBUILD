@@ -1,7 +1,7 @@
 # Maintainer: Vasiliy Stelmachenok <ventureo@cachyos.org>
 # Contributor: ahzaidi <ahmedzd111@gmail.com>
 pkgname=cachyos-drm-awaiter
-pkgver=2
+pkgver=3
 pkgrel=1
 pkgdesc="Configuration for proper systemd chain-loading of DRM modules"
 arch=('any')
@@ -11,14 +11,20 @@ depends=('systemd')
 makedepends=('coreutils')
 source=(
     drm-module-awaiter-generator
+    drm-failure-handler
+    drm-failure-handler.service
     30-drm-awaiter.rules
 )
 sha256sums=(
-    'ba577911f8c4067c1505f7b64ef530cff1bb7e2a42f6e791563d15ef25749106'
+    'cd86f855154289be46b8e57fa58a85c03ef00a956b368d3154314b19e3b4506a'
+    '6b801848e6559cd8aed4c57741678055eebf72baf705f6511509fab6d00852f3'
+    'ca353c9b49a831651c528fa6ca78196376660906ec5a7d472bf9c18043faa940'
     'fefbe1ce8012f0f0b9063d4cfdb8b31a7292f931f5069465b5646e5c5fa5f083'
 )
 
 package() {
     install -Dm755 drm-module-awaiter-generator "${pkgdir}/usr/lib/systemd/system-generators/drm-module-awaiter-generator"
+    install -Dm755 drm-failure-handler "${pkgdir}/usr/lib/systemd/scripts/drm-failure-handler"
+    install -Dm644 drm-failure-handler.service "${pkgdir}/usr/lib/systemd/system/drm-failure-handler.service"
     install -Dm644 30-drm-awaiter.rules "${pkgdir}/usr/lib/udev/rules.d/30-drm-awaiter.rules"
 }
