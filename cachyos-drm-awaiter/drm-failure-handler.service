@@ -1,0 +1,11 @@
+[Unit]
+Description=Dump logs on GPU driver failure
+DefaultDependencies=no
+Before=emergency.target
+
+[Service]
+ExecStart=/usr/lib/systemd/scripts/drm-failure-handler
+Type=oneshot
+RemainAfterExit=true
+StandardOutput=tty
+StandardError=tty
