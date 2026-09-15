@@ -4,74 +4,47 @@
 
 pkgname=lsfg-vk
 epoch=1
-pkgver=1.0.0
+pkgver=2.0.0
 pkgrel=1
 pkgdesc="Lossless Scaling Frame Generation on Linux"
 arch=('x86_64')
-url="https://github.com/PancakeTAS/lsfg-vk"
-license=('MIT')
+url="https://lsfg-vk.dev"
+license=('CC-BY-NC-ND-4.0')
 depends=(
+  glibc
+  libgcc
+  libstdc++
+  hicolor-icon-theme
+  qt6-base
+  qt6-declarative
   vulkan-icd-loader
-  gtk4
-  libadwaita
 )
 makedepends=(
   clang
   llvm
-  vulkan-headers
   cmake
-  ninja
   git
-  rust
-  cargo
+  ninja
+  vulkan-headers
 )
-source=("git+https://github.com/PancakeTAS/lsfg-vk#tag=v$pkgver")
-sha256sums=('92fb0df0afc68a0c2ed77dc23baef13849e4cd1d7ff5025ad538f19fd58e03cc')
+source=("git+https://git.lsfg-vk.dev/lsfg-vk.git#tag=$pkgver")
+sha256sums=('150b29e94f257797cab7e79d1649477da09f0830af361f944395490dcbfbf11e')
 install=lsfg-vk.install
 
-pkgver() {
-  cd "$srcdir/${pkgname%-git}"
-  printf "%s" "$(git describe --long --tags | sed 's/^v//;s/\([^-]*-\)g/r\1/;s/-/./g')"
-}
-
-prepare() {
-  cd "$srcdir/$pkgname"
-  cd ui
-  export RUSTUP_TOOLCHAIN=stable
-  cargo fetch --locked --target "$(rustc -vV | sed -n 's/host: //p')"
-
-  # --filter=tree:0 minimizes network traffic
-  git submodule update --init --filter=tree:0 --recursive
-}
-
 build() {
-  cd "$srcdir/$pkgname"
-
-  # build library
-  cmake -B build -G Ninja \
+  cmake -S "$pkgname" -B build -G Ninja \
     -DCMAKE_BUILD_TYPE=Release \
-    -DCMAKE_C_COMPILER=clang \
+    -DCMAKE_INSTALL_PREFIX=/usr \
+    -DCMAKE_INSTALL_LIBDIR=lib \
     -DCMAKE_CXX_COMPILER=clang++ \
-    -DCMAKE_INTERPROCEDURAL_OPTIMIZATION=On
-  ninja -C build
-
-  # build UI
-  cd ui
-  cargo build --release --locked
+    -DCMAKE_INTERPROCEDURAL_OPTIMIZATION=ON \
+    -DLSFGVK_BUILD_UI=ON \
+    -DLSFGVK_BUILD_CLI=ON \
+    -DLSFGVK_MANAGED=ON
+  cmake --build build
 }
 
 package() {
-  cd "$srcdir/$pkgname"
-
-  # base library and config
-  install -Dm644 VkLayer_LS_frame_generation.json "$pkgdir/etc/vulkan/implicit_layer.d/VkLayer_LS_frame_generation.json"
-  install -Dm644 build/liblsfg-vk.so "$pkgdir/usr/lib/liblsfg-vk.so"
-
-  # UI binary, desktop file and icon
-  install -Dm755 ui/target/release/lsfg-vk-ui "$pkgdir/usr/bin/lsfg-vk-ui"
-  install -Dm644 ui/rsc/gay.pancake.lsfg-vk-ui.desktop "$pkgdir/usr/share/applications/lsfg-vk-ui.desktop"
-  install -Dm644 ui/rsc/icon.png "$pkgdir/usr/share/icons/hicolor/256x256/apps/gay.pancake.lsfg-vk-ui.png"
-
-  # license
-  install -Dm644 LICENSE.md "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+  DESTDIR="$pkgdir" cmake --install build
+  install -Dm644 "$pkgname/LICENSE.txt" "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
 }
