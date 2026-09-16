@@ -64,6 +64,7 @@ function is_module_loadable() {
 function generate_load_target() {
     local device class vendor sysfs modalias nvidia_module kernel
     local -a modules=()
+    local -a modaliases=()
 
     while read -r class; do
         sysfs="${class%%/class}"
@@ -95,7 +96,7 @@ function generate_load_target() {
                 fi
                 ;;
             *)
-                module="${modules[-1]}"
+                module="${modaliases[-1]}"
                 if is_module_loadable "$module"; then
                     modules+=("${module}")
                 fi
