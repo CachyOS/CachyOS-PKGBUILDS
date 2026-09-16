@@ -62,7 +62,7 @@ function is_module_loadable() {
 }
 
 function generate_load_target() {
-    local device class vendor sysfs modalias nvidia_module
+    local device class vendor sysfs modalias nvidia_module kernel
     local -a modules=()
 
     while read -r class; do
@@ -112,6 +112,13 @@ function generate_load_target() {
     for module in "${modules[@]}"; do
         devices+=("sys-module-${module}.device")
     done
+
+    mkdir -p /run/udev/rules.d
+    kernel="$(echo "${modules[@]}" | tr ' ' '|')"
+cat <<EOF >/run/udev/rules.d/30-drm-awaiter.rules
+# Creates device units for DRM modules
+ACTION=="add", SUBSYSTEM=="module", KERNEL=="$kernel", TAG+="systemd"
+EOF
 
     cat <<EOF >"$generator_dir"/drm-module-load.target
 [Unit]
