@@ -54,19 +54,11 @@ function is_module_forced() {
     return 1
 }
 
-function is_module_blacklisted() {
-    local module="$1"
-    modprobe --showconfig | grep -q "^blacklist $1\$" && return 0
-    return 1
-}
-
 function is_module_loadable() {
     local module="$1"
-    is_module_blacklisted "$module" && return 1
-    grep -q -f <(modinfo "$module" \
-        | grep -Po '^alias:\s+\K(.*)$' \
-        | sed -e 's/*/.*/g') "$modalias" || return 1
-    return 0
+    modprobe --showconfig | grep -q "^blacklist $1\$" && return 1
+    [[ "${modaliases[*]}" =~ $module ]] && return 0
+    return 1
 }
 
 function generate_load_target() {
@@ -77,11 +69,12 @@ function generate_load_target() {
         sysfs="${class%%/class}"
         device="$(cat "${sysfs}/device" | sed 's/0x//')"
         vendor="$(cat "${sysfs}/vendor")"
-        modalias="${sysfs}/modalias"
+        modalias="$(cat "${sysfs}/modalias")"
+        readarray -t modaliases <<< "$(modprobe -R "$modalias")"
 
         case "$vendor" in
             0x10de)
-                if modinfo "nvidia" &>/dev/null && ! is_module_blacklisted "nvidia"; then
+                if is_module_loadable "nvidia"; then
                     nvidia_module="nvidia_drm"
                 elif is_module_loadable "nouveau"; then
                     nvidia_module="nouveau"
