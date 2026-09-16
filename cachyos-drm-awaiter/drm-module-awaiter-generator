@@ -62,7 +62,7 @@ function is_module_loadable() {
 }
 
 function generate_load_target() {
-    local device class vendor sysfs modalias nvidia_module kernel
+    local device class vendor sysfs modalias nvidia_module kernel modprobe
     local -a modules=()
     local -a modaliases=()
 
@@ -71,7 +71,13 @@ function generate_load_target() {
         device="$(cat "${sysfs}/device" | sed 's/0x//')"
         vendor="$(cat "${sysfs}/vendor")"
         modalias="$(cat "${sysfs}/modalias")"
-        readarray -t modaliases <<< "$(modprobe -R "$modalias")"
+        modprobe="$(modprobe -R "$modalias")"
+
+        if [ -z "$modprobe" ]; then
+            continue
+        fi
+
+        readarray -t modaliases <<< "$modprobe"
 
         case "$vendor" in
             0x10de)
