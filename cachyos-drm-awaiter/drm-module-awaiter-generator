@@ -94,6 +94,12 @@ function generate_load_target() {
                     modules+=(xe)
                 fi
                 ;;
+            *)
+                module="${modules[-1]}"
+                if is_module_loadable "$module"; then
+                    modules+=("${module}")
+                fi
+                ;;
         esac
     done < <(grep -l "0x030[0-9]00" /sys/bus/pci/devices/*/class)
 
