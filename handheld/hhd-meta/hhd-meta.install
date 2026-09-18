@@ -1,0 +1,12 @@
+post_install() {
+    systemctl enable hhd.service
+    update-initramfs
+}
+
+pre_remove() {
+    systemctl disable hhd.service
+}
+
+post_remove() {
+    update-initramfs 
+}
