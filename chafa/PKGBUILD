@@ -1,0 +1,43 @@
+# Maintainer: Felix Yan <felixonmars@archlinux.org>
+# Contributor: Vladislav Nepogodin <nepogodin.vlad@gmail.com>
+
+pkgname=chafa
+pkgver=1.18.2
+pkgrel=2.1
+pkgdesc="Image-to-text converter supporting a wide range of symbols and palettes, transparency, animations, etc."
+arch=("x86_64")
+url="https://hpjansson.org/chafa/"
+license=("LGPL-3.0-or-later")
+depends=('libavif' 'libheif' 'libjxl' 'librsvg' 'libwebp' 'libxslt')
+makedepends=('git' 'gtk-doc')
+provides=('libchafa.so')
+source=(
+  "git+https://github.com/hpjansson/chafa.git#tag=$pkgver?signed"
+  "chafa-1.18.2-smolscale-avx2-alignment.patch"
+)
+sha512sums=('93e1a44e2e5ec655f65e9f2b85be44e407429621a6b14b37f6cdf1db5c686d78c3b1c12d7b45791e12127d174da47fd69d151bb539f72f4449a8671c75f0a3ad'
+            '4f09c1b2a9de80777f731c2fee1250cca6a3109d479f3074c59fa597135ffd91ac241db42ca3ce5d71986fe852a0937a76cf7b7ceed5bd43baa37fbbde633050')
+validpgpkeys=('C01EDE5BB0D91E26D003662EC76BB9FEEAD12EA7')  # Hans Petter Jansson
+
+prepare() {
+  cd "$pkgname"
+  # Fix Zen 4/5 AVX2 smolscale unaligned streaming load crash (hpjansson/chafa#347, hpjansson/chafa#350)
+  patch -Np1 -i "$srcdir/chafa-1.18.2-smolscale-avx2-alignment.patch"
+}
+
+build() {
+  cd "$pkgname"
+  ./autogen.sh --prefix=/usr --enable-man --enable-gtk-doc
+  make
+}
+
+check() {
+  cd "$pkgname"
+  make check
+}
+
+package() {
+  cd "$pkgname"
+  make DESTDIR="$pkgdir" install
+  make -C tools/completions PREFIX="$pkgdir"/usr/share install-zsh-completion install-fish-completion install-bash-completion
+}
