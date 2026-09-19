@@ -1,0 +1,7 @@
+post_install() {
+  systemctl enable --now bpftune.service
+}
+
+post_upgrade() {
+  post_install
+}
