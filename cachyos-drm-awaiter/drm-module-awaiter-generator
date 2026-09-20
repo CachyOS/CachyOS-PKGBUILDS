@@ -141,15 +141,16 @@ JobTimeoutSec=30s
 OnFailure=emergency.target drm-failure-handler.service
 OnFailureJobMode=replace-irreversibly
 
-Before=getty@tty1.service kmsconvt@tty1.service display-manager.service
-After=${devices[@]} plymouth-quit.service
-Wants=${devices[@]}
+Before=getty@tty1.service kmsconvt@tty1.service display-manager.service plymouth-start.service
+After=${devices[@]}
+Wants=${devices[@]} plymouth-start.service
 EOF
 
-    mkdir -p "$generator_dir"/getty@tty1.service.wants "$generator_dir"/display-manager.service.wants "$generator_dir"/kmsconvt@tty1.service.wants
+    mkdir -p "$generator_dir"/getty@tty1.service.wants "$generator_dir"/display-manager.service.wants "$generator_dir"/kmsconvt@tty1.service.wants "$generator_dir"/plymouth-start.service.wants
     ln -s ../drm-module-load.target "$generator_dir"/kmsconvt@tty1.service.wants/drm-module-load.target
     ln -s ../drm-module-load.target "$generator_dir"/getty@tty1.service.wants/drm-module-load.target
     ln -s ../drm-module-load.target "$generator_dir"/display-manager.service.wants/drm-module-load.target
+    ln -s ../drm-module-load.target "$generator_dir"/plymouth-start.service.wants/drm-module-load.target
 }
 
 generate_load_target
