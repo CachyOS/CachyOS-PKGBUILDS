@@ -2,14 +2,14 @@
 
 pkgname=cachyos-plymouth-theme
 pkgver=1
-pkgrel=1
+pkgrel=2
 groups=("cachyos")
 arch=("any")
 url="https://github.com/CachyOS/${pkgname}"
 license=("GPL")
 pkgdesc="CachyOS plymouth theme"
 depends=("plymouth")
-makedepends=('git')
+makedepends=('git' 'plymouth')
 optdepends=("plymouth-kcm: for KDE settings integration")
 source=("${pkgname}::git+${url}.git")
 sha256sums=("SKIP")
@@ -18,4 +18,9 @@ package() {
   install -d "$pkgdir/usr/share/plymouth/themes"
   cp -rf "${srcdir}/${pkgname}/src" "${pkgdir}/usr/share/plymouth/themes/cachyos"
   install -Dm644 "${srcdir}/${pkgname}/LICENSE" "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE"
+
+  # keymap-render.png offsets are tied to the installed plymouth build, so take it
+  # from spinner instead of the stale copy in the git source
+  install -Dm644 /usr/share/plymouth/themes/spinner/keymap-render.png \
+    "${pkgdir}/usr/share/plymouth/themes/cachyos/keymap-render.png"
 }
