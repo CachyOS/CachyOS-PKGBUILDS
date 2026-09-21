@@ -4,8 +4,8 @@
 
 pkgname=devtools
 epoch=1
-pkgver=1.4.0
-pkgrel=4
+pkgver=1.5.1
+pkgrel=2
 pkgdesc='Tools for Arch Linux package maintainers'
 arch=('any')
 license=('GPL-3.0-or-later')
@@ -48,25 +48,30 @@ optdepends=(
   'bat: pretty printing for pkgctl search'
   'nvchecker: pkgctl version subcommand'
 )
-replaces=(devtools-git-poc)
 source=(https://gitlab.archlinux.org/archlinux/devtools/-/releases/v${pkgver}/downloads/devtools-${pkgver}.tar.gz{,.sig}
-        0001-makechrootpkg-add-paccache-flag.patch)
+        https://github.com/CachyOS/devtools/commit/3892c591abc18a0cae03c600ff1ce410d12cf070.patch
+        https://github.com/CachyOS/devtools/commit/b0ed72249d22bfa927de2ce4c8ca639add3657cb.patch)
 validpgpkeys=(
   'E240B57E2C4630BA768E2F26FC1B547C8D8172C8' # Levente Polyak <anthraxx@archlinux.org>
   'F00B96D15228013FFC9C9D0393B11DAA4C197E3D' # Christian Heusel (gromit packager key) <gromit@archlinux.org>
 )
-sha256sums=('8ea6c752ec6dc2823a271b94a73ab5dd22acb16218d644783d515f7d8b03e19a'
+sha256sums=('4968ee684cae62216ffafe11ac684559a7c03a7f254ec3a1b1152ced2bf8e4fa'
             'SKIP'
-            '67c5d64910de52550f3fc3edd4c1b61effefed30b21c6e738be49274f2c782b3')
-b2sums=('9850382d2f6329e7fb958ef01178b7cd8bfcc148aad00ed07578382744b64b049e1c907febea5fb27381a270a742e4149e9995ef724ce222ee1afe9a939fb5ca'
+            'cfbdba3af8d286a4686c077a357261365e61270620662927e5016b124b75d5c9'
+            '8fd967c97097cdd7c8fea135f56209bc492d9c27839c34d4759b22c6e97b3717')
+b2sums=('42eee98b5363eb83519cf3953b382ba38af38257fc440f700540713767a53dbb3f7c3c23ef5146eaf63586ba6a0fd114a9dcb354e34d8670c341a138c511602f'
         'SKIP'
-        '890b835f27995fd3eff512d035140b01efa5d14475dd2dfee2f9c0046e42ecf462a30a5fd2d0c79d4c6aa50144a186f018037d0ebd049deca88c8abe40ee0d8d')
+        'ed915706f05909b44a681f823787fcc9cf6b8c2727d8b386c94046bfa9ebced246f7a6d017ed8244d21ef4065e5fd8bb53ec893cf3346ea32576d31c5e6ae82d'
+        '38fffbec92f432b835731e78a9d8fc70dde81b0fd637dd3e38f5471fc60ebe8979cc5db7248a93cbbd800747b1c7b8dca28f134151b44424dea68e26f4df7cde')
 
 prepare() {
   cd ${pkgname}-${pkgver}
 
   # makechrootpkg: add paccache flag
-  patch -Np1 -i ../0001-makechrootpkg-add-paccache-flag.patch
+  patch -Np1 -i ../3892c591abc18a0cae03c600ff1ce410d12cf070.patch
+
+  # makechrootpkg: add -V to build with private net
+  patch -Np1 -i ../b0ed72249d22bfa927de2ce4c8ca639add3657cb.patch
 }
 
 build() {
