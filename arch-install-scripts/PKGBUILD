@@ -1,0 +1,39 @@
+# Maintainer: David Runge <dvzrv@archlinux.org>
+# Maintainer: Morten Linderud <foxboron@archlinux.org>
+# Contributor: Dave Reisner <dreisner@archlinux.org>
+
+pkgname=arch-install-scripts
+pkgver=31
+pkgrel=3
+pkgdesc="Scripts to aid in installing Arch Linux"
+arch=('any')
+url="https://gitlab.archlinux.org/archlinux/arch-install-scripts"
+license=('GPL-2.0-only')
+depends=('awk' 'bash' 'coreutils' 'grep' 'pacman' 'util-linux')
+makedepends=('asciidoc' 'git')
+source=("git+$url.git#tag=v${pkgver}?signed"
+        https://github.com/CachyOS/arch-install-scripts/commit/6f52dcbeb02cb096d5b14589df42f69d06c9effc.patch)
+validpgpkeys=(
+  'C100346676634E80C940FB9E9C02FF419FECBE16'  # Morten Linderud
+)
+sha256sums=('77b4f4eb96ecb6031e3ed0ff4c68de1fbeb28deae9615cfe91e2632c1fe629e2'
+            'd6149b1af01b725b9943200d879e64135149b397d034df92d024ca8ac3c05fc7')
+
+prepare() {
+  cd "$pkgname"
+
+  # pacstrap: give the new root a private /run
+  patch -Np1 -i ../6f52dcbeb02cb096d5b14589df42f69d06c9effc.patch
+}
+
+build() {
+  make -C "$pkgname"
+}
+
+check() {
+  make -C "$pkgname" check
+}
+
+package() {
+  make -C "$pkgname" PREFIX=/usr DESTDIR="$pkgdir" install
+}
