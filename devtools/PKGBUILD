@@ -50,7 +50,8 @@ optdepends=(
 )
 source=(https://gitlab.archlinux.org/archlinux/devtools/-/releases/v${pkgver}/downloads/devtools-${pkgver}.tar.gz{,.sig}
         https://github.com/CachyOS/devtools/commit/3892c591abc18a0cae03c600ff1ce410d12cf070.patch
-        https://github.com/CachyOS/devtools/commit/b0ed72249d22bfa927de2ce4c8ca639add3657cb.patch)
+        https://github.com/CachyOS/devtools/commit/b0ed72249d22bfa927de2ce4c8ca639add3657cb.patch
+        https://github.com/CachyOS/devtools/commit/853f8fc3abbfa62e2b4c6806bb6b4bbc9d8f705e.patch)
 validpgpkeys=(
   'E240B57E2C4630BA768E2F26FC1B547C8D8172C8' # Levente Polyak <anthraxx@archlinux.org>
   'F00B96D15228013FFC9C9D0393B11DAA4C197E3D' # Christian Heusel (gromit packager key) <gromit@archlinux.org>
@@ -58,11 +59,13 @@ validpgpkeys=(
 sha256sums=('4968ee684cae62216ffafe11ac684559a7c03a7f254ec3a1b1152ced2bf8e4fa'
             'SKIP'
             'cfbdba3af8d286a4686c077a357261365e61270620662927e5016b124b75d5c9'
-            '8fd967c97097cdd7c8fea135f56209bc492d9c27839c34d4759b22c6e97b3717')
+            '8fd967c97097cdd7c8fea135f56209bc492d9c27839c34d4759b22c6e97b3717'
+            '1fd5e10d55546fd50c130d08a7dadec2d420372c4a49773c83cb827b069df9ba')
 b2sums=('42eee98b5363eb83519cf3953b382ba38af38257fc440f700540713767a53dbb3f7c3c23ef5146eaf63586ba6a0fd114a9dcb354e34d8670c341a138c511602f'
         'SKIP'
         'ed915706f05909b44a681f823787fcc9cf6b8c2727d8b386c94046bfa9ebced246f7a6d017ed8244d21ef4065e5fd8bb53ec893cf3346ea32576d31c5e6ae82d'
-        '38fffbec92f432b835731e78a9d8fc70dde81b0fd637dd3e38f5471fc60ebe8979cc5db7248a93cbbd800747b1c7b8dca28f134151b44424dea68e26f4df7cde')
+        '38fffbec92f432b835731e78a9d8fc70dde81b0fd637dd3e38f5471fc60ebe8979cc5db7248a93cbbd800747b1c7b8dca28f134151b44424dea68e26f4df7cde'
+        'dd5a309aacade13fbfa014ca915b0ccbd93551504c9d87a8e8f3cdc8dac37fe264a2e8fe89015560a183fb986e6c24ea7e763955e4ae12b493faa0b0767883d1')
 
 prepare() {
   cd ${pkgname}-${pkgver}
@@ -72,6 +75,9 @@ prepare() {
 
   # makechrootpkg: add -V to build with private net
   patch -Np1 -i ../b0ed72249d22bfa927de2ce4c8ca639add3657cb.patch
+
+  # makechrootpkg: suppress networkd verbose output
+  patch -Np1 -i ../853f8fc3abbfa62e2b4c6806bb6b4bbc9d8f705e.patch
 }
 
 build() {
