@@ -1,0 +1,79 @@
+From e6bad42a623e21e6e188f70b7bf8d8323749f335 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Michel=20D=C3=A4nzer?= <mdaenzer@redhat.com>
+Date: Sat, 6 Jun 2026 15:48:46 +0200
+Subject: [PATCH 1/2] kms/crtc: Clamp max dispatch duration minus
+ DEADLINE_EVASION_CONSTANT_US
+
+Otherwise the largest clamped value results in
+meta_kms_crtc_determine_deadline always considering the deadline missed
+and skipping one refresh cycle.
+
+Part-of: <https://gitlab.gnome.org/GNOME/mutter/-/merge_requests/5116>
+---
+ src/backends/native/meta-kms-crtc.c | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/src/backends/native/meta-kms-crtc.c b/src/backends/native/meta-kms-crtc.c
+index 8d9692ce4e9..70cefbed6a6 100644
+--- a/src/backends/native/meta-kms-crtc.c
++++ b/src/backends/native/meta-kms-crtc.c
+@@ -1073,7 +1073,8 @@ meta_kms_crtc_update_shortterm_max_dispatch_duration (MetaKmsCrtc *crtc,
+     (int64_t) (0.5 + G_USEC_PER_SEC /
+                meta_calculate_drm_mode_refresh_rate (&crtc->current_state.drm_mode));
+ 
+-  crtc->shortterm_max_dispatch_duration_us = MIN (duration_us, refresh_interval_us);
++  crtc->shortterm_max_dispatch_duration_us =
++    MIN (duration_us, refresh_interval_us - DEADLINE_EVASION_CONSTANT_US);
+ }
+ 
+ int64_t
+-- 
+GitLab
+
+
+From b3179d4ae635e0737595ff011d19cbce28a609d9 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Michel=20D=C3=A4nzer?= <mdaenzer@redhat.com>
+Date: Sat, 6 Jun 2026 15:48:59 +0200
+Subject: [PATCH 2/2] kms/crtc: Dispatch ASAP on missing deadline within
+ constant margin
+
+One purpose of the margin is to compensate for the deadline timer firing
+later than planned. If we missed the deadline for setting the timer, but
+are still within the margin, we can start dispatch ASAP and hit the next
+refresh cycle at least some of the time, instead of always skipping it.
+
+Part-of: <https://gitlab.gnome.org/GNOME/mutter/-/merge_requests/5116>
+---
+ src/backends/native/meta-kms-crtc.c | 17 +++++++++++++++++
+ 1 file changed, 17 insertions(+)
+
+diff --git a/src/backends/native/meta-kms-crtc.c b/src/backends/native/meta-kms-crtc.c
+index 70cefbed6a6..2ee09dd00fe 100644
+--- a/src/backends/native/meta-kms-crtc.c
++++ b/src/backends/native/meta-kms-crtc.c
+@@ -975,6 +975,23 @@ meta_kms_crtc_determine_deadline (MetaKmsCrtc  *crtc,
+           next_deadline_us = now_us;
+         }
+     }
++  else if (now_us > next_deadline_us &&
++           now_us - next_deadline_us <= DEADLINE_EVASION_CONSTANT_US &&
++           (!target_presentation_time_us ||
++            mtk_find_nearest_interval_boundary (next_presentation_us,
++                                                target_presentation_time_us,
++                                                refresh_interval_us) ==
++            next_presentation_us))
++    {
++      if (target_presentation_time_us)
++        {
++          meta_topic (META_DEBUG_KMS_DEADLINE,
++                      "CRTC %d missed deadline by %3"G_GINT64_FORMAT "µs, "
++                      "starting ASAP for FRR",
++                      meta_kms_crtc_get_id (crtc),
++                      now_us - next_deadline_us);
++        }
++    }
+   else if (now_us > next_deadline_us)
+     {
+       int64_t skip_us;
+-- 
+GitLab

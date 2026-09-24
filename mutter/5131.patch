@@ -1,0 +1,1117 @@
+From f3ae2cb5d8f42eb26059d54dbba1510c7e3d511a Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Michel=20D=C3=A4nzer?= <mdaenzer@redhat.com>
+Date: Sat, 6 Jun 2026 15:49:03 +0200
+Subject: [PATCH 1/9] clutter/frame-clock: Use sliding estimate of maximum
+ update duration
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Previously, the estimate was always raised immediately to match any
+higher measurement. Now, that is done only if the measurement exceeded
+the current estimate by more than clutter_max_render_time_constant_us
+(currently 1 millisecond). Otherwise, the estimate approaches the
+measurements gradually per frame, such that it would take at least
+seconds to match a consistent measurement.
+
+The latter is now also done when the last measurement was lower than the
+current estimate. Previously, the estimate was frozen for at least a
+second in that case, then it approached recent measurements in one
+potentially large step.
+
+The gradual adjustments are biased such that the estimate rises more
+quickly and falls more slowly.
+
+The new algorithm should generally result in smaller estimate changes
+between frames and correspondingly lower potential for clients getting
+confused by abrupt changes in mutter's redraw timing.
+
+v2: (Jonas Ådahl)
+* Use separate adjustment_us & refresh_rate local variables to make the
+  algorithm clearer.
+* Add comment explaining the delta_us fractions used for adjustment_us.
+---
+ clutter/clutter/clutter-frame-clock.c | 92 +++++++++------------------
+ 1 file changed, 31 insertions(+), 61 deletions(-)
+
+diff --git a/clutter/clutter/clutter-frame-clock.c b/clutter/clutter/clutter-frame-clock.c
+index feac00beb46..4ca357ce2b8 100644
+--- a/clutter/clutter/clutter-frame-clock.c
++++ b/clutter/clutter/clutter-frame-clock.c
+@@ -140,12 +140,8 @@ struct _ClutterFrameClock
+    */
+   int64_t vblank_duration_us;
+ 
+-  /* Last time we promoted short-term maximum to long-term one */
+-  int64_t longterm_promotion_us;
+-  /* Long-term maximum update duration */
+-  int64_t longterm_max_update_duration_us;
+-  /* Short-term maximum update duration */
+-  int64_t shortterm_max_update_duration_us;
++  /* Maximum update duration estimate */
++  int64_t max_update_duration_us;
+ 
+   gboolean ever_got_measurements;
+ 
+@@ -414,46 +410,33 @@ maybe_reschedule_update (ClutterFrameClock *frame_clock)
+ }
+ 
+ static void
+-maybe_update_longterm_max_duration_us (ClutterFrameClock *frame_clock,
+-                                       ClutterFrameInfo  *frame_info)
++adjust_max_update_duration_estimate (ClutterFrameClock *frame_clock,
++                                     int64_t            update_duration_us)
+ {
+-  if ((frame_info->presentation_time - frame_clock->longterm_promotion_us) <
+-      G_USEC_PER_SEC)
+-    return;
+-
+-  if (frame_clock->longterm_max_update_duration_us >
+-      frame_clock->shortterm_max_update_duration_us)
+-    {
+-      int64_t old_duration_us;
++  float refresh_rate = frame_clock->refresh_rate;
++  int64_t delta_us, adjustment_us;
+ 
+-      old_duration_us = frame_clock->longterm_max_update_duration_us;
++  delta_us = update_duration_us - frame_clock->max_update_duration_us;
+ 
+-      /* Exponential drop-off toward the short-term max */
+-      frame_clock->longterm_max_update_duration_us -=
+-        (frame_clock->longterm_max_update_duration_us -
+-         frame_clock->shortterm_max_update_duration_us) / 2;
++  /* Adjust the estimate by a fraction of the delta such that it'll take at
++   * least seconds for the estimate to catch up to the latest measurement
++   */
++  if (delta_us < 0)
++    adjustment_us = (int64_t) roundf ((float) delta_us / (refresh_rate * 8));
++  else if (delta_us < clutter_max_render_time_constant_us)
++    adjustment_us = (int64_t) roundf ((float) delta_us / refresh_rate);
++  else
++    adjustment_us = delta_us;
+ 
++  if (adjustment_us != 0)
++    {
+       CLUTTER_NOTE (FRAME_TIMINGS,
+-                    "%s maximum update duration updated: %ldµs → %ldµs",
++                    "%s maximum update duration updated: %ld → %ld µs",
+                     frame_clock->output_name,
+-                    old_duration_us,
+-                    frame_clock->longterm_max_update_duration_us);
+-    }
+-  else
+-    {
+-      frame_clock->longterm_max_update_duration_us =
+-        frame_clock->shortterm_max_update_duration_us;
++                    frame_clock->max_update_duration_us,
++                    frame_clock->max_update_duration_us + adjustment_us);
++      frame_clock->max_update_duration_us += adjustment_us;
+     }
+-
+-  frame_clock->shortterm_max_update_duration_us = 0;
+-  frame_clock->longterm_promotion_us = frame_info->presentation_time;
+-}
+-
+-static int64_t
+-get_max_update_duration_us (ClutterFrameClock *frame_clock)
+-{
+-  return MAX (frame_clock->longterm_max_update_duration_us,
+-              frame_clock->shortterm_max_update_duration_us);
+ }
+ 
+ void
+@@ -574,9 +557,8 @@ clutter_frame_clock_notify_presented (ClutterFrameClock *frame_clock,
+   if (frame_info->kms_ready_time_us ||
+       frame_clock->ever_got_measurements)
+     {
+-      int64_t to_flip_us, to_kms_ready_us = 0;
++      int64_t to_flip_us, to_kms_ready_us = 0, update_duration_us;
+       int64_t kms_ready_time_us = frame_info->kms_ready_time_us;
+-      int64_t max_duration_us;
+       const char *ready_name = "(no ready time)";
+ 
+       to_flip_us = presented_frame->flip_time_us - dispatch_time_us;
+@@ -597,25 +579,13 @@ clutter_frame_clock_notify_presented (ClutterFrameClock *frame_clock,
+                     presented_frame->dispatch_lateness_us,
+                     to_flip_us, to_kms_ready_us, ready_name);
+ 
+-      max_duration_us = get_max_update_duration_us (frame_clock);
+-
+-      frame_clock->shortterm_max_update_duration_us =
+-        CLAMP (presented_frame->dispatch_lateness_us +
+-               MAX (to_kms_ready_us, to_flip_us) +
+-               frame_clock->deadline_evasion_us,
+-               frame_clock->shortterm_max_update_duration_us,
+-               3 * frame_clock->refresh_interval_us);
+-
+-      if (frame_clock->shortterm_max_update_duration_us > max_duration_us)
+-        {
+-          CLUTTER_NOTE (FRAME_TIMINGS,
+-                        "%s maximum update duration updated: %ldµs → %ldµs",
+-                        frame_clock->output_name,
+-                        max_duration_us,
+-                        frame_clock->shortterm_max_update_duration_us);
+-        }
++      update_duration_us =
++        MIN (presented_frame->dispatch_lateness_us +
++             MAX (to_kms_ready_us, to_flip_us) +
++             frame_clock->deadline_evasion_us,
++             3 * frame_clock->refresh_interval_us);
+ 
+-      maybe_update_longterm_max_duration_us (frame_clock, frame_info);
++      adjust_max_update_duration_estimate (frame_clock, update_duration_us);
+ 
+       presented_frame->got_measurements = TRUE;
+       frame_clock->ever_got_measurements = TRUE;
+@@ -884,7 +854,7 @@ clutter_frame_clock_estimate_max_update_time_us (ClutterFrameClock *frame_clock,
+    * - A constant to account for variations in the above estimates.
+    */
+   *max_update_time_estimate_us =
+-    get_max_update_duration_us (frame_clock) +
++    frame_clock->max_update_duration_us +
+     frame_clock->vblank_duration_us +
+     clutter_max_render_time_constant_us;
+ 
+@@ -1833,7 +1803,7 @@ clutter_frame_clock_get_max_render_time_debug_info (ClutterFrameClock *frame_clo
+   g_string_append_printf (string, "\nVblank duration: %ld µs +",
+                           frame_clock->vblank_duration_us);
+   g_string_append_printf (string, "\nUpdate duration: %ld µs +",
+-                          get_max_update_duration_us (frame_clock));
++                          frame_clock->max_update_duration_us);
+   g_string_append_printf (string, "\nConstant: %d µs",
+                           clutter_max_render_time_constant_us);
+ 
+-- 
+GitLab
+
+
+From 507a586e2f61861f3fc893373d55fd2817a4e1cf Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Michel=20D=C3=A4nzer?= <mdaenzer@redhat.com>
+Date: Sat, 6 Jun 2026 15:49:12 +0200
+Subject: [PATCH 2/9] clutter/frame-clock: Use dynamic margin for max update
+ time estimate
+
+The dynamic margin is added to and complements
+clutter_max_render_time_constant_us. It's based on measured update
+durations which exceeded the current maximum estimate, trying to prevent
+the duration of future updates from exceeding the constant + dynamic
+margin. It's limited to a quarter of a refresh cycle duration, to
+prevent it from growing too large due to stragglers.
+
+The algorithm is designed such that the dynamic margin rises relatively
+quickly and falls much more slowly. The intention is that the dynamic
+margin hovers around a balance, which reflects how low latency the
+system can support without dropping frames frequently.
+
+v2:
+* Raise update duration margin by half the delta, to make it rise more
+  quickly.
+v3:
+* Use adjustment_us.
+---
+ clutter/clutter/clutter-frame-clock.c | 77 ++++++++++++++++++++++++---
+ 1 file changed, 69 insertions(+), 8 deletions(-)
+
+diff --git a/clutter/clutter/clutter-frame-clock.c b/clutter/clutter/clutter-frame-clock.c
+index 4ca357ce2b8..394ccd7b925 100644
+--- a/clutter/clutter/clutter-frame-clock.c
++++ b/clutter/clutter/clutter-frame-clock.c
+@@ -143,6 +143,15 @@ struct _ClutterFrameClock
+   /* Maximum update duration estimate */
+   int64_t max_update_duration_us;
+ 
++  struct {
++    /* Current margin for maximum update duration estimate */
++    int64_t current_us;
++    /* Target margin for maximum update duration estimate */
++    int64_t target_us;
++    /* Last time the current margin was updated */
++    int64_t set_time_us;
++  } max_update_margin;
++
+   gboolean ever_got_measurements;
+ 
+   gboolean pending_reschedule;
+@@ -409,21 +418,37 @@ maybe_reschedule_update (ClutterFrameClock *frame_clock)
+     }
+ }
+ 
++static int64_t
++get_max_update_time_margin_us (ClutterFrameClock *frame_clock)
++{
++  return clutter_max_render_time_constant_us +
++         frame_clock->max_update_margin.current_us;
++}
++
+ static void
+-adjust_max_update_duration_estimate (ClutterFrameClock *frame_clock,
+-                                     int64_t            update_duration_us)
++adjust_update_duration_estimates (ClutterFrameClock *frame_clock,
++                                  int64_t            update_duration_us)
+ {
++  int64_t refresh_interval_us = frame_clock->refresh_interval_us;
+   float refresh_rate = frame_clock->refresh_rate;
+   int64_t delta_us, adjustment_us;
++  int64_t target_margin_us;
++  int64_t now_us;
+ 
+   delta_us = update_duration_us - frame_clock->max_update_duration_us;
+ 
++  target_margin_us =
++    CLAMP (delta_us - clutter_max_render_time_constant_us,
++           frame_clock->max_update_margin.target_us,
++           refresh_interval_us / 4);
++  frame_clock->max_update_margin.target_us = target_margin_us;
++
+   /* Adjust the estimate by a fraction of the delta such that it'll take at
+    * least seconds for the estimate to catch up to the latest measurement
+    */
+   if (delta_us < 0)
+     adjustment_us = (int64_t) roundf ((float) delta_us / (refresh_rate * 8));
+-  else if (delta_us < clutter_max_render_time_constant_us)
++  else if (delta_us < get_max_update_time_margin_us (frame_clock))
+     adjustment_us = (int64_t) roundf ((float) delta_us / refresh_rate);
+   else
+     adjustment_us = delta_us;
+@@ -437,6 +462,42 @@ adjust_max_update_duration_estimate (ClutterFrameClock *frame_clock,
+                     frame_clock->max_update_duration_us + adjustment_us);
+       frame_clock->max_update_duration_us += adjustment_us;
+     }
++
++  now_us = g_get_monotonic_time ();
++  delta_us = target_margin_us - frame_clock->max_update_margin.current_us;
++
++  if (delta_us <= 0)
++    {
++      if (now_us - frame_clock->max_update_margin.set_time_us < G_USEC_PER_SEC)
++        return;
++
++      /* Lower dynamic margin by a fraction of the delta such that it'll take
++       * at least a minute for the margin to drop to the latest measurement
++       */
++      adjustment_us = delta_us / 60;
++      frame_clock->max_update_margin.target_us = 0;
++    }
++  else if (delta_us < clutter_max_render_time_constant_us)
++    {
++      /* Raise dynamic margin half way toward the latest measurement */
++      adjustment_us = MAX (delta_us / 2, 1);
++    }
++  else
++    {
++      adjustment_us = delta_us;
++    }
++
++  if (adjustment_us == 0)
++    return;
++
++  CLUTTER_NOTE (FRAME_TIMINGS,
++                "%s update duration margin updated: %ld → %ld µs",
++                frame_clock->output_name,
++                frame_clock->max_update_margin.current_us,
++                frame_clock->max_update_margin.current_us + adjustment_us);
++
++  frame_clock->max_update_margin.current_us += adjustment_us;
++  frame_clock->max_update_margin.set_time_us = now_us;
+ }
+ 
+ void
+@@ -585,7 +646,7 @@ clutter_frame_clock_notify_presented (ClutterFrameClock *frame_clock,
+              frame_clock->deadline_evasion_us,
+              3 * frame_clock->refresh_interval_us);
+ 
+-      adjust_max_update_duration_estimate (frame_clock, update_duration_us);
++      adjust_update_duration_estimates (frame_clock, update_duration_us);
+ 
+       presented_frame->got_measurements = TRUE;
+       frame_clock->ever_got_measurements = TRUE;
+@@ -851,12 +912,12 @@ clutter_frame_clock_estimate_max_update_time_us (ClutterFrameClock *frame_clock,
+    *   both of these things need to happen before the vblank, and they are done
+    *   in parallel.
+    * - The duration of vertical blank.
+-   * - A constant to account for variations in the above estimates.
++   * - A margin to account for variations in the above estimates.
+    */
+   *max_update_time_estimate_us =
+     frame_clock->max_update_duration_us +
+     frame_clock->vblank_duration_us +
+-    clutter_max_render_time_constant_us;
++    get_max_update_time_margin_us (frame_clock);
+ 
+   *max_update_time_estimate_us = CLAMP (*max_update_time_estimate_us, 0,
+                                         maximum_us);
+@@ -1804,8 +1865,8 @@ clutter_frame_clock_get_max_render_time_debug_info (ClutterFrameClock *frame_clo
+                           frame_clock->vblank_duration_us);
+   g_string_append_printf (string, "\nUpdate duration: %ld µs +",
+                           frame_clock->max_update_duration_us);
+-  g_string_append_printf (string, "\nConstant: %d µs",
+-                          clutter_max_render_time_constant_us);
++  g_string_append_printf (string, "\nMargin: %ld µs",
++                          get_max_update_time_margin_us (frame_clock));
+ 
+   return string;
+ }
+-- 
+GitLab
+
+
+From 3ecd2eb65ff1b05a684024dd1cf1e8775627d1dc Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Michel=20D=C3=A4nzer?= <mdaenzer@redhat.com>
+Date: Sat, 20 Jun 2026 15:00:45 +0200
+Subject: [PATCH 3/9] clutter/frame-clock: Track dispatch lateness as part of
+ dynamic margin
+
+Conceptually, it makes more sense to think of the lateness as eating
+into the margin, rather than being part of the update duration.
+---
+ clutter/clutter/clutter-frame-clock.c | 18 ++++++++++--------
+ 1 file changed, 10 insertions(+), 8 deletions(-)
+
+diff --git a/clutter/clutter/clutter-frame-clock.c b/clutter/clutter/clutter-frame-clock.c
+index 394ccd7b925..2a68f4864ef 100644
+--- a/clutter/clutter/clutter-frame-clock.c
++++ b/clutter/clutter/clutter-frame-clock.c
+@@ -427,7 +427,8 @@ get_max_update_time_margin_us (ClutterFrameClock *frame_clock)
+ 
+ static void
+ adjust_update_duration_estimates (ClutterFrameClock *frame_clock,
+-                                  int64_t            update_duration_us)
++                                  int64_t            update_duration_us,
++                                  int64_t            dispatch_lateness_us)
+ {
+   int64_t refresh_interval_us = frame_clock->refresh_interval_us;
+   float refresh_rate = frame_clock->refresh_rate;
+@@ -438,7 +439,8 @@ adjust_update_duration_estimates (ClutterFrameClock *frame_clock,
+   delta_us = update_duration_us - frame_clock->max_update_duration_us;
+ 
+   target_margin_us =
+-    CLAMP (delta_us - clutter_max_render_time_constant_us,
++    CLAMP (delta_us + dispatch_lateness_us -
++           clutter_max_render_time_constant_us,
+            frame_clock->max_update_margin.target_us,
+            refresh_interval_us / 4);
+   frame_clock->max_update_margin.target_us = target_margin_us;
+@@ -640,13 +642,13 @@ clutter_frame_clock_notify_presented (ClutterFrameClock *frame_clock,
+                     presented_frame->dispatch_lateness_us,
+                     to_flip_us, to_kms_ready_us, ready_name);
+ 
+-      update_duration_us =
+-        MIN (presented_frame->dispatch_lateness_us +
+-             MAX (to_kms_ready_us, to_flip_us) +
+-             frame_clock->deadline_evasion_us,
+-             3 * frame_clock->refresh_interval_us);
++      update_duration_us = MIN (MAX (to_kms_ready_us, to_flip_us) +
++                                frame_clock->deadline_evasion_us,
++                                3 * frame_clock->refresh_interval_us);
+ 
+-      adjust_update_duration_estimates (frame_clock, update_duration_us);
++      adjust_update_duration_estimates (frame_clock,
++                                        update_duration_us,
++                                        presented_frame->dispatch_lateness_us);
+ 
+       presented_frame->got_measurements = TRUE;
+       frame_clock->ever_got_measurements = TRUE;
+-- 
+GitLab
+
+
+From 759c8e3c865a5a7dd9aa1111cea85da4d2cfeeb0 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Michel=20D=C3=A4nzer?= <mdaenzer@redhat.com>
+Date: Tue, 9 Jun 2026 17:15:36 +0200
+Subject: [PATCH 4/9] clutter/frame-clock: Add minimum update duration tracking
+
+This is mostly the same as the corresponding maximum update duration
+tracking, but with basically opposite bias. This results in different
+minimum & maxium estimates, in particular after recent changes in the
+measured values.
+
+This commit adds the tracking and computing of the minimum duration
+estimate, it's not actually used for anything yet though.
+
+v2:
+* Use adjustment_us & refresh_rate.
+---
+ clutter/clutter/clutter-frame-clock.c | 33 +++++++++++++++++++++++++--
+ 1 file changed, 31 insertions(+), 2 deletions(-)
+
+diff --git a/clutter/clutter/clutter-frame-clock.c b/clutter/clutter/clutter-frame-clock.c
+index 2a68f4864ef..81d507ab8fa 100644
+--- a/clutter/clutter/clutter-frame-clock.c
++++ b/clutter/clutter/clutter-frame-clock.c
+@@ -142,6 +142,8 @@ struct _ClutterFrameClock
+ 
+   /* Maximum update duration estimate */
+   int64_t max_update_duration_us;
++  /* Minimum update duration estimate */
++  int64_t min_update_duration_us;
+ 
+   struct {
+     /* Current margin for maximum update duration estimate */
+@@ -436,6 +438,13 @@ adjust_update_duration_estimates (ClutterFrameClock *frame_clock,
+   int64_t target_margin_us;
+   int64_t now_us;
+ 
++  if (frame_clock->max_update_duration_us == 0)
++    {
++      frame_clock->max_update_duration_us = update_duration_us;
++      frame_clock->min_update_duration_us = update_duration_us;
++      return;
++    }
++
+   delta_us = update_duration_us - frame_clock->max_update_duration_us;
+ 
+   target_margin_us =
+@@ -445,7 +454,7 @@ adjust_update_duration_estimates (ClutterFrameClock *frame_clock,
+            refresh_interval_us / 4);
+   frame_clock->max_update_margin.target_us = target_margin_us;
+ 
+-  /* Adjust the estimate by a fraction of the delta such that it'll take at
++  /* Adjust the estimates by a fraction of the delta such that it'll take at
+    * least seconds for the estimate to catch up to the latest measurement
+    */
+   if (delta_us < 0)
+@@ -465,6 +474,24 @@ adjust_update_duration_estimates (ClutterFrameClock *frame_clock,
+       frame_clock->max_update_duration_us += adjustment_us;
+     }
+ 
++  delta_us = update_duration_us - frame_clock->min_update_duration_us;
++  if (delta_us > 0)
++    adjustment_us = (int64_t) roundf ((float) delta_us / (refresh_rate * 8));
++  else if (delta_us < 0)
++    adjustment_us = (int64_t) roundf ((float) delta_us / refresh_rate);
++  else
++    adjustment_us = delta_us;
++
++  if (adjustment_us != 0)
++    {
++      CLUTTER_NOTE (FRAME_TIMINGS,
++                    "%s minimum update duration updated: %ld → %ld µs",
++                    frame_clock->output_name,
++                    frame_clock->min_update_duration_us,
++                    frame_clock->min_update_duration_us + adjustment_us);
++      frame_clock->min_update_duration_us += adjustment_us;
++    }
++
+   now_us = g_get_monotonic_time ();
+   delta_us = target_margin_us - frame_clock->max_update_margin.current_us;
+ 
+@@ -1865,8 +1892,10 @@ clutter_frame_clock_get_max_render_time_debug_info (ClutterFrameClock *frame_clo
+ 
+   g_string_append_printf (string, "\nVblank duration: %ld µs +",
+                           frame_clock->vblank_duration_us);
+-  g_string_append_printf (string, "\nUpdate duration: %ld µs +",
++  g_string_append_printf (string, "\nMaximum update duration: %ld µs +",
+                           frame_clock->max_update_duration_us);
++  g_string_append_printf (string, "\nMinimum update duration: %ld µs +",
++                          frame_clock->min_update_duration_us);
+   g_string_append_printf (string, "\nMargin: %ld µs",
+                           get_max_update_time_margin_us (frame_clock));
+ 
+-- 
+GitLab
+
+
+From 2253a698b8d227294c307d2e27e9b86539cd146a Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Michel=20D=C3=A4nzer?= <mdaenzer@redhat.com>
+Date: Wed, 10 Jun 2026 18:57:51 +0200
+Subject: [PATCH 5/9] clutter/frame-clock: Use minimum update duration time
+ estimate
+
+When there's not enough time to hit a display refresh cycle according
+to the maximum estimate, but there is according to the minimum estimate,
+we attempt to hit that cycle by starting dispatch ASAP.
+
+This is vaguely similar to the previous min_render_time_allowed_us, but
+dynamic based on measurements instead of a static number.
+---
+ clutter/clutter/clutter-frame-clock.c | 62 +++++++++++++++++++++------
+ 1 file changed, 48 insertions(+), 14 deletions(-)
+
+diff --git a/clutter/clutter/clutter-frame-clock.c b/clutter/clutter/clutter-frame-clock.c
+index 81d507ab8fa..18ab7521b04 100644
+--- a/clutter/clutter/clutter-frame-clock.c
++++ b/clutter/clutter/clutter-frame-clock.c
+@@ -915,6 +915,23 @@ maybe_want_triple_buffering (ClutterFrameClock *frame_clock)
+   return TRUE;
+ }
+ 
++static gboolean
++clutter_frame_clock_estimate_min_update_time_us (ClutterFrameClock *frame_clock,
++                                                 int64_t           *min_update_time_estimate_us)
++{
++  if (!frame_clock->ever_got_measurements ||
++      G_UNLIKELY (clutter_paint_debug_flags &
++                  CLUTTER_DEBUG_DISABLE_DYNAMIC_MAX_RENDER_TIME))
++    return FALSE;
++
++  /* Estimate the minimum total update duration */
++  *min_update_time_estimate_us =
++    frame_clock->min_update_duration_us +
++    frame_clock->vblank_duration_us;
++
++  return TRUE;
++}
++
+ static gboolean
+ clutter_frame_clock_estimate_max_update_time_us (ClutterFrameClock *frame_clock,
+                                                  int64_t           *max_update_time_estimate_us)
+@@ -1102,26 +1119,43 @@ calculate_next_update_time_us (ClutterFrameClock *frame_clock,
+     }
+   else
+     {
+-      if (next_presentation_time_us - max_update_time_estimate_us < now_us)
++      next_update_time_us =
++        next_presentation_time_us - max_update_time_estimate_us;
++
++      if (next_update_time_us < now_us)
+         {
+-          int64_t min_update_time_estimate_us =
+-            (int64_t) (refresh_interval_us * SYNC_DELAY_FALLBACK_FRACTION);
++          int64_t min_update_time_estimate_us;
+ 
+-          if (maybe_want_triple_buffering (frame_clock))
+-            min_update_time_estimate_us += refresh_interval_us;
++          if (clutter_frame_clock_estimate_min_update_time_us (frame_clock,
++                                                               &min_update_time_estimate_us))
++            {
++              next_update_time_us =
++                next_presentation_time_us - min_update_time_estimate_us;
+ 
+-          if (min_update_time_estimate_us > max_update_time_estimate_us)
+-            min_update_time_estimate_us = max_update_time_estimate_us;
++              if (next_update_time_us < now_us)
++                {
++                  next_update_time_us =
++                    mtk_extrapolate_next_interval_boundary (next_update_time_us,
++                                                            now_us,
++                                                            refresh_interval_us);
++                  next_presentation_time_us =
++                    next_update_time_us + min_update_time_estimate_us;
++                }
+ 
+-          while (next_presentation_time_us - min_update_time_estimate_us <
+-                 now_us)
+-            next_presentation_time_us += refresh_interval_us;
++              if (next_presentation_time_us - max_update_time_estimate_us < now_us)
++                next_update_time_us = now_us;
++            }
++          else
++            {
++              next_update_time_us =
++                mtk_extrapolate_next_interval_boundary (next_update_time_us,
++                                                        now_us,
++                                                        refresh_interval_us);
++              next_presentation_time_us =
++                next_update_time_us + max_update_time_estimate_us;
++            }
+         }
+ 
+-      next_update_time_us = next_presentation_time_us - max_update_time_estimate_us;
+-      if (next_update_time_us < now_us)
+-        next_update_time_us = now_us;
+-
+       *out_next_update_time_us = next_update_time_us;
+       *out_next_presentation_time_us = next_presentation_time_us;
+       if (out_is_target_presentation_time)
+-- 
+GitLab
+
+
+From 170a38cc1381adf1e53601e0e291a1701c0da155 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Michel=20D=C3=A4nzer?= <mdaenzer@redhat.com>
+Date: Fri, 19 Jun 2026 17:58:42 +0200
+Subject: [PATCH 6/9] clutter/frame-clock: Don't include deadline evasion in
+ update duration
+
+Now the tracked maximum / minimum update duration values are purely
+about how much time passes between when dispatch actually starts and
+when the KMS update becomes ready.
+---
+ clutter/clutter/clutter-frame-clock.c | 7 +++++--
+ 1 file changed, 5 insertions(+), 2 deletions(-)
+
+diff --git a/clutter/clutter/clutter-frame-clock.c b/clutter/clutter/clutter-frame-clock.c
+index 18ab7521b04..6a47fa83c2f 100644
+--- a/clutter/clutter/clutter-frame-clock.c
++++ b/clutter/clutter/clutter-frame-clock.c
+@@ -669,8 +669,7 @@ clutter_frame_clock_notify_presented (ClutterFrameClock *frame_clock,
+                     presented_frame->dispatch_lateness_us,
+                     to_flip_us, to_kms_ready_us, ready_name);
+ 
+-      update_duration_us = MIN (MAX (to_kms_ready_us, to_flip_us) +
+-                                frame_clock->deadline_evasion_us,
++      update_duration_us = MIN (MAX (to_kms_ready_us, to_flip_us),
+                                 3 * frame_clock->refresh_interval_us);
+ 
+       adjust_update_duration_estimates (frame_clock,
+@@ -927,6 +926,7 @@ clutter_frame_clock_estimate_min_update_time_us (ClutterFrameClock *frame_clock,
+   /* Estimate the minimum total update duration */
+   *min_update_time_estimate_us =
+     frame_clock->min_update_duration_us +
++    frame_clock->deadline_evasion_us +
+     frame_clock->vblank_duration_us;
+ 
+   return TRUE;
+@@ -962,6 +962,7 @@ clutter_frame_clock_estimate_max_update_time_us (ClutterFrameClock *frame_clock,
+    */
+   *max_update_time_estimate_us =
+     frame_clock->max_update_duration_us +
++    frame_clock->deadline_evasion_us +
+     frame_clock->vblank_duration_us +
+     get_max_update_time_margin_us (frame_clock);
+ 
+@@ -1926,6 +1927,8 @@ clutter_frame_clock_get_max_render_time_debug_info (ClutterFrameClock *frame_clo
+ 
+   g_string_append_printf (string, "\nVblank duration: %ld µs +",
+                           frame_clock->vblank_duration_us);
++  g_string_append_printf (string, "\nDeadline evasion: %ld µs +",
++                          frame_clock->deadline_evasion_us);
+   g_string_append_printf (string, "\nMaximum update duration: %ld µs +",
+                           frame_clock->max_update_duration_us);
+   g_string_append_printf (string, "\nMinimum update duration: %ld µs +",
+-- 
+GitLab
+
+
+From f533afa5a6e3974eb6d3b25475339541c3e04630 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Michel=20D=C3=A4nzer?= <mdaenzer@redhat.com>
+Date: Sat, 20 Jun 2026 15:20:53 +0200
+Subject: [PATCH 7/9] kms/crtc: Use sliding deadline evasion
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Previously, the estimate was always raised immediately to match any
+higher measurement. Now, that is done only if the measurement exceeded
+the current estimate by more than DEADLINE_EVASION_CONSTANT_US
+(currently 800 microseconds). Otherwise, the estimate approaches the
+measurements gradually per frame, such that it would take at least
+seconds to match a consistent measurement.
+
+The latter is now also done when the last measurement was lower than the
+current estimate. Previously, the estimate was frozen for at least a
+second in that case, then it approached recent measurements in one
+potentially large step.
+
+The gradual adjustments are biased such that the estimate rises more
+quickly and falls more slowly.
+
+The new algorithm should generally result in smaller estimate changes
+between frames and correspondingly lower potential for the clutter frame
+clock missing a refresh cycle due to abrupt changes.
+
+v2: (Jonas Ådahl)
+* Use separate adjustment_us & refresh_rate local variables to make the
+  algorithm clearer.
+* Add comment explaining the delta_us fractions used for adjustment_us.
+---
+ src/backends/native/meta-kms-crtc.c        | 85 ++++++++++------------
+ src/backends/native/meta-kms-crtc.h        |  4 +-
+ src/backends/native/meta-kms-impl-device.c |  2 +-
+ 3 files changed, 41 insertions(+), 50 deletions(-)
+
+diff --git a/src/backends/native/meta-kms-crtc.c b/src/backends/native/meta-kms-crtc.c
+index 2ee09dd00fe..48f4a404795 100644
+--- a/src/backends/native/meta-kms-crtc.c
++++ b/src/backends/native/meta-kms-crtc.c
+@@ -52,9 +52,7 @@ struct _MetaKmsCrtc
+ 
+   gboolean is_leased;
+ 
+-  int64_t shortterm_max_dispatch_duration_us;
+   int64_t deadline_evasion_us;
+-  int64_t deadline_evasion_update_time_us;
+ 
+   int64_t last_vblank_time_us;
+ 
+@@ -735,33 +733,6 @@ get_crtc_type_bitmask (MetaKmsCrtc *crtc)
+     }
+ }
+ 
+-static void
+-maybe_update_deadline_evasion (MetaKmsCrtc *crtc,
+-                               int64_t      next_presentation_time_us)
+-{
+-  /* Do not update long-term max if there has been no measurement */
+-  if (!crtc->shortterm_max_dispatch_duration_us)
+-    return;
+-
+-  if (next_presentation_time_us - crtc->deadline_evasion_update_time_us <
+-      G_USEC_PER_SEC)
+-    return;
+-
+-  if (crtc->deadline_evasion_us > crtc->shortterm_max_dispatch_duration_us)
+-    {
+-      /* Exponential drop-off toward the clamped short-term max */
+-      crtc->deadline_evasion_us -=
+-        (crtc->deadline_evasion_us - crtc->shortterm_max_dispatch_duration_us) / 2;
+-    }
+-  else
+-    {
+-      crtc->deadline_evasion_us = crtc->shortterm_max_dispatch_duration_us;
+-    }
+-
+-  crtc->shortterm_max_dispatch_duration_us = 0;
+-  crtc->deadline_evasion_update_time_us = next_presentation_time_us;
+-}
+-
+ typedef struct
+ {
+   MetaKmsCrtc *crtc;
+@@ -1021,8 +992,6 @@ meta_kms_crtc_determine_deadline (MetaKmsCrtc  *crtc,
+       next_deadline_us += skip_us;
+     }
+ 
+-  maybe_update_deadline_evasion (crtc, next_presentation_us);
+-
+   *out_next_presentation_us = next_presentation_us;
+   *out_next_deadline_us = next_deadline_us;
+ 
+@@ -1076,34 +1045,56 @@ meta_kms_crtc_set_vrr_presentation_time (MetaKmsCrtc *crtc,
+ }
+ 
+ void
+-meta_kms_crtc_update_shortterm_max_dispatch_duration (MetaKmsCrtc *crtc,
+-                                                      int64_t      duration_us)
++meta_kms_crtc_adjust_deadline_evasion (MetaKmsCrtc *crtc,
++                                       int64_t      duration_us)
+ {
+   int64_t refresh_interval_us;
++  float refresh_rate;
++  int64_t delta_us, adjustment_us;
+ 
+   g_return_if_fail (crtc->current_state.is_drm_mode_valid);
+ 
+-  if (duration_us <= crtc->shortterm_max_dispatch_duration_us)
+-    return;
++  refresh_rate =
++    meta_calculate_drm_mode_refresh_rate (&crtc->current_state.drm_mode);
++  refresh_interval_us = (int64_t) (0.5 + G_USEC_PER_SEC / refresh_rate);
+ 
+-  refresh_interval_us =
+-    (int64_t) (0.5 + G_USEC_PER_SEC /
+-               meta_calculate_drm_mode_refresh_rate (&crtc->current_state.drm_mode));
+-
+-  crtc->shortterm_max_dispatch_duration_us =
++  duration_us =
+     MIN (duration_us, refresh_interval_us - DEADLINE_EVASION_CONSTANT_US);
++
++  if (crtc->deadline_evasion_us == 0)
++    {
++      crtc->deadline_evasion_us = duration_us;
++      return;
++    }
++
++  delta_us = duration_us - crtc->deadline_evasion_us;
++
++  /* Adjust the estimates by a fraction of the delta such that it'll take at
++   * least seconds for the estimate to catch up to the latest measurement
++   */
++  if (delta_us < 0)
++    adjustment_us = (int64_t) roundf ((float) delta_us / (refresh_rate * 8));
++  else if (delta_us < DEADLINE_EVASION_CONSTANT_US)
++    adjustment_us = (int64_t) roundf ((float) delta_us / refresh_rate);
++  else
++    adjustment_us = delta_us;
++
++  if (adjustment_us != 0)
++    {
++      meta_topic (META_DEBUG_KMS_DEADLINE,
++                  "CRTC %d deadline evasion updated: %ld → %ld µs",
++                  meta_kms_crtc_get_id (crtc),
++                  crtc->deadline_evasion_us,
++                  crtc->deadline_evasion_us + adjustment_us);
++      crtc->deadline_evasion_us += adjustment_us;
++    }
+ }
+ 
+ int64_t
+ meta_kms_crtc_get_deadline_evasion (MetaKmsCrtc *crtc)
+ {
+-  int64_t deadline_evasion_us;
+-
+-  deadline_evasion_us =
+-    MAX (crtc->shortterm_max_dispatch_duration_us, crtc->deadline_evasion_us);
+-
+-  if (!deadline_evasion_us)
++  if (crtc->deadline_evasion_us == 0)
+     return 0;
+ 
+-  return deadline_evasion_us + DEADLINE_EVASION_CONSTANT_US;
++  return crtc->deadline_evasion_us + DEADLINE_EVASION_CONSTANT_US;
+ }
+diff --git a/src/backends/native/meta-kms-crtc.h b/src/backends/native/meta-kms-crtc.h
+index 789a8531f16..6c084558d92 100644
+--- a/src/backends/native/meta-kms-crtc.h
++++ b/src/backends/native/meta-kms-crtc.h
+@@ -86,7 +86,7 @@ void meta_kms_crtc_set_presentation_time (MetaKmsCrtc *crtc,
+ void meta_kms_crtc_set_vrr_presentation_time (MetaKmsCrtc *crtc,
+                                               int64_t      presentation_us);
+ 
+-void meta_kms_crtc_update_shortterm_max_dispatch_duration (MetaKmsCrtc *crtc,
+-                                                           int64_t      duration_us);
++void meta_kms_crtc_adjust_deadline_evasion (MetaKmsCrtc *crtc,
++                                            int64_t      duration_us);
+ 
+ int64_t meta_kms_crtc_get_deadline_evasion (MetaKmsCrtc *crtc);
+diff --git a/src/backends/native/meta-kms-impl-device.c b/src/backends/native/meta-kms-impl-device.c
+index 835bbc25e46..07eb06ebf63 100644
+--- a/src/backends/native/meta-kms-impl-device.c
++++ b/src/backends/native/meta-kms-impl-device.c
+@@ -1820,7 +1820,7 @@ crtc_frame_deadline_dispatch (MetaThreadImpl  *thread_impl,
+         }
+     }
+ 
+-  meta_kms_crtc_update_shortterm_max_dispatch_duration (crtc, interval_us);
++  meta_kms_crtc_adjust_deadline_evasion (crtc, interval_us);
+ 
+   if (meta_kms_feedback_did_pass (feedback))
+     crtc_frame->deadline.is_deadline_page_flip = TRUE;
+-- 
+GitLab
+
+
+From 2ab0fe1ead2bda4d238e8facc3adf8895ff62bdd Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Michel=20D=C3=A4nzer?= <mdaenzer@redhat.com>
+Date: Sat, 20 Jun 2026 15:56:34 +0200
+Subject: [PATCH 8/9] kms/crtc: Use dynamic deadline evasion margin
+
+The dynamic margin is added to and complements
+DEADLINE_EVASION_CONSTANT_US. It's based on measured update durations
+which exceeded the current maximum estimate, trying to prevent
+the duration of future updates from exceeding the constant + dynamic
+margin. It's limited to a quarter of a refresh cycle duration, to
+prevent it from growing too large due to stragglers.
+
+The algorithm is designed such that the dynamic margin rises relatively
+quickly and falls much more slowly. The intention is that the dynamic
+margin hovers around a balance, which reflects how low latency the
+system can support without dropping frames frequently.
+
+v2:
+* Use adjustment_us.
+---
+ src/backends/native/meta-kms-crtc.c | 63 ++++++++++++++++++++++++++---
+ 1 file changed, 58 insertions(+), 5 deletions(-)
+
+diff --git a/src/backends/native/meta-kms-crtc.c b/src/backends/native/meta-kms-crtc.c
+index 48f4a404795..877d647c5c5 100644
+--- a/src/backends/native/meta-kms-crtc.c
++++ b/src/backends/native/meta-kms-crtc.c
+@@ -53,6 +53,11 @@ struct _MetaKmsCrtc
+   gboolean is_leased;
+ 
+   int64_t deadline_evasion_us;
++  struct {
++    int64_t current_us;
++    int64_t target_us;
++    int64_t set_time_us;
++  } deadline_evasion_margin;
+ 
+   int64_t last_vblank_time_us;
+ 
+@@ -947,7 +952,9 @@ meta_kms_crtc_determine_deadline (MetaKmsCrtc  *crtc,
+         }
+     }
+   else if (now_us > next_deadline_us &&
+-           now_us - next_deadline_us <= DEADLINE_EVASION_CONSTANT_US &&
++           now_us - next_deadline_us <=
++           crtc->deadline_evasion_margin.current_us +
++           DEADLINE_EVASION_CONSTANT_US &&
+            (!target_presentation_time_us ||
+             mtk_find_nearest_interval_boundary (next_presentation_us,
+                                                 target_presentation_time_us,
+@@ -1051,6 +1058,8 @@ meta_kms_crtc_adjust_deadline_evasion (MetaKmsCrtc *crtc,
+   int64_t refresh_interval_us;
+   float refresh_rate;
+   int64_t delta_us, adjustment_us;
++  int64_t target_margin_us;
++  int64_t now_us;
+ 
+   g_return_if_fail (crtc->current_state.is_drm_mode_valid);
+ 
+@@ -1058,8 +1067,8 @@ meta_kms_crtc_adjust_deadline_evasion (MetaKmsCrtc *crtc,
+     meta_calculate_drm_mode_refresh_rate (&crtc->current_state.drm_mode);
+   refresh_interval_us = (int64_t) (0.5 + G_USEC_PER_SEC / refresh_rate);
+ 
+-  duration_us =
+-    MIN (duration_us, refresh_interval_us - DEADLINE_EVASION_CONSTANT_US);
++  duration_us = MIN (duration_us, refresh_interval_us -
++                     refresh_interval_us / 4 - DEADLINE_EVASION_CONSTANT_US);
+ 
+   if (crtc->deadline_evasion_us == 0)
+     {
+@@ -1068,13 +1077,19 @@ meta_kms_crtc_adjust_deadline_evasion (MetaKmsCrtc *crtc,
+     }
+ 
+   delta_us = duration_us - crtc->deadline_evasion_us;
++  target_margin_us =
++    CLAMP (delta_us - DEADLINE_EVASION_CONSTANT_US,
++           crtc->deadline_evasion_margin.target_us,
++           refresh_interval_us / 4);
++  crtc->deadline_evasion_margin.target_us = target_margin_us;
+ 
+   /* Adjust the estimates by a fraction of the delta such that it'll take at
+    * least seconds for the estimate to catch up to the latest measurement
+    */
+   if (delta_us < 0)
+     adjustment_us = (int64_t) roundf ((float) delta_us / (refresh_rate * 8));
+-  else if (delta_us < DEADLINE_EVASION_CONSTANT_US)
++  else if (delta_us < crtc->deadline_evasion_margin.current_us +
++           DEADLINE_EVASION_CONSTANT_US)
+     adjustment_us = (int64_t) roundf ((float) delta_us / refresh_rate);
+   else
+     adjustment_us = delta_us;
+@@ -1088,6 +1103,42 @@ meta_kms_crtc_adjust_deadline_evasion (MetaKmsCrtc *crtc,
+                   crtc->deadline_evasion_us + adjustment_us);
+       crtc->deadline_evasion_us += adjustment_us;
+     }
++
++  now_us = g_get_monotonic_time ();
++  delta_us = target_margin_us - crtc->deadline_evasion_margin.current_us;
++
++  if (delta_us <= 0)
++    {
++      if (now_us - crtc->deadline_evasion_margin.set_time_us < G_USEC_PER_SEC)
++        return;
++
++      /* Lower dynamic margin by a fraction of the delta such that it'll take
++       * at least a minute for the margin to drop to the latest measurement
++       */
++      adjustment_us = delta_us / 60;
++      crtc->deadline_evasion_margin.target_us = 0;
++    }
++  else if (delta_us < DEADLINE_EVASION_CONSTANT_US)
++    {
++      /* Raise dynamic margin half way toward the latest measurement */
++      adjustment_us = MAX (delta_us / 2, 1);
++    }
++  else
++    {
++      adjustment_us = delta_us;
++    }
++
++  if (adjustment_us == 0)
++    return;
++
++  meta_topic (META_DEBUG_KMS_DEADLINE,
++              "CRTC %d deadline evasion margin updated: %ld → %ld µs",
++              meta_kms_crtc_get_id (crtc),
++              crtc->deadline_evasion_margin.current_us,
++              crtc->deadline_evasion_margin.current_us + adjustment_us);
++
++  crtc->deadline_evasion_margin.current_us += adjustment_us;
++  crtc->deadline_evasion_margin.set_time_us = now_us;
+ }
+ 
+ int64_t
+@@ -1096,5 +1147,7 @@ meta_kms_crtc_get_deadline_evasion (MetaKmsCrtc *crtc)
+   if (crtc->deadline_evasion_us == 0)
+     return 0;
+ 
+-  return crtc->deadline_evasion_us + DEADLINE_EVASION_CONSTANT_US;
++  return crtc->deadline_evasion_us +
++         crtc->deadline_evasion_margin.current_us +
++         DEADLINE_EVASION_CONSTANT_US;
+ }
+-- 
+GitLab
+
+
+From 85571df135d2f94403d9b7db13ec3e5b254f05e3 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Michel=20D=C3=A4nzer?= <mdaenzer@redhat.com>
+Date: Sat, 20 Jun 2026 16:10:51 +0200
+Subject: [PATCH 9/9] kms/crtc: Track dispatch lateness as part of deadline
+ evasion margin
+
+Conceptually, it makes more sense to think of the lateness as eating
+into the margin, rather than being part of the update duration.
+---
+ src/backends/native/meta-kms-crtc.c        |  5 +++--
+ src/backends/native/meta-kms-crtc.h        |  3 ++-
+ src/backends/native/meta-kms-impl-device.c | 16 ++++++----------
+ 3 files changed, 11 insertions(+), 13 deletions(-)
+
+diff --git a/src/backends/native/meta-kms-crtc.c b/src/backends/native/meta-kms-crtc.c
+index 877d647c5c5..6157bcc71a8 100644
+--- a/src/backends/native/meta-kms-crtc.c
++++ b/src/backends/native/meta-kms-crtc.c
+@@ -1053,7 +1053,8 @@ meta_kms_crtc_set_vrr_presentation_time (MetaKmsCrtc *crtc,
+ 
+ void
+ meta_kms_crtc_adjust_deadline_evasion (MetaKmsCrtc *crtc,
+-                                       int64_t      duration_us)
++                                       int64_t      duration_us,
++                                       int64_t      lateness_us)
+ {
+   int64_t refresh_interval_us;
+   float refresh_rate;
+@@ -1078,7 +1079,7 @@ meta_kms_crtc_adjust_deadline_evasion (MetaKmsCrtc *crtc,
+ 
+   delta_us = duration_us - crtc->deadline_evasion_us;
+   target_margin_us =
+-    CLAMP (delta_us - DEADLINE_EVASION_CONSTANT_US,
++    CLAMP (delta_us + lateness_us - DEADLINE_EVASION_CONSTANT_US,
+            crtc->deadline_evasion_margin.target_us,
+            refresh_interval_us / 4);
+   crtc->deadline_evasion_margin.target_us = target_margin_us;
+diff --git a/src/backends/native/meta-kms-crtc.h b/src/backends/native/meta-kms-crtc.h
+index 6c084558d92..b84599e2d73 100644
+--- a/src/backends/native/meta-kms-crtc.h
++++ b/src/backends/native/meta-kms-crtc.h
+@@ -87,6 +87,7 @@ void meta_kms_crtc_set_vrr_presentation_time (MetaKmsCrtc *crtc,
+                                               int64_t      presentation_us);
+ 
+ void meta_kms_crtc_adjust_deadline_evasion (MetaKmsCrtc *crtc,
+-                                            int64_t      duration_us);
++                                            int64_t      duration_us,
++                                            int64_t      lateness_us);
+ 
+ int64_t meta_kms_crtc_get_deadline_evasion (MetaKmsCrtc *crtc);
+diff --git a/src/backends/native/meta-kms-impl-device.c b/src/backends/native/meta-kms-impl-device.c
+index 07eb06ebf63..0cfb50b2b59 100644
+--- a/src/backends/native/meta-kms-impl-device.c
++++ b/src/backends/native/meta-kms-impl-device.c
+@@ -1707,10 +1707,10 @@ crtc_frame_deadline_dispatch (MetaThreadImpl  *thread_impl,
+   MetaKmsUpdate *update = NULL;
+   uint64_t timer_value;
+   ssize_t ret;
+-  int64_t dispatch_time_us = 0, update_done_time_us, interval_us;
++  int64_t dispatch_time_us, update_done_time_us;
++  int64_t lateness_us, duration_us;
+ 
+-  if (meta_is_topic_enabled (META_DEBUG_KMS_DEADLINE))
+-    dispatch_time_us = g_get_monotonic_time ();
++  dispatch_time_us = g_get_monotonic_time ();
+ 
+   ret = read (crtc_frame->deadline.timer_fd,
+               &timer_value,
+@@ -1780,15 +1780,11 @@ crtc_frame_deadline_dispatch (MetaThreadImpl  *thread_impl,
+ 
+   update_done_time_us = g_get_monotonic_time ();
+   /* Calculate how long after the planned start of deadline dispatch it finished */
+-  interval_us = update_done_time_us - crtc_frame->deadline.expected_deadline_time_us;
++  lateness_us = dispatch_time_us - crtc_frame->deadline.expected_deadline_time_us;
++  duration_us = update_done_time_us - dispatch_time_us;
+ 
+   if (meta_is_topic_enabled (META_DEBUG_KMS_DEADLINE))
+     {
+-      int64_t lateness_us, duration_us;
+-
+-      lateness_us = dispatch_time_us - crtc_frame->deadline.expected_deadline_time_us;
+-      duration_us = update_done_time_us - dispatch_time_us;
+-
+       if (meta_kms_crtc_get_current_state (crtc)->vrr.enabled)
+         {
+           meta_topic (META_DEBUG_KMS_DEADLINE,
+@@ -1820,7 +1816,7 @@ crtc_frame_deadline_dispatch (MetaThreadImpl  *thread_impl,
+         }
+     }
+ 
+-  meta_kms_crtc_adjust_deadline_evasion (crtc, interval_us);
++  meta_kms_crtc_adjust_deadline_evasion (crtc, duration_us, lateness_us);
+ 
+   if (meta_kms_feedback_did_pass (feedback))
+     crtc_frame->deadline.is_deadline_page_flip = TRUE;
+-- 
+GitLab
