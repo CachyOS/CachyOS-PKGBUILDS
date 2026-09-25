@@ -105,6 +105,7 @@ package() {
   DESTDIR="${pkgdir}" meson install -C build \
     --skip-subprojects
   install -Dm 644 gamescope/LICENSE -t "${pkgdir}"/usr/share/licenses/gamescope/
+  setcap 'cap_sys_nice=eip' "${pkgdir}"/usr/bin/gamescope
 }
 
 # vim: ts=2 sw=2 et:
