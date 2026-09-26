@@ -62,9 +62,6 @@ prepare() {
 build() {
   cd llvm-project-$pkgver.src/clang/build
 
-  # Add dir for PGO data
-  mkdir $srcdir/llvm-project-$pkgver.src/clang/pgo
-
   # Build only minimal debug info to reduce size
   CFLAGS=${CFLAGS/-g /-g1 }
   CXXFLAGS=${CXXFLAGS/-g /-g1 }
@@ -103,46 +100,73 @@ build() {
   export CXX=clang++
   export NM=llvm-nm
   export RANLIB=llvm-ranlib
-  # Export Original CFLAGS
-  export ORIG_CFLAGS="${CFLAGS}"
-  export ORIG_CXXFLAGS="${CXXFLAGS}"
-
-  # Flags for profile generation
-  export CFLAGS+=" -fprofile-generate"
-  export CXXFLAGS+=" -fprofile-generate"
 
   cmake .. "${cmake_args[@]}"
   local distribution_components=$(_get_distribution_components | paste -sd\;)
   test -n "$distribution_components"
-  cmake_args+=(-DLLVM_DISTRIBUTION_COMPONENTS="$distribution_components")
 
-  # Instrumented build
-  cmake .. -DCMAKE_BUILD_TYPE=Release -DLLVM_BUILD_INSTRUMENTED=IR -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DLLVM_USE_LINKER=lld -DLLVM_VP_COUNTERS_PER_SITE=6 "${cmake_args[@]}"
+  # Build instrumented clang; LLVM_BUILD_INSTRUMENTED=IR adds
+  # -fprofile-generate itself. LLVM_PROFILE_DATA_DIR is only set by the
+  # LLVM tree, so standalone builds have to pass it explicitly.
+  # Unittests and docs are not needed for training, so skip them in this
+  # stage. Nothing gets installed from here, so the distribution
+  # components are only passed to the final build.
+  cmake .. -DLLVM_BUILD_INSTRUMENTED=IR -DLLVM_PROFILE_DATA_DIR="$PWD/profiles" \
+    -DLLVM_USE_LINKER=lld -DLLVM_VP_COUNTERS_PER_SITE=6 \
+    "${cmake_args[@]}" -DLLVM_BUILD_TESTS=OFF -DLLVM_BUILD_DOCS=OFF
+  # Test tools for lit; clang-test-depends would also build the unittests
   ninja
+  ninja hmaptool
 
-  # Workload for PGO profiles
-  # Might want to be increased in the future
-  LD_LIBRARY_PATH=$PWD/lib ninja check-clang{,-tools} || true
+  # Drop profiles written by clang-tblgen etc. during the build
+  rm -f profiles/*.profraw
+
+  # CMAKE_SKIP_RPATH=ON: the instrumented binaries need libclang-cpp
+  # from the build tree
+  export LD_LIBRARY_PATH="$PWD/lib"
+
+  # Run the clang, clang-tools-extra and clangd lit tests (without the
+  # gtest unittests); covers other languages, targets and the tools
+  # (clangd, clang-tidy) so they don't end up with zero counts and get
+  # optimized as cold code
+  lit -q test tools/extra/test tools/extra/clangd/test || true
+
+  # Main workload: compile part of LLVM (middle-end + X86 backend) with the
+  # instrumented clang and the regular package CFLAGS
+  cmake -S "$srcdir/llvm-project-$pkgver.src/llvm" -B ../build-train -G Ninja \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DCMAKE_C_COMPILER="$PWD/bin/clang" \
+    -DCMAKE_CXX_COMPILER="$PWD/bin/clang++" \
+    -DCMAKE_OPTIMIZE_DEPENDENCIES=ON \
+    -DLLVM_TARGETS_TO_BUILD=X86 \
+    -DLLVM_INCLUDE_BENCHMARKS=OFF \
+    -DLLVM_INCLUDE_EXAMPLES=OFF \
+    -DLLVM_INCLUDE_TESTS=OFF
+  ninja -C ../build-train LLVMCore LLVMInstCombine LLVMScalarOpts LLVMX86CodeGen
+  rm -rf ../build-train
+
   unset LD_LIBRARY_PATH
 
-  # Move all profiles into PGO dir
-  # Somehow defining the dir did not work, therefore we use that hacky workaround
-  find . -name "*.profraw" -exec mv {} "$srcdir/llvm-project-$pkgver.src/clang/pgo" \;
-
   # Merge the generated profile
-  llvm-profdata merge -o "${srcdir}/llvm-project-$pkgver.src/clang/pgo/llvm.profdata" "$srcdir/llvm-project-$pkgver.src/clang/pgo"/*.profraw
+  local pgo_profile="$PWD/clang.profdata"
+  llvm-profdata merge -o "$pgo_profile" profiles/*.profraw
 
-  # Use Original CFLAGS again and enable ThinLTO + use the profile
-  export PGO_PROFILE="${srcdir}/llvm-project-$pkgver.src/clang/pgo/llvm.profdata"
-  export CFLAGS="${ORIG_CFLAGS} -fprofile-use=$PGO_PROFILE"
-  export CXXFLAGS="${ORIG_CXXFLAGS} -fprofile-use=$PGO_PROFILE"
-  export LDFLAGS="$LDFLAGS -flto=thin"
+  # Make sure the training actually covered the clang frontend and the
+  # tools (clang-tidy)
+  local _fn
+  for _fn in _ZN5clang4Sema _ZN5clang4tidy; do
+    if llvm-profdata show --function=$_fn "$pgo_profile" | grep -q '^Functions shown: 0$'; then
+      echo "PGO profile has no data for $_fn, aborting" >&2
+      return 1
+    fi
+  done
 
   cd ..
   mkdir build-pgo-use
   cd build-pgo-use
-  # Enable ThinLTO and use profile
-  cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DLLVM_USE_LINKER=lld -DLLVM_ENABLE_LTO=Thin -DLLVM_PROFDATA_FILE=$PGO_PROFILE "${cmake_args[@]}"
+  # Use the profile and enable ThinLTO
+  cmake .. -DLLVM_USE_LINKER=lld -DLLVM_ENABLE_LTO=Thin -DLLVM_PROFDATA_FILE="$pgo_profile" \
+    "${cmake_args[@]}" -DLLVM_DISTRIBUTION_COMPONENTS="$distribution_components"
   ninja
 }
 
