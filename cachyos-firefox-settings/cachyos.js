@@ -227,7 +227,7 @@ pref("browser.safebrowsing.provider.mozilla.updateURL", "", locked);
 pref("browser.safebrowsing.reportPhishURL", "", locked);
 
 // Performance tweaks
-pref("browser.tabs.unloadOnLowMemory", true, locked); // Unload unused tabs
+pref("browser.tabs.unloadOnLowMemory", true); // Unload unused tabs
 pref("content.notify.interval", 100000); // page reflow timer, lower redrawn rendering timer, increases responsiveness but increase total load time
 pref("network.dnsCacheExpiration", 3600); // Time DNS entries are cached in seconds.
 pref("network.http.max-connections", 1800); //https://kb.mozillazine.org/Network.http.max-connections
