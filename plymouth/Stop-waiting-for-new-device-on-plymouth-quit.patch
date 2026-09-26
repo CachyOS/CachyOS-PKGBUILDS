@@ -1,0 +1,27 @@
+From ba9810e8f181429144479436f5d435f04f788f50 Mon Sep 17 00:00:00 2001
+From: Michal Gawlik <dex6@noreply.gitlab.freedesktop.org>
+Date: Mon, 14 Sep 2026 11:38:46 +0300
+Subject: [PATCH] Stop waiting for new device on plymouth quit
+
+See: https://gitlab.freedesktop.org/plymouth/plymouth/-/work_items/349
+
+Signed-off-by: Vasiliy Stelmachenok <ventureo@cachyos.org>
+---
+ src/main.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/src/main.c b/src/main.c
+index aac5125d..d3052498 100644
+--- a/src/main.c
++++ b/src/main.c
+@@ -1482,6 +1482,7 @@ on_quit (state_t       *state,
+         if (state->session != NULL)
+                 ply_terminal_session_close_log (state->session);
+ 
++        ply_device_manager_pause (state->device_manager);
+         ply_device_manager_deactivate_keyboards (state->device_manager);
+ 
+         ply_trace ("unloading splash");
+-- 
+2.55.0
+

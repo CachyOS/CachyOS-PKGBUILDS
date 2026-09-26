@@ -1,0 +1,59 @@
+From 9902d07539755ff64ba863308b8d1029668eaba0 Mon Sep 17 00:00:00 2001
+From: Danny Milosavljevic <dannym@friendly-machines.com>
+Date: Sat, 14 Feb 2026 00:00:00 +0000
+Subject: [PATCH] plugins: Restore device name after failed attempt
+
+When DRM shared library opens fine but /dev/dri/card0 device file doesn't
+exist, the device name (of the non-existent device) would stay anyway,
+ruining the chance of any fall back path (further drivers) to work.
+
+This restores the old device name in such a case.
+---
+ src/libply-splash-core/ply-renderer.c | 13 ++++++++++++-
+ 1 file changed, 12 insertions(+), 1 deletion(-)
+
+diff --git a/src/libply-splash-core/ply-renderer.c b/src/libply-splash-core/ply-renderer.c
+index 21df22f9..5bea901b 100644
+--- a/src/libply-splash-core/ply-renderer.c
++++ b/src/libply-splash-core/ply-renderer.c
+@@ -244,15 +244,23 @@ ply_renderer_open_plugin (ply_renderer_t *renderer,
+                           const char     *plugin_path,
+                           bool            force)
+ {
++        char *saved_device_name;
++
+         ply_trace ("trying to open renderer plugin %s", plugin_path);
+ 
+-        if (!ply_renderer_load_plugin (renderer, plugin_path))
++        saved_device_name = renderer->device_name != NULL ? strdup (renderer->device_name) : NULL;
++
++        if (!ply_renderer_load_plugin (renderer, plugin_path)) {
++                free (saved_device_name);
+                 return false;
++        }
+ 
+         if (!ply_renderer_open_device (renderer)) {
+                 ply_trace ("could not open rendering device for plugin %s",
+                            plugin_path);
+                 ply_renderer_unload_plugin (renderer);
++                free (renderer->device_name);
++                renderer->device_name = saved_device_name;
+                 return false;
+         }
+ 
+@@ -261,9 +269,12 @@ ply_renderer_open_plugin (ply_renderer_t *renderer,
+                            plugin_path);
+                 ply_renderer_close_device (renderer);
+                 ply_renderer_unload_plugin (renderer);
++                free (renderer->device_name);
++                renderer->device_name = saved_device_name;
+                 return false;
+         }
+ 
++        free (saved_device_name);
+         ply_trace ("opened renderer plugin %s", plugin_path);
+         return true;
+ }
+-- 
+GitLab
+
