@@ -11,7 +11,7 @@
 _optimize_v3=${_optimize_v3-}
 
 # ENABLE x86-64-v4 optimization
-_optimize_v4=${_optimize_v4-}
+_optimize_v4=${_optimize_v4-y}
 
 pkgname=(
   gcc
@@ -84,7 +84,7 @@ options=(
   !lto
 )
 _libdir=usr/lib/gcc/$CHOST/${pkgver%%.*}
-source=(git+https://sourceware.org/git/gcc.git#commit=$_commit
+source=(git+https://github.com/gcc-mirror/gcc.git#commit=$_commit
         c89 c99
         gcc-ada-repro.patch
         gcc-16-52cd02606b90.patch
@@ -95,7 +95,7 @@ sha256sums=('c4def1816bc86f2bb981deb958a572ca63eb0ef784418f0414f1071a4efee44d'
             '2513c6d9984dd0a2058557bf00f06d8d5181734e41dcfe07be7ed86f2959622a'
             '1773f5137f08ac1f48f0f7297e324d5d868d55201c03068670ee4602babdef2f'
             '09c0fcfb370399270adb7905becc4fc395aa1d5f59c8d6169a1f021182600386'
-            '45b8f33a5ca9de804808cf84e56a39127197b655ab2b008682139caa5375664f')
+            '1c62265ce27d4f50a15e8a20b31d814c0c5d7aab5726fc66546d244d6d78fafb')
 #pkgver() {
 #  cd gcc
 #  echo "$(cat gcc/BASE-VER)+$(git describe --abbrev=12 --tags | sed 's/[^-]*-[^-]*-//;s/[^-]*-/r&/;s/-/+/g;s/_/./')"
