@@ -2,6 +2,8 @@
 Description=Refresh arch / cachyos mirror lists
 Documentation=https://github.com/CachyOS/CachyOS-PKGBUILDS/tree/master/cachyos-rate-mirrors
 After=network-online.target nss-lookup.target
+StartLimitIntervalSec=1h
+StartLimitBurst=6
 
 [Service]
 Type=oneshot
@@ -9,3 +11,5 @@ StandardOutput=null
 StandardError=journal
 ExecStart=/usr/bin/cachyos-rate-mirrors
 IPAccounting=yes
+Restart=on-failure
+RestartSec=5min
