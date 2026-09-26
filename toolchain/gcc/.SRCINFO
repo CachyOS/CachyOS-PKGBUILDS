@@ -1,7 +1,7 @@
 pkgbase = gcc
 	pkgdesc = The GNU Compiler Collection
 	pkgver = 16.2.1+r23+gd564253eb6c8
-	pkgrel = 1
+	pkgrel = 2
 	url = https://gcc.gnu.org
 	arch = x86_64
 	license = GPL-3.0-or-later WITH GCC-exception-3.1
@@ -18,33 +18,37 @@ pkgbase = gcc
 	makedepends = git
 	makedepends = lib32-gcc-libs
 	makedepends = lib32-glibc
+	makedepends = libelf
 	makedepends = libisl
 	makedepends = libmpc
+	makedepends = perf
 	makedepends = python
 	makedepends = rust
 	makedepends = zstd
 	options = !emptydirs
 	options = !lto
-	source = git+https://sourceware.org/git/gcc.git#commit=d564253eb6c859e266d3cae18e82fb4db9a88316
+	source = git+https://github.com/gcc-mirror/gcc.git#commit=d564253eb6c859e266d3cae18e82fb4db9a88316
 	source = c89
 	source = c99
 	source = gcc-ada-repro.patch
 	source = gcc-16-52cd02606b90.patch
+	source = autofdo.patch
 	sha256sums = c4def1816bc86f2bb981deb958a572ca63eb0ef784418f0414f1071a4efee44d
-	sha256sums = 7b09ec947f90b98315397af675369a1e3dfc527fa70013062e6e85c4be0275ab
-	sha256sums = 44ea973558842f3f4bd666bdaf6e810fd7b7c7bd36b5cc4c69f93d2cd0124fc7
+	sha256sums = de48736f6e4153f03d0a5d38ceb6c6fdb7f054e8f47ddd6af0a3dbf14f27b931
+	sha256sums = 2513c6d9984dd0a2058557bf00f06d8d5181734e41dcfe07be7ed86f2959622a
 	sha256sums = 1773f5137f08ac1f48f0f7297e324d5d868d55201c03068670ee4602babdef2f
-	sha256sums = 838e14d4ef76079107a5373316598025915eaf747a10522ec9f8842125ca9a8e
+	sha256sums = 09c0fcfb370399270adb7905becc4fc395aa1d5f59c8d6169a1f021182600386
+	sha256sums = 45b8f33a5ca9de804808cf84e56a39127197b655ab2b008682139caa5375664f
 
 pkgname = gcc
 	pkgdesc = The GNU Compiler Collection - C and C++ frontends
-	depends = libasan=16.2.1+r23+gd564253eb6c8-1
-	depends = libgcc=16.2.1+r23+gd564253eb6c8-1
-	depends = libhwasan=16.2.1+r23+gd564253eb6c8-1
-	depends = liblsan=16.2.1+r23+gd564253eb6c8-1
-	depends = libstdc++=16.2.1+r23+gd564253eb6c8-1
-	depends = libtsan=16.2.1+r23+gd564253eb6c8-1
-	depends = libubsan=16.2.1+r23+gd564253eb6c8-1
+	depends = libasan=16.2.1+r23+gd564253eb6c8-2
+	depends = libgcc=16.2.1+r23+gd564253eb6c8-2
+	depends = libhwasan=16.2.1+r23+gd564253eb6c8-2
+	depends = liblsan=16.2.1+r23+gd564253eb6c8-2
+	depends = libstdc++=16.2.1+r23+gd564253eb6c8-2
+	depends = libtsan=16.2.1+r23+gd564253eb6c8-2
+	depends = libubsan=16.2.1+r23+gd564253eb6c8-2
 	depends = binutils>=2.28
 	depends = glibc>=2.27
 	depends = gmp
@@ -53,6 +57,7 @@ pkgname = gcc
 	depends = mpfr
 	depends = zlib
 	depends = zstd
+	optdepends = gcc-autofdo-tools: for creating, merging and inspecting AutoFDO profiles
 	optdepends = lib32-gcc-libs: for generating code for 32-bit ABI
 	provides = gcc-multilib
 	replaces = gcc-multilib
@@ -61,7 +66,7 @@ pkgname = gcc
 
 pkgname = gcc-ada
 	pkgdesc = Ada front-end for GCC (GNAT)
-	depends = gcc=16.2.1+r23+gd564253eb6c8-1
+	depends = gcc=16.2.1+r23+gd564253eb6c8-2
 	depends = glibc>=2.27
 	depends = gmp
 	depends = libgcc
@@ -75,9 +80,16 @@ pkgname = gcc-ada
 	options = !emptydirs
 	options = staticlibs
 
+pkgname = gcc-autofdo-tools
+	pkgdesc = Tools for creating, merging and inspecting GCC AutoFDO profiles
+	license = GPL-3.0-or-later
+	depends = glibc>=2.27
+	depends = libelf
+	depends = zlib
+
 pkgname = gcc-d
 	pkgdesc = D frontend for GCC
-	depends = gcc=16.2.1+r23+gd564253eb6c8-1
+	depends = gcc=16.2.1+r23+gd564253eb6c8-2
 	depends = glibc>=2.27
 	depends = gmp
 	depends = libgphobos
@@ -93,7 +105,7 @@ pkgname = gcc-d
 
 pkgname = gcc-fortran
 	pkgdesc = Fortran front-end for GCC
-	depends = gcc=16.2.1+r23+gd564253eb6c8-1
+	depends = gcc=16.2.1+r23+gd564253eb6c8-2
 	depends = glibc>=2.27
 	depends = gmp
 	depends = libgfortran
@@ -107,7 +119,7 @@ pkgname = gcc-fortran
 
 pkgname = gcc-gcobol
 	pkgdesc = Cobol frontend for GCC
-	depends = gcc=16.2.1+r23+gd564253eb6c8-1
+	depends = gcc=16.2.1+r23+gd564253eb6c8-2
 	depends = glibc>=2.27
 	depends = gmp
 	depends = libgcobol
@@ -119,7 +131,7 @@ pkgname = gcc-gcobol
 
 pkgname = gcc-go
 	pkgdesc = Go front-end for GCC
-	depends = gcc=16.2.1+r23+gd564253eb6c8-1
+	depends = gcc=16.2.1+r23+gd564253eb6c8-2
 	depends = glibc>=2.27
 	depends = gmp
 	depends = libgo
@@ -152,7 +164,7 @@ pkgname = gcc-libs
 
 pkgname = gcc-m2
 	pkgdesc = Modula-2 frontend for GCC
-	depends = gcc=16.2.1+r23+gd564253eb6c8-1
+	depends = gcc=16.2.1+r23+gd564253eb6c8-2
 	depends = glibc>=2.27
 	depends = gmp
 	depends = libgm2
@@ -164,7 +176,7 @@ pkgname = gcc-m2
 
 pkgname = gcc-objc
 	pkgdesc = Objective-C front-end for GCC
-	depends = gcc=16.2.1+r23+gd564253eb6c8-1
+	depends = gcc=16.2.1+r23+gd564253eb6c8-2
 	depends = glibc>=2.27
 	depends = gmp
 	depends = libisl.so
@@ -178,7 +190,7 @@ pkgname = gcc-objc
 
 pkgname = gcc-rust
 	pkgdesc = Rust frontend for GCC
-	depends = gcc=16.2.1+r23+gd564253eb6c8-1
+	depends = gcc=16.2.1+r23+gd564253eb6c8-2
 	depends = glibc>=2.27
 	depends = gmp
 	depends = libisl.so
@@ -222,7 +234,7 @@ pkgname = libgcc
 
 pkgname = libgccjit
 	pkgdesc = Just-In-Time Compilation with GCC backend
-	depends = gcc=16.2.1+r23+gd564253eb6c8-1
+	depends = gcc=16.2.1+r23+gd564253eb6c8-2
 	depends = glibc>=2.27
 	depends = gmp
 	depends = libisl.so
@@ -327,7 +339,7 @@ pkgname = libubsan
 
 pkgname = lto-dump
 	pkgdesc = Dump link time optimization object files
-	depends = gcc=16.2.1+r23+gd564253eb6c8-1
+	depends = gcc=16.2.1+r23+gd564253eb6c8-2
 	depends = glibc>=2.27
 	depends = gmp
 	depends = libisl.so
