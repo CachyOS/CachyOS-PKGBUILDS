@@ -2,7 +2,7 @@
 # Contributor: Jan "heftig" Steffens <jan.steffens@gmail.com>
 
 pkgname=('llvm' 'llvm-libs')
-pkgver=22.1.8
+pkgver=23.1.1
 pkgrel=2
 arch=('x86_64')
 url="https://llvm.org/"
@@ -15,7 +15,7 @@ checkdepends=('llvm-libs')
 options=('staticlibs' '!lto') # tools/llvm-shlib/typeids.test fails with LTO
 _source_base=https://github.com/llvm/llvm-project/releases/download/llvmorg-$pkgver
 source=($_source_base/llvm-project-$pkgver.src.tar.xz{,.sig})
-sha256sums=('922f1817a0df7b1489272d18134ee0087a8b068828f87ac63b9861b1a9965888'
+sha256sums=('ebe9be46fe8756d58c5b198ffad0fa2a766257add81a4dc52179bfacc7888ee6'
             'SKIP')
 validpgpkeys=('474E22316ABF4785A88C6E8EA2C794A986419D8A'  # Tom Stellard <tstellar@redhat.com>
               'D574BD5D1D0E98895E3BF90044F2485E45D59042'  # Tobias Hieta <tobias@hieta.se>
@@ -39,7 +39,7 @@ _get_distribution_components() {
       LLVMDemangle|LLVMSupport|LLVMTableGen)
         ;;
       # used by lldb
-      LLVMDebuginfod)
+      LLVMDebuginfod|LLVMHTTP)
         ;;
       # testing libraries
       LLVMTestingAnnotations|LLVMTestingSupport)
@@ -83,7 +83,7 @@ build() {
     -DCMAKE_BUILD_TYPE=Release
     -DCMAKE_INSTALL_DOCDIR=share/doc
     -DCMAKE_INSTALL_PREFIX=/usr
-    -DCMAKE_SKIP_RPATH=ON
+    -DCMAKE_SKIP_INSTALL_RPATH=ON
     -DLLVM_BINUTILS_INCDIR=/usr/include
     -DLLVM_BUILD_DOCS=ON
     -DLLVM_BUILD_LLVM_DYLIB=ON
@@ -108,39 +108,67 @@ build() {
   export CXX=clang++
   export NM=llvm-nm
   export RANLIB=llvm-ranlib
-  # Export Original CFLAGS
-  export ORIG_CFLAGS="${CFLAGS}"
-  export ORIG_CXXFLAGS="${CXXFLAGS}"
-
-  export CFLAGS+=" -fprofile-generate"
-  export CXXFLAGS+=" -fprofile-generate"
 
   cmake .. "${cmake_args[@]}"
   local distribution_components=$(_get_distribution_components | paste -sd\;)
   test -n "$distribution_components"
-  cmake_args+=(-DLLVM_DISTRIBUTION_COMPONENTS="$distribution_components")
 
-  # Build LLVM with -fprofile generate
-  cmake .. -DCMAKE_BUILD_TYPE=Release -DLLVM_BUILD_INSTRUMENTED=IR -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DLLVM_USE_LINKER=lld -DLLVM_VP_COUNTERS_PER_SITE=6 "${cmake_args[@]}"
+  # Build instrumented LLVM; LLVM_BUILD_INSTRUMENTED=IR adds
+  # -fprofile-generate=<build>/profiles itself. Unittests and docs are
+  # not needed for training, so skip them in this stage. Nothing gets
+  # installed from here, so the distribution components are only passed
+  # to the final build (they include docs targets).
+  # Clang is only built here as training driver on top of the
+  # instrumented libLLVM; it gets thrown away afterwards.
+  cmake .. -DLLVM_BUILD_INSTRUMENTED=IR -DLLVM_USE_LINKER=lld -DLLVM_VP_COUNTERS_PER_SITE=6 \
+    "${cmake_args[@]}" -DLLVM_BUILD_TESTS=OFF -DLLVM_BUILD_DOCS=OFF \
+    -DLLVM_ENABLE_PROJECTS=clang -DCLANG_BUILD_TOOLS=OFF \
+    -DCLANG_INCLUDE_TESTS=OFF -DCLANG_INCLUDE_DOCS=OFF
   ninja
+  ninja clang
 
-  # Run LLVM lit tests to generate profile to be used for PGO
-  ./bin/llvm-lit -v test || true
+  # Drop profiles written by llvm-tblgen etc. during the build
+  rm -f profiles/*.profraw
+
+  # Run a subset of the LLVM lit tests; covers all backends (e.g. AMDGPU for
+  # Mesa, BPF), the optimizer and the JIT, so they don't end up with zero
+  # counts and get optimized as cold code
+  ./bin/llvm-lit ../test/{CodeGen,Transforms,MC,ExecutionEngine} || true
+
+  # Main workload: compile part of LLVM itself (middle-end + X86 backend)
+  # with the instrumented clang and the regular package CFLAGS
+  cmake -S .. -B ../build-train -G Ninja \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DCMAKE_C_COMPILER="$PWD/bin/clang" \
+    -DCMAKE_CXX_COMPILER="$PWD/bin/clang++" \
+    -DCMAKE_OPTIMIZE_DEPENDENCIES=ON \
+    -DLLVM_TARGETS_TO_BUILD=X86 \
+    -DLLVM_INCLUDE_BENCHMARKS=OFF \
+    -DLLVM_INCLUDE_EXAMPLES=OFF \
+    -DLLVM_INCLUDE_TESTS=OFF
+  ninja -C ../build-train LLVMCore LLVMInstCombine LLVMScalarOpts LLVMX86CodeGen
+  rm -rf ../build-train
 
   # Merge the generated profile
-  llvm-profdata merge -o llvm.profdata "${srcdir}/llvm-project-$pkgver.src/llvm/build/profiles"/*.profraw
+  local pgo_profile="$PWD/llvm.profdata"
+  llvm-profdata merge -o "$pgo_profile" profiles/*.profraw
 
-  # Use Original CFLAGS again and enable ThinLTO + use the profile
-  export PGO_PROFILE="${srcdir}/llvm-project-$pkgver.src/llvm/build/llvm.profdata"
-  export CFLAGS="${ORIG_CFLAGS} -fprofile-use=$PGO_PROFILE"
-  export CXXFLAGS="${ORIG_CXXFLAGS} -fprofile-use=$PGO_PROFILE"
-  export LDFLAGS="$LDFLAGS -flto=thin"
+  # Make sure the training actually ran against the instrumented libLLVM
+  # (InstCombine only lives there) and that the clang workload ran
+  local _fn
+  for _fn in InstCombinerImpl _ZN5clang; do
+    if llvm-profdata show --function=$_fn "$pgo_profile" | grep -q '^Functions shown: 0$'; then
+      echo "PGO profile has no data for $_fn, aborting" >&2
+      return 1
+    fi
+  done
 
   cd ..
   mkdir build-pgo-use
   cd build-pgo-use
-  # Enable ThinLTO
-  cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DLLVM_USE_LINKER=lld -DLLVM_ENABLE_LTO=Thin -DLLVM_PROFDATA_FILE=$PGO_PROFILE "${cmake_args[@]}"
+  # Use the profile and enable ThinLTO
+  cmake .. -DLLVM_USE_LINKER=lld -DLLVM_ENABLE_LTO=Thin -DLLVM_PROFDATA_FILE="$pgo_profile" \
+    "${cmake_args[@]}" -DLLVM_DISTRIBUTION_COMPONENTS="$distribution_components"
   ninja
 
   # Include lit for running lit-based tests in other projects
