@@ -1,0 +1,63 @@
+# Maintainer: Noctalia Team <team@noctalia.dev>
+
+pkgname=umbriel
+pkgver=0.1.0.r0.0
+pkgrel=1
+pkgdesc='A Wayland compositor built on wlroots'
+arch=('x86_64' 'aarch64')
+url='https://github.com/noctalia-dev/umbriel'
+license=('MIT')
+depends=(
+  'cairo'
+  'gcc-libs'
+  'glibc'
+  'jemalloc'
+  'lcms2'
+  'libdrm'
+  'libglvnd'
+  'libinput'
+  'libxkbcommon'
+  'mesa'
+  'pango'
+  'pixman'
+  'systemd-libs'
+  'tomlplusplus'
+  'wayland'
+  'xdg-desktop-portal-umbriel'
+  'wlroots0.20>=0.20.1'
+)
+makedepends=(
+  'git'
+  'meson'
+  'ninja'
+  'nlohmann-json'
+  'pkgconf'
+  'wayland-protocols'
+)
+optdepends=(
+  'xwayland-satellite: X11 application support'
+)
+source=('git+https://github.com/noctalia-dev/umbriel.git#branch=main')
+b2sums=('SKIP')
+
+pkgver() {
+  cd "$srcdir/umbriel"
+  printf '%s.r%s.%s' \
+    "$(<VERSION)" \
+    "$(git rev-list --count HEAD)" \
+    "$(git rev-parse --short=7 HEAD)"
+}
+
+build() {
+  arch-meson "$srcdir/umbriel" "$srcdir/umbriel/build" \
+    -Db_ndebug=true \
+    -Dtests=disabled \
+    -Dtest_ipc=disabled
+  meson compile -C "$srcdir/umbriel/build"
+}
+
+package() {
+  DESTDIR="$pkgdir" meson install -C "$srcdir/umbriel/build" --no-rebuild
+  install -Dm644 "$srcdir/umbriel/LICENSE" \
+    "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+}
