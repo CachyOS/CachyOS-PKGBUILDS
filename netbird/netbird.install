@@ -1,0 +1,18 @@
+# Install and start service after installation
+post_install() {
+  echo "Run 'sudo netbird service install && sudo netbird service start' to install and start the service"
+}
+
+# Only when the service is running, reconfigure and restart it after upgrade
+post_upgrade() {
+  if systemctl is-active --quiet netbird; then
+    netbird service reconfigure &>/dev/null || true
+    netbird service restart &>/dev/null || true
+  fi
+}
+
+# Stop and uninstall service and delete related data before removal
+pre_remove() {
+  netbird service stop 2>/dev/null || true
+  netbird service uninstall 2>/dev/null || true
+}
