@@ -61,6 +61,26 @@ function is_module_loadable() {
     return 1
 }
 
+function archiso_nvidia_module() {
+    mkdir -p /run/modprobe.d
+    if (chwd --check "nouveau" \
+        || chwd --check "nvidia-dkms-470xx" \
+        || check --check "nvidia-dkms-580xx") &>/dev/null
+    then
+        cat <<'EOF' >"/run/modprobe.d/archiso.conf"
+install nvidia modprobe nouveau
+install nvidia_drm modprobe nouveau
+install nvidia_modeset modprobe nouveau
+install nvidia_uvm modprobe nouveau
+EOF
+        echo "nouveau"
+    elif (chwd --check "nvidia-open-dkms" \
+        || chwd --check "nvidia-open-dkms.prime") &>/dev/null;
+    then
+        echo "nvidia_drm"
+    fi
+}
+
 function generate_load_target() {
     local device class vendor sysfs modalias nvidia_module kernel modprobe
     local -a modules=()
@@ -109,6 +129,10 @@ function generate_load_target() {
                 ;;
         esac
     done < <(grep -l "0x030[0-9]00" /sys/bus/pci/devices/*/class)
+
+    if [[ -d /run/archiso ]]; then
+        nvidia_module="$(archiso_nvidia_module)"
+    fi
 
     if [ -n "$nvidia_module" ]; then
         for module in "${modules[@]}"; do
