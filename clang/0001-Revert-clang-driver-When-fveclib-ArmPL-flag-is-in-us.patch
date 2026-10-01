@@ -61,19 +61,19 @@ diff --git a/clang/lib/Driver/ToolChains/MSVC.cpp b/clang/lib/Driver/ToolChains/
 index 7d31eea60308..00525de6c037 100644
 --- a/clang/lib/Driver/ToolChains/MSVC.cpp
 +++ b/clang/lib/Driver/ToolChains/MSVC.cpp
-@@ -79,12 +79,6 @@ void visualstudio::Linker::ConstructJob(Compilation &C, const JobAction &JA,
+@@ -78,12 +78,6 @@
+     CmdArgs.push_back("-machine:arm64x");
    else if (TC.getTriple().isWindowsArm64EC())
      CmdArgs.push_back("-machine:arm64ec");
- 
+-
 -  if (const Arg *A = Args.getLastArg(options::OPT_fveclib)) {
 -    StringRef V = A->getValue();
 -    if (V == "ArmPL")
 -      CmdArgs.push_back(Args.MakeArgString("--dependent-lib=amath"));
 -  }
--
-   if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nostartfiles) &&
-       !C.getDriver().IsCLMode() && !C.getDriver().IsFlangMode()) {
-     CmdArgs.push_back("-defaultlib:libcmt");
+ 
+   // SYCL requires dynamic CRT because STL objects cross DLL boundaries.
+   // Library dependency is added via --dependent-lib at compiler stage.
 diff --git a/clang/test/Driver/fveclib.c b/clang/test/Driver/fveclib.c
 index c57e9aa7a3cc..4e278285c925 100644
 --- a/clang/test/Driver/fveclib.c
