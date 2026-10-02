@@ -1,9 +1,10 @@
 # Maintainer: Michael Bolden <me@sm9.dev>
 # Maintainer: Peter Jung <admin@ptr1337.dev>
+# Contributor: witchlliee <witchlliee@proton.me>
 
 pkgname=cachyos-gaming-meta
 pkgver=1.0.0
-pkgrel=9
+pkgrel=10
 epoch=1
 arch=(any)
 pkgdesc='Meta package for Gaming dependencies'
@@ -33,9 +34,14 @@ depends=(
   vulkan-tools
 )
 
-source=('99-splitlock.conf')
-sha256sums=('76cded15c34773ab77672fba4bf3e00452256b09f9b58e59334b9b8848cddcba')
+source=(
+  '99-splitlock.conf'
+  '72-dstm.rules'
+)
+sha256sums=('76cded15c34773ab77672fba4bf3e00452256b09f9b58e59334b9b8848cddcba'
+            'fa7865af53d9d85bbb0b9b97592c2e836c8c16975c6337cfd50d5a2340469478')
 
 package() {
-  install -Dm644 "$srcdir/99-splitlock.conf" "$pkgdir/usr/lib/sysctl.d/99-splitlock.conf"
+  install -Dm644 "${srcdir}/99-splitlock.conf" "${pkgdir}/usr/lib/sysctl.d/99-splitlock.conf"
+  install -Dm644 "${srcdir}/72-dstm.rules" "${pkgdir}/usr/lib/udev/rules.d/72-dstm.rules"
 }
