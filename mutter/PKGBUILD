@@ -6,8 +6,8 @@
 # Contributor: Michael Kanis <mkanis_at_gmx_dot_de>
 
 pkgname=mutter
-pkgver=50.5
-pkgrel=2
+pkgver=51.0
+pkgrel=1
 pkgdesc="Window manager and compositor for GNOME"
 url="https://gitlab.gnome.org/GNOME/mutter"
 arch=(x86_64)
@@ -82,41 +82,34 @@ makedepends=(
   sysprof
   wayland-protocols
 )
-provides=(libmutter-18.so mutter)
+provides=(libmutter-51.so mutter)
 optdepends=('bash-completion: Bash completions for gdctl')
 source=(
   # Mutter tags use SSH signatures which makepkg doesn't understand
   "git+$url.git#tag=${pkgver/[a-z]/.&}"
   "git+https://gitlab.gnome.org/GNOME/gvdb.git#commit=b54bc5da25127ef416858a3ad92e57159ff565b3"
   "Add-support-for-tearing.patch"
-  "5116.patch"
-  "5131.patch"
+  "cogl-Handle-errors-on-EGL-initialization.patch"
 )
-b2sums=('1809a54d355194538db6128a91867799dc96c191e761c39e9952b54ace0868648dd62459f7eb047c21bc51e03377336563bdfc53876197ae53e0a74e94cd18c3'
-        'f989bc2ceb52aad3c6a23c439df3bbc672bc11d561a247d19971d30cc85ed5d42295de40f8e55b13404ed32aa44f12307c9f5b470f2e288d1c9c8329255c43bf'
-        '1d5be8466fa8198268a955ae37343cc817d7e022538e6508dd920702d76072d0bd263f9657ac896f916c655cf9cc07a0a3e10a1e5d0e46b65f3285b37d1875b5'
-        'f9f2c36bb077ad859d54e667bd1f26d624ba170e7abd89678745d5626790697ab93db33fa07b76907494092316d67821d37dcc7cd1e2ac7b3a6decf7c21bf94c'
-        'af8198871ef28a7394989264166a1018146b37c7aa1b20c93ff0a0668a64bfc36d925157fdb82b835d6e82d51bdfe326e404de0157ef8ed301f4548979bedb00')
+b2sums=(
+  '3c7e7159e70b09b91325335c4d13bb0ff51a161e430a0a63c65f380d5d31927cc8812cfb32b38b4964741c65c34ba12decc81274c7f556e7225d4255778689d8'
+  'f989bc2ceb52aad3c6a23c439df3bbc672bc11d561a247d19971d30cc85ed5d42295de40f8e55b13404ed32aa44f12307c9f5b470f2e288d1c9c8329255c43bf'
+  'e413125d0a55b416f0cfe352e162d8f9500323a4fa2eef4ddaf7adffcbd8f02bf8b45cbe0045081e072ba1fa5c3b7b04c8023a98adbe3a425289e99ec7c12001'
+  'd583f9d5ab03f9be75ece1735d388261cfa6120ab23235e63fd4f769af57a8978c61aaf79fe1f85319ca3427ef1e5ca2635394da794d8112bb5e688c8eaa9127'
+)
 
 prepare() {
   cd mutter
-
-  # https://gitlab.gnome.org/GNOME/mutter/-/merge_requests/2660
   patch -Np1 -i "${srcdir}/Add-support-for-tearing.patch"
-  # https://gitlab.gnome.org/GNOME/mutter/-/merge_requests/5116
-  patch -Np1 -i "${srcdir}/5116.patch"
-  # https://gitlab.gnome.org/GNOME/mutter/-/merge_requests/5131
-  patch -Np1 -i "${srcdir}/5131.patch"
+  patch -Np1 -i "${srcdir}/cogl-Handle-errors-on-EGL-initialization.patch"
 }
 
 build() {
   local meson_options=(
     -D docs=false
-    -D egl_device=true
     -D devkit=disabled
     -D installed_tests=false
     -D tests=disabled
-    -D wayland_eglstream=true
   )
 
   CFLAGS="${CFLAGS/-O2/-O3} -fno-semantic-interposition"
