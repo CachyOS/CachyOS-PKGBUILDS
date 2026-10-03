@@ -1,0 +1,61 @@
+From f948e80f5e7812fe0a7f695c9114e507c1be2920 Mon Sep 17 00:00:00 2001
+From: Vasiliy Stelmachenok <ventureo@cachyos.org>
+Date: Wed, 23 Sep 2026 18:58:41 +0300
+Subject: [PATCH] cogl: Handle errors on EGL initialization
+
+Signed-off-by: Vasiliy Stelmachenok <ventureo@cachyos.org>
+---
+ src/backends/native/meta-render-device.c | 17 ++++++++---------
+ 1 file changed, 8 insertions(+), 9 deletions(-)
+
+diff --git a/src/backends/native/meta-render-device.c b/src/backends/native/meta-render-device.c
+index eb92c3a810..bb36a865e9 100644
+--- a/src/backends/native/meta-render-device.c
++++ b/src/backends/native/meta-render-device.c
+@@ -58,25 +58,26 @@ G_DEFINE_ABSTRACT_TYPE_WITH_CODE (MetaRenderDevice, meta_render_device,
+                                   G_IMPLEMENT_INTERFACE (G_TYPE_INITABLE,
+                                                          initable_iface_init))
+ 
+-static void
+-init_egl (MetaRenderDevice *render_device)
++static gboolean
++init_egl (MetaRenderDevice *render_device, GError **error)
+ {
+   MetaRenderDevicePrivate *priv =
+     meta_render_device_get_instance_private (render_device);
+-  g_autoptr (GError) error = NULL;
+   MetaRendererEgl *renderer_egl;
+ 
+   renderer_egl = meta_renderer_egl_new (render_device);
+   priv->renderer_egl = renderer_egl;
+ 
+-  if (!cogl_renderer_connect (COGL_RENDERER (renderer_egl), &error))
++  if (!cogl_renderer_connect (COGL_RENDERER (renderer_egl), error))
+     {
+       meta_topic (META_DEBUG_RENDER, "Failed to connect renderer for %s: %s",
+                   meta_device_file_get_path (priv->device_file),
+-                  error->message);
++                  (*error)->message);
+       g_clear_object (&priv->renderer_egl);
+-      return;
++      return FALSE;
+     }
++
++  return TRUE;
+ }
+ 
+ static gboolean
+@@ -86,9 +87,7 @@ meta_render_device_initable_init (GInitable     *initable,
+ {
+   MetaRenderDevice *render_device = META_RENDER_DEVICE (initable);
+ 
+-  init_egl (render_device);
+-
+-  return TRUE;
++  return init_egl (render_device, error);
+ }
+ 
+ static void
+-- 
+2.56.0
+
