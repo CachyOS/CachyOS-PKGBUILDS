@@ -1,0 +1,40 @@
+# Maintainer: witchlliee <witchlliee@proton.me>
+
+pkgname=qt6ct
+pkgver=0.11
+pkgrel=1
+pkgdesc='Qt 6 Configuration Utility'
+arch=(x86_64)
+url='https://www.opencode.net/trialuser/qt6ct'
+license=(BSD-2-Clause)
+depends=(glibc
+         libgcc
+         libstdc++
+         qt6-base
+         qt6-svg)
+makedepends=(cmake
+             git
+             qt6-tools)
+provides=(${pkgname})
+conflicts=(${pkgname})
+source=(
+  https://www.opencode.net/api/v4/projects/5459/packages/generic/qt6ct/${pkgver}/qt6ct-${pkgver}.tar.xz
+  kde.patch)
+sha256sums=('35ac3c65136c4c5e6e06e477dd0574b128333f050d315bfabc73db2df06a9c14'
+            'e38ab65b6852c5adffa6c61cc09ec9e19c2484dc797f0e6c172450dc247ef952')
+
+prepare(){
+  cd ${pkgname}-${pkgver}
+  patch -Np1 < ../kde.patch
+}
+
+build() {
+  cmake -B build -S ${pkgname}-${pkgver} \
+    -DCMAKE_INSTALL_PREFIX=/usr
+  cmake --build build
+}
+
+package() {
+  DESTDIR="${pkgdir}" cmake --install build
+  install -Dm644 ${pkgname}-${pkgver}/COPYING "${pkgdir}"/usr/share/licenses/$_pkgname/LICENSE
+}
