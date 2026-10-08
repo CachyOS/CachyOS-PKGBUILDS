@@ -1,705 +1,339 @@
+# Maintainer: Peter Jung <admin@ptr1337.dev>
 # Originally based on AUR pkgbuilds from Lone_Wolf <lonewolf at xs4all dot nl> - https://aur.archlinux.org/packages/mesa-git/ - https://aur.archlinux.org/packages/lib32-mesa-git/
-# Glitched by: Tk-Glitch <ti3nou at gmail dot com>
+# and on mesa-git from Tk-Glitch <ti3nou at gmail dot com>
 
-plain '       .---.`               `.---.'
-plain '    `/syhhhyso-           -osyhhhys/`'
-plain '   .syNMdhNNhss/``.---.``/sshNNhdMNys.'
-plain '   +sdMh.`+MNsssssssssssssssNM+`.hMds+'
-plain '   :syNNdhNNhssssssssssssssshNNhdNNys:'
-plain '    /ssyhhhysssssssssssssssssyhhhyss/'
-plain '    .ossssssssssssssssssssssssssssso.'
-plain '   :sssssssssssssssssssssssssssssssss:'
-plain '  /sssssssssssssssssssssssssssssssssss/'
-plain ' :sssssssssssssoosssssssoosssssssssssss:'
-plain ' osssssssssssssoosssssssoossssssssssssso'
-plain ' osssssssssssyyyyhhhhhhhyyyyssssssssssso'
-plain ' /yyyyyyhhdmmmmNNNNNNNNNNNmmmmdhhyyyyyy/'
-plain '  smmmNNNNNNNNNNNNNNNNNNNNNNNNNNNNNmmms'
-plain '   /dNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNd/'
-plain '    `:sdNNNNNNNNNNNNNNNNNNNNNNNNNds:`'
-plain '       `-+shdNNNNNNNNNNNNNNNdhs+-`'
-plain '             `.-:///////:-.`'
-
-if [ -z "$_where" ]; then
-  export _where="$PWD" # track basedir as different Arch based distros are moving srcdir around
-fi
+_where="${_where:-$PWD}"
 
 source "$_where"/customization.cfg
 
-# Load external configuration file if present. Available variable values will overwrite customization.cfg ones.
-if [ -e "$_where/mesa-userpatches/user.cfg" ]; then
-  source "$_where/mesa-userpatches/user.cfg" && msg2 "User.cfg config loaded"
-elif [ -e "$_EXT_CONFIG_PATH" ]; then
-  source "$_EXT_CONFIG_PATH" && msg2 "External configuration file $_EXT_CONFIG_PATH will be used to override customization.cfg values.\n"
+# Optional overrides of customization.cfg values
+if [[ -e "$_where/mesa-userpatches/user.cfg" ]]; then
+  source "$_where/mesa-userpatches/user.cfg"
+elif [[ -e "$_EXT_CONFIG_PATH" ]]; then
+  source "$_EXT_CONFIG_PATH"
 fi
 
 pkgname=('mesa-git')
-if [ "$_lib32" == "true" ]; then
-  pkgname+=('lib32-mesa-git')
-fi
-
-# custom mesa commit to pass to git
-if [ -n "$_mesa_commit" ]; then
-  _mesa_version="#commit=${_mesa_commit}"
-else
-  _mesa_version="#branch=${_mesa_branch}"
-fi
-
-pkgdesc="an open-source implementation of the OpenGL specification, git version"
+[[ $_lib32 == true ]] && pkgname+=('lib32-mesa-git')
 pkgver=0
 pkgrel=1
+pkgdesc="Open-source OpenGL drivers, git version"
 arch=('x86_64')
-makedepends=('git' 'python-mako' 'python-ply' 'xorgproto' 'libxml2' 'libx11' 'libva'
-             'elfutils' 'libomxil-bellagio' 'libxrandr' 'libdisplay-info' 'ocl-icd' 'libgcrypt'  'wayland'
-             'wayland-protocols' 'meson' 'ninja' 'libdrm' 'xorgproto' 'libdrm' 'libxshmfence'
-             'libxxf86vm' 'libxdamage' 'libclc' 'libglvnd' 'libunwind' 'lm_sensors' 'libxrandr'
-             'valgrind' 'glslang' 'byacc' 'wget' 'flex' 'bison' 'rust' 'rust-bindgen' 'spirv-llvm-translator'
-             'cbindgen' 'python-packaging' 'python-yaml')
-
-if [ "$_lib32" == "true" ]; then
-  makedepends+=('lib32-libdisplay-info' 'lib32-libxml2' 'lib32-libx11' 'lib32-libdrm' 'lib32-libxshmfence'
-                'lib32-libxxf86vm' 'lib32-gcc-libs' 'lib32-libelf' 'lib32-libgcrypt'
-                'lib32-lm_sensors' 'lib32-libxdamage' 'gcc-multilib' 'lib32-libunwind' 'lib32-libglvnd'
-                'lib32-libva' 'lib32-wayland' 'lib32-libxrandr' 'lib32-expat'
-                'lib32-spirv-llvm-translator' 'lib32-rust-libs')
-fi
-
-depends=('libdrm' 'libxxf86vm' 'libxdamage' 'libxshmfence' 'libelf' 'libomxil-bellagio' 'libunwind'
-         'libglvnd' 'wayland' 'lm_sensors' 'libclc' 'glslang' 'zstd' 'vulkan-icd-loader' 'libdisplay-info')
-if [ "$_lib32" == "true" ]; then
-  depends+=('lib32-zstd' 'lib32-vulkan-icd-loader' 'lib32-libdisplay-info')
+url="https://www.mesa3d.org"
+license=('MIT AND BSD-3-Clause AND SGI-B-2.0')
+makedepends=('cbindgen' 'clang' 'cmake' 'elfutils' 'expat' 'git' 'glslang' 'libclc'
+             'libdisplay-info' 'libdrm' 'libglvnd' 'libva' 'libx11' 'libxcb' 'libxdamage'
+             'libxext' 'libxml2' 'libxrandr' 'libxshmfence' 'libxxf86vm' 'llvm' 'lm_sensors' 'meson'
+             'python-mako' 'python-packaging' 'python-ply' 'python-pycparser' 'python-yaml'
+             'rust' 'rust-bindgen' 'spirv-llvm-translator' 'spirv-tools' 'systemd-libs'
+             'valgrind' 'vulkan-icd-loader' 'wayland' 'wayland-protocols' 'xcb-util-keysyms'
+             'xorgproto' 'zlib' 'zstd')
+if [[ $_lib32 == true ]]; then
+  makedepends+=('lib32-expat' 'lib32-gcc-libs' 'lib32-libdisplay-info' 'lib32-libdrm' 'lib32-libelf'
+                'lib32-clang' 'lib32-libglvnd' 'lib32-libva' 'lib32-libx11' 'lib32-libxcb' 'lib32-libxdamage'
+                'lib32-libxext' 'lib32-libxml2' 'lib32-libxrandr' 'lib32-libxshmfence'
+                'lib32-libxxf86vm' 'lib32-llvm' 'lib32-lm_sensors' 'lib32-rust-libs' 'lib32-spirv-llvm-translator'
+                'lib32-spirv-tools' 'lib32-systemd' 'lib32-vulkan-icd-loader' 'lib32-wayland'
+                'lib32-xcb-util-keysyms' 'lib32-zlib' 'lib32-zstd')
 fi
 optdepends=('opengl-man-pages: for the OpenGL API man pages')
 
-# Use ccache if available
-if pacman -Qq ccache &> /dev/null; then
-  msg2 "ccache was found and will be used\n"
-  _makepkg_options+=('ccache')
-else
-  msg2 "ccache was not found and will not be used\n"
+options=('!debug')
+_debug_re='(^|[[:space:]])(--buildtype[=[:space:]]+|-D[[:space:]]*buildtype=)debug([[:space:]]|$)'
+if [[ $_additional_meson_flags =~ $_debug_re ]]; then
+  options=('debug' '!strip')
 fi
+[[ $_lto != true ]] && options+=('!lto')
 
-if [ "$_lto" != "true" ]; then
-  _makepkg_options+=('!lto')
-fi
-
-if [[ "$_additional_meson_flags" =~ "--buildtype debug" ]]; then
-  _makepkg_options+=('debug !strip')
-fi
-_makepkg_options+=('!debug')
-options=(${_makepkg_options[@]})
-
-url="https://www.mesa3d.org"
-license=('custom')
-
-_sourceurl="mesa::git+${_mesa_source}${_mesa_version}"
 _mesa_srcdir="mesa"
 # In-tree build dirs: bindgen's output_inline_wrapper emits broken #include paths when
 # the build directory is a sibling of the source tree (meson#13227, mesa#11178).
 _build64="${_mesa_srcdir}/_build64"
 _build32="${_mesa_srcdir}/_build32"
 
-source=("$_sourceurl"
+if [[ -n $_mesa_commit ]]; then
+  _mesa_ref="#commit=${_mesa_commit}"
+else
+  _mesa_ref="#branch=${_mesa_branch}"
+fi
+
+source=("mesa::git+${_mesa_source}${_mesa_ref}"
         'LICENSE'
-        'llvm32.native'
-)
-md5sums=('SKIP'
-         '5c65a0fe315dd347e09b1f2826a1df5a'
-         '722c7b0a4f7ace13d9009996615da938')
-sha512sums=('SKIP'
-            '25da77914dded10c1f432ebcbf29941124138824ceecaf1367b3deedafaecabc082d463abcfa3d15abff59f177491472b505bcb5ba0c4a51bb6b93b4721a23c2'
-            '46874ef82f9794cfd4955ec1aa953b1a14848bfcf4019018e1932469cfc32ee7844d87dd5a798f6e0fca913ed95b1d6cc05b2d508d1c56d5122e37a872f237b3')
-
-function exit_cleanup {
-  if [ "$pkgver" != "0" ]; then
-    sed -i "s/pkgver=$pkgver.*/pkgver=0/g" "$_where"/PKGBUILD
-  fi
-
-  # Remove temporarily copied patches
-  sleep 1 # Workarounds a race condition with ninja
-  rm -rf "$_where"/*.mymesa*
-  rm -f "$_where"/frogminer
-
-  remove_deps
-
-  msg2 "Cleanup done"
-}
-
-user_patcher() {
-	# To patch the user because all your base are belong to us
-	local _patches=("$_where"/*."${_userpatch_ext}revert")
-	if [ ${#_patches[@]} -ge 2 ] || [ -e "${_patches}" ]; then
-	  if [ "$_user_patches_no_confirm" != "true" ]; then
-	    msg2 "Found ${#_patches[@]} 'to revert' userpatches for ${_userpatch_target}:"
-	    printf '%s\n' "${_patches[@]//*\//}"
-	    read -rp "Do you want to install it/them? - Be careful with that ;)"$'\n> N/y : ' _CONDITION;
-	  fi
-	  if [ "$_CONDITION" == "y" ] || [ "$_user_patches_no_confirm" == "true" ]; then
-	    for _f in "${_patches[@]}"; do
-	      if [ -e "${_f}" ]; then
-	        msg2 "######################################################"
-	        msg2 ""
-	        msg2 "Reverting your own ${_userpatch_target} patch ${_f}"
-	        msg2 ""
-	        msg2 "######################################################"
-	        patch -Np1 -R < "${_f}"
-	        echo "Reverted your own patch ${_f}" >> "$_where"/last_build_config.log
-	      fi
-	    done
-	  fi
-	fi
-
-	_patches=("$_where"/*."${_userpatch_ext}patch")
-	if [ ${#_patches[@]} -ge 2 ] || [ -e "${_patches}" ]; then
-	  if [ "$_user_patches_no_confirm" != "true" ]; then
-	    msg2 "Found ${#_patches[@]} userpatches for ${_userpatch_target}:"
-	    printf '%s\n' "${_patches[@]//*\//}"
-	    read -rp "Do you want to install it/them? - Be careful with that ;)"$'\n> N/y : ' _CONDITION;
-	  fi
-	  if [ "$_CONDITION" == "y" ] || [ "$_user_patches_no_confirm" == "true" ]; then
-	    for _f in "${_patches[@]}"; do
-	      if [ -e "${_f}" ]; then
-	        msg2 "######################################################"
-	        msg2 ""
-	        msg2 "Applying your own ${_userpatch_target} patch ${_f}"
-	        msg2 ""
-	        msg2 "######################################################"
-	        patch -Np1 < "${_f}"
-	        echo "Applied your own patch ${_f}" >> "$_where"/last_build_config.log
-	      fi
-	    done
-	  fi
-	fi
-}
-
-# NINJAFLAGS is an env var used to pass commandline options to ninja
-# NOTE: It's your responbility to validate the value of $NINJAFLAGS. If unsure, don't set it.
-
-# MESA_WHICH_LLVM is an environment variable that determines which llvm package tree is used to built mesa-git against.
-# Adding a line to ~/.bashrc  that sets this value is the simplest way to ensure a specific choice.
-#
-# 1: llvm-minimal-git (aur) preferred value
-# 2: AUR llvm-git
-# 3: llvm-git from LordHeavy unofficial repo
-# 4  llvm (stable from extra) Default value
-#
-
-if [[ ! $MESA_WHICH_LLVM ]] && [ ! -e "$_where"/frogminer ]; then
-  plain "Which llvm package tree do you want to use to build mesa-git against ?"
-  read -rp "`echo $'     1.llvm-minimal-git (AUR)\n     2.llvm-git (AUR)\n     3.llvm-git from LordHeavy unofficial repo\n   > 4.llvm (default)\n    choice[1-4?]: '`" MESA_WHICH_LLVM;
-  touch "$_where"/frogminer
-fi
-# double dip
-if [ -z "$MESA_WHICH_LLVM" ] || [[ $MESA_WHICH_LLVM -le 0 ]] || [[ $MESA_WHICH_LLVM -ge 5 ]]; then
-  MESA_WHICH_LLVM=4
-fi
-
-case $MESA_WHICH_LLVM in
-    1)
-        # aur llvm-minimal-git
-        makedepends+=('llvm-minimal-git')
-        _llvm='llvm-libs-minimal-git'
-        if [ "$_lib32" == "true" ]; then
-          makedepends+=('lib32-llvm-minimal-git')
-          _lib32_llvm='lib32-llvm-libs-minimal-git'
-        fi
-        msg2 "Using llvm-minimal-git (AUR)"
-        echo "Using llvm-minimal-git (AUR)" >> "$_where"/last_build_config.log
-        ;;
-    2)
-        # aur llvm-git
-        # depending on aur-llvm-* to avoid mixup with LH llvm-git
-        makedepends+=('aur-llvm-git')
-        _llvm='aur-llvm-libs-git'
-        if [ "$_lib32" == "true" ]; then
-          makedepends+=('aur-lib32-llvm-git')
-          _lib32_llvm='aur-lib32-llvm-libs-git'
-        fi
-        msg2 "Using llvm-git (AUR)"
-        echo "Using llvm-git (AUR)" >> "$_where"/last_build_config.log
-        ;;
-    3)
-        # mesa-git/llvm-git (lordheavy unofficial repo)
-        makedepends+=('llvm-git' 'clang-git')
-        _llvm='llvm-libs-git'
-        if [ "$_lib32" == "true" ]; then
-          makedepends+=('lib32-llvm-git')
-          _lib32_llvm='lib32-llvm-libs-git'
-        fi
-        msg2 "Using llvm-git from LordHeavy unofficial repo"
-        echo "Using llvm-git from LordHeavy unofficial repo" >> "$_where"/last_build_config.log
-        ;;
-    4)
-        # extra/llvm
-        makedepends+=('llvm>=8.0.0' 'clang>=8.0.0')
-        _llvm='llvm-libs>=8.0.0'
-        if [ "$_lib32" == "true" ]; then
-          makedepends+=('lib32-llvm>=8.0.0' 'lib32-clang>=8.0.0')
-          _lib32_llvm='lib32-llvm-libs>=8.0.0'
-        fi
-        msg2 "Using llvm (default)"
-        echo "Using llvm (default)" >> "$_where"/last_build_config.log
-        ;;
-    *)
-esac
+        'llvm32.native')
+b2sums=('SKIP'
+        'cc60238726b35133b5b729fb4ed1e76e04136588533615d84b4a54656d5b41727d5e7ff06ef4de3eb102eed6669d6c5c5cb8ac9fbdf6fc25aa477877c5c3ba87'
+        '0f3a4ab5dc94adca1824e6634edfbef616f127eba78c1e4ad42b015f31412ffdf14e8ae25e4e7e071057ed667799a5d7e8b9b3227c002c12735d9c64e47940ab')
 
 pkgver() {
-    cd "$_mesa_srcdir"
-    _ver=$( cat VERSION )
-    echo ${_ver/-/_}.$(git rev-list --count HEAD).$(git rev-parse --short HEAD)
+  cd "$_mesa_srcdir"
+  local _ver=$(<VERSION)
+  echo "${_ver/-/_}.$(git rev-list --count HEAD).$(git rev-parse --short HEAD)"
+}
+
+_apply_userpatches() {
+  local _reverts=() _patches=() _p _ans
+
+  shopt -s nullglob
+  _reverts=("$_where"/mesa-userpatches/*.mymesarevert "$_where"/*.mymesarevert)
+  _patches=("$_where"/mesa-userpatches/*.mymesapatch "$_where"/*.mymesapatch)
+  shopt -u nullglob
+
+  # Community patches (https://github.com/Frogging-Family/community-patches)
+  if [[ -n $_community_patches ]]; then
+    local _cpdir="$_where/../community-patches"
+    [[ -d $_cpdir ]] || git clone https://github.com/Frogging-Family/community-patches.git "$_cpdir"
+    for _p in $_community_patches; do
+      case $_p in
+        *.mymesarevert) _reverts+=("$_cpdir/mesa-git/$_p") ;;
+        *)              _patches+=("$_cpdir/mesa-git/$_p") ;;
+      esac
+    done
+  fi
+
+  # Pending merge requests
+  for _p in $_mesa_prs; do
+    curl -fL -o "$srcdir/mr-$_p.mymesapatch" \
+      "https://gitlab.freedesktop.org/mesa/mesa/-/merge_requests/$_p.diff"
+    _patches+=("$srcdir/mr-$_p.mymesapatch")
+  done
+
+  (( ${#_reverts[@]} + ${#_patches[@]} )) || return 0
+
+  if [[ $_user_patches_no_confirm != true ]]; then
+    msg2 "Found userpatches:"
+    printf '    %s\n' "${_reverts[@]/#/revert: }" "${_patches[@]/#/apply:  }"
+    read -rp "Apply them? - Be careful with that ;) [y/N] " _ans
+    [[ $_ans == [yY] ]] || return 0
+  fi
+
+  for _p in "${_reverts[@]}"; do
+    msg2 "Reverting ${_p##*/}"
+    patch -Np1 -R -i "$_p"
+    echo "Reverted ${_p}" >> "$_where"/last_build_config.log
+  done
+  for _p in "${_patches[@]}"; do
+    msg2 "Applying ${_p##*/}"
+    patch -Np1 -i "$_p"
+    echo "Applied ${_p}" >> "$_where"/last_build_config.log
+  done
 }
 
 prepare() {
-    # cleanups
-    cd "$srcdir/$_mesa_srcdir"
-    git reset --hard HEAD
-    git clean -xdf
-    if [ -n "$_mesa_commit" ]; then
-      git checkout "${_mesa_commit}"
-    fi
-    msg2 "Tree cleaned"
+  cd "$_mesa_srcdir"
+  git reset --hard HEAD
+  git clean -xdf -e /_build64 -e /_build32
 
-    # copy userpatches inside the PKGBUILD's dir
-    for _file in "$_where"/mesa-userpatches/*.mymesa*
-    do
-        [ -e "$_file" ] && cp "$_file" "$_where"
-    done
+  {
+    echo -e "# Last ${pkgbase:-mesa-git} ${pkgver} configuration - $(date):\n"
+    echo "Gallium drivers: ${_gallium_drivers}"
+    echo -e "Vulkan drivers: ${_vulkan_drivers}\n"
+  } > "$_where"/last_build_config.log
 
-    if [ -n "$_mesa_prs" ]; then
-      for _pr in ${_mesa_prs[@]}; do
-        wget -O "$_where"/"$_pr".mymesapatch https://gitlab.freedesktop.org/mesa/mesa/merge_requests/"$_pr".diff
-      done
-    fi
+  [[ $_user_patches == true ]] && _apply_userpatches
 
-    # Community patches
-    if [ -n "$_community_patches" ]; then
-      if [ ! -d "$_where/../community-patches" ]; then
-        cd "$_where/.." && git clone https://github.com/Frogging-Family/community-patches.git && cd "$srcdir"/$_mesa_srcdir
-      fi
-      _community_patches=($_community_patches)
-      for _p in ${_community_patches[@]}; do
-        ln -s "$_where"/../community-patches/mesa-git/$_p "$_where"/
-      done
-    fi
-
-    # mesa user patches
-    if [ "$_user_patches" == "true" ]; then
-      _userpatch_target="mesa"
-      _userpatch_ext="mymesa"
-      echo -e "# Last ${pkgname} ${pkgver} configuration - $(date) :\n" > "$_where"/last_build_config.log
-      echo -e "DRI drivers: ${_dri_drivers}" >> "$_where"/last_build_config.log
-      echo -e "Gallium drivers: ${_gallium_drivers}" >> "$_where"/last_build_config.log
-      echo -e "Vulkan drivers: ${_vulkan_drivers}\n" >> "$_where"/last_build_config.log
-      user_patcher
-    fi
-
-    # Community/prs patches removal
-    for _p in ${_community_patches[@]}; do
-      rm -f "$_where"/$_p
-    done
-    for _pr in ${_mesa_prs[@]}; do
-      rm -f "$_where"/$_pr.mymesapatch
-    done
-
-    cd "$srcdir"
-
-    if [ "$_compiler" = "clang" ]; then
-      echo "_compiler=clang" > "$_where"/frogminer
-    else
-      echo "_compiler=gcc" > "$_where"/frogminer
-    fi
-
-    # although removing _build folder in build() function feels more natural,
-    # that interferes with the spirit of makepkg --noextract
-    if [  -d "$_build64" ] && [ "$_NUKR" != "false" ]; then
-      if [[ "$_additional_meson_flags" = *-Db_pgo=use* ]]; then
-        find "$_build64" -type f ! -name '*.gcda' -delete
+  # Done here rather than in build() to respect makepkg --noextract
+  cd "$srcdir"
+  if [[ $_NUKR != false ]]; then
+    local _dir
+    for _dir in "$_build64" "$_build32"; do
+      [[ -d $_dir ]] || continue
+      if [[ $_additional_meson_flags =~ b_pgo=use ]]; then
+        find "$_dir" -type f ! -name '*.gcda' -delete
       else
-        rm -rf "$_build64"
+        rm -rf "$_dir"
       fi
-    fi
-    if [  -d "$_build32" ] && [ "$_NUKR" != "false" ]; then
-      if [[ "$_additional_meson_flags" = *-Db_pgo=use* ]]; then
-        find "$_build32" -type f ! -name '*.gcda' -delete
-      else
-        rm -rf "$_build32"
-      fi
-    fi
-    cd "$_where"
+    done
+  fi
 }
 
-build () {
-    if [ -n "$_custom_opt_flags" ]; then
-      export CFLAGS="${_custom_opt_flags}"
-      export CPPFLAGS="${_custom_opt_flags}"
-      export CXXFLAGS="${_custom_opt_flags}"
+build() {
+  if [[ -n $_custom_opt_flags ]]; then
+    export CFLAGS="$_custom_opt_flags"
+    export CXXFLAGS="$_custom_opt_flags"
+  fi
+
+  local _cc=gcc _cxx=g++
+  if [[ $_compiler == clang ]]; then
+    _cc=clang _cxx=clang++
+  elif [[ -n $CUSTOM_GCC_PATH ]]; then
+    msg2 "CUSTOM_GCC_PATH = ${CUSTOM_GCC_PATH}"
+    export PATH="$CUSTOM_GCC_PATH/bin:$PATH"
+  fi
+
+  local _lto_flags=(-D b_lto=false)
+  if [[ $_lto == true ]]; then
+    _lto_flags=(-D b_lto=true)
+    [[ $_compiler != clang ]] && warning "LTO with GCC is known to cause issues with mesa. Consider using Clang instead."
+    # LTO hits `too many open files` with low limits
+    ulimit -Sn 4096
+  fi
+
+  local _gallium_va=enabled
+  if [[ ! $_gallium_drivers =~ r600|radeonsi|nouveau ]]; then
+    warning "Gallium VA disabled (gallium driver r600, radeonsi or nouveau required)"
+    _gallium_va=disabled
+  fi
+
+  local _layers=device-select,overlay
+  [[ $_antilag == true ]] && _layers+=,anti-lag
+
+  local _intel_rt=disabled
+  [[ ,$_vulkan_drivers, == *,intel,* ]] && _intel_rt=enabled
+
+  # shellcheck disable=SC2054
+  local _meson_common=(
+    --wrap-mode=nofallback
+    --force-fallback-for=syn,paste,rustc-hash
+    -D android-libbacktrace=disabled
+    -D b_ndebug=true
+    -D egl=enabled
+    -D gallium-drivers="$_gallium_drivers"
+    -D gallium-extra-hud=true
+    -D gallium-mediafoundation=disabled
+    -D gallium-va=$_gallium_va
+    -D gbm=enabled
+    -D gles1=disabled
+    -D gles2=enabled
+    -D glvnd=enabled
+    -D glx=dri
+    -D libunwind=disabled
+    -D llvm=enabled
+    -D lmsensors=enabled
+    -D microsoft-clc=disabled
+    -D opengl=true
+    -D platforms=x11,wayland
+    -D video-codecs="$_codecs"
+    -D vulkan-layers="$_layers"
+    -D zstd=enabled
+  )
+
+  export CC="$_cc" CXX="$_cxx"
+
+  arch-meson "$_mesa_srcdir" "$_build64" \
+    "${_meson_common[@]}" \
+    "${_lto_flags[@]}" \
+    -D gallium-rusticl="$_rusticl" \
+    -D intel-rt=$_intel_rt \
+    -D valgrind=enabled \
+    -D vulkan-drivers="$_vulkan_drivers" \
+    $_additional_meson_flags $_additional_meson_flags_64
+
+  meson configure "$_build64" --no-pager
+  ninja $NINJAFLAGS -C "$_build64"
+
+  [[ $_lib32 == true ]] || return 0
+
+  local _vulkan_drivers32=$_vulkan_drivers _rusticl32 _crossfile
+  if [[ $_rusticl32_bypass == true ]]; then
+    _rusticl32=$_rusticl
+    _crossfile=(--cross-file lib32)
+    if [[ $_compiler == clang ]]; then
+      warning "LTO forcefully disabled on lib32 because _rusticl32_bypass=\"true\""
+      _lto_flags=(-D b_lto=false)
     fi
-    if [ "$_lto" != "true" ]; then
-      export _lto="-D b_lto=false"
-    else
-      export _lto="-D b_lto=true"
-      if [ "$_compiler" != "clang" ]; then
-        warning "Enabling LTO on GCC is known to create issues with mesa. Consider using Clang instead of GCC."
-      fi
-      # With LTO, we'll hit `too many open files` if the limit is too low, so let's use some bif enough value for our current shell
-      ulimit -Sn 4096
-    fi
+  else
+    _rusticl32=false
+    _crossfile=(--native-file "$srcdir/llvm32.native")
+    # lib32 nvk fails with the native file
+    warning "lib32 nvk forcefully disabled because _rusticl32_bypass=\"false\""
+    _vulkan_drivers32=${_vulkan_drivers32//,nouveau/}
+  fi
 
-    # Selector fixes
+  export CC="$_cc -m32" CXX="$_cxx -m32"
+  export PKG_CONFIG=/usr/bin/i686-pc-linux-gnu-pkg-config
+  export BINDGEN_EXTRA_CLANG_ARGS="--target=i686-unknown-linux-gnu"
 
-    # dri drivers moved to the amber branch
-    if [ "$_mesa_branch" = "amber" ] || ( cd "$srcdir/$_mesa_srcdir" && ! git merge-base --is-ancestor cdde031ac2c8124721655532ee6f4149e20e9c61 HEAD ); then
-      _dri_inc="-D dri-drivers=${_dri_drivers} "
-    fi
+  arch-meson "$_mesa_srcdir" "$_build32" \
+    "${_crossfile[@]}" \
+    --libdir=/usr/lib32 \
+    "${_meson_common[@]}" \
+    "${_lto_flags[@]}" \
+    -D gallium-rusticl="$_rusticl32" \
+    -D intel-rt=disabled \
+    -D valgrind=disabled \
+    -D vulkan-drivers="$_vulkan_drivers32" \
+    $_additional_meson_flags $_additional_meson_flags_32
 
-    # Syntax legacy compat
-    if ( cd "$srcdir/$_mesa_srcdir" && git merge-base --is-ancestor 138c003d22739b0d1e6860ed398dd511a44cde04 HEAD ); then
-      _enabled_="enabled"
-      _disabled_="disabled"
-    else
-      _enabled_="true"
-      _disabled_="false"
-    fi
-    if [ "$_gallium_xa" = "false" ] || [ "$_gallium_xa" = "disabled" ]; then
-      _gallium_xa="${_disabled_}"
-    else
-      _gallium_xa="${_enabled_}"
-    fi
-
-    # VDPAU was removed from Mesa in 4b54277d2e9. Disable it explicitly when
-    # building an older revision so libvdpau is not required.
-    if ( cd "$srcdir/$_mesa_srcdir" && ! git merge-base --is-ancestor 4b54277d2e9420e37cdce98b3a09e6cecf87300d HEAD ); then
-      _gallium_vdpau="-D gallium-vdpau=${_disabled_}"
-    fi
-
-    # gallium_va requires either r600, radeonsi or nouveau
-    if [[ $_gallium_drivers != *r600* ]] && [[ $_gallium_drivers != *radeonsi* ]] && [[ $_gallium_drivers != *nouveau* ]]; then
-      warning "Gallium VA disabled (gallium driver r600, radeonsi or nouveau required)"
-      _gallium_va="${_disabled_}"
-    else
-      _gallium_va="${_enabled_}"
-    fi
-
-    # gallium_omx requires either r600, radeonsi or nouveau
-    if [[ $_gallium_drivers != *r600* ]] && [[ $_gallium_drivers != *radeonsi* ]] && [[ $_gallium_drivers != *nouveau* ]]; then
-      warning "Gallium OMX disabled (gallium driver r600, radeonsi or nouveau required)"
-      _gallium_omx="${_disabled_}"
-    else
-      _gallium_omx="bellagio"
-    fi
-
-    # legacy compat
-    if ( cd "$srcdir/$_mesa_srcdir" && git merge-base --is-ancestor e00adef34a5ce485e2c9216a268ca05e89a5fc98 HEAD ); then
-      _platforms="x11,wayland"
-    else
-      _platforms="x11,wayland,drm,surfaceless"
-    fi
-    if ( cd "$srcdir/$_mesa_srcdir" && ! git merge-base --is-ancestor e2de00876a7033b6923f912af8d2b0bbd100e113 HEAD ); then
-      _legacy_switches="-D swr-arches=avx,avx2"
-    fi
-
-    # microsoft clc
-    if ( cd "$srcdir/$_mesa_srcdir" && git merge-base --is-ancestor a5227465c13ae74651a932a82aeae65683f4a063 HEAD ); then
-      _microsoft_clc="-D microsoft-clc=${_disabled_}"
-    fi
-
-    # osmesa
-    if ( cd "$srcdir/$_mesa_srcdir" && ! git merge-base --is-ancestor 027ccd963b1f8f288bef4224aedcddc1557e4f8a HEAD ); then
-      if ( cd "$srcdir/$_mesa_srcdir" && git merge-base --is-ancestor ee802372180a2b4460cc7abb53438e45c6b6f1e4 HEAD ); then
-        if [ "$_osmesa" != "false" ]; then
-          _osmesa="-D osmesa=true"
-        else
-          _osmesa="-D osmesa=false"
-        fi
-      else
-        _osmesa="-D osmesa=gallium"
-      fi
-    fi
-
-    # optional codecs after 7ab05e3
-    if ( cd "$srcdir/$_mesa_srcdir" && git merge-base --is-ancestor 7ab05e3c3fe34ea7f8d7345b9229c163e42c3600 HEAD ); then
-      _optional_codecs="-D video-codecs=${_codecs}"
-    fi
-
-    # layer selector
-    if ( cd "$srcdir/$_mesa_srcdir" && git merge-base --is-ancestor 722ffe9a739152626894acf4b1248f8848b88b96 HEAD ) && [ "$_antilag" = "true" ]; then
-      if ( cd "$srcdir/$_mesa_srcdir" && git merge-base --is-ancestor 54fe5b0482df0f066384b274796d4081c2a1968c HEAD ); then
-        _layers="-D vulkan-layers=device-select,overlay,anti-lag"
-      else
-        _layers="-D vulkan-overlay-layer=true -D vulkan-device-select-layer=true -D anti-lag=true"
-      fi
-    else
-      if ( cd "$srcdir/$_mesa_srcdir" && git merge-base --is-ancestor 54fe5b0482df0f066384b274796d4081c2a1968c HEAD ); then
-        _layers="-D vulkan-layers=device-select,overlay"
-      else
-        _layers="-D vulkan-overlay-layer=true -D vulkan-device-select-layer=true"
-      fi
-    fi
-
-    # intel_hasvk removal for legacy trees
-    if ( cd "$srcdir/$_mesa_srcdir" && ! git merge-base --is-ancestor 50013ca9a57c42114044f593c981bbad8c405cc9 HEAD ); then
-      _vulkan_drivers=$(echo $_vulkan_drivers | sed "s/,intel_hasvk//g" | tr -s " ")
-    fi
-
-    # xvmc toggle for legacy trees
-    if ( cd "$srcdir/$_mesa_srcdir" && ! git merge-base --is-ancestor 8cc766d8f7eac26b7c029a2fac1bdfdba4776c29 HEAD ); then
-      _xvmc="-D gallium-xvmc=${_disabled_}"
-    fi
-
-    # android-libbacktrace was enabled with 6291d4d but only affects android. Let's disable.
-    if ( cd "$srcdir/$_mesa_srcdir" && git merge-base --is-ancestor 6291d4d33978f14e59e64a4b66ef92ee891babc3 HEAD ); then
-      _android_libbacktrace="-D android-libbacktrace=disabled"
-    fi
-
-    # intel-rt
-    if ( cd "$srcdir/$_mesa_srcdir" && git merge-base --is-ancestor 876db9135048be34d84bd74b18411678e15c7c3f HEAD ); then
-      if [[ ${_vulkan_drivers[*]} =~ "intel" ]]; then
-        _intel_rt="-D intel-rt=enabled"
-      else
-        _intel_rt="-D intel-rt=disabled"
-      fi
-      _intel_rt_32="-D intel-rt=disabled"
-    fi
-
-    # intel-clc cross compile fix
-    if ( cd "$srcdir/$_mesa_srcdir" && git merge-base --is-ancestor 28c1053c07c177854520f6283fa665f17618adb5 HEAD && ! git merge-base --is-ancestor 2d691d7dd31463a9ec2d832a98164e0aa9225068 HEAD && ! git merge-base --is-ancestor c2cbff82971f0166563a07ca0a07907d2ac898a1 HEAD ); then
-      if [[ "$_lib32" == "true" ]]; then
-         _intel_clc_32="-D intel-clc=system"
-        # Workaround cross compilation error by using intel_clc binary from _build64
-        export PATH=$srcdir/$_build64/src/intel/compiler:${PATH}
-      fi
-    fi
-
-    # omx removal
-    if ( cd "$srcdir/$_mesa_srcdir" && ! git merge-base --is-ancestor 9b6c27a320ab4b0fcf1fb16220ae7c3d3f06f7df HEAD ); then
-      _omx="-D gallium-omx=${_gallium_omx}"
-      _omx_32="-D gallium-omx=${_disabled_}"
-    fi
-
-    # dri3 removal
-    if ( cd "$srcdir/$_mesa_srcdir" && ! git merge-base --is-ancestor 8f6fca89aa1812b03da6d9f7fac3966955abc41e HEAD ); then
-      _dri3="-D dri3=${_enabled_}"
-    fi
-
-    # gallium-nine deprecation
-    if ( cd "$srcdir/$_mesa_srcdir" && ! git merge-base --is-ancestor 6b6cb825e92ad3bf33b1e032151e32c7b79d8323 HEAD ); then
-      _galliumnine="-D gallium-nine=true"
-    fi
-
-    # gallium-xa deprecation
-    if ( cd "$srcdir/$_mesa_srcdir" && ! git merge-base --is-ancestor cf40099730c4af304227c30c891834cec220abff HEAD ); then
-      _galliumxa="-D gallium-xa=${_gallium_xa}"
-    fi
-
-    # shared-glapi option removal
-    if ( cd "$srcdir/$_mesa_srcdir" && ! git merge-base --is-ancestor fefb1a6fb3cff1b227e835c2f67accd33fb96b2a HEAD ); then
-      _sharedglapi="-D shared-glapi=${_enabled_}"
-    fi
-
-    # gallium-opencl deprecation
-    if ( cd "$srcdir/$_mesa_srcdir" && ! git merge-base --is-ancestor 5844dea31620f36c41ac738e17fefd57084b2dbb HEAD ); then
-      _galliumopencl="-D gallium-opencl=icd"
-    fi
-
-    # Windows-only feature gallium-mediafoundation needs explicit disabling on Linux because reasons
-    if ( cd "$srcdir/$_mesa_srcdir" && git merge-base --is-ancestor d348fd5fb5b50edfbdf00f12fd900f77fd658a52 HEAD ); then
-      _mediafoundation="-D gallium-mediafoundation=disabled"
-    fi
-
-    # /Selector fixes
-
-    source "$_where"/frogminer
-
-    if [ -n "${CUSTOM_GCC_PATH}" ] && [ "$_compiler" != "clang" ]; then
-      export PATH=$( find "$CUSTOM_GCC_PATH/" -maxdepth 1 -printf "%p:" || ( warning "Custom compiler path seems wrong.." && exit 1 ) )${PATH}
-      msg2 "CUSTOM_GCC_PATH = ${CUSTOM_GCC_PATH}"
-    fi
-
-    if [ "$_compiler" = "clang" ]; then
-      export CC="clang"
-      export CXX="clang++"
-    else
-      export CC="gcc"
-      export CXX="g++"
-    fi
-
-    if [ "$_rusticl" = "true" ]; then
-      _rusticladditions="-D rust_std=2021 -D llvm=enabled"
-    fi
-
-    arch-meson $_mesa_srcdir $_build64 \
-       --wrap-mode=nofallback \
-       --force-fallback-for=syn,paste,rustc-hash \
-       -D b_ndebug=true \
-       -D platforms=${_platforms} \
-       -D gallium-drivers=${_gallium_drivers} \
-       -D vulkan-drivers=${_vulkan_drivers} \
-       -D egl=${_enabled_} \
-       -D gallium-extra-hud=true \
-       -D gallium-rusticl=${_rusticl} \
-       -D gallium-va=${_gallium_va} \
-       -D gbm=${_enabled_} \
-       -D gles1=${_disabled_} \
-       -D gles2=${_enabled_} \
-       -D glvnd=${_enabled_} \
-       -D glx=dri \
-       -D libunwind=${_enabled_} \
-       -D llvm=${_enabled_} \
-       -D lmsensors=${_enabled_} \
-       -D opengl=true \
-       -D zstd=auto \
-       -D valgrind=${_enabled_} $_legacy_switches $_dri3 $_omx $_dri_inc $_microsoft_clc $_osmesa $_xvmc $_layers $_optional_codecs $_android_libbacktrace $_intel_rt $_galliumnine $_galliumxa $_sharedglapi $_galliumopencl $_gallium_vdpau $_mediafoundation $_rusticladditions $_lto $_additional_meson_flags $_additional_meson_flags_64
-
-    meson configure $_build64 --no-pager
-
-    # quoted from https://www.mesa3d.org/meson.html
-    # Note: autotools automatically updated translation files (used by the DRI configuration tool) as part of the build process, Meson does not do this.
-    # Instead, you will need do this:
-    if ( cd "$srcdir/$_mesa_srcdir" && ! git merge-base --is-ancestor 2ef983dca61b549a9242afd9008200b231a26e90 HEAD ); then
-      ninja $NINJAFLAGS -C $_build64 xmlpool-pot xmlpool-update-po xmlpool-gmo
-    fi
-    #
-    ninja $NINJAFLAGS -C $_build64
-
-    if [ "$_localglesv2pc" == "true" ]; then
-      echo -e "prefix=/usr\nlibdir=\${prefix}/lib\nincludedir=\${prefix}/include\n\nName: glesv2\nDescription: Mesa OpenGL ES 2.0 library\nVersion: ${pkgver}\nLibs: -L\${libdir} -lGLESv2\nLibs.private: -lpthread -pthread -lm -ldl\nCflags: -I\${includedir}" > "$srcdir"/$_build64/glesv2.pc
-    fi
-    if [ "$_localeglpc" == "true" ]; then
-      echo -e "prefix=/usr\nlibdir=\${prefix}/lib\nincludedir=\${prefix}/include\n\nName: egl\nDescription: Mesa EGL Library\nVersion: ${pkgver}\nRequires.private: x11, xext, xdamage >=  1.1, xfixes, x11-xcb, xcb, xcb-glx >=  1.8.1, xcb-dri2 >=  1.8, xxf86vm, libdrm >=  2.4.75\nLibs: -L\${libdir} -lEGL\nLibs.private: -lpthread -pthread -lm -ldl\nCflags: -I\${includedir}" > "$srcdir"/$_build64/egl.pc
-    fi
-
-    if [ "$_lib32" == "true" ]; then
-      cd "$srcdir"
-      if [ "$_compiler" = "clang" ]; then
-        if [ "$_rusticl32_bypass" = "true" ]; then
-          warning "LTO forcefully disabled on lib32 because _rusticl32_bypass=\"true\""
-          _lto="-D b_lto=false"
-        fi
-        export CC="clang -m32"
-        export CXX="clang++ -m32"
-      else
-        export CC="gcc -m32"
-        export CXX="g++ -m32"
-      fi
-
-      if [ "$_rusticl32_bypass" != "true" ]; then
-        _rusticl_32="false"
-        _crossfile_flag="--native-file llvm32.native"
-        # lib32 nvk fails with native
-        warning "lib32 nvk forcefully disabled when using _rusticl32_bypass=\"false\""
-        _vulkan_drivers=$(echo $_vulkan_drivers | sed "s/,nouveau//g" | tr -s " ")
-      else
-        _rusticl_32="$_rusticl"
-        _crossfile_flag="--cross-file lib32"
-      fi
-
-      export PKG_CONFIG=/usr/bin/i686-pc-linux-gnu-pkg-config
-      export BINDGEN_EXTRA_CLANG_ARGS="--target=i686-unknown-linux-gnu"
-
-      arch-meson $_mesa_srcdir $_build32 \
-          ${_crossfile_flag} \
-          --libdir=/usr/lib32 \
-          --wrap-mode=nofallback \
-          --force-fallback-for=syn,paste,rustc-hash \
-          -D b_ndebug=true \
-          -D platforms=${_platforms} \
-          -D gallium-drivers=${_gallium_drivers} \
-          -D vulkan-drivers=${_vulkan_drivers} \
-          -D egl=${_enabled_} \
-          -D gallium-extra-hud=true \
-          -D gallium-rusticl=${_rusticl_32} \
-          -D gallium-va=${_gallium_va} \
-          -D gbm=${_enabled_} \
-          -D gles1=${_disabled_} \
-          -D gles2=${_enabled_} \
-          -D glvnd=${_enabled_} \
-          -D glx=dri \
-          -D libunwind=${_disabled_} \
-          -D llvm=${_enabled_} \
-          -D lmsensors=${_enabled_} \
-          -D zstd=auto \
-          -D valgrind=${_disabled_} $_legacy_switches $_dri3 $_omx_32 $_dri_inc $_microsoft_clc $_osmesa $_xvmc $_layers $_optional_codecs $_android_libbacktrace $_intel_rt_32 $_intel_clc_32 $_galliumnine $_galliumxa $_sharedglapi $_galliumopencl $_gallium_vdpau $_mediafoundation $_rusticladditions $_lto $_additional_meson_flags $_additional_meson_flags_32
-
-      meson configure $_build32 --no-pager
-
-      # quoted from https://www.mesa3d.org/meson.html
-      # Note: autotools automatically updated translation files (used by the DRI configuration tool) as part of the build process, Meson does not do this.
-      # Instead, you will need do this:
-      if ( cd "$srcdir/$_mesa_srcdir" && ! git merge-base --is-ancestor 2ef983dca61b549a9242afd9008200b231a26e90 HEAD ); then
-        ninja $NINJAFLAGS -C $_build32 xmlpool-pot xmlpool-update-po xmlpool-gmo
-      fi
-      #
-      ninja $NINJAFLAGS -C $_build32
-
-      if [ "$_localglesv2pc" == "true" ]; then
-        echo -e "prefix=/usr\nlibdir=\${prefix}/lib32\nincludedir=\${prefix}/include\n\nName: glesv2\nDescription: Mesa OpenGL ES 2.0 library\nVersion: ${pkgver}\nLibs: -L\${libdir} -lGLESv2\nLibs.private: -lpthread -pthread -lm -ldl\nCflags: -I\${includedir}" > "$srcdir"/$_build32/glesv2.pc
-      fi
-      if [ "$_localeglpc" == "true" ]; then
-        echo -e "prefix=/usr\nlibdir=\${prefix}/lib32\nincludedir=\${prefix}/include\n\nName: egl\nDescription: Mesa EGL Library\nVersion: ${pkgver}\nRequires.private: x11, xext, xdamage >=  1.1, xfixes, x11-xcb, xcb, xcb-glx >=  1.8.1, xcb-dri2 >=  1.8, xxf86vm, libdrm >=  2.4.75\nLibs: -L\${libdir} -lEGL\nLibs.private: -lpthread -pthread -lm -ldl\nCflags: -I\${includedir}" > "$srcdir"/$_build32/egl.pc
-      fi
-    fi
+  meson configure "$_build32" --no-pager
+  ninja $NINJAFLAGS -C "$_build32"
 }
 
 package_mesa-git() {
-  depends=('libdrm' 'wayland' 'libxxf86vm' 'libxdamage' 'libxshmfence' 'libelf'
-           'libomxil-bellagio' 'libunwind' 'lm_sensors' 'libglvnd'
-           'expat' 'libclc' 'libx11' $_llvm 'spirv-tools')
-  provides=(mesa=$pkgver-$pkgrel vulkan-intel=$pkgver-$pkgrel vulkan-radeon=$pkgver-$pkgrel vulkan-nouveau=$pkgver-$pkgrel vulkan-mesa-layers=$pkgver-$pkgrel mesa-vulkan-layers=$pkgver-$pkgrel libva-mesa-driver=$pkgver-$pkgrel vulkan-driver opencl-mesa=$pkgver-$pkgrel opengl-driver opencl-driver ati-dri intel-dri nouveau-dri svga-dri mesa-dri mesa-libgl vulkan-mesa-device-select vulkan-swrast)
-  conflicts=('mesa' 'opencl-mesa' 'vulkan-intel' 'vulkan-radeon' 'vulkan-nouveau' 'vulkan-mesa-device-select' 'vulkan-mesa-layers' 'mesa-vulkan-layers' 'libva-mesa-driver' 'vulkan-swrast')
+  depends=('expat' 'glibc' 'libdisplay-info' 'libdrm' 'libelf' 'libgcc' 'libglvnd' 'libstdc++'
+           'libx11' 'libxcb' 'libxext' 'libxshmfence' 'libxxf86vm' 'lm_sensors' 'spirv-tools'
+           'llvm-libs' 'systemd-libs' 'vulkan-icd-loader' 'wayland' 'xcb-util-keysyms' 'zlib' 'zstd')
+  if [[ $_rusticl == true ]]; then
+    depends+=('clang' 'libclc' 'spirv-llvm-translator')
+  fi
+  provides=("mesa=$pkgver-$pkgrel"
+            "opencl-mesa=$pkgver-$pkgrel"
+            "libva-mesa-driver=$pkgver-$pkgrel"
+            "mesa-libgl=$pkgver-$pkgrel"
+            "vulkan-intel=$pkgver-$pkgrel"
+            "vulkan-radeon=$pkgver-$pkgrel"
+            "vulkan-nouveau=$pkgver-$pkgrel"
+            "vulkan-swrast=$pkgver-$pkgrel"
+            "vulkan-mesa-layers=$pkgver-$pkgrel"
+            "vulkan-mesa-implicit-layers=$pkgver-$pkgrel"
+            "vulkan-mesa-device-select=$pkgver-$pkgrel"
+            "mesa-vulkan-layers=$pkgver-$pkgrel"
+            'libva-driver' 'opencl-driver' 'opengl-driver' 'vulkan-driver')
+  conflicts=('mesa' 'opencl-mesa' 'libva-mesa-driver'
+             'vulkan-intel' 'vulkan-radeon' 'vulkan-nouveau' 'vulkan-swrast'
+             'vulkan-mesa-layers' 'vulkan-mesa-implicit-layers' 'vulkan-mesa-device-select'
+             'mesa-vulkan-layers')
 
-  DESTDIR="$pkgdir" ninja $NINJAFLAGS -C $_build64 install
+  DESTDIR="$pkgdir" ninja $NINJAFLAGS -C "$_build64" install
 
-  # remove script file from /usr/bin
   # https://gitlab.freedesktop.org/mesa/mesa/issues/2230
-  rm -f "${pkgdir}/usr/bin/mesa-overlay-control.py"
+  rm -f "$pkgdir"/usr/bin/mesa-overlay-control.py
 
   # indirect rendering
-  ln -s /usr/lib/libGLX_mesa.so.0 "${pkgdir}/usr/lib/libGLX_indirect.so.0"
+  ln -s /usr/lib/libGLX_mesa.so.0 "$pkgdir"/usr/lib/libGLX_indirect.so.0
 
-  if [ "$_localglesv2pc" == "true" ]; then
-    # bring back glesv2.pc
-    install -m644 -Dt "$pkgdir"/usr/lib/pkgconfig "$srcdir"/$_build64/glesv2.pc
-  fi
-  if [ "$_localeglpc" == "true" ]; then
-    # bring back egl.pc
-    install -m644 -Dt "$pkgdir"/usr/lib/pkgconfig "$srcdir"/$_build64/egl.pc
-  fi
-
-  install -Dt "$pkgdir"/usr/share/licenses/$pkgname "$srcdir"/LICENSE
+  install -Dm644 LICENSE -t "$pkgdir"/usr/share/licenses/$pkgname
 }
 
 package_lib32-mesa-git() {
-  depends=('lib32-libdrm' 'lib32-libxxf86vm' 'lib32-libxdamage' 'lib32-libxshmfence'
-           'lib32-lm_sensors' 'lib32-libelf' 'lib32-wayland'
-           'lib32-libglvnd' 'lib32-libx11' 'mesa' $_lib32_llvm 'lib32-spirv-tools'
-           'lib32-libdisplay-info')
-  provides=(lib32-mesa=$pkgver-$pkgrel lib32-vulkan-intel=$pkgver-$pkgrel lib32-vulkan-radeon=$pkgver-$pkgrel lib32-vulkan-nouveau=$pkgver-$pkgrel lib32-vulkan-mesa-layers=$pkgver-$pkgrel lib32-mesa-vulkan-layers=$pkgver-$pkgrel lib32-libva-mesa-driver=$pkgver-$pkgrel lib32-opencl-mesa=$pkgver-$pkgrel lib32-opengl-driver lib32-opencl-driver lib32-vulkan-driver lib32-ati-dri lib32-intel-dri lib32-nouveau-dri lib32-mesa-dri lib32-mesa-libgl lib32-vulkan-mesa-device-select lib32-vulkan-swrast)
-  conflicts=('lib32-mesa' 'lib32-opencl-mesa' 'lib32-vulkan-intel' 'lib32-vulkan-radeon' 'lib32-vulkan-nouveau' 'lib32-vulkan-mesa-device-select' 'lib32-vulkan-mesa-layers' 'lib32-mesa-vulkan-layers' 'lib32-libva-mesa-driver' 'lib32-vulkan-swrast')
+  depends=('lib32-expat' 'lib32-gcc-libs' 'lib32-glibc' 'lib32-libdisplay-info' 'lib32-libdrm'
+           'lib32-libelf' 'lib32-libglvnd' 'lib32-libx11' 'lib32-libxcb' 'lib32-libxext'
+           'lib32-libxshmfence' 'lib32-libxxf86vm' 'lib32-lm_sensors' 'lib32-spirv-tools'
+           'lib32-systemd' 'lib32-vulkan-icd-loader' 'lib32-wayland' 'lib32-xcb-util-keysyms'
+           'lib32-llvm-libs' 'lib32-zlib' 'lib32-zstd' 'mesa')
+  if [[ $_rusticl == true && $_rusticl32_bypass == true ]]; then
+    depends+=('lib32-clang' 'lib32-spirv-llvm-translator')
+  fi
+  provides=("lib32-mesa=$pkgver-$pkgrel"
+            "lib32-opencl-mesa=$pkgver-$pkgrel"
+            "lib32-libva-mesa-driver=$pkgver-$pkgrel"
+            "lib32-mesa-libgl=$pkgver-$pkgrel"
+            "lib32-vulkan-intel=$pkgver-$pkgrel"
+            "lib32-vulkan-radeon=$pkgver-$pkgrel"
+            "lib32-vulkan-nouveau=$pkgver-$pkgrel"
+            "lib32-vulkan-swrast=$pkgver-$pkgrel"
+            "lib32-vulkan-mesa-layers=$pkgver-$pkgrel"
+            "lib32-vulkan-mesa-implicit-layers=$pkgver-$pkgrel"
+            "lib32-vulkan-mesa-device-select=$pkgver-$pkgrel"
+            "lib32-mesa-vulkan-layers=$pkgver-$pkgrel"
+            'lib32-libva-driver' 'lib32-opencl-driver' 'lib32-opengl-driver' 'lib32-vulkan-driver')
+  conflicts=('lib32-mesa' 'lib32-opencl-mesa' 'lib32-libva-mesa-driver'
+             'lib32-vulkan-intel' 'lib32-vulkan-radeon' 'lib32-vulkan-nouveau' 'lib32-vulkan-swrast'
+             'lib32-vulkan-mesa-layers' 'lib32-vulkan-mesa-implicit-layers'
+             'lib32-vulkan-mesa-device-select' 'lib32-mesa-vulkan-layers')
 
-  DESTDIR="$pkgdir" ninja $NINJAFLAGS -C $_build32 install
+  DESTDIR="$pkgdir" ninja $NINJAFLAGS -C "$_build32" install
 
-  # remove files provided by mesa-git
-  rm -rf "$pkgdir"/etc
-  rm -rf "$pkgdir"/usr/include
-  rm -rf "$pkgdir"/usr/share/glvnd/
-  rm -rf "$pkgdir"/usr/share/drirc.d/
-  rm -rf "$pkgdir"/usr/share/vulkan/explicit_layer.d/
-  rm -rf "$pkgdir"/usr/share/vulkan/implicit_layer.d/VkLayer_MESA_device_select.json
-  rm -rf "$pkgdir"/usr/share/vulkan/implicit_layer.d/VkLayer_MESA_anti_lag.json
+  # Files provided by mesa-git
+  rm -rf "$pkgdir"/etc \
+         "$pkgdir"/usr/bin \
+         "$pkgdir"/usr/include \
+         "$pkgdir"/usr/share/glvnd \
+         "$pkgdir"/usr/share/drirc.d \
+         "$pkgdir"/usr/share/vulkan/explicit_layer.d \
+         "$pkgdir"/usr/share/vulkan/implicit_layer.d/VkLayer_MESA_{device_select,anti_lag}.json
 
   # indirect rendering
-  ln -s /usr/lib32/libGLX_mesa.so.0 "${pkgdir}/usr/lib32/libGLX_indirect.so.0"
+  ln -s /usr/lib32/libGLX_mesa.so.0 "$pkgdir"/usr/lib32/libGLX_indirect.so.0
 
-  if [ "$_localglesv2pc" == "true" ]; then
-    # bring back glesv2.pc
-    install -m644 -Dt "$pkgdir"/usr/lib32/pkgconfig "$srcdir"/$_build32/glesv2.pc
-  fi
-  if [ "$_localeglpc" == "true" ]; then
-    # bring back egl.pc
-    install -m644 -Dt "$pkgdir"/usr/lib32/pkgconfig "$srcdir"/$_build32/egl.pc
-  fi
-
-  install -Dt "$pkgdir"/usr/share/licenses/$pkgname "$srcdir"/LICENSE
+  install -Dm644 LICENSE -t "$pkgdir"/usr/share/licenses/$pkgname
 }
-
-trap exit_cleanup EXIT
