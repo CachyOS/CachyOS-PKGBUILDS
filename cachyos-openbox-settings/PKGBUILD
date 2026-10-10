@@ -30,6 +30,11 @@ install=$pkgname.install
 provides=('cachyos-desktop-settings')
 conflicts=('cachyos-desktop-settings' 'cachyos-picom-config')
 
+prepare() {
+    cd "$srcdir/$pkgname-$pkgver"
+    sed -i '/^theme=Nordic-Darker-Solid$/d' etc/skel/.config/Kvantum/kvantum.kvconfig
+}
+
 package() {
     install -d $pkgdir/etc
     install -d $pkgdir/usr

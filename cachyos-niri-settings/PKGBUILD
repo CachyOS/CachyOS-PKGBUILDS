@@ -49,6 +49,16 @@ depends=(
 provides=('cachyos-desktop-settings')
 conflicts=('cachyos-desktop-settings')
 
+prepare() {
+  cd "$srcdir/$pkgname"
+
+  # Stop selecting the retired GTK theme; leave GTK defaults in effect.
+  sed -i '/^gtk-theme-name=.*cachyos-nord/d' \
+    etc/skel/.config/gtk-3.0/settings.ini \
+    etc/skel/.config/gtk-4.0/settings.ini
+  sed -i '/^theme=Nordic-Darker-Solid$/d' etc/skel/.config/Kvantum/kvantum.kvconfig
+}
+
 package() {
   install -d $pkgdir/etc
   cp -rf $srcdir/$pkgname/etc $pkgdir
