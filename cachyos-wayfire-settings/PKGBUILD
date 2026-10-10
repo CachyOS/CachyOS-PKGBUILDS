@@ -11,8 +11,7 @@ license=(GPL-1.0-only)
 makedepends=('coreutils')
 source=("$pkgname-$pkgver.tar.gz::$url/archive/$pkgver.tar.gz")
 sha512sums=('f0fc7b49648c1435480a23f11b656773e1db02835b88942fb80cc2dfc2a0065f2432a0c802711d283ce7562f72fea0bf2fb9730dd9d9ff206cd65f01741dd8f9')
-depends=('gnome-themes-extra'
-    'cachyos-fish-config'
+depends=('cachyos-fish-config'
     'cachyos-alacritty-config'
     'ttf-fantasque-nerd'
     'noto-fonts'
@@ -30,16 +29,6 @@ depends=('gnome-themes-extra'
 install=$pkgname.install
 provides=('cachyos-desktop-settings')
 conflicts=('cachyos-desktop-settings')
-
-prepare() {
-  cd "$srcdir/$pkgname-$pkgver"
-
-  sed -i 's/cachyos-nord/Adwaita/g' \
-    etc/skel/.gtkrc-2.0 \
-    etc/skel/.config/gtk-3.0/settings.ini \
-    etc/skel/.config/gtk-4.0/settings.ini \
-    usr/share/glib-2.0/schemas/25_wayfire-default-settings.gschema.override
-}
 
 package() {
     install -d $pkgdir/etc

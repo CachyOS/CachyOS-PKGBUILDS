@@ -50,15 +50,6 @@ depends=(
 provides=('cachyos-desktop-settings')
 conflicts=('cachyos-desktop-settings')
 
-prepare() {
-  cd "$srcdir/$pkgname"
-
-  sed -i 's/cachyos-nord/Adwaita/g' \
-    etc/skel/.config/gtk-3.0/settings.ini \
-    etc/skel/.config/gtk-4.0/settings.ini
-  sed -i 's/^export GTK_THEME=adw-gtk3-dark$/export GTK_THEME=Adwaita/' etc/skel/.profile
-}
-
 package() {
   install -d $pkgdir/etc
   cp -rf $srcdir/$pkgname/etc $pkgdir

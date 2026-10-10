@@ -11,8 +11,7 @@ license=(GPL-1.0-only)
 makedepends=('coreutils')
 source=("$pkgname-$pkgver.tar.gz::$url/archive/$pkgver.tar.gz")
 sha512sums=('64d9827d0a27a1436c6c5736cf80993417fc44f1cf6bd425b6a9988cc9465f8e95cc1e2763234f0e0ce1fc4103372c1e7429e3dec034545bf636ba50fc4169e8')
-depends=('gnome-themes-extra'
-    'cachyos-zsh-config'
+depends=('cachyos-zsh-config'
     'cachyos-alacritty-config'
     'cachyos-picom-config'
     'feh'
@@ -33,14 +32,6 @@ depends=('gnome-themes-extra'
 install=$pkgname.install
 provides=('cachyos-desktop-settings')
 conflicts=('cachyos-desktop-settings')
-
-prepare() {
-  cd "$srcdir/$pkgname-$pkgver"
-
-  sed -i 's/cachyos-nord/Adwaita/g' \
-    etc/skel/.gtkrc-2.0 \
-    etc/skel/.config/gtk-3.0/settings.ini
-}
 
 package() {
     install -d $pkgdir/etc
