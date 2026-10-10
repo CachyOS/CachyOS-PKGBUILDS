@@ -2177,8 +2177,8 @@ Subject: [PATCH 11/11] Fix crash if pending surface state is NULL
 
 Signed-off-by: Vasiliy Stelmachenok <ventureo@cachyos.org>
 ---
- src/wayland/meta-wayland-tearing-control.c | 32 ++++++++++++++--------
- 1 file changed, 20 insertions(+), 12 deletions(-)
+ src/wayland/meta-wayland-tearing-control.c | 35 +++++++++++++++++-------
+ 1 file changed, 23 insertions(+), 12 deletions(-)
 
 diff --git a/src/wayland/meta-wayland-tearing-control.c b/src/wayland/meta-wayland-tearing-control.c
 index ce96675074..b9643583a3 100644
@@ -2193,7 +2193,7 @@ index ce96675074..b9643583a3 100644
    /* Surface has been destroyed - just clear our pointer.
     * Called AFTER destruction, so we can't access the surface. */
    tearing_surface->surface = NULL;
-@@ -118,20 +118,28 @@ clear_tearing_surface_data (MetaWaylandTearingSurface *tearing_surface)
+@@ -118,20 +118,31 @@ clear_tearing_surface_data (MetaWaylandTearingSurface *tearing_surface)
  {
    MetaWaylandSurfaceState *pending;
  
@@ -2205,6 +2205,9 @@ index ce96675074..b9643583a3 100644
 -                           tearing_surface);
 +  if (!tearing_surface->surface)
 +    return;
++
++  g_object_set_qdata (G_OBJECT (tearing_surface->surface),
++                      quark_tearing_surface_data, NULL);
  
 -      /* Safe to access surface since we're cleaning up explicitly,
 -       * not being called during surface destruction */
