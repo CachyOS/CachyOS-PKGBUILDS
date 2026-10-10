@@ -25,14 +25,15 @@ depends=('cachyos-zsh-config'
     'gsimplecal' 'mpv' 'parcellite' 'pavucontrol' 'viewnior' 'xfce4-power-manager'
     'capitaine-cursors'
     'polkit-gnome'
-    'cachyos-wallpapers')
+    'cachyos-wallpapers'
+    'cachyos-nord-gtk-theme-git')
 install=$pkgname.install
 provides=('cachyos-desktop-settings')
 conflicts=('cachyos-desktop-settings' 'cachyos-picom-config')
 
 prepare() {
-    cd "$srcdir/$pkgname-$pkgver"
-    sed -i '/^theme=Nordic-Darker-Solid$/d' etc/skel/.config/Kvantum/kvantum.kvconfig
+  cd "$srcdir/$pkgname-$pkgver"
+  sed -i '/^theme=Nordic-Darker-Solid$/d' etc/skel/.config/Kvantum/kvantum.kvconfig
 }
 
 package() {

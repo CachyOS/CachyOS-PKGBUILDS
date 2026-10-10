@@ -23,22 +23,14 @@ depends=('cachyos-zsh-config'
     'char-white'
     'qogir-icon-theme'
     'capitaine-cursors'
-    'cachyos-wallpapers')
+    'cachyos-wallpapers'
+    'cachyos-nord-gtk-theme-git')
 install=$pkgname.install
 provides=('cachyos-desktop-settings')
 conflicts=('cachyos-desktop-settings')
 
 prepare() {
   cd "$srcdir/$pkgname-$pkgver"
-
-  # Stop selecting the retired GTK theme; leave GTK defaults in effect.
-  sed -i '/^gtk-theme-name=.*cachyos-nord/d' \
-    etc/skel/.gtkrc-2.0 \
-    etc/skel/.config/gtk-3.0/settings.ini \
-    etc/skel/.config/gtk-4.0/settings.ini
-  sed -i "/^gtk-theme='cachyos-nord'$/d" usr/share/glib-2.0/schemas/25_xfce-default-settings.gschema.override
-  sed -i '/name="ThemeName".*value="cachyos-nord"/d' \
-    etc/skel/.config/xfce4/xfconf/xfce-perchannel-xml/xsettings.xml
   sed -i '/^theme=Nordic-Darker-Solid$/d' etc/skel/.config/Kvantum/kvantum.kvconfig
 }
 
