@@ -1,0 +1,11 @@
+post_install() {
+  echo ":: Shader cache size has been increased to 12GB."
+  echo "   A reboot (or re-login) is required for this to take effect."
+}
+
+post_upgrade() {
+  # Notify when upgrading from a version that did not ship the shader-cache conf.
+  if (( $(vercmp "$2" '1:1.0.0-10') < 0 )); then
+    post_install
+  fi
+}
