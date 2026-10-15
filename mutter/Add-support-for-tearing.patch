@@ -2177,11 +2177,11 @@ Subject: [PATCH 11/11] Fix crash if pending surface state is NULL
 
 Signed-off-by: Vasiliy Stelmachenok <ventureo@cachyos.org>
 ---
- src/wayland/meta-wayland-tearing-control.c | 35 +++++++++++++++++-------
- 1 file changed, 23 insertions(+), 12 deletions(-)
+ src/wayland/meta-wayland-tearing-control.c | 33 +++++++++++++++++++++------------
+ 1 file changed, 21 insertions(+), 12 deletions(-)
 
 diff --git a/src/wayland/meta-wayland-tearing-control.c b/src/wayland/meta-wayland-tearing-control.c
-index ce96675074..b9643583a3 100644
+index ce96675074..fdbca9e39e 100644
 --- a/src/wayland/meta-wayland-tearing-control.c
 +++ b/src/wayland/meta-wayland-tearing-control.c
 @@ -100,7 +100,7 @@ on_surface_weak_notify (gpointer  data,
@@ -2193,7 +2193,7 @@ index ce96675074..b9643583a3 100644
    /* Surface has been destroyed - just clear our pointer.
     * Called AFTER destruction, so we can't access the surface. */
    tearing_surface->surface = NULL;
-@@ -118,20 +118,31 @@ clear_tearing_surface_data (MetaWaylandTearingSurface *tearing_surface)
+@@ -118,20 +118,29 @@ clear_tearing_surface_data (MetaWaylandTearingSurface *tearing_surface)
  {
    MetaWaylandSurfaceState *pending;
  
@@ -2230,8 +2230,6 @@ index ce96675074..b9643583a3 100644
 +      pending->has_new_allow_tearing = TRUE;
      }
 +
-+  pending->allow_tearing = FALSE;
-+  pending->has_new_allow_tearing = FALSE;
 +  tearing_surface->surface = NULL;
  }
  
