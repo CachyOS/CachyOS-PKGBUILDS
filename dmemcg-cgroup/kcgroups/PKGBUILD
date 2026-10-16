@@ -6,7 +6,7 @@ _tag=dmemcg-experimental
 _kcgroups_commit=d106f1c8f44c1f231a9050b2bf82a34bb7d5db32
 _booster_commit=386ccfe529dac54fca51e24aec4b880a31afe836
 pkgver=0.0.${_tag//-/.}
-pkgrel=3
+pkgrel=4
 pkgdesc="KDE library to manipulate cgroups (and boost foreground apps)"
 arch=('x86_64')
 url="https://invent.kde.org/libraries/kcgroups.git"
@@ -21,6 +21,13 @@ prepare() {
   mkdir -p kcgroups-build
   mkdir -p kcgroups-install
   mkdir -p plasma-foreground-booster-build
+
+  # Order after kwin_wayland like the other plasma-workspace.target services,
+  # otherwise it can start before WAYLAND_DISPLAY exists and abort in
+  # QGuiApplication (no platform plugin). After=graphical-session.target was
+  # dropped upstream to break an ordering cycle, but left no ordering at all.
+  sed -i '/^PartOf=graphical-session.target/a After=plasma-core.target' \
+    plasma-foreground-booster/plasma-foreground-booster.service.in
 }
 
 build () {
