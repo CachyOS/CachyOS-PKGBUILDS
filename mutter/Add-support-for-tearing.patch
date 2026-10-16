@@ -1,4 +1,4 @@
-From cd41be8f0e36fbb71d59e697e6968c0b1be6f368 Mon Sep 17 00:00:00 2001
+From 16c91caf5cb1802ce0e79fd3b862303f31086121 Mon Sep 17 00:00:00 2001
 From: Naveen Kumar <naveen1.kumar@intel.com>
 Date: Mon, 26 May 2025 14:55:01 +0000
 Subject: [PATCH 01/11] build: Bump libdrm requirement to >= 2.4.120
@@ -9,7 +9,7 @@ Signed-off-by: Vasiliy Stelmachenok <ventureo@cachyos.org>
  1 file changed, 1 insertion(+), 1 deletion(-)
 
 diff --git a/meson.build b/meson.build
-index cdd13b683c..bbd36033f1 100644
+index cecc3c7bcc..f3186239fe 100644
 --- a/meson.build
 +++ b/meson.build
 @@ -52,7 +52,7 @@ wayland_protocols_req = '>= 1.48'
@@ -25,7 +25,7 @@ index cdd13b683c..bbd36033f1 100644
 2.56.0
 
 
-From a86eab7a84df340cf7f8c0ce93a36dcb0e91b355 Mon Sep 17 00:00:00 2001
+From da11bdabd1e5ff3f14396bd0c30e825363d24a49 Mon Sep 17 00:00:00 2001
 From: Naveen Kumar <naveen1.kumar@intel.com>
 Date: Thu, 10 Apr 2025 04:27:46 +0000
 Subject: [PATCH 02/11] atomic: Check for atomic tearing capability
@@ -111,7 +111,7 @@ index 57173924fa..9a445a027b 100644
 2.56.0
 
 
-From 82e5583fec3cf34de92d59ffaa5d4a67dbbba140 Mon Sep 17 00:00:00 2001
+From 5968751fec112518de0e83cb9239486412958dd7 Mon Sep 17 00:00:00 2001
 From: Naveen Kumar <naveen1.kumar@intel.com>
 Date: Mon, 14 Oct 2024 08:26:52 +0000
 Subject: [PATCH 03/11] settings: Add experimental feature for tearing
@@ -235,7 +235,7 @@ index a3b40df550..cdb63c86de 100644
 2.56.0
 
 
-From 1f91086151f710f341e6dcfbfdb3d8b850bd4c5d Mon Sep 17 00:00:00 2001
+From eced51733078b3af5bb8d1adc6f72610ee386443 Mon Sep 17 00:00:00 2001
 From: Naveen Kumar <naveen1.kumar@intel.com>
 Date: Mon, 26 May 2025 15:02:14 +0000
 Subject: [PATCH 04/11] wayland: Add support for tearing control protocol
@@ -688,7 +688,7 @@ index cf8a99042d..d5790cb057 100644
 2.56.0
 
 
-From 8544ca84e423a1e5a3700266c83701ad3f558aa7 Mon Sep 17 00:00:00 2001
+From c210846682013d973988b276a6f6ceb5fb05ce1e Mon Sep 17 00:00:00 2001
 From: Naveen Kumar <naveen1.kumar@intel.com>
 Date: Thu, 24 Oct 2024 12:06:15 +0000
 Subject: [PATCH 05/11] kms/plane: Use g_autoptr & g_steal_pointer in
@@ -743,7 +743,7 @@ index 268981a2a1..2cb6279744 100644
 2.56.0
 
 
-From f076965fa7daf6a601003e411a5015ea25d04fcb Mon Sep 17 00:00:00 2001
+From cb4cb6a935ea6a47999b19ae6442da8155bad334 Mon Sep 17 00:00:00 2001
 From: Naveen Kumar <naveen1.kumar@intel.com>
 Date: Sat, 31 Jan 2026 19:17:21 +0000
 Subject: [PATCH 06/11] backends/native: Add IN_FORMATS_ASYNC and improve async
@@ -769,7 +769,7 @@ Kernel patchwork: https://patchwork.freedesktop.org/series/140935/
 Co-authored-by: Sultech <6282-Sultech@users.noreply.gitlab.gnome.org>
 Signed-off-by: Vasiliy Stelmachenok <ventureo@cachyos.org>
 ---
- src/backends/native/meta-kms-cursor-manager.c |  98 ++++++++++++
+ src/backends/native/meta-kms-cursor-manager.c | 103 +++++++++++++
  .../native/meta-kms-impl-device-atomic.c      |   5 +
  src/backends/native/meta-kms-plane-private.h  |   1 +
  src/backends/native/meta-kms-plane.c          |  99 ++++++++++++
@@ -784,13 +784,13 @@ Signed-off-by: Vasiliy Stelmachenok <ventureo@cachyos.org>
  src/wayland/meta-wayland-dma-buf.c            |  45 +++++-
  src/wayland/meta-wayland-surface-private.h    |   2 +
  src/wayland/meta-wayland-surface.c            |   6 +
- 15 files changed, 461 insertions(+), 59 deletions(-)
+ 15 files changed, 466 insertions(+), 59 deletions(-)
 
 diff --git a/src/backends/native/meta-kms-cursor-manager.c b/src/backends/native/meta-kms-cursor-manager.c
-index e4cef1d9a2..75e94b3315 100644
+index e4cef1d9a2..8aeb611d49 100644
 --- a/src/backends/native/meta-kms-cursor-manager.c
 +++ b/src/backends/native/meta-kms-cursor-manager.c
-@@ -461,6 +461,83 @@ maybe_update_cursor_plane (MetaKmsCursorManagerImpl  *cursor_manager_impl,
+@@ -461,6 +461,88 @@ maybe_update_cursor_plane (MetaKmsCursorManagerImpl  *cursor_manager_impl,
    return update;
  }
  
@@ -804,6 +804,7 @@ index e4cef1d9a2..75e94b3315 100644
 +  float x, y;
 +  gboolean should_have_cursor;
 +  graphene_rect_t cursor_rect;
++  unsigned int sprite_width, sprite_height;
 +
 +  crtc_state_impl = find_crtc_state (cursor_manager_impl, crtc);
 +  if (!crtc_state_impl ||
@@ -818,14 +819,18 @@ index e4cef1d9a2..75e94b3315 100644
 +    return FALSE;
 +
 +  buffer = crtc_state_impl->buffer;
++  sprite_width = crtc_state_impl->sprite_width;
++  sprite_height = crtc_state_impl->sprite_height;
 +  hotspot = &crtc_state_impl->hotspot;
 +
 +  if (buffer)
 +    {
-+      should_have_cursor = calculate_cursor_rect (crtc_state_impl,
++      should_have_cursor = calculate_cursor_buffer_rect (crtc_state_impl,
 +                                                         buffer,
 +                                                         hotspot,
 +                                                         x, y,
++                                                         sprite_width,
++                                                         sprite_height,
 +                                                         &cursor_rect);
 +    }
 +  else
@@ -874,7 +879,7 @@ index e4cef1d9a2..75e94b3315 100644
  static void
  free_old_buffers (gpointer      retval,
                    const GError *error,
-@@ -481,6 +558,27 @@ update_filter_cb (MetaKmsImpl       *impl,
+@@ -481,6 +563,27 @@ update_filter_cb (MetaKmsImpl       *impl,
    MetaThreadImpl *thread_impl = META_THREAD_IMPL (impl);
    MetaKmsCursorManagerImpl *cursor_manager_impl = user_data;
  
@@ -1585,7 +1590,7 @@ index 340fcdd675..378b3730c7 100644
  }
  
 diff --git a/src/wayland/meta-wayland-dma-buf.c b/src/wayland/meta-wayland-dma-buf.c
-index c0f05a14ea..ecbe94bf82 100644
+index aef277e144..7842598326 100644
 --- a/src/wayland/meta-wayland-dma-buf.c
 +++ b/src/wayland/meta-wayland-dma-buf.c
 @@ -615,10 +615,20 @@ has_modifier (GArray   *modifiers,
@@ -1734,7 +1739,7 @@ index 102d2904eb..dcb50b57c6 100644
 2.56.0
 
 
-From 4800f81622f2a6c4ddf43d5522296e7e3dec6e3b Mon Sep 17 00:00:00 2001
+From 644bb027bec5c9fa129a631cd25eff28d9d78c36 Mon Sep 17 00:00:00 2001
 From: Sultech <6282-Sultech@users.noreply.gitlab.gnome.org>
 Date: Wed, 4 Feb 2026 00:00:00 +0000
 Subject: [PATCH 07/11] Add unlocked frame clock mode for tearing support
@@ -1751,10 +1756,10 @@ Signed-off-by: Vasiliy Stelmachenok <ventureo@cachyos.org>
  3 files changed, 35 insertions(+), 4 deletions(-)
 
 diff --git a/clutter/clutter/clutter-frame-clock.c b/clutter/clutter/clutter-frame-clock.c
-index d00c414712..50dc66f5ba 100644
+index 12f4c90c76..7798ba08f9 100644
 --- a/clutter/clutter/clutter-frame-clock.c
 +++ b/clutter/clutter/clutter-frame-clock.c
-@@ -991,6 +991,7 @@ maybe_want_triple_buffering (ClutterFrameClock *frame_clock)
+@@ -999,6 +999,7 @@ maybe_want_triple_buffering (ClutterFrameClock *frame_clock)
      {
      case CLUTTER_FRAME_CLOCK_MODE_FIXED:
      case CLUTTER_FRAME_CLOCK_MODE_VARIABLE:
@@ -1762,7 +1767,7 @@ index d00c414712..50dc66f5ba 100644
        break;
      case CLUTTER_FRAME_CLOCK_MODE_PASSIVE:
        return FALSE;
-@@ -1385,6 +1386,16 @@ want_triple_buffering (ClutterFrameClock *frame_clock)
+@@ -1396,6 +1397,16 @@ want_triple_buffering (ClutterFrameClock *frame_clock)
    if (!maybe_want_triple_buffering (frame_clock))
      return FALSE;
  
@@ -1779,7 +1784,7 @@ index d00c414712..50dc66f5ba 100644
    if (clutter_frame_clock_estimate_max_update_time_us (frame_clock,
                                                         &max_update_time_estimate_us) &&
        max_update_time_estimate_us < frame_clock->refresh_interval_us)
-@@ -1455,6 +1466,12 @@ clutter_frame_clock_schedule_update_now (ClutterFrameClock *frame_clock)
+@@ -1466,6 +1477,12 @@ clutter_frame_clock_schedule_update_now (ClutterFrameClock *frame_clock)
        frame_clock->has_next_frame_deadline =
          (frame_clock->next_frame_deadline_us != 0);
        break;
@@ -1792,7 +1797,7 @@ index d00c414712..50dc66f5ba 100644
      case CLUTTER_FRAME_CLOCK_MODE_PASSIVE:
        clutter_frame_clock_driver_schedule_update (frame_clock->driver);
        break;
-@@ -1483,6 +1500,7 @@ schedule_update (ClutterFrameClock *frame_clock,
+@@ -1494,6 +1511,7 @@ schedule_update (ClutterFrameClock *frame_clock,
      {
      case CLUTTER_FRAME_CLOCK_MODE_FIXED:
      case CLUTTER_FRAME_CLOCK_MODE_VARIABLE:
@@ -1800,7 +1805,7 @@ index d00c414712..50dc66f5ba 100644
        break;
      case CLUTTER_FRAME_CLOCK_MODE_PASSIVE:
        clutter_frame_clock_driver_schedule_update (frame_clock->driver);
-@@ -1546,6 +1564,12 @@ schedule_update (ClutterFrameClock *frame_clock,
+@@ -1557,6 +1575,12 @@ schedule_update (ClutterFrameClock *frame_clock,
        frame_clock->has_next_frame_deadline =
          (frame_clock->next_frame_deadline_us != 0);
        break;
@@ -1813,7 +1818,7 @@ index d00c414712..50dc66f5ba 100644
      case CLUTTER_FRAME_CLOCK_MODE_PASSIVE:
        g_assert_not_reached ();
        break;
-@@ -1603,6 +1627,7 @@ clutter_frame_clock_schedule_update_later (ClutterFrameClock *frame_clock,
+@@ -1614,6 +1638,7 @@ clutter_frame_clock_schedule_update_later (ClutterFrameClock *frame_clock,
      {
      case CLUTTER_FRAME_CLOCK_MODE_FIXED:
      case CLUTTER_FRAME_CLOCK_MODE_VARIABLE:
@@ -1821,7 +1826,7 @@ index d00c414712..50dc66f5ba 100644
        break;
      case CLUTTER_FRAME_CLOCK_MODE_PASSIVE:
        clutter_frame_clock_driver_schedule_update (frame_clock->driver);
-@@ -1676,6 +1701,9 @@ clutter_frame_clock_schedule_update_later (ClutterFrameClock *frame_clock,
+@@ -1687,6 +1712,9 @@ clutter_frame_clock_schedule_update_later (ClutterFrameClock *frame_clock,
        frame_clock->is_next_presentation_time_valid = TRUE;
        frame_clock->next_presentation_time_us = target_us;
        break;
@@ -1832,7 +1837,7 @@ index d00c414712..50dc66f5ba 100644
        g_assert_not_reached ();
        break;
 diff --git a/clutter/clutter/clutter-frame-clock.h b/clutter/clutter/clutter-frame-clock.h
-index 4b45d257aa..aba85c0b5f 100644
+index 699a2e958b..5e0874f059 100644
 --- a/clutter/clutter/clutter-frame-clock.h
 +++ b/clutter/clutter/clutter-frame-clock.h
 @@ -72,6 +72,7 @@ typedef enum _ClutterFrameClockMode
@@ -1868,7 +1873,7 @@ index 547e3cd829..b16b0558ec 100644
 2.56.0
 
 
-From 82999440964f7d15ad0eee2d751e3eeb48ba0e71 Mon Sep 17 00:00:00 2001
+From 0466888a7ae911fbe795f18db6913efcde2fc3f6 Mon Sep 17 00:00:00 2001
 From: Naveen Kumar <naveen1.kumar@intel.com>
 Date: Wed, 17 Jun 2026 09:29:19 +0000
 Subject: [PATCH 08/11] kms/atomic: pre-test async and fallback to sync
@@ -1926,7 +1931,7 @@ index 3cdfcc7e5f..ee579db818 100644
 2.56.0
 
 
-From b0cff46da0693ebeb5ecb8fe97426c46ab649e08 Mon Sep 17 00:00:00 2001
+From e31efab9ca650a605504c27e56e2d41a3a89a15b Mon Sep 17 00:00:00 2001
 From: Sultech <6282-Sultech@users.noreply.gitlab.gnome.org>
 Date: Thu, 5 Feb 2026 00:00:00 +0000
 Subject: [PATCH 09/11] Add experimental flag for auto-fullscreen tearing
@@ -2058,7 +2063,7 @@ index 378b3730c7..1cc4436eaa 100644
 2.56.0
 
 
-From c94964f3e10bf2e8815ac5d57f64c35d84f0908a Mon Sep 17 00:00:00 2001
+From ca627e511d4ca63be8557df21c24c4d31726030c Mon Sep 17 00:00:00 2001
 From: Sultech <6282-Sultech@users.noreply.gitlab.gnome.org>
 Date: Wed, 4 Feb 2026 00:00:00 +0000
 Subject: [PATCH 10/11] Fix tearing crash with weak references
@@ -2170,15 +2175,15 @@ index 3e7c0b602f..ce96675074 100644
 2.56.0
 
 
-From 06d75936abd0945a00486995e0545a350328b5fd Mon Sep 17 00:00:00 2001
+From 03095bd8f9ab68acd35b605f08e4be649e49b872 Mon Sep 17 00:00:00 2001
 From: Vasiliy Stelmachenok <ventureo@cachyos.org>
 Date: Thu, 9 Apr 2026 18:47:39 +0300
 Subject: [PATCH 11/11] Fix crash if pending surface state is NULL
 
 Signed-off-by: Vasiliy Stelmachenok <ventureo@cachyos.org>
 ---
- src/wayland/meta-wayland-tearing-control.c | 33 +++++++++++++++++++++------------
- 1 file changed, 21 insertions(+), 12 deletions(-)
+ src/wayland/meta-wayland-tearing-control.c | 31 ++++++++++++++--------
+ 1 file changed, 20 insertions(+), 11 deletions(-)
 
 diff --git a/src/wayland/meta-wayland-tearing-control.c b/src/wayland/meta-wayland-tearing-control.c
 index ce96675074..716ebab664 100644
@@ -2205,13 +2210,13 @@ index ce96675074..716ebab664 100644
 -                           tearing_surface);
 +  if (!tearing_surface->surface)
 +    return;
-+
-+  g_object_set_qdata (G_OBJECT (tearing_surface->surface),
-+                      quark_tearing_surface_data, NULL);
  
 -      /* Safe to access surface since we're cleaning up explicitly,
 -       * not being called during surface destruction */
 -      pending = meta_wayland_surface_get_pending_state (tearing_surface->surface);
++  g_object_set_qdata (G_OBJECT (tearing_surface->surface),
++                      quark_tearing_surface_data, NULL);
++
 +  /* Remove weak reference to prevent notification */
 +  g_object_weak_unref (G_OBJECT (tearing_surface->surface),
 +                       on_surface_weak_notify,
@@ -2225,9 +2230,8 @@ index ce96675074..716ebab664 100644
 +  if (pending)
 +    {
        pending->allow_tearing = FALSE;
--      pending->has_new_allow_tearing = FALSE;
+       pending->has_new_allow_tearing = FALSE;
 -      tearing_surface->surface = NULL;
-+      pending->has_new_allow_tearing = FALSE;
      }
 +
 +  tearing_surface->surface = NULL;
