@@ -1,5 +1,6 @@
 # Maintainer: Michael Bolden <me@sm9.dev>
 # Maintainer: Peter Jung <admin@ptr1337.dev>
+# Contributor: witchlliee <witchlliee@proton.me>
 
 pkgname=cachyos-gaming-meta
 pkgver=1.0.0
@@ -9,6 +10,7 @@ arch=(any)
 pkgdesc='Meta package for Gaming dependencies'
 depends=(
   alsa-plugins
+  ds-inhibit
   giflib
   glfw
   gst-plugins-base-libs
@@ -38,4 +40,12 @@ sha256sums=('76cded15c34773ab77672fba4bf3e00452256b09f9b58e59334b9b8848cddcba')
 
 package() {
   install -Dm644 "$srcdir/99-splitlock.conf" "$pkgdir/usr/lib/sysctl.d/99-splitlock.conf"
+}
+
+post_install() {
+  systemctl enable --now ds-inhibit
+}
+
+post_upgrade() {
+  $post_install
 }
