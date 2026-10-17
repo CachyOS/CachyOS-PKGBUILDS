@@ -1,0 +1,57 @@
+# Maintainer: Lumi <keoo2929@gmail.com>
+pkgname=astralrinth-beta-bin
+pkgver=0.21.901.gf0f73ba4b3
+pkgrel=1
+pkgdesc='Unofficial Arch package of the AstralRinth beta Minecraft launcher'
+arch=('x86_64')
+url='https://github.com/mozyk96/astralrinth-beta-build'
+license=('GPL-3.0-only')
+depends=(
+  'alsa-lib'
+  'cairo'
+  'gcc-libs'
+  'gdk-pixbuf2'
+  'glib2'
+  'glibc'
+  'gtk3'
+  'libayatana-appindicator'
+  'librsvg'
+  'libsoup3'
+  'openssl'
+  'webkit2gtk-4.1'
+  'xdg-utils'
+)
+makedepends=('libarchive' 'zstd')
+optdepends=('java-runtime: run Minecraft instances')
+provides=('astralrinth')
+conflicts=('astralrinth' 'astralrinth-bin' 'astralrinth-app-bin')
+source=("$pkgname-$pkgver-rootfs.tar.zst::https://github.com/mozyk96/astralrinth-beta-build/releases/download/v$pkgver/astralrinth-beta-rootfs.tar.zst")
+noextract=("$pkgname-$pkgver-rootfs.tar.zst")
+sha256sums=('c18cbc8de375acf027457066bab93631bc55d60f699d741a2e7d1e33f5d3b0f8')
+
+package() {
+  local archive="$srcdir/$pkgname-$pkgver-rootfs.tar.zst"
+  [[ -s "$archive" ]] || {
+    printf 'ERROR: release payload not found: %s\n' "$archive" >&2
+    return 1
+  }
+  install -d "$pkgdir"
+  bsdtar -xpf "$archive" -C "$pkgdir"
+
+  # Compatibility symlinks for standard invocation
+  ln -sf AstralRinthApp "$pkgdir/usr/bin/astralrinth"
+  ln -sf AstralRinthApp "$pkgdir/usr/bin/astralrinth-beta"
+
+  [[ -f "$pkgdir/usr/share/applications/astralrinth-beta.desktop" ]] || {
+    printf 'ERROR: KDE desktop entry missing from release payload.\n' >&2
+    return 1
+  }
+  [[ -s "$pkgdir/usr/share/pixmaps/astralrinth-beta.png" || \
+     -s "$pkgdir/usr/share/pixmaps/astralrinth-beta.svg" || \
+     -s "$pkgdir/usr/share/pixmaps/astralrinth-beta.xpm" || \
+     -s "$pkgdir/usr/share/pixmaps/astralrinth-beta.jpg" || \
+     -s "$pkgdir/usr/share/pixmaps/astralrinth-beta.jpeg" ]] || {
+    printf 'ERROR: KDE icon missing from release payload.\n' >&2
+    return 1
+  }
+}
