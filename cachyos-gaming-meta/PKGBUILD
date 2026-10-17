@@ -3,7 +3,7 @@
 
 pkgname=cachyos-gaming-meta
 pkgver=1.0.0
-pkgrel=9
+pkgrel=10
 epoch=1
 arch=(any)
 pkgdesc='Meta package for Gaming dependencies'
@@ -32,10 +32,20 @@ depends=(
   winetricks
   vulkan-tools
 )
+install=$pkgname.install
 
-source=('99-splitlock.conf')
-sha256sums=('76cded15c34773ab77672fba4bf3e00452256b09f9b58e59334b9b8848cddcba')
+source=(
+  '99-splitlock.conf'
+  '40-cachyos-gaming-shader-cache.conf'
+)
+sha256sums=(
+  '76cded15c34773ab77672fba4bf3e00452256b09f9b58e59334b9b8848cddcba'
+  '435b7f91b8301597cbb451cede7065e26be9d6ac7d4ecb3a0077e97cbb6de156'
+)
 
 package() {
-  install -Dm644 "$srcdir/99-splitlock.conf" "$pkgdir/usr/lib/sysctl.d/99-splitlock.conf"
+  install -Dm644 "$srcdir/99-splitlock.conf" \
+    "$pkgdir/usr/lib/sysctl.d/99-splitlock.conf"
+  install -Dm644 "$srcdir/40-cachyos-gaming-shader-cache.conf" \
+    "$pkgdir/usr/lib/environment.d/40-cachyos-gaming-shader-cache.conf"
 }
