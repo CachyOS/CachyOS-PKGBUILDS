@@ -3,7 +3,7 @@
 
 pkgname=cachyos-handheld
 pkgver=1.4.1
-pkgrel=1
+pkgrel=2
 arch=('any')
 license=('GPL-3.0-later')
 pkgdesc='CachyOS - Handheld!'
@@ -32,6 +32,11 @@ depends=(
   'scx-scheds'
   'steamos-jupiter-stable'
 )
+
+prepare() {
+  cd "$srcdir/CachyOS-Handheld"
+  git revert -n a2a30f431137228906b507d034dd799628b40315
+}
 
 package() {
   install -d "$pkgdir/etc"
