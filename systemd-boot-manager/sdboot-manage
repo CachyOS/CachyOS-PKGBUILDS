@@ -55,18 +55,18 @@ for i in "$@"; do
 done
 
 # config variables
-export LINUX_OPTIONS \
+export LINUX_OPTIONS="" \
     LINUX_FALLBACK_OPTIONS \
     USE_UKI="no" \
     DEFAULT_ENTRY="manual" \
     DISABLE_FALLBACK="no" \
     KERNEL_PATTERN="vmlinuz-*" \
     REMOVE_EXISTING="yes" \
-    OVERWRITE_EXISTING \
+    OVERWRITE_EXISTING="no" \
     REMOVE_OBSOLETE="yes" \
-    PRESERVE_FOREIGN \
-    NO_AUTOGEN \
-    NO_AUTOUPDATE \
+    PRESERVE_FOREIGN="no" \
+    NO_AUTOGEN="no" \
+    NO_AUTOUPDATE="no" \
     INITRD_PREFIX=initramfs \
     INITRD_ENTRIES
 
@@ -149,7 +149,7 @@ unset -f _systemd_boot_manager_uki_override
 
 # removes a systemd-boot entry
 remove_entry() {
-    [[ ${1} =~ ^$(get_entry_root "${ESP}").* || ${PRESERVE_FOREIGN} != "yes" ]] && rm -f "$1"
+    [[ ${1} =~ ^$(get_entry_root "${ESP}").* || "${PRESERVE_FOREIGN,,}" != "yes" ]] && rm -f "$1"
 }
 
 # installs and configures systemd-boot
@@ -236,7 +236,7 @@ generate_uki_entries() {
     local -i preset_created=0
 
     if [ ! -e /etc/kernel/entry-token ]; then
-        machine="$(cat /etc/machine-id)"
+        machine="$(cat /etc/machine-id || echo "")"
         [ -n "$machine" ] && echo "$machine" > /etc/kernel/entry-token
     fi
 
@@ -392,12 +392,12 @@ if ! bootctl status &>/dev/null && [ "$1" != "setup" ]; then
     die "systemd-boot not installed\nTry sdboot-manage setup to install"
 fi
 
-case $1 in
+case "${1:-}" in
     autogen)
-        [ "${NO_AUTOGEN}" != "yes" ] && generate_entries
+        [ "${NO_AUTOGEN,,}" != "yes" ] && generate_entries
         ;;
     autoupdate)
-        [ "${NO_AUTOUPDATE}" != "yes" ] && bootctl --esp-path="${ESP}" update
+        [ "${NO_AUTOUPDATE,,}" != "yes" ] && bootctl --esp-path="${ESP}" update
         ;;
     gen)
         REBUILD_UKI="yes" generate_entries
