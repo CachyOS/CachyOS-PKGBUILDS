@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 #
 # sdboot-manage provides automation for systemd-boot on systems with multiple kernels
+set -euo pipefail
+
+declare -r OVERRIDE_START="## ATTENTION! START OF SYSTEMD-BOOT-MANAGER GENERATED OVERRIDE, DO NOT EDIT"
+declare -r OVERRIDE_END="## ATTENTION! END OF SYSTEMD-BOOT-MANAGER GENERATED OVERRIDE, DO NOT EDIT"
 
 die() {
   echo -e "$@" >&2
@@ -25,7 +29,7 @@ exit 0
 }
 
 # set defaults for optional arguments if they are not passed on the command-line
-ESP="$(bootctl -p)"
+ESP="$(bootctl -p 2>/dev/null || echo /boot)"
 config="/etc/sdboot-manage.conf"
 
 # parse the options
@@ -53,6 +57,7 @@ done
 # config variables
 export LINUX_OPTIONS \
     LINUX_FALLBACK_OPTIONS \
+    USE_UKI="no" \
     DEFAULT_ENTRY="manual" \
     DISABLE_FALLBACK="no" \
     KERNEL_PATTERN="vmlinuz-*" \
@@ -80,9 +85,71 @@ get_entry_root() {
     echo -n "$ESP/loader/entries/"
 }
 
+get_installed_kernels() {
+    LC_ALL=C.UTF-8 find /usr/lib/modules -maxdepth 2 -type f -regex ".*/pkgbase$" \
+        | grep -Po "^/usr/lib/modules/\K(.*)(?=/pkgbase$)" \
+        | uniq \
+        | sort
+}
+
+check_preset() {
+    local preset="/etc/mkinitcpio.d/${1}.preset"
+    local -n start="$2" end="$3"
+
+    if [ ! -e "${preset}" ]; then
+        echo "Preset ${preset} not found"
+        return 1
+    fi
+
+    start="$(grep -nx "${OVERRIDE_START}" "${preset}" | head -n1 | cut -d ':' -f 1 || echo -1)"
+    end="$(grep -nx "${OVERRIDE_END}" "${preset}" | tail -n1 | cut -d ':' -f 1 || echo -1)"
+
+    return $((!(end > 0 && start > 0 && end > start)))
+}
+
+# Workaround, to make sure that regular calls of mkinitcpio will create UKI
+# images instead of default ones.
+add_uki_in_preset() {
+    local preset="/etc/mkinitcpio.d/${1}.preset"
+
+    if [ ! -e "${preset}" ]; then
+        echo "Preset ${preset} not found"
+        return 1
+    fi
+
+    echo -e "\n${OVERRIDE_START}" >> "${preset}"
+    cat <<< '
+function _systemd_boot_manager_uki_override() {
+    local pkgbase pkgver token esp
+
+    [ -n "$ALL_kver" ] || return 0
+    pkgbase="${ALL_kver##*/}"
+    pkgbase="${pkgbase#vmlinuz-}"
+
+    [ -n "$pkgbase" ] || return 0
+    pkgver="$(grep -lx "$pkgbase" /usr/lib/modules/*/pkgbase)"
+    pkgver="${pkgver%\/pkgbase}"
+    pkgver="${pkgver##*/}"
+
+    esp="$(bootctl -p 2>/dev/null || echo /boot)"
+    token="$(cat /etc/kernel/entry-token 2>/dev/null || cat /etc/machine-id 2>/dev/null)"
+
+    [ -n "$token" ] || return 0
+    pkgbase="${pkgbase%vmlinuz-}"
+    default_uki="${esp}/EFI/Linux/${token}-${pkgver}.efi"
+    default_image=
+    ALL_kver="/usr/lib/modules/${pkgver}/vmlinuz"
+}
+
+_systemd_boot_manager_uki_override
+unset -f _systemd_boot_manager_uki_override
+' >> "${preset}"
+    echo -e "${OVERRIDE_END}\n" >> "${preset}"
+}
+
 # removes a systemd-boot entry
 remove_entry() {
-    [[ ${1} =~ ^$(get_entry_root "${ESP}").* || ${PRESERVE_FOREIGN} != "yes" ]] && rm "$1"
+    [[ ${1} =~ ^$(get_entry_root "${ESP}").* || ${PRESERVE_FOREIGN} != "yes" ]] && rm -f "$1"
 }
 
 # installs and configures systemd-boot
@@ -113,17 +180,7 @@ append_initrd_entries() {
     echo "initrd ${initrd}" >> "$kernel_entry"
 }
 
-generate_entries() {
-    # First, ensure we have a valid config
-    if [ ! -f "${ESP}/loader/loader.conf" ]; then
-        die "Error: ${ESP}/loader/loader.conf does not exist"
-    fi
-
-    # only build entries if there is some place to put them
-    if [ ! -d "${ESP}/loader/entries" ]; then
-        die "Error: ${ESP}/loader/entries does not exist"
-    fi
-
+generate_cmdline() {
     srcdev="$(findmnt -no SOURCE /)"
     srcdev_uuid="$(findmnt -no UUID /)"
     srcdev_partuuid="$(findmnt -no PARTUUID /)"
@@ -170,6 +227,68 @@ generate_entries() {
         fi
     done < <(lsblk -nslo NAME,TYPE /dev/disk/by-uuid/"${top_level_uuid}" 2>/dev/null)
 
+    echo "${sdoptions} ${LINUX_OPTIONS}"
+}
+
+generate_uki_entries() {
+    local machine kernel pkgver token entry uki entry_root
+    local -i _start _end
+    local -i preset_created=0
+
+    if [ ! -e /etc/kernel/entry-token ]; then
+        machine="$(cat /etc/machine-id)"
+        [ -n "$machine" ] && echo "$machine" > /etc/kernel/entry-token
+    fi
+
+    [[ -d /etc/cmdline.d ]] || mkdir -p /etc/cmdline.d
+    generate_cmdline > /etc/cmdline.d/systemd-boot-manager.conf
+
+    token="$(cat /etc/kernel/entry-token 2>/dev/null || cat /etc/machine-id 2>/dev/null)"
+    entry_root="$(get_entry_root "$ESP")"
+
+    # Create presets for each installed kernel and build its UKI
+    while read -r pkgver; do
+        kernel="$(cat "/usr/lib/modules/${pkgver}/pkgbase")"
+        entry="${entry_root}/${kernel}.conf"
+        uki="${ESP}/EFI/Linux/${token}-${pkgver}.efi"
+        preset_created=0
+
+        if ! check_preset "${kernel}" _start _end; then
+            if add_uki_in_preset "${kernel}"; then
+                preset_created=1
+            fi
+        fi
+
+        if [[ "${REBUILD_UKI:-no}" = "yes" || ! -e "${uki}" ]]; then
+            mkinitcpio -p "${kernel}" || true
+        fi
+
+        # Remove existing entries to not create duplicates with UKI
+        if [[ "${REMOVE_EXISTING,,}" = "yes" && -e "${uki}" ]] && ((preset_created)); then
+            rm -f "${ESP}/initramfs-${kernel}.img" "${ESP}/vmlinuz-${kernel}" || true
+            remove_entry "${entry}" || true
+        fi
+    done < <(get_installed_kernels)
+
+    if [[ -z "$(ls -A "${ESP}/EFI/Linux")" ]]; then
+        die "Error: There are no UKI images after entry generation"
+    fi
+}
+
+generate_regular_entries() {
+    local cmdline pkgver
+    local -i override_start override_end
+
+    # First, ensure we have a valid config
+    if [ ! -f "${ESP}/loader/loader.conf" ]; then
+        die "Error: ${ESP}/loader/loader.conf does not exist"
+    fi
+
+    # only build entries if there is some place to put them
+    if [ ! -d "${ESP}/loader/entries" ]; then
+        die "Error: ${ESP}/loader/entries does not exist"
+    fi
+
     # when remove existing is set we want to start from an empty slate
     if [ "${REMOVE_EXISTING,,}" = "yes" ]; then
         while read -r entry; do
@@ -177,10 +296,32 @@ generate_entries() {
         done < <(LC_ALL=C.UTF-8 find "${ESP}/loader/entries" -type f -name "*.conf")
     fi
 
+    # Generate cmdline
+    cmdline="$(generate_cmdline)"
+
+    # Remove UKI presets if any
+    while read -r pkgver; do
+        kernel="$(cat "/usr/lib/modules/${pkgver}/pkgbase")"
+
+        # Regenerate initramfs if preset was changed before
+        if check_preset "${kernel}" override_start override_end; then
+            # Remove UKI image if present
+            mkinitcpio -p "${kernel}" -R
+
+            sed -i "$((override_start - 1)),$((override_end + 1))d" "/etc/mkinitcpio.d/${kernel}.preset"
+
+            echo "/usr/lib/modules/${pkgver}/" | /usr/share/libalpm/scripts/depmod
+            if [[ ! -e "/boot/vmlinuz-${kernel}" ]]; then
+                echo "/usr/lib/modules/${pkgver}/vmlinuz" | /usr/share/libalpm/scripts/mkinitcpio install
+            fi
+        fi
+    done < <(get_installed_kernels)
+
     # create entries for each installed kernel
     while read -r kernel; do
         entry="${kernel//vmlinuz-/}"
-        entry_path="$(get_entry_root "$ESP")${entry}"
+        entry_root="$(get_entry_root "$ESP")"
+        entry_path="${entry_root}/${entry}"
         initramfs="${kernel//vmlinuz/${INITRD_PREFIX}}"
 
         # first validate we don't already have an entry for this kernel
@@ -197,7 +338,7 @@ generate_entries() {
 
         cat <<EOF >"${entry_path}.conf"
 title ${title}
-options ${sdoptions} ${LINUX_OPTIONS}
+options ${cmdline}
 linux ${kernel}
 EOF
         append_initrd_entries "${entry_path}.conf" "${kernelpath}${initramfs}.img"
@@ -205,7 +346,7 @@ EOF
         if [[ -e "${kernelpath}${initramfs}-fallback.img" && "${DISABLE_FALLBACK}" != "yes" ]]; then
             cat <<EOF >"${entry_path}-fallback.conf"
 title ${title} (Fallback)
-options ${sdoptions} ${LINUX_FALLBACK_OPTIONS}
+options ${cmdline}
 linux ${kernel}
 EOF
             append_initrd_entries "$entry_path-fallback.conf" "${kernelpath}${initramfs}-fallback.img"
@@ -214,6 +355,14 @@ EOF
 
     if [ -z "$(ls -A "${ESP}/loader/entries")" ]; then
         die "Error: There are no boot loader entries after entry generation"
+    fi
+}
+
+generate_entries() {
+    if [[ "${USE_UKI,,}" = "yes" ]]; then
+        generate_uki_entries
+    else
+        generate_regular_entries
     fi
 }
 
@@ -251,7 +400,7 @@ case $1 in
         [ "${NO_AUTOUPDATE}" != "yes" ] && bootctl --esp-path="${ESP}" update
         ;;
     gen)
-        generate_entries
+        REBUILD_UKI="yes" generate_entries
         ;;
     remove)
         remove_orphan_entries
