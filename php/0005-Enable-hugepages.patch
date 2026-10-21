@@ -1,33 +1,36 @@
-From 71f678a31b50524bfa9c0f9d8a25223e104a6c31 Mon Sep 17 00:00:00 2001
+From 21afc2dc35d052f56075d408b67f57d71edce971 Mon Sep 17 00:00:00 2001
 From: Arjan van de Ven <arjan@linux.intel.com>
 Date: Thu, 23 Jan 2020 12:39:31 -0800
-Subject: [PATCH 5/5] Enable hugepages.
+Subject: [PATCH] Enable hugepages.
 
+Signed-off-by: Vasiliy Stelmachenok <ventureo@cachyos.org>
 ---
- Zend/zend_alloc.c               | 5 ++++-
- ext/opcache/shared_alloc_mmap.c | 1 +
- 2 files changed, 5 insertions(+), 1 deletion(-)
+ Zend/zend_alloc.c | 5 ++++-
+ 1 file changed, 4 insertions(+), 1 deletion(-)
 
 diff --git a/Zend/zend_alloc.c b/Zend/zend_alloc.c
-index 21ccf850..7c275ba2 100644
+index d67c1bf0937..1dd5a966cf2 100644
 --- a/Zend/zend_alloc.c
 +++ b/Zend/zend_alloc.c
-@@ -195,7 +195,7 @@ typedef struct  _zend_mm_free_slot zend_mm_free_slot;
+@@ -236,7 +236,7 @@ typedef struct  _zend_mm_free_slot zend_mm_free_slot;
  typedef struct  _zend_mm_chunk     zend_mm_chunk;
  typedef struct  _zend_mm_huge_list zend_mm_huge_list;
  
 -static bool zend_mm_use_huge_pages = false;
 +static bool zend_mm_use_huge_pages = true;
+ static bool zend_mm_max_allocs_reached = false;
  
  /*
-  * Memory is retrieved from OS by chunks of fixed size 2MB.
-@@ -478,6 +478,9 @@ static void *zend_mm_mmap(size_t size)
- #endif
+@@ -701,6 +701,9 @@ static void *zend_mm_mmap(size_t size)
  		return NULL;
  	}
+ 	zend_mmap_set_name(ptr, size, "zend_alloc");
 +	if (zend_mm_use_huge_pages && size == ZEND_MM_CHUNK_SIZE) {
 +		madvise (ptr, size , MADV_HUGEPAGE);
 +	}
  	return ptr;
  #endif
  }
+-- 
+2.56.0
+
