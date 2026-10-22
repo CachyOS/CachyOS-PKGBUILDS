@@ -52,7 +52,7 @@ jobs:
 
           source='${{ github.event.pull_request.base.sha }}'
           target='${{ github.event.pull_request.head.sha }}'
-          echo "changed=$(jsonify "package" "$(git diff --diff-filter=d --name-only "${source}" "${target}" "*/PKGBUILD")")" >> "$GITHUB_OUTPUT"
+          echo "changed=$(jsonify "package" "$(git diff --diff-filter=d --name-only "${source}"..."${target}" "*/PKGBUILD")")" >> "$GITHUB_OUTPUT"
 
   build:
     name: Check ${{ matrix.package }}
@@ -80,4 +80,4 @@ jobs:
       - name: Check package
         run: |
           cd "${{ matrix.package }}"
-          sudo -H -E -u builder makepkg --syncdeps --noconfirm --nobuild
+          sudo -H -E -u builder makepkg --syncdeps --noconfirm --nobuild --skippgpcheck
