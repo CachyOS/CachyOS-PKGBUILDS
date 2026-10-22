@@ -7,7 +7,7 @@ const pkgbuildsDir = join(import.meta.dir, "..", "..");
 
 async function getChangedPkgbuilds() {
   const { stdout } =
-    await $`git diff --diff-filter=d --name-only ${process.env.BASE_REF} ${process.env.HEAD_REF} "*/PKGBUILD"`
+    await $`git diff --diff-filter=d --name-only ${process.env.BASE_REF}...${process.env.HEAD_REF} "*/PKGBUILD"`
       .nothrow()
       .quiet();
 
