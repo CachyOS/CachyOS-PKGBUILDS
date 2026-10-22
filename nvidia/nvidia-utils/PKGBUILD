@@ -7,7 +7,7 @@
 pkgbase=nvidia-utils
 pkgname=('nvidia-utils' 'opencl-nvidia' 'nvidia-open-dkms')
 pkgver=615.78.08
-pkgrel=2
+pkgrel=3
 arch=('x86_64')
 url="http://www.nvidia.com/"
 license=('custom')
@@ -25,18 +25,24 @@ source=('nvidia-drm-outputclass.conf'
         "https://us.download.nvidia.com/XFree86/Linux-x86_64/${pkgver}/${_pkg}.run"
         "https://download.nvidia.com/XFree86/NVIDIA-kernel-module-source/${_pkg_open}.tar.xz"
         'limit-vram-usage'
-        'cuda-no-stable-perf-limit')
+        'cuda-no-stable-perf-limit'
+        '0001-fix-dsc-correct-RC-parameter-tables-to-match-VESA-DS.patch'
+        '0002-fix-dp-add-Bigscreen-Beyond-VR-headset-to-WAR-databa.patch'
+        '0004-Open-sysfs-config-from-the-userspace-root-on-7.3.patch')
 sha256sums=('be99ff3def641bb900c2486cce96530394c5dc60548fc4642f19d3a4c784134d'
             'f77a5247a3ba63e9fad3a3b2822d0fcfa51e0f79b5a90bd79bf08ea34b64ab07'
             'e30714f9b473d810c28763d067e0b85c75f86f23618d968b49b9d1fced9a1dd6'
             'c5aa7b8abe69e72bfdc6b9ee8afbfd350bcc557e894558f2e6e4087fa9aa0dd8'
             '1d053c5078387021338cfc3a732bed61be1a20a549775573788e9134775c8149'
-            '7d2300d62480cfc92be125d1dd628d97555e0dd7dd7667248036dc4f7c81d096'
+            'aa3106f169f1640a9f73af1e7bf5346800eecb030078b646a860d4994d0e0992'
             'd9251519fcd5570525b04dbea40278abbe16b35eb958c8f5cf251dacb6b52ed7'
             '3e3f6dddc2ee767a08185300af7be3cb286ece76698d2dde3524599782d07ffe'
             '17b4f3d195a5ab1fad9aa1f195c9d3a4ad03aceda18bb9fb68a8bd33d7a000f6'
             'b14f7a65359c05c373ddfc750cd4cf086a48e815489d93ad5cbe1dbf84bf8f5a'
-            '6264d279bbae8eae6554ed78dd6e562da00cf71ffa5601ce5208099a98cd2c4d')
+            '6264d279bbae8eae6554ed78dd6e562da00cf71ffa5601ce5208099a98cd2c4d'
+            'dcbce21a16a008a7371014220cff1153ad9893b8d095b2024066275d4c953bee'
+            '70dc137a9bd6e95ae4b9e296acc24d3e13a138786c6f5dd549dcbcd3a3305906'
+            'a6bbae1da91bead7030ed78a161dedd2dc8d38d495ef87af24673642ef1d7ca9')
 
 create_links() {
     # create soname links
@@ -53,12 +59,9 @@ prepare() {
     cd "${_pkg}"
     bsdtar -xf nvidia-persistenced-init.tar.bz2
 
-    # Linux 7.3 support
-#    patch -Np1 -i "${srcdir}/0003-Pass-dmem_cgroup_init-to-dmem_cgroup_register_region.patch" -d "${srcdir}/${_pkg_open}/"
-
-#    patch -Np1 -i "${srcdir}/0001-fix-dsc-correct-RC-parameter-tables-to-match-VESA-DS.patch" -d "${srcdir}/${_pkg_open}/"
-#    patch -Np1 -i "${srcdir}/0002-fix-dsc-use-bits_per_component-for-flatnessDetThresh.patch" -d "${srcdir}/${_pkg_open}/"
-#    patch -Np1 -i "${srcdir}/0003-fix-dp-add-Bigscreen-Beyond-VR-headset-to-WAR-databa.patch" -d "${srcdir}/${_pkg_open}/"
+    patch -Np1 -i "${srcdir}/0001-fix-dsc-correct-RC-parameter-tables-to-match-VESA-DS.patch" -d "${srcdir}/${_pkg_open}/"
+    patch -Np1 -i "${srcdir}/0002-fix-dp-add-Bigscreen-Beyond-VR-headset-to-WAR-databa.patch" -d "${srcdir}/${_pkg_open}/"
+    patch -Np1 -i "${srcdir}/0004-Open-sysfs-config-from-the-userspace-root-on-7.3.patch" -d "${srcdir}/${_pkg_open}/"
 
     # Attempt to make builds reproducible
     sed -i "s/^  HOSTNAME.*/  HOSTNAME = echo cachyos/" "${srcdir}/${_pkg_open}/utils.mk"
