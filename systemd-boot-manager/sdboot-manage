@@ -56,10 +56,8 @@ done
 
 # config variables
 export LINUX_OPTIONS \
-    LINUX_FALLBACK_OPTIONS \
     USE_UKI="no" \
     DEFAULT_ENTRY="manual" \
-    DISABLE_FALLBACK="no" \
     KERNEL_PATTERN="vmlinuz-*" \
     REMOVE_EXISTING="yes" \
     OVERWRITE_EXISTING="no" \
@@ -342,15 +340,6 @@ options ${cmdline}
 linux ${kernel}
 EOF
         append_initrd_entries "${entry_path}.conf" "${kernelpath}${initramfs}.img"
-
-        if [[ -e "${kernelpath}${initramfs}-fallback.img" && "${DISABLE_FALLBACK}" != "yes" ]]; then
-            cat <<EOF >"${entry_path}-fallback.conf"
-title ${title} (Fallback)
-options ${cmdline}
-linux ${kernel}
-EOF
-            append_initrd_entries "$entry_path-fallback.conf" "${kernelpath}${initramfs}-fallback.img"
-        fi
     done < <(LC_ALL=C.UTF-8 find "${ESP}" -maxdepth 1 -type f -name "${KERNEL_PATTERN}" -printf "/%P\n")
 
     if [ -z "$(ls -A "${ESP}/loader/entries")" ]; then
