@@ -3,7 +3,7 @@
 pkgbase=dms-shell
 _pkg1=DankMaterialShell
 pkgname=$pkgbase
-pkgver=1.6.3
+pkgver=2.0.0
 pkgrel=1
 pkgdesc='A Quickshell-based desktop shell with Material 3 design principles'
 arch=(x86_64)
@@ -28,14 +28,14 @@ optdepends=('cava: Audio visualizer'
 makedepends=(git
 			 go)
 source=("$_pkg1::git+$url.git#tag=v$pkgver"
-        "dank-qml-common::git+https://github.com/AvengeMedia/dank-qml-common.git")
-sha256sums=('a404f657e0f5109d1606797e268ac452989836bfa53e244532ca0c4ea567f71d'
+        "dux-qml-common::git+https://github.com/duxlabs-dev/dux-qml-common.git")
+sha256sums=('7d132b0bbf763ba8963ad09eff280d88b19f2c9fea464d8080e35edacd369ad2'
             'SKIP')
 
 prepare() {
 	cd "$_pkg1"
 	git submodule init
-	git config submodule.dank-qml-common.url "$srcdir/dank-qml-common"
+	git config submodule.dank-qml-common.url "$srcdir/dux-qml-common"
 	git -c protocol.file.allow=always submodule update --recursive
 }
 
@@ -64,10 +64,11 @@ package() {
 	cd "$_pkg1"
 	install -Dm0755 -t "$pkgdir/usr/bin/" core/dms
 	install -Dm0644 -t "$pkgdir/usr/share/doc/$pkgname/" README.md
-	cp -r "docs/"* "$pkgdir/usr/share/doc/$pkgname/"
 	install -Dm0644 -t "$pkgdir/usr/lib/systemd/user/" assets/systemd/dms.service
-	install -Dm0644 -t "$pkgdir/usr/share/applications/" assets/dms-open.desktop
-	install -Dm0644 -t "$pkgdir/usr/share/icons/hicolor/scalable/apps/" assets/danklogo.svg
+	install -Dm0644 -t "$pkgdir/usr/share/applications/" assets/dms-open.desktop \
+		assets/dev.duxlabs.shell.desktop \
+		assets/dev.duxlabs.shell.notepad.desktop
+	install -Dm0644 -t "$pkgdir/usr/share/icons/hicolor/scalable/apps/" assets/dev.duxlabs.shell.svg
 	install -Dm0644 -t "$pkgdir/usr/share/licenses/$pkgname/" LICENSE
 	install -Dm0644 <(_completion bash) "$pkgdir/usr/share/bash-completion/completions/dms"
 	install -Dm0644 <(_completion zsh) "$pkgdir/usr/share/zsh/site-functions/_dms"
