@@ -9,7 +9,7 @@
 # Contributor: TIanyi Cui <tianyicui@gmail.com>
 
 pkgname=nodejs
-pkgver=26.11.1
+pkgver=26.12.1
 pkgrel=2
 pkgdesc='Evented I/O for V8 javascript ("Current" release)'
 arch=('x86_64')
@@ -35,6 +35,7 @@ depends=(
   'zstd'
 )
 makedepends=(
+  'cargo'
   'git'
   'ninja'
   'procps-ng'
@@ -43,7 +44,7 @@ makedepends=(
 optdepends=('npm: nodejs package manager')
 source=("git+https://github.com/nodejs/node.git#tag=v$pkgver?signed")
 
-sha512sums=('d7a0735b925f2585b00b6de699498d76338729c39bb6c3e551736a3771cc28bd10fc59085cf85e741543073ae21e35bc49a5f100b71f1f6537ae295227a9db1b')
+sha512sums=('bbf66cd385c68f1bdfa85ea4f9a547a4e9302c59558bc514be87cb0e724bea5bdeda23f7f7cb14c45bf02fafebf2725ad0bd5b275b18d51f93fdea6fe6b061f7')
 validpgpkeys=(
   '8FCCA13FEF1D0C2E91008E09770F7A9A5AE15600' # Michaël Zasso (Targos) <targos@protonmail.com>
   '890C08DB8579162FEE0DF9DB8BEAB4DFCF555EF4' # RafaelGSS <rafael.nunu@hotmail.com>
@@ -64,6 +65,7 @@ _configure_args=(
   --prefix=/usr
   --with-intl=system-icu
   --without-npm
+  --v8-enable-temporal-support
   --shared-abseil
   --shared-ada
   --shared-brotli
@@ -89,14 +91,6 @@ _set_flags() {
 
   export CFLAGS+=" ${_common_flags[*]}"
   export CXXFLAGS+=" ${_common_flags[*]}"
-}
-
-prepare() {
-  cd node
-
-  # Fix the CCM empty-message test with newer OpenSSL behavior:
-  # https://github.com/nodejs/node/commit/7e2254fc8ba5ac88fe6f35715e7bb6e78597846b
-  git cherry-pick -n 7e2254fc8ba5ac88fe6f35715e7bb6e78597846b
 }
 
 build() {
