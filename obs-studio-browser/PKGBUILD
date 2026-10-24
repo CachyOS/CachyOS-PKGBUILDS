@@ -6,7 +6,7 @@
 # Contributor: ledti <antergist at gmail dot com>
 
 pkgname=obs-studio-browser
-pkgver=32.2.2
+pkgver=33.0.0
 pkgrel=1
 pkgdesc="Free and open source software for video recording and live streaming. With everything except service integration"
 arch=("x86_64")
@@ -14,17 +14,16 @@ url="https://github.com/obsproject/obs-studio"
 license=('GPL-2.0-or-later')
 # To manage dependency rebuild easily, this will prevent you to rebuild OBS on non-updated system
 _qtver=6.11
-_libajantv2ver=17.5.0
-_libdatachannelver=0.24
-_mbedtlsver=3.6.7
+_libajantv2ver=18.0.0
+_libdatachannelver=0.24.3
+_mbedtlsver=3.6.1
 _pythonver=3.14
 depends=(
   "alsa-lib" # Deps of ALSA plugin and CEF
   "curl" # Deps of OBS Studio and rtmp-services plugin
-  "ffmpeg>=8" # Deps of OBS Studio and FFmpeg plugin
+  "ffmpeg>=9" # Deps of OBS Studio and FFmpeg plugin
   "fontconfig" # Deps of Freetype2 plugin
   "freetype2" # Deps of Freetype2 plugin
-  "gcc-libs" # Deps of any C++ related binary
   "glib2" # Deps of libobs, PipeWire plugin and CEF
   "glibc" # Deps of any C related binary
   "jack" # Deps of JACK plugin
@@ -32,10 +31,12 @@ depends=(
   "libajantv2>=$_libajantv2ver" # Deps of AJA plugins
   "libdatachannel>=$_libdatachannelver" # Deps of WebRTC plugin (NICE variant like the Flatpak)
   "libfdk-aac" # Deps of FDK AAC plugin
+  "libgcc" # Deps of any C++ related binary
   "libgl" # Deps of libobs-opengl and OBS Studio
   "libpipewire" # Deps of the PipeWire plugin
   "libpulse" # Deps of PulseAudio monitoring (in libobs) and PulseAudio plugin
   "librist" # Deps of FFmpeg plugin
+  "libstdc++" # Deps of any C++ related binary
   "libva" # Deps of FFmpeg plugin and QSV plugin
   "libvpl" # Deps of QSV plugin
   "libx11" # Deps of libobs, libobs-opengl, X11 Capture plugin, frontend tools plugin, obs-browser and CEF
@@ -99,17 +100,19 @@ conflicts=(
   "obs-studio" "obs-vst" "obs-websocket" "obs-browser"
   "obs-linuxbrowser" # This plugin is obsolete
   "libva-vdpau-driver" # This driver is abandonned and make OBS segfault if it happen to be loaded, try libva-nvidia-driver is you really need Nvidia decode through VAAPI
+  "obs-studio-plugin-browser"
 )
 source=(
   "obs-studio::git+https://github.com/obsproject/obs-studio.git#tag=$pkgver"
   "obs-browser::git+https://github.com/obsproject/obs-browser.git"
   "obs-websocket::git+https://github.com/obsproject/obs-websocket.git"
 )
-source_x86_64=("https://cdn-fastly.obsproject.com/downloads/cef_binary_6533_linux_x86_64_v6.tar.xz")
-sha256sums=('18edf1162e6cc37c192c4532ccfb902a07c5891d5929e95c4f028c6ad5d762d5'
+source_x86_64=("https://cdn-fastly.obsproject.com/downloads/cef_binary_7871_linux_x86_64.tar.xz")
+source_aarch64=("https://cdn-fastly.obsproject.com/downloads/cef_binary_7871_linux_aarch64.tar.xz")
+sha256sums=('a682ad0e3d780508ec81e4dae4e7ff824b0ddc6ddf4b6cb095c341d0907d798b'
             'SKIP'
             'SKIP')
-sha256sums_x86_64=('7963335519a19ccdc5233f7334c5ab023026e2f3e9a0cc417007c09d86608146')
+sha256sums_x86_64=('8ffc64d06ea74da613eeda7f2aa5d4e98661af6fa3ed8c68724c9a6e4e89ea8e')
 optdepends+=("decklink: Blackmagic Design DeckLink support")
 
 prepare() {
@@ -123,11 +126,6 @@ prepare() {
 
   # Keep sentinel file functional without messing with compile flags
   sed -i "s|#ifndef NDEBUG|#if 0|" frontend/utility/CrashHandler.cpp
-
-  # Ensure MbedTLS 3 is picked
-  sed -i "s|find_package(MbedTLS|find_package(MbedTLS 3...<4|" frontend/cmake/feature-whatsnew.cmake
-  sed -i "s|find_package(MbedTLS|find_package(MbedTLS 3...<4|" plugins/obs-outputs/CMakeLists.txt
-  rm cmake/finders/FindMbedTLS.cmake
 }
 
 build() {
@@ -139,8 +137,8 @@ build() {
     -DENABLE_JACK=ON \
     -DENABLE_SNDIO=ON \
     -DENABLE_BROWSER=ON \
-    -DCEF_ROOT_DIR="$srcdir/cef_binary_6533_linux_${CARCH/%_v?/}" \
-    -DOBS_VERSION_OVERRIDE="$pkgver" \
+    -DCEF_ROOT_DIR="$srcdir/cef_binary_7871_linux_${CARCH/%_v?/}" \
+    -DOBS_VERSION_OVERRIDE="$_pkgver" \
     -DOBS_COMPILE_DEPRECATION_AS_WARNING=ON \
     -DCMAKE_INCLUDE_PATH="/usr/include/mbedtls3;/usr/include" \
     -DMbedTLS_ROOT="/usr/lib/mbedtls3/cmake/MbedTLS" \
