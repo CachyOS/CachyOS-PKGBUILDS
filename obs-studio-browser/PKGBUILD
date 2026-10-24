@@ -122,7 +122,7 @@ prepare() {
   git -c protocol.file.allow=always submodule update
 
   ## Mark log and titlebar version
-  sed -i "s|obs_get_version_string()|\"$_pkgver-$_suffix-$pkgrel\"|" frontend/OBSApp.cpp
+  sed -i "s|obs_get_version_string()|\"$pkgver-$pkgrel\"|" frontend/OBSApp.cpp
 
   # Keep sentinel file functional without messing with compile flags
   sed -i "s|#ifndef NDEBUG|#if 0|" frontend/utility/CrashHandler.cpp
@@ -138,7 +138,7 @@ build() {
     -DENABLE_SNDIO=ON \
     -DENABLE_BROWSER=ON \
     -DCEF_ROOT_DIR="$srcdir/cef_binary_7871_linux_${CARCH/%_v?/}" \
-    -DOBS_VERSION_OVERRIDE="$_pkgver" \
+    -DOBS_VERSION_OVERRIDE="$pkgver" \
     -DOBS_COMPILE_DEPRECATION_AS_WARNING=ON \
     -DCMAKE_INCLUDE_PATH="/usr/include/mbedtls3;/usr/include" \
     -DMbedTLS_ROOT="/usr/lib/mbedtls3/cmake/MbedTLS" \
