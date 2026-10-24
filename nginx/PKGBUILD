@@ -17,9 +17,10 @@ pkgname=(
   nginx-mod-xslt
   nginx-src
 )
-pkgver=1.28.2
-pkgrel=2
-_tests_commit=17c6a06e7b692351f4af53ca6511b919e9e510b8
+# IMPORTANT: When bumping $pkgver, remember to rebuild NGINX modules nginx-mod-*.
+pkgver=1.30.6
+pkgrel=1
+_tests_commit=4d1de3f357afeb91865d024b27516d6b67aad86e
 arch=(x86_64)
 pkgdesc='Lightweight HTTP server and IMAP/POP3 proxy server'
 url='https://nginx.org'
@@ -69,13 +70,15 @@ validpgpkeys=(
   'D6786CE303D9A9022998DC6CC8464D549AF75C0A'  # Sergey Kandaurov <s.kandaurov@f5.com>
   '13C82A63B603576156E30A4EA0EA981B66B0D967'  # Konstantin Pavlov <thresh@nginx.com>
 )
-sha512sums=('393f7519e69f167ea7819cf8fc074acdc9e1d5fdd68a63a992db0f2bf236d3f67d93e5908e67428eca12c36cf3cdbb142aed7cefe891b66928cc4b219c0e6b11'
-            '5a3b2673e485f7e40094ee11e3f80319f8555f6cac05ea4a40139faa1b218f6124d67f8715e56d894a4f4f5c9bc89987e175b7a5772938207861d9f9a57cacf1'
+sha512sums=('cd3c52ceb8f62bda3f9fb88d33f24e162069ddd6ec9a7ea05c78a2579c60405350c8d5b0a2b7a2d745a588257f4953feb9d9c2c61ab5fc074a661f06ed5c30c1'
+            '827180c353d2765557c9cd85f205d4e79b4a43dc01b150abc32e93b37ff27ac718d339825096396250c4a9b83899f06de39e9622dae10c54b9bd9748112a3016'
             'f469b3b14def666e955abf6f2d3c68a47631cad7bee90c92039ffe5bf629aa7e32bb4250844d52c0f963740fb07bf7fea5f8887cc1d5199403f07be6214fcb8d'
-            '2f4dfcfa711b8bcbc5918ba635f5e430ef7132e66276261ade62bb1cba016967432c8dce7f84352cb8b07dc7c6b18f09177aa3eb92c8e358b2a106c8ca142fe9')
+            'f707961d716392a0cc5345aa79e0cb1b44d2f1233b26cb77724a2716f1552a766d8aeb5347e20cba801a271e785c9ba1f35ac8e155fbadadd0c145ec222e8e0b')
 
 prepare() {
   cp -r $pkgbase{,-src}
+  # Fix ssl_certificate_compression test: loop only checked first algorithm
+  sed '/\$has_zlib = 1 if \$algo == 1;/{n;/^\t\t\t\tlast;/d}' -i nginx-tests/ssl_certificate_compression.t
 }
 
 _configure_nginx() {
@@ -336,8 +339,7 @@ package_nginx() {
   mv "$srcdir"/install/* "$pkgdir/"
 
   sed -e 's|\<user\s\+\w\+;|user http;|g' \
-    -e '44s|html|/usr/share/nginx/html|' \
-    -e '54s|html|/usr/share/nginx/html|' \
+    -e '/^\s\+root/s|html|/usr/share/nginx/html|' \
     -e '/^events {/ i # Load all installed modules\ninclude modules.d/*.conf;\n' \
     -i "$pkgdir"/etc/nginx/nginx.conf
 
