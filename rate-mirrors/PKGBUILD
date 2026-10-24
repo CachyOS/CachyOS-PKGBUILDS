@@ -2,7 +2,7 @@
 # Contributor: Nikita Almakov <nikita.almakov@gmail.com>
 
 pkgname=rate-mirrors
-pkgver=0.33.0
+pkgver=0.34.0
 pkgrel=1
 pkgdesc="Everyday-use client-side map-aware mirror ranking tool"
 arch=(x86_64)
@@ -12,26 +12,26 @@ depends=('glibc' 'gcc-libs' 'librustls')
 makedepends=('git' 'cargo' 'lld' 'clang' 'llvm')
 source=(
     "${pkgname}::git+$url.git#tag=v${pkgver}"
-    "https://github.com/CachyOS/rate-mirrors/commit/a4d651079a9269adc7ff6b376026a0e39da452fc.patch"
-    "0001-archlinux-use-cachyos-proxy-mirrorlist.patch"
-    "https://github.com/CachyOS/rate-mirrors/commit/44925188286e4935eec3ca6652454fb0c148659e.patch"
+    "https://github.com/CachyOS/rate-mirrors/commit/646c4f5377e37549ca860b6bbbe5893e7a53521f.patch"
+    "https://github.com/CachyOS/rate-mirrors/commit/38cc36bc4778af6f9c42c24e8eb2f1c0a63715a8.patch"
+    "https://github.com/CachyOS/rate-mirrors/commit/04c45751d15657a20e939d744eee2f10d3f15439.patch"
 )
-sha256sums=('ffd329353dc52dd4404c7774f884e16e4d1f7bdbaf07196089fb539806950c06'
-            'a299c7f0b6b78dfb2e48c5254bea8baa8d7efbd63a1d207ea600d37aca68be6e'
-            'a9321090569bf54c8c7b92148c763bffdfe2f02ff6e25903a775ab3bfcb9cd74'
-            '4aa7bdecd9be306e1bcc77d5c56e247408e9a1b4c2b2b08e35ee525110507afc')
+sha256sums=('5711cf7a7ec817f1f4c880717950a24f2563e2fc963144082b170d238b82cbc7'
+            'bc67ef8ce7972c86d1a35c81edef0f3f201e65ba13a729f58a7dd52beb32bb00'
+            '7c7aa882e1e10a54c781b8f70e78bbaade444fb4549c9daa9651639ea4fbdae5'
+            'e0c553a8877017fd4fd3b5199f3f4a923a27394058ce50f4f5a65ce236ff9c01')
 
 prepare() {
   cd "$pkgname"
 
   # cachyos: add proxy mirrorlist as primary
-  patch -Np1 -i ../a4d651079a9269adc7ff6b376026a0e39da452fc.patch
+  patch -Np1 -i ../646c4f5377e37549ca860b6bbbe5893e7a53521f.patch
 
   # archlinux: use cachyos proxy mirrorlist
-  patch -Np1 -i ../0001-archlinux-use-cachyos-proxy-mirrorlist.patch
+  patch -Np1 -i ../38cc36bc4778af6f9c42c24e8eb2f1c0a63715a8.patch
 
   # cachyos: use mirrorlist API from zyner
-  patch -Np1 -i ../44925188286e4935eec3ca6652454fb0c148659e.patch
+  patch -Np1 -i ../04c45751d15657a20e939d744eee2f10d3f15439.patch
 
   cargo fetch --locked --target "$CARCH-unknown-linux-gnu"
 }
