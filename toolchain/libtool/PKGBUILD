@@ -10,7 +10,7 @@ pkgbase=libtool
 pkgname=(libtool lib32-libltdl)
 pkgver=2.6.2
 _commit=309bb53a8adfb22c6e5869cc8da049bf123e5438
-pkgrel=5
+pkgrel=6
 _gccver=16
 pkgdesc='A generic library support script'
 arch=(aarch64 x86_64)
@@ -67,7 +67,7 @@ build() {
 
   #lib32
   echo $CARCH
-  if [[ $CARCH = "x86_64" ]]; then
+  if [[ $CARCH == x86_64* ]]; then
     cd "${srcdir}"/libtool32
     export CC="gcc -m32" CXX="g++ -m32"
     ./configure --prefix=/usr lt_cv_sys_lib_dlsearch_path_spec="/usr/lib /usr/lib32" --libdir=/usr/lib32
