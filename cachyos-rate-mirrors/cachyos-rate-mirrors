@@ -164,11 +164,17 @@ rate_repository_mirrors arch "${MIRRORS_DEFAULT_DIR}/mirrorlist"
 if [ "$country" != "RU" ] && [ "$country" != "CN" ]; then
     # shellcheck disable=SC2016
     sed -i \
-        -e '1iServer = https://archlinux.cachyos.org/repo/$repo/os/$arch' \
-        -e '1iServer = https://mirror.zyner.org/archlinux/$repo/os/$arch' "${MIRRORS_DEFAULT_DIR}/mirrorlist"
+        -e '1iServer = https://mirror.zyner.org/archlinux/$repo/os/$arch' \
+        -e '1iServer = https://archlinux.cachyos.org/repo/$repo/os/$arch' "${MIRRORS_DEFAULT_DIR}/mirrorlist"
 fi
 
 rate_repository_mirrors cachyos "${MIRRORS_DEFAULT_DIR}/cachyos-mirrorlist"
+
+# Always insert Zyner mirror to the start, unless RU and CN region is detected
+if [ "$country" != "RU" ] && [ "$country" != "CN" ]; then
+    # shellcheck disable=SC2016
+    sed -i '1iServer = https://mirror.zyner.org/cachyos/repo/$arch/$repo' "${MIRRORS_DEFAULT_DIR}/cachyos-mirrorlist"
+fi
 
 # Always insert local mirrors as first due to blockings in RU region
 #if [ "$country" = "RU" ]; then
