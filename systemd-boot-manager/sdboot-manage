@@ -295,8 +295,14 @@ generate_regular_entries() {
         done < <(LC_ALL=C.UTF-8 find "${ESP}/loader/entries" -type f -name "*.conf")
     fi
 
-    # Generate cmdline
-    cmdline="$(generate_cmdline)"
+    if [[ -s "/etc/kernel/cmdline" ]]; then
+        cmdline="$(cat /etc/kernel/cmdline)"
+    fi
+
+    # Fallback
+    if [[ -z "${cmdline:-}" ]]; then
+        cmdline="$(generate_cmdline)"
+    fi
 
     # Remove UKI presets if any
     while read -r pkgver; do
