@@ -302,6 +302,8 @@ generate_regular_entries() {
     # Fallback
     if [[ -z "${cmdline:-}" ]]; then
         cmdline="$(generate_cmdline)"
+    else
+        cmdline="${cmdline} ${LINUX_OPTIONS}"
     fi
 
     # Remove UKI presets if any
