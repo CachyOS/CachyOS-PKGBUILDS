@@ -176,5 +176,7 @@ EOF
     ln -s ../drm-module-load.target "$generator_dir"/display-manager.service.wants/drm-module-load.target
 }
 
-generate_load_target
+if ! cat /proc/cmdline | tr ' ' '\n' | grep -qx "cachyos-drm-awaiter.disable"; then
+    generate_load_target
+fi
 exit 0
