@@ -229,9 +229,11 @@ generate_cmdline() {
 }
 
 generate_uki_entries() {
-    local machine kernel pkgver token entry uki entry_root
+    local machine kernel pkgver token entry uki entry_root uki_staging preset_copy
     local -i _start _end
     local -i preset_created=0
+    local -i rebuild=0
+    local -i failed=0
 
     if [ ! -e /etc/kernel/entry-token ]; then
         machine="$(cat /etc/machine-id || echo "")"
@@ -240,6 +242,10 @@ generate_uki_entries() {
 
     token="$(cat /etc/kernel/entry-token 2>/dev/null || cat /etc/machine-id 2>/dev/null)"
     entry_root="$(get_entry_root "$ESP")"
+
+    # Remove stale staging files from an interrupted previous run.
+    rm -f -- "${ESP}"/EFI/Linux/.sdboot-manage-new.* \
+        "${ESP}"/EFI/Linux/.sdboot-manage-preset.* 2>/dev/null || true
 
     # Create presets for each installed kernel and build its UKI
     while read -r pkgver; do
@@ -255,12 +261,56 @@ generate_uki_entries() {
             fi
         fi
 
-        if [[ "${REBUILD_UKI:-no}" = "yes" || ! -e "${uki}" ]]; then
-            mkinitcpio -p "${kernel}" || true
+        # On the first switch, always regenerate. A preexisting image must not
+        # authorize deleting the regular boot path without verification.
+        rebuild=0
+        if ((preset_created)) || [[ "${REBUILD_UKI:-no}" = "yes" || ! -e "${uki}" ]]; then
+            rebuild=1
+        fi
+
+        # Generate to a non-.efi staging path. The old UKI stays at its
+        # original path until a non-empty replacement is verified.
+        if ((rebuild)); then
+            uki_staging="${ESP}/EFI/Linux/.sdboot-manage-new.$$"
+            preset_copy="${ESP}/EFI/Linux/.sdboot-manage-preset.$$"
+            rm -f -- "${uki_staging}" "${preset_copy}"
+            if ! cp -f "/etc/mkinitcpio.d/${kernel}.preset" "${preset_copy}"; then
+                echo "Error: failed to stage preset for ${kernel}, preserving existing boot entries" >&2
+                failed=1
+                continue
+            fi
+            printf '\ndefault_uki="%s"\ndefault_image=\n' "${uki_staging}" >>"${preset_copy}"
+            if ! mkinitcpio -p "${preset_copy}"; then
+                rm -f -- "${uki_staging}" "${preset_copy}"
+                echo "Error: failed to generate UKI for ${kernel}, preserving existing boot entries" >&2
+                failed=1
+                continue
+            fi
+            if [[ ! -s "${uki_staging}" ]]; then
+                rm -f -- "${uki_staging}" "${preset_copy}"
+                echo "Error: UKI ${uki_staging} is missing or empty, preserving existing boot entries" >&2
+                failed=1
+                continue
+            fi
+            if ! mv -f -- "${uki_staging}" "${uki}"; then
+                rm -f -- "${uki_staging}" "${preset_copy}"
+                echo "Error: failed to install ${uki}, preserving existing boot entries" >&2
+                failed=1
+                continue
+            fi
+            rm -f -- "${preset_copy}"
+        fi
+
+        # A failed or interrupted generation can leave an empty or partial UKI.
+        # Never drop the regular boot path unless this run produced a usable UKI.
+        if [[ ! -s "${uki}" ]]; then
+            echo "Error: UKI ${uki} is missing or empty, preserving existing boot entries" >&2
+            failed=1
+            continue
         fi
 
         # Remove existing entries to not create duplicates with UKI
-        if [[ -e "${uki}" ]] && ((preset_created)); then
+        if ((preset_created)); then
             rm -f "${ESP}/initramfs-${kernel}.img" "${ESP}/vmlinuz-${kernel}" || true
             remove_entry "${entry}" || true
 
@@ -269,14 +319,49 @@ generate_uki_entries() {
         fi
     done < <(get_installed_kernels)
 
-    if [[ -z "$(ls -A "${ESP}/EFI/Linux")" ]]; then
+    if ((failed)); then
+        die "Error: failed to generate one or more UKI images"
+    fi
+
+    if ! compgen -G "${ESP}/EFI/Linux/*.efi" >/dev/null; then
         die "Error: There are no UKI images after entry generation"
     fi
 }
 
+entry_references_valid() {
+    local entry_file="$1" name="$2" linux_path initrd_path
+    local -i initrd_count=0
+
+    linux_path="$(awk '$1 == "linux" { print $2; exit }' "${entry_file}")"
+    [[ -n "${linux_path}" ]] || return 1
+    [[ "${linux_path}" == /* ]] || linux_path="/${linux_path}"
+    case "/${linux_path#/}/" in
+        *"/../"*) return 1 ;;
+    esac
+    [[ "${linux_path##*/}" == "vmlinuz-${name}" ]] || return 1
+    [[ -s "${ESP}${linux_path}" ]] || return 1
+
+    while read -r _ initrd_path; do
+        [[ -n "${initrd_path}" ]] || continue
+        initrd_count+=1
+        [[ "${initrd_path}" == /* ]] || initrd_path="/${initrd_path}"
+        case "/${initrd_path#/}/" in
+            *"/../"*) return 1 ;;
+        esac
+        [[ -s "${ESP}${initrd_path}" ]] || return 1
+    done < <(awk '$1 == "initrd" { print $1, $2 }' "${entry_file}")
+
+    ((initrd_count > 0)) || return 1
+    return 0
+}
+
 generate_regular_entries() {
-    local cmdline pkgver
+    local cmdline pkgver kernel entry entry_root entry_path initramfs title kernelpath tmp final
+    local -a staged_files=() staged_finals=()
+    local -A new_entries=()
     local -i override_start override_end
+    local -i failed=0
+    local -i available=0
 
     # First, ensure we have a valid config
     if [ ! -f "${ESP}/loader/loader.conf" ]; then
@@ -286,13 +371,6 @@ generate_regular_entries() {
     # only build entries if there is some place to put them
     if [ ! -d "${ESP}/loader/entries" ]; then
         die "Error: ${ESP}/loader/entries does not exist"
-    fi
-
-    # when remove existing is set we want to start from an empty slate
-    if [ "${REMOVE_EXISTING,,}" = "yes" ]; then
-        while read -r entry; do
-            remove_entry "${entry}"
-        done < <(LC_ALL=C.UTF-8 find "${ESP}/loader/entries" -type f -name "*.conf")
     fi
 
     if [[ -s "/etc/kernel/cmdline" ]]; then
@@ -312,27 +390,58 @@ generate_regular_entries() {
 
         # Regenerate initramfs if preset was changed before
         if check_preset "${kernel}" override_start override_end; then
-            # Remove UKI image if present
-            mkinitcpio -p "${kernel}" -R || true
+            # Keep the UKI as a fallback. Removing it before the regular boot
+            # path was proven was the bug; verified removal is a follow-up.
+            if ! echo "/usr/lib/modules/${pkgver}/" | /usr/share/libalpm/scripts/depmod; then
+                echo "Error: depmod failed for ${kernel}, preserving UKI" >&2
+                failed=1
+                continue
+            fi
 
             sed -i "$((override_start)),$((override_end))d" "/etc/mkinitcpio.d/${kernel}.preset"
 
-            echo "/usr/lib/modules/${pkgver}/" | /usr/share/libalpm/scripts/depmod
-            if [[ ! -e "${ESP}/vmlinuz-${kernel}" || ! -e "${ESP}/${INITRD_PREFIX}-${kernel}.img" ]]; then
-                echo "/usr/lib/modules/${pkgver}/vmlinuz" | /usr/share/libalpm/scripts/mkinitcpio install
+            if [[ ! -s "${ESP}/vmlinuz-${kernel}" || ! -s "${ESP}/${INITRD_PREFIX}-${kernel}.img" ]]; then
+                if ! echo "/usr/lib/modules/${pkgver}/vmlinuz" | /usr/share/libalpm/scripts/mkinitcpio install; then
+                    echo "Error: failed to regenerate regular images for ${kernel}, preserving UKI" >&2
+                    if ! add_uki_in_preset "${kernel}"; then
+                        echo "Error: failed to restore UKI preset override for ${kernel}" >&2
+                    fi
+                    failed=1
+                    continue
+                fi
+            fi
+
+            if [[ ! -s "${ESP}/vmlinuz-${kernel}" || ! -s "${ESP}/${INITRD_PREFIX}-${kernel}.img" ]]; then
+                echo "Error: regular images for ${kernel} are missing or empty, preserving UKI" >&2
+                if ! add_uki_in_preset "${kernel}"; then
+                    echo "Error: failed to restore UKI preset override for ${kernel}" >&2
+                fi
+                failed=1
+                continue
             fi
         fi
     done < <(get_installed_kernels)
 
-    # create entries for each installed kernel
+    # Stage every new entry before touching the existing ones. If any write
+    # fails, the old entries (including a rescue entry) remain untouched.
     while read -r kernel; do
-        entry="${kernel//vmlinuz-/}"
+        entry="${kernel##*/}"
+        entry="${entry#vmlinuz-}"
         entry_root="$(get_entry_root "$ESP")"
-        entry_path="${entry_root}/${entry}"
+        entry_path="${entry_root}${entry}"
         initramfs="${kernel//vmlinuz/${INITRD_PREFIX}}"
 
         # first validate we don't already have an entry for this kernel
-        [[ "${OVERWRITE_EXISTING,,}" != "yes" && -f "${entry_path}.conf" ]] && continue
+        if [[ "${OVERWRITE_EXISTING,,}" != "yes" && -f "${entry_path}.conf" ]]; then
+            if entry_references_valid "${entry_path}.conf" "${entry}"; then
+                new_entries["${entry_path}.conf"]=1
+                available+=1
+                continue
+            fi
+            echo "Error: existing entry ${entry_path}.conf is not usable; preserving existing entries" >&2
+            failed=1
+            continue
+        fi
 
         # generate entry title (WIP)
         title="$(echo -e "$entry" | sed -e 's/-/ /g' -e 's/\b\(.\)/\u\1/g')"
@@ -343,13 +452,73 @@ generate_regular_entries() {
         # get the kernel location so the initrd can be written to the same location as the kernel
         [[ $(dirname "$kernel") == "/" ]] && kernelpath="" || kernelpath="$(dirname "$kernel")"
 
-        cat <<EOF >"${entry_path}.conf"
-title ${title}
-options ${cmdline}
-linux ${kernel}
-EOF
-        append_initrd_entries "${entry_path}.conf" "${kernelpath}${initramfs}.img"
+        # Do not stage an entry that points to a missing or empty initramfs.
+        if [[ ! -s "${ESP}${kernelpath}${initramfs}.img" ]]; then
+            echo "Warning: no usable initramfs for ${kernel}, preserving existing entries" >&2
+            failed=1
+            continue
+        fi
+
+        tmp="${entry_path}.conf.sdboot-manage-new.$$"
+        rm -f -- "${tmp}"
+        if ! printf 'title %s\noptions %s\nlinux %s\n' "${title}" "${cmdline}" "${kernel}" >"${tmp}"; then
+            echo "Error: failed to write staged entry for ${kernel}, preserving existing entries" >&2
+            rm -f -- "${tmp}"
+            failed=1
+            continue
+        fi
+        if ! append_initrd_entries "${tmp}" "${kernelpath}${initramfs}.img"; then
+            echo "Error: failed to append initrd for ${kernel}, preserving existing entries" >&2
+            rm -f -- "${tmp}"
+            failed=1
+            continue
+        fi
+        if [[ ! -s "${tmp}" ]]; then
+            echo "Error: staged entry for ${kernel} is empty, preserving existing entries" >&2
+            rm -f -- "${tmp}"
+            failed=1
+            continue
+        fi
+
+        staged_files+=("${tmp}")
+        staged_finals+=("${entry_path}.conf")
+        available+=1
     done < <(LC_ALL=C.UTF-8 find "${ESP}" -maxdepth 1 -type f -name "${KERNEL_PATTERN}" -printf "/%P\n")
+
+    if ((available == 0)) && [ "${REMOVE_EXISTING,,}" = "yes" ]; then
+        echo "Error: no usable regular entries were generated; preserving existing entries" >&2
+        failed=1
+    fi
+
+    # Install the validated entries. A failed install leaves the old entries
+    # and the rescue entry in place because cleanup has not run yet.
+    if ((failed == 0)); then
+        local -i i
+        for i in "${!staged_files[@]}"; do
+            final="${staged_finals[$i]}"
+            if ! mv -f -- "${staged_files[$i]}" "${final}"; then
+                echo "Error: failed to install ${final}, preserving existing entries" >&2
+                failed=1
+                break
+            fi
+            new_entries["${final}"]=1
+        done
+    fi
+
+    # Only now, after every new entry is in place, honor REMOVE_EXISTING.
+    if ((failed == 0)) && [ "${REMOVE_EXISTING,,}" = "yes" ] && ((available > 0)); then
+        while read -r entry; do
+            [[ -n "${new_entries["${entry}"]+x}" ]] || remove_entry "${entry}"
+        done < <(LC_ALL=C.UTF-8 find "${ESP}/loader/entries" -type f -name "*.conf")
+    fi
+
+    for tmp in "${staged_files[@]}"; do
+        [[ -e "${tmp}" ]] && rm -f -- "${tmp}"
+    done
+
+    if ((failed)); then
+        die "Error: failed to regenerate one or more regular boot images"
+    fi
 
     if [ -z "$(ls -A "${ESP}/loader/entries")" ]; then
         die "Error: There are no boot loader entries after entry generation"
