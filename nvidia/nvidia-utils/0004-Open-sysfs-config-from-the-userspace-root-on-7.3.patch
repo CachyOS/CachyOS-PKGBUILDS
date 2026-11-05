@@ -21,19 +21,19 @@ Signed-off-by: treshaun <71833988+treshaun@users.noreply.github.com>
  1 file changed, 14 insertions(+), 1 deletion(-)
 
 diff --git a/kernel-open/nvidia/nv-pci.c b/kernel-open/nvidia/nv-pci.c
-index 48d8b78..54b19d1 100644
+index 5aee234..b441657 100644
 --- a/kernel-open/nvidia/nv-pci.c
 +++ b/kernel-open/nvidia/nv-pci.c
-@@ -36,6 +36,8 @@
+@@ -45,6 +45,8 @@
  #include <linux/completion.h>
  #include <linux/iommu.h>
  #include <linux/kthread.h>
 +#include <linux/fs_struct.h>
 +#include <linux/version.h>
  
- #include <linux/clk.h>
- #include <linux/device.h>
-@@ -439,7 +441,18 @@ static void nv_get_pci_sysfs_config
+ #if defined(NV_SEQ_READ_ITER_PRESENT)
+ #include <linux/seq_file.h>
+@@ -481,7 +483,18 @@ static void nv_get_pci_sysfs_config
                     NV_PCI_SLOT_NUMBER(pci_dev));
      if (ret > 0 && ret < sizeof(filename))
      {
@@ -55,4 +55,3 @@ index 48d8b78..54b19d1 100644
  #if defined(NV_SEQ_READ_ITER_PRESENT)
 -- 
 2.56.0
-

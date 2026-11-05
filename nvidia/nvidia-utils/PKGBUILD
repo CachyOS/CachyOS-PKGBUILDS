@@ -6,8 +6,8 @@
 
 pkgbase=nvidia-utils
 pkgname=('nvidia-utils' 'opencl-nvidia' 'nvidia-open-dkms')
-pkgver=615.78.08
-pkgrel=3
+pkgver=620.70.06
+pkgrel=1
 arch=('x86_64')
 url="http://www.nvidia.com/"
 license=('custom')
@@ -36,13 +36,13 @@ sha256sums=('be99ff3def641bb900c2486cce96530394c5dc60548fc4642f19d3a4c784134d'
             '1d053c5078387021338cfc3a732bed61be1a20a549775573788e9134775c8149'
             'aa3106f169f1640a9f73af1e7bf5346800eecb030078b646a860d4994d0e0992'
             'd9251519fcd5570525b04dbea40278abbe16b35eb958c8f5cf251dacb6b52ed7'
-            '3e3f6dddc2ee767a08185300af7be3cb286ece76698d2dde3524599782d07ffe'
-            '17b4f3d195a5ab1fad9aa1f195c9d3a4ad03aceda18bb9fb68a8bd33d7a000f6'
+            '29118e3abd08c07559bcca3d9c76238d039490af0362a2e5bcfcbe7204afd4b1'
+            'd65c8bbea3abebc64f83119e4fb7ecb6601fc43d718dbecbec8e3758a246355e'
             'b14f7a65359c05c373ddfc750cd4cf086a48e815489d93ad5cbe1dbf84bf8f5a'
             '6264d279bbae8eae6554ed78dd6e562da00cf71ffa5601ce5208099a98cd2c4d'
             'dcbce21a16a008a7371014220cff1153ad9893b8d095b2024066275d4c953bee'
             '70dc137a9bd6e95ae4b9e296acc24d3e13a138786c6f5dd549dcbcd3a3305906'
-            'a6bbae1da91bead7030ed78a161dedd2dc8d38d495ef87af24673642ef1d7ca9')
+            '9d4597347fb66b4615aa7d6e3a375c5d63a95e2b9ec4ae42434d519257f5fcc7')
 
 create_links() {
     # create soname links
@@ -209,9 +209,15 @@ package_nvidia-utils() {
     # NGX
     install -Dm755 nvidia-ngx-updater "${pkgdir}/usr/bin/nvidia-ngx-updater"
     install -Dm755 "libnvidia-ngx.so.${pkgver}" "${pkgdir}/usr/lib/libnvidia-ngx.so.${pkgver}"
+    install -Dm755 libnvidia-ngx-builtin-dlssd.so.* -t "${pkgdir}/usr/lib"
     install -Dm755 _nvngx.dll "${pkgdir}/usr/lib/nvidia/wine/_nvngx.dll"
     install -Dm755 nvngx.dll "${pkgdir}/usr/lib/nvidia/wine/nvngx.dll"
     install -Dm755 nvngx_dlssg.dll "${pkgdir}/usr/lib/nvidia/wine/nvngx_dlssg.dll"
+    install -Dm755 nvngx_update.exe "${pkgdir}/usr/lib/nvidia/wine/nvngx_update.exe"
+    # nvidia-installer flattens this to wine/, while _nvngx.dll refers to ngx-builtins
+    install -Dm755 ngx-builtins/nvngx_dlssd.dll "${pkgdir}/usr/lib/nvidia/wine/nvngx_dlssd.dll"
+    install -d "${pkgdir}/usr/lib/nvidia/wine/ngx-builtins"
+    ln -s ../nvngx_dlssd.dll "${pkgdir}/usr/lib/nvidia/wine/ngx-builtins/nvngx_dlssd.dll"
 
     # Optical flow
     install -Dm755 "libnvidia-opticalflow.so.${pkgver}" "${pkgdir}/usr/lib/libnvidia-opticalflow.so.${pkgver}"
