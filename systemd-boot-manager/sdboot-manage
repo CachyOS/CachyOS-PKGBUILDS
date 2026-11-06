@@ -275,7 +275,7 @@ generate_uki_entries() {
 }
 
 generate_regular_entries() {
-    local cmdline pkgver
+    local cmdline pkgver default_uki title vmlinux initramfs
     local -i override_start override_end
 
     # First, ensure we have a valid config
@@ -306,50 +306,64 @@ generate_regular_entries() {
         cmdline="${cmdline} ${LINUX_OPTIONS}"
     fi
 
-    # Remove UKI presets if any
+    # Create entries for each installed kernel
     while read -r pkgver; do
         kernel="$(cat "/usr/lib/modules/${pkgver}/pkgbase")"
 
-        # Regenerate initramfs if preset was changed before
+        # Regenerate initramfs only if preset was changed before
         if check_preset "${kernel}" override_start override_end; then
-            # Remove UKI image if present
-            mkinitcpio -p "${kernel}" -R || true
+            default_uki="$(
+                source "/etc/mkinitcpio.d/${kernel}.preset"
+                echo "${default_uki:-}"
+            )"
 
+            # Remove UKI presets if any
             sed -i "$((override_start)),$((override_end))d" "/etc/mkinitcpio.d/${kernel}.preset"
 
-            echo "/usr/lib/modules/${pkgver}/" | /usr/share/libalpm/scripts/depmod
-            if [[ ! -e "${ESP}/vmlinuz-${kernel}" || ! -e "${ESP}/${INITRD_PREFIX}-${kernel}.img" ]]; then
-                echo "/usr/lib/modules/${pkgver}/vmlinuz" | /usr/share/libalpm/scripts/mkinitcpio install
+            if [[ ! -s "${ESP}/vmlinuz-${kernel}" || ! -s "${ESP}/${INITRD_PREFIX}-${kernel}.img" ]]; then
+                echo "/usr/lib/modules/${pkgver}/vmlinuz" | /usr/share/libalpm/scripts/mkinitcpio install || true
+            fi
+
+            if [[ ! -s "${ESP}/vmlinuz-${kernel}" \
+                || ! -s "${ESP}/${INITRD_PREFIX}-${kernel}.img" ]] \
+                || ! lsinitcpio "${ESP}/${INITRD_PREFIX}-${kernel}.img" &>/dev/null; then
+                echo "Failed to regenerate initramfs for ${kernel}"
+                continue
             fi
         fi
-    done < <(get_installed_kernels)
 
-    # create entries for each installed kernel
-    while read -r kernel; do
-        entry="${kernel//vmlinuz-/}"
         entry_root="$(get_entry_root "$ESP")"
-        entry_path="${entry_root}/${entry}"
-        initramfs="${kernel//vmlinuz/${INITRD_PREFIX}}"
+        entry_path="${entry_root}/${kernel}.conf"
+        initramfs="${ESP}/${INITRD_PREFIX}-${kernel}.img"
+        vmlinux="${ESP}/vmlinuz-${kernel}"
+
+        if [[ ! -s "${vmlinux}" || ! -s "${initramfs}" ]]; then
+            echo "Files for ${kernel} not found, skipping..."
+            continue
+        fi
 
         # first validate we don't already have an entry for this kernel
-        [[ "${OVERWRITE_EXISTING,,}" != "yes" && -f "${entry_path}.conf" ]] && continue
+        [[ "${OVERWRITE_EXISTING,,}" != "yes" && -f "${entry_path}" ]] && continue
 
         # generate entry title (WIP)
-        title="$(echo -e "$entry" | sed -e 's/-/ /g' -e 's/\b\(.\)/\u\1/g')"
+        title="$(echo -e "$kernel" | sed -e 's/-/ /g' -e 's/\b\(.\)/\u\1/g')"
         title="${title/\//}"
         title="${title//Rt/(Realtime)}"
         title="${title//Cachyos/CachyOS}"
 
-        # get the kernel location so the initrd can be written to the same location as the kernel
-        [[ $(dirname "$kernel") == "/" ]] && kernelpath="" || kernelpath="$(dirname "$kernel")"
-
-        cat <<EOF >"${entry_path}.conf"
+        cat << EOF > "${entry_path}"
 title ${title}
 options ${cmdline}
-linux ${kernel}
+linux ${vmlinux#"${ESP}"}
 EOF
-        append_initrd_entries "${entry_path}.conf" "${kernelpath}${initramfs}.img"
-    done < <(LC_ALL=C.UTF-8 find "${ESP}" -maxdepth 1 -type f -name "${KERNEL_PATTERN}" -printf "/%P\n")
+        append_initrd_entries "${entry_path}" "${initramfs#"${ESP}"}"
+
+        # Remove UKI image if present
+        if [[ -n "${default_uki:-}" ]]; then
+            rm -f "${default_uki}"
+            unset default_uki
+        fi
+    done < <(get_installed_kernels)
 
     if [ -z "$(ls -A "${ESP}/loader/entries")" ]; then
         die "Error: There are no boot loader entries after entry generation"
