@@ -1,0 +1,73 @@
+# Maintainer: Caleb Maclennan <caleb@alerque.com>
+
+pkgname=dux-shell
+_qml_common=dux-qml-common
+pkgver=2.1.1
+pkgrel=1
+pkgdesc='A Quickshell-based desktop shell with Material 3 design principles'
+arch=(x86_64 aarch64)
+url="https://github.com/duxlabs-dev/$pkgname"
+license=(MIT)
+depends=(accountsservice
+         quickshell)
+optdepends=('cava: Audio visualizer'
+            'cups-pk-helper: Printer Management'
+            'i2c-tools: External monitor brightness control'
+            'iwd: Required for network managementa via iwd'
+            'matugen: Dynamic wallpaper-based theming'
+            'networkmanager: Required for network managementa via networkmanager'
+            'power-profiles-daemon: Set power profile'
+            'qt6-multimedia: Sound effect support'
+            'qt6ct: Qt6 application theming'
+            'systemd: Required for network managementa via systemd-networkd'
+            'wtype: Paste from clipboard history and plugins')
+makedepends=(git
+             go)
+provides=("dms-shell=$pkgver")
+conflicts=(dms-shell)
+replaces=(dms-shell
+          "$pkgname-bin"
+          dms-shell-hyprland
+          dms-shell-niri)
+source=("git+$url.git#tag=v$pkgver"
+        "git+${url/$pkgname/$_qml_common}")
+sha256sums=('15d094d1e867d3a0456fa7a54cb9de65c29ddd2c303aa1c747b937398bf2e258'
+            'SKIP')
+
+_binname=dms
+
+prepare() {
+	cd "$pkgname"
+	git submodule init
+	git config submodule.$_qml_common.url ../$_qml_common
+	git -c protocol.file.allow=always submodule update
+	sed -i \
+		-e '/@update-desktop-database/d' \
+		-e '/@gtk-update-icon-cache/d' \
+		-e '/^install:/s/install-shell //' \
+		Makefile
+	pushd core
+	make sync-shell
+
+}
+
+build() {
+	cd "$pkgname/core"
+	export CGO_CPPFLAGS="$CPPFLAGS"
+	export CGO_CFLAGS="$CFLAGS"
+	export CGO_CXXFLAGS="$CXXFLAGS"
+	go build -v \
+		-tags "distro_binary,withshell" \
+		-trimpath \
+		-buildmode=pie \
+		-mod=readonly \
+		-modcacherw \
+		-ldflags="-s -w -linkmode=external -extldflags \"${LDFLAGS}\" -X main.Version=v$pkgver" \
+		-o bin/$_binname ./cmd/$_binname
+}
+
+package() {
+	cd "$pkgname"
+	make DESTDIR="$pkgdir" PREFIX="/usr" SYSTEMD_USER_DIR="$pkgdir/usr/lib/systemd/user" install
+	install -Dm0644 -t "$pkgdir/usr/share/doc/$pkgname/" README.md
+}
