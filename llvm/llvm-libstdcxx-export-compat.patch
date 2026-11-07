@@ -1,0 +1,46 @@
+diff -Nru a/llvm/lib/Support/CMakeLists.txt b/llvm/lib/Support/CMakeLists.txt
+--- a/llvm/lib/Support/CMakeLists.txt
++++ b/llvm/lib/Support/CMakeLists.txt
+@@ -219,6 +219,7 @@
+   KnownBits.cpp
+   KnownFPClass.cpp
+   LEB128.cpp
++  LibstdcxxCompat.cpp
+   LineIterator.cpp
+   Locale.cpp
+   LockFileManager.cpp
+diff -Nru a/llvm/lib/Support/LibstdcxxCompat.cpp b/llvm/lib/Support/LibstdcxxCompat.cpp
+--- a/llvm/lib/Support/LibstdcxxCompat.cpp
++++ b/llvm/lib/Support/LibstdcxxCompat.cpp
+@@ -0,0 +1,31 @@
++//===-- LibstdcxxCompat.cpp - Keep libstdc++ symbols exported -------------===//
++//
++// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
++// See https://llvm.org/LICENSE.txt for license information.
++// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
++//
++//===----------------------------------------------------------------------===//
++//
++// libLLVM.so exports every symbol under the LLVM_<version> tag, including
++// weak libstdc++ template instantiations. A GCC-built libLLVM (Arch Linux)
++// always contains these, so consumers linked against it (e.g. Arch's
++// librustc_driver) bind them to LLVM_<version>. With clang + PGO + ThinLTO
++// they can get inlined into every caller and vanish from libLLVM, which
++// breaks those consumers at load time. Explicit instantiations are never
++// discarded, so pin the ones known to be needed.
++//
++//===----------------------------------------------------------------------===//
++
++#include <string>
++
++#if defined(__GLIBCXX__) && _GLIBCXX_USE_CXX11_ABI
++template void std::string::_M_mutate(std::string::size_type,
++                                     std::string::size_type, const char *,
++                                     std::string::size_type);
++template std::string &std::string::_M_replace(std::string::size_type,
++                                              std::string::size_type,
++                                              const char *,
++                                              std::string::size_type);
++template std::string &std::string::_M_append(const char *,
++                                             std::string::size_type);
++#endif

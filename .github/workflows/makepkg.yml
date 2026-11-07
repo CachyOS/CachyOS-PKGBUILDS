@@ -1,0 +1,83 @@
+name: Check using makepkg
+
+on:
+  pull_request:
+    paths:
+      - '**/PKGBUILD'
+
+concurrency:
+  group: ${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  get-changed-packages:
+    name: Get changed packages
+    runs-on: ubuntu-latest
+    outputs:
+      changed: ${{ steps.changed-packages.outputs.changed }}
+    steps:
+      - name: Clone PKGBUILDs
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Find changed packages
+        id: changed-packages
+        run: |
+          function jsonify() {
+            local json=""
+            local pkgname
+            local input="$2"
+
+            if [ -n "$input" ]; then
+              mapfile -t <<< "$input"
+              local size="${#MAPFILE[@]}"
+              for ((i=0; i < size; i++)); do
+                ((i == 0)) && json+="{\"$1\": ["
+                pkgname="$(dirname "${MAPFILE[$i]}")"
+                [[ ! -e "$pkgname/.ci-skip" ]] && json+="\"$pkgname\""
+                if ((i == size - 1)); then
+                    json+="]}"
+                else
+                  next="$(dirname "${MAPFILE[$i+1]}")"
+                  if [ ! -e "$next/.ci-skip" ]; then
+                    json+=", "
+                  fi
+                fi
+              done
+            fi
+
+            echo "$json"
+          }
+
+          source='${{ github.event.pull_request.base.sha }}'
+          target='${{ github.event.pull_request.head.sha }}'
+          echo "changed=$(jsonify "package" "$(git diff --diff-filter=d --name-only "${source}"..."${target}" "*/PKGBUILD")")" >> "$GITHUB_OUTPUT"
+
+  build:
+    name: Check ${{ matrix.package }}
+    runs-on: ubuntu-latest
+    container: cachyos/cachyos:latest
+    if: needs.get-changed-packages.outputs.changed != ''
+    needs: get-changed-packages
+    strategy:
+      fail-fast: false
+      max-parallel: 4
+      matrix: ${{fromJSON(needs.get-changed-packages.outputs.changed)}}
+    steps:
+      - name: Clone PKGBUILDs
+        uses: actions/checkout@v4
+
+      - name: Setup build environment
+        run: |
+          pacman -Syu --noconfirm
+
+          # Setup builder user
+          useradd builder -m
+          echo "builder ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
+          chmod -R a+rw .
+
+      - name: Check package
+        run: |
+          cd "${{ matrix.package }}"
+          sudo -H -E -u builder makepkg --syncdeps --noconfirm --nobuild --skippgpcheck

@@ -1,0 +1,144 @@
+From 4c5f93627690eb9f73ac6655a00a5c97181e4bd5 Mon Sep 17 00:00:00 2001
+From: witchlliee <witchlliee@tuta.io>
+Date: Thu, 17 Sep 2026 15:15:29 -0300
+Subject: [PATCH] archlinux: use cachyos proxy mirrorlist
+
+---
+ src/config.rs            | 10 ++-----
+ src/targets/archlinux.rs | 64 +++++++++++++++++++++++++++++++++-------
+ 2 files changed, 55 insertions(+), 19 deletions(-)
+
+diff --git a/src/config.rs b/src/config.rs
+index 75c2834..2ce30eb 100644
+--- a/src/config.rs
++++ b/src/config.rs
+@@ -454,7 +454,6 @@ pub fn fetch_json_or_file<T: DeserializeOwned>(
+ #[cfg(test)]
+ mod tests {
+     use super::*;
+-    use crate::targets::archlinux::{ARCH_TIER_1_MIRROR_SOURCE, selected_mirror_source};
+     use clap::error::ErrorKind;
+     use std::sync::Mutex;
+ 
+@@ -494,17 +493,12 @@ mod tests {
+     }
+ 
+     #[test]
+-    fn arch_fetch_first_tier_only_succeeds_and_selects_tier_1_source() {
+-        let config = parse_arch_with_mirror_source_env(
++    fn arch_fetch_first_tier_only_succeeds() {
++        parse_arch_with_mirror_source_env(
+             None,
+             &["rate-mirrors", "arch", "--fetch-first-tier-only"],
+         )
+         .unwrap();
+-
+-        assert_eq!(
+-            selected_mirror_source(arch_target(&config)),
+-            ARCH_TIER_1_MIRROR_SOURCE
+-        );
+     }
+ 
+     #[test]
+diff --git a/src/targets/archlinux.rs b/src/targets/archlinux.rs
+index 48316a3..c739ea9 100644
+--- a/src/targets/archlinux.rs
++++ b/src/targets/archlinux.rs
+@@ -11,6 +11,9 @@ use url::Url;
+ 
+ pub(crate) const ARCH_TIER_1_MIRROR_SOURCE: &str =
+     "https://archlinux.org/mirrors/status/tier/1/json/";
++const ARCH_CACHYOS_PROXY_TIER_1_SOURCE: &str = "https://cachyos.org/archlinuxmirrorlist/api/tier1";
++const ARCH_CACHYOS_PROXY_STATUS_SOURCE: &str = "https://cachyos.org/archlinuxmirrorlist/api/status";
++const ARCH_STATUS_SOURCE: &str = "https://archlinux.org/mirrors/status/json/";
+ 
+ #[derive(Deserialize, Debug, Clone)]
+ pub struct ArchMirror {
+@@ -39,14 +42,6 @@ impl LogFormatter for ArchTarget {
+     }
+ }
+ 
+-pub(crate) fn selected_mirror_source(target: &ArchTarget) -> &str {
+-    if target.fetch_first_tier_only {
+-        ARCH_TIER_1_MIRROR_SOURCE
+-    } else {
+-        &target.mirror_source
+-    }
+-}
+-
+ pub(crate) fn fetch_archweb_mirrors(
+     source: &str,
+     timeout_ms: u64,
+@@ -57,6 +52,21 @@ pub(crate) fn fetch_archweb_mirrors(
+     tx_progress: mpsc::Sender<String>,
+ ) -> Result<Vec<Mirror>, AppError> {
+     let mirrors_data: ArchMirrorsData = fetch_json_or_file(source, timeout_ms)?;
++    process_archweb_mirrors(
++        mirrors_data,
++        completion,
++        max_delay,
++        sort,
++        path_to_test,
++        tx_progress
++    )
++}
++
++/// Filter, sort and convert already fetched archweb mirror data.
++fn process_archweb_mirrors(
++    mirrors_data: ArchMirrorsData, completion: f64, max_delay: i64,
++    sort: &ArchMirrorsSortingStrategy, path_to_test: &str, tx_progress: mpsc::Sender<String>,
++) -> Result<Vec<Mirror>, AppError> {
+ 
+     tx_progress
+         .send(format!("FETCHED MIRRORS: {}", mirrors_data.urls.len()))
+@@ -113,12 +123,44 @@ pub(crate) fn fetch_archweb_mirrors(
+     Ok(result)
+ }
+ 
++/// Resolve the (primary, fallback) mirror sources for the requested tier.
++fn proxy_and_fallback_urls(fetch_first_tier_only: bool) -> (&'static str, &'static str) {
++    if fetch_first_tier_only {
++        (ARCH_CACHYOS_PROXY_TIER_1_SOURCE, ARCH_TIER_1_MIRROR_SOURCE)
++    } else {
++        (ARCH_CACHYOS_PROXY_STATUS_SOURCE, ARCH_STATUS_SOURCE)
++    }
++}
++
++/// Fetch the archlinux mirror status.
++fn fetch_mirrors_data(
++    fetch_first_tier_only: bool,
++    fetch_mirrors_timeout: u64,
++    tx_progress: &mpsc::Sender<String>,
++) -> Result<ArchMirrorsData, AppError> {
++    let (primary, fallback) = proxy_and_fallback_urls(fetch_first_tier_only);
++    match fetch_json_or_file::<ArchMirrorsData>(primary, fetch_mirrors_timeout) {
++        Ok(data) => Ok(data),
++        Err(_err) => {
++            tx_progress
++                .send("Falling back mirrorlist url to archlinux".to_string())
++                .unwrap();
++            fetch_json_or_file::<ArchMirrorsData>(fallback, fetch_mirrors_timeout)
++        }
++    }
++}
++
+ impl FetchMirrors for ArchTarget {
+     fn fetch_mirrors(&self, tx_progress: mpsc::Sender<String>) -> Result<Vec<Mirror>, AppError> {
+-        fetch_archweb_mirrors(
+-            selected_mirror_source(self),
++        let mirrors_data = fetch_mirrors_data(
++            self.fetch_first_tier_only,
+             self.fetch_mirrors_timeout,
+-            self.completion,
++            &tx_progress,
++        )?;
++        
++        process_archweb_mirrors(
++            mirrors_data,
++            self.completion, 
+             self.max_delay,
+             &self.sort_mirrors_by,
+             &self.path_to_test,
+-- 
+2.55.0
+

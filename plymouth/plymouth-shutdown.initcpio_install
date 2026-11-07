@@ -1,0 +1,50 @@
+#!/bin/bash
+
+build() {
+  # get default theme settings
+  local PLYMOUTH_THEME_NAME=$(plymouth-set-default-theme)
+  local PLYMOUTH_THEME_DIR="/usr/share/plymouth/themes/$PLYMOUTH_THEME_NAME"
+  local PLYMOUTH_IMAGE_DIR=$(sed -n "s/^ *ImageDir *= *//p" "$PLYMOUTH_THEME_DIR/$PLYMOUTH_THEME_NAME.plymouth")
+  local PLYMOUTH_FONT_NAME=$(sed -n "s/^ *Font *= *//p" "$PLYMOUTH_THEME_DIR/$PLYMOUTH_THEME_NAME.plymouth")
+  local PLYMOUTH_FONT_PATH=$(/usr/lib/plymouth/plymouth-font-file "${PLYMOUTH_FONT_NAME:-Sans}")
+  local PLYMOUTH_TITLE_FONT_NAME=$(sed -n "s/^ *TitleFont *= *//p" "$PLYMOUTH_THEME_DIR/$PLYMOUTH_THEME_NAME.plymouth")
+  local PLYMOUTH_TITLE_FONT_PATH=$(/usr/lib/plymouth/plymouth-font-file "${PLYMOUTH_TITLE_FONT_NAME:-Sans}")
+  local PLYMOUTH_MONOSPACE_FONT_NAME=$(sed -n "s/^ *MonospaceFont *= *//p" "$PLYMOUTH_THEME_DIR/$PLYMOUTH_THEME_NAME.plymouth")
+  local PLYMOUTH_MONOSPACE_FONT_PATH=$(/usr/lib/plymouth/plymouth-font-file "${PLYMOUTH_MONOSPACE_FONT_NAME:-monospace}")
+  local PLYMOUTH_MONOSPACE_BOLD_FONT_PATH=$(/usr/lib/plymouth/plymouth-font-file --bold "${PLYMOUTH_MONOSPACE_FONT_NAME:-monospace}")
+
+  # copy helper binary
+  if [ -f '/lib/plymouth/plymouthd-fd-escrow' ]; then
+    add_file '/lib/plymouth/plymouthd-fd-escrow'
+  fi
+
+  # copy fonts
+  if [ -n "$PLYMOUTH_FONT_PATH" ]; then
+    add_file "$PLYMOUTH_FONT_PATH"
+  fi
+  if [ -n "$PLYMOUTH_TITLE_FONT_PATH" ]; then
+    add_file "$PLYMOUTH_TITLE_FONT_PATH"
+  fi
+  if [ -n "$PLYMOUTH_MONOSPACE_FONT_PATH" ]; then
+    add_file "$PLYMOUTH_MONOSPACE_FONT_PATH"
+    add_file "$PLYMOUTH_MONOSPACE_BOLD_FONT_PATH"
+  fi
+
+  # copy configured theme
+  if [ -d "$PLYMOUTH_THEME_DIR" ]; then
+    add_full_dir "$PLYMOUTH_THEME_DIR"
+  fi
+
+  # copy images for the configured theme
+  if [ "$PLYMOUTH_IMAGE_DIR" != "$PLYMOUTH_THEME_DIR" -a -d "$PLYMOUTH_IMAGE_DIR" ]; then
+    add_full_dir "$PLYMOUTH_IMAGE_DIR"
+  fi
+}
+
+help() {
+  cat <<HELPEOF
+This hook includes fonts and a helper binary in shutdown initramfs for
+Plymouth. This is needed to display the console messages during shutdown and to
+hold on to the pixel-displays fds until the end.
+HELPEOF
+}

@@ -3,7 +3,7 @@
 
 pkgname=scx-scheds-git
 _gitname=scx
-pkgver=1.1.1.r166.g13d50ce4
+pkgver=1.1.4.r18.ge9cd670d9
 pkgrel=2
 pkgdesc='sched_ext schedulers and tools'
 url='https://github.com/sched-ext/scx'
@@ -17,11 +17,13 @@ depends=(
   zlib
 )
 makedepends=(
+  bpf-linker
   cargo
   clang
   git
   llvm
   llvm-libs
+  rust-src
 )
 source=("git+https://github.com/sched-ext/scx")
 sha256sums=('SKIP')
@@ -78,11 +80,14 @@ build() {
      --frozen \
      --workspace \
      --exclude scx_rlfifo \
+     --exclude scx_mavd \
      --exclude scx_mitosis \
+     --exclude scx_nitosis \
      --exclude scx_characterize \
      --exclude xtask \
      --exclude vmlinux_docify \
-     --exclude scx_arena_selftests
+     --exclude scx_arena_selftests \
+     --exclude scx_arena_libarena_selftests
 }
 
 package() {

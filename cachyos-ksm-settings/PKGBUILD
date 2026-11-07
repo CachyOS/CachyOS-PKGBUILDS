@@ -1,6 +1,6 @@
 # Maintainer: Vasiliy Stelmachenok <ventureo@cachyos.org>
 pkgname=cachyos-ksm-settings
-pkgver=4
+pkgver=5
 pkgrel=1
 pkgdesc="Package for easy configuration of KSM via systemd"
 arch=('any')
@@ -37,6 +37,7 @@ package() {
     install -Dm644 10-systemd-ksm.conf "${pkgdir}/usr/lib/systemd/system/plasmalogin.service.d/10-ksm.conf"
     install -Dm644 10-systemd-ksm.conf "${pkgdir}/usr/lib/systemd/system/user@.service.d/10-ksm.conf"
     install -Dm644 10-systemd-ksm.conf "${pkgdir}/usr/lib/systemd/system/getty@.service.d/10-ksm.conf"
+    install -Dm644 10-systemd-ksm.conf "${pkgdir}/usr/lib/systemd/system/kmsconvt@.service.d/10-ksm.conf"
     install -Dm644 ksmd.service "${pkgdir}/usr/lib/systemd/system/ksmd.service"
     install -Dm755 ksmctl "${pkgdir}/usr/bin/ksmctl"
     install -Dm755 ksmstats "${pkgdir}/usr/bin/ksmstats"

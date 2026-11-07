@@ -9,13 +9,14 @@
 # Contributor: TIanyi Cui <tianyicui@gmail.com>
 
 pkgname=nodejs
-pkgver=26.7.0
-pkgrel=2
+pkgver=26.13.0
+pkgrel=1
 pkgdesc='Evented I/O for V8 javascript ("Current" release)'
 arch=('x86_64')
 url='https://nodejs.org/'
 license=('MIT')
 depends=(
+  'abseil-cpp'
   'ada'
   'brotli'
   'c-ares'
@@ -34,6 +35,7 @@ depends=(
   'zstd'
 )
 makedepends=(
+  'cargo'
   'git'
   'ninja'
   'procps-ng'
@@ -42,7 +44,7 @@ makedepends=(
 optdepends=('npm: nodejs package manager')
 source=("git+https://github.com/nodejs/node.git#tag=v$pkgver?signed")
 
-sha512sums=('73b6c236d41ada03af22d0e5526bcad38516f4d300b51673b02f39002e9cb69d06cf935d67ec121fd75a50fc9944c8b2ee0a726ef16c3c438be5420664310b8e')
+sha512sums=('f551ef6e9ab1073ff871b4e20b4316cdc3a3dff20a44fa53da0397134772a2753bf27497fc2e552499475382370f43f500d4cdc7938db0d78e1f44dd2b063db8')
 validpgpkeys=(
   '8FCCA13FEF1D0C2E91008E09770F7A9A5AE15600' # Michaël Zasso (Targos) <targos@protonmail.com>
   '890C08DB8579162FEE0DF9DB8BEAB4DFCF555EF4' # RafaelGSS <rafael.nunu@hotmail.com>
@@ -63,6 +65,8 @@ _configure_args=(
   --prefix=/usr
   --with-intl=system-icu
   --without-npm
+  --v8-enable-temporal-support
+  --shared-abseil
   --shared-ada
   --shared-brotli
   --shared-cares
@@ -92,6 +96,7 @@ _set_flags() {
 build() {
   _set_flags
   cd node
+
 
   # PGO: instrumented build
   ./configure "${_configure_args[@]}" --enable-pgo-generate

@@ -2,7 +2,7 @@
 
 pkgname=rare
 pkgver=1.12.0.221
-pkgrel=1
+pkgrel=2
 pkgdesc="Open source alternative for Epic Games Launcher, using Legendary"
 arch=('any')
 url="https://github.com/RareDevs/Rare"
@@ -10,11 +10,12 @@ license=('GPL3')
 depends=(
   clang
   lld
-  patchelf
   pyside6
 )
 makedepends=(
   git
+  patchelf
+  python313
 )
 optdepends=(
   "wine: run Windows games"
@@ -27,7 +28,7 @@ sha256sums=('a8c003680463595e587740bcb04d104cbdb3cd9225963f5394595cbff9744cd2'
 
 prepare() {
   cd Rare
-  python -m venv venv
+  python3.13 -m venv venv
   source venv/bin/activate
   pip install nuitka ruff
   pip install -r packaging/requirements.in

@@ -6,8 +6,8 @@
 
 pkgbase=nvidia-utils
 pkgname=('nvidia-utils' 'opencl-nvidia' 'nvidia-open-dkms')
-pkgver=610.57.04
-pkgrel=1
+pkgver=620.70.06
+pkgrel=2
 arch=('x86_64')
 url="http://www.nvidia.com/"
 license=('custom')
@@ -20,24 +20,31 @@ source=('nvidia-drm-outputclass.conf'
         'nvidia.rules'
         'systemd-homed-override.conf'
         'systemd-suspend-override.conf'
-        'nvidia-sleep.conf'
+        'nvidia-utils.conf'
         '50-nvidia-cuda-disable-perf-boost.conf'
         "https://us.download.nvidia.com/XFree86/Linux-x86_64/${pkgver}/${_pkg}.run"
         "https://download.nvidia.com/XFree86/NVIDIA-kernel-module-source/${_pkg_open}.tar.xz"
         'limit-vram-usage'
-        'cuda-no-stable-perf-limit')
+        'cuda-no-stable-perf-limit'
+        '0001-fix-dsc-correct-RC-parameter-tables-to-match-VESA-DS.patch'
+        '0002-fix-dp-add-Bigscreen-Beyond-VR-headset-to-WAR-databa.patch'
+        '0004-Open-sysfs-config-from-the-userspace-root-on-7.3.patch'
+        '0005-Fix-build-on-Linux-7.4.patch')
 sha256sums=('be99ff3def641bb900c2486cce96530394c5dc60548fc4642f19d3a4c784134d'
             'f77a5247a3ba63e9fad3a3b2822d0fcfa51e0f79b5a90bd79bf08ea34b64ab07'
-            '0e54249a7754b668b436f0f7aa7e95fff68edbb12a93dbee4660e09a8c695f84'
+            'e30714f9b473d810c28763d067e0b85c75f86f23618d968b49b9d1fced9a1dd6'
             'c5aa7b8abe69e72bfdc6b9ee8afbfd350bcc557e894558f2e6e4087fa9aa0dd8'
             '1d053c5078387021338cfc3a732bed61be1a20a549775573788e9134775c8149'
-            '8ef63570d2d48cf96979c32fb46827a1ef0ec432512cdaebc5116bab1f2a461f'
+            'aa3106f169f1640a9f73af1e7bf5346800eecb030078b646a860d4994d0e0992'
             'd9251519fcd5570525b04dbea40278abbe16b35eb958c8f5cf251dacb6b52ed7'
-            'b2e935c66b83bb00c0c857bc8e0ee0fd52de9286b40c9cc1eec29a7ce7eb116d'
-            '0be1ce1905f579e68c1701c1286e15ddf02f5243e625773f5a997a8325dc856d'
+            '29118e3abd08c07559bcca3d9c76238d039490af0362a2e5bcfcbe7204afd4b1'
+            'd65c8bbea3abebc64f83119e4fb7ecb6601fc43d718dbecbec8e3758a246355e'
             'b14f7a65359c05c373ddfc750cd4cf086a48e815489d93ad5cbe1dbf84bf8f5a'
-            '6264d279bbae8eae6554ed78dd6e562da00cf71ffa5601ce5208099a98cd2c4d')
-
+            '6264d279bbae8eae6554ed78dd6e562da00cf71ffa5601ce5208099a98cd2c4d'
+            'dcbce21a16a008a7371014220cff1153ad9893b8d095b2024066275d4c953bee'
+            '70dc137a9bd6e95ae4b9e296acc24d3e13a138786c6f5dd549dcbcd3a3305906'
+            '9d4597347fb66b4615aa7d6e3a375c5d63a95e2b9ec4ae42434d519257f5fcc7'
+            'a220dfd01d800c1627ee10ece40cd6e21e3827122acfc4b1ddc3ec632c30a191')
 
 create_links() {
     # create soname links
@@ -54,9 +61,10 @@ prepare() {
     cd "${_pkg}"
     bsdtar -xf nvidia-persistenced-init.tar.bz2
 
-#    patch -Np1 -i "${srcdir}/0001-fix-dsc-correct-RC-parameter-tables-to-match-VESA-DS.patch" -d "${srcdir}/${_pkg_open}/"
-#    patch -Np1 -i "${srcdir}/0002-fix-dsc-use-bits_per_component-for-flatnessDetThresh.patch" -d "${srcdir}/${_pkg_open}/"
-#    patch -Np1 -i "${srcdir}/0003-fix-dp-add-Bigscreen-Beyond-VR-headset-to-WAR-databa.patch" -d "${srcdir}/${_pkg_open}/"
+    patch -Np1 -i "${srcdir}/0001-fix-dsc-correct-RC-parameter-tables-to-match-VESA-DS.patch" -d "${srcdir}/${_pkg_open}/"
+    patch -Np1 -i "${srcdir}/0002-fix-dp-add-Bigscreen-Beyond-VR-headset-to-WAR-databa.patch" -d "${srcdir}/${_pkg_open}/"
+    patch -Np1 -i "${srcdir}/0004-Open-sysfs-config-from-the-userspace-root-on-7.3.patch" -d "${srcdir}/${_pkg_open}/"
+    patch -Np1 -i "${srcdir}/0005-Fix-build-on-Linux-7.4.patch" -d "${srcdir}/${_pkg_open}/"
 
     # Attempt to make builds reproducible
     sed -i "s/^  HOSTNAME.*/  HOSTNAME = echo cachyos/" "${srcdir}/${_pkg_open}/utils.mk"
@@ -163,6 +171,8 @@ package_nvidia-utils() {
     install -Dm755 "libnvidia-encode.so.${pkgver}" "${pkgdir}/usr/lib/libnvidia-encode.so.${pkgver}"
     install -Dm755 "libnvidia-cfg.so.${pkgver}" "${pkgdir}/usr/lib/libnvidia-cfg.so.${pkgver}"
     install -Dm755 "libnvidia-ml.so.${pkgver}" "${pkgdir}/usr/lib/libnvidia-ml.so.${pkgver}"
+    install -Dm755 "libnvidia-fmdrv.so.${pkgver}" "${pkgdir}/usr/lib/libnvidia-fmdrv.so.${pkgver}"
+    install -Dm755 "libnvidia-imex.so.${pkgver}" "${pkgdir}/usr/lib/libnvidia-imex.so.${pkgver}"
     install -Dm755 "libnvidia-glvkspirv.so.${pkgver}" "${pkgdir}/usr/lib/libnvidia-glvkspirv.so.${pkgver}"
     install -Dm755 "libnvidia-allocator.so.${pkgver}" "${pkgdir}/usr/lib/libnvidia-allocator.so.${pkgver}"
     install -Dm755 "libnvidia-gpucomp.so.${pkgver}" "${pkgdir}/usr/lib/libnvidia-gpucomp.so.${pkgver}"
@@ -202,9 +212,15 @@ package_nvidia-utils() {
     # NGX
     install -Dm755 nvidia-ngx-updater "${pkgdir}/usr/bin/nvidia-ngx-updater"
     install -Dm755 "libnvidia-ngx.so.${pkgver}" "${pkgdir}/usr/lib/libnvidia-ngx.so.${pkgver}"
+    install -Dm755 libnvidia-ngx-builtin-dlssd.so.* -t "${pkgdir}/usr/lib"
     install -Dm755 _nvngx.dll "${pkgdir}/usr/lib/nvidia/wine/_nvngx.dll"
     install -Dm755 nvngx.dll "${pkgdir}/usr/lib/nvidia/wine/nvngx.dll"
     install -Dm755 nvngx_dlssg.dll "${pkgdir}/usr/lib/nvidia/wine/nvngx_dlssg.dll"
+    install -Dm755 nvngx_update.exe "${pkgdir}/usr/lib/nvidia/wine/nvngx_update.exe"
+    # nvidia-installer flattens this to wine/, while _nvngx.dll refers to ngx-builtins
+    install -Dm755 ngx-builtins/nvngx_dlssd.dll "${pkgdir}/usr/lib/nvidia/wine/nvngx_dlssd.dll"
+    install -d "${pkgdir}/usr/lib/nvidia/wine/ngx-builtins"
+    ln -s ../nvngx_dlssd.dll "${pkgdir}/usr/lib/nvidia/wine/ngx-builtins/nvngx_dlssd.dll"
 
     # Optical flow
     install -Dm755 "libnvidia-opticalflow.so.${pkgver}" "${pkgdir}/usr/lib/libnvidia-opticalflow.so.${pkgver}"
@@ -286,17 +302,7 @@ package_nvidia-utils() {
 
     install -Dm644 "${srcdir}/nvidia.rules" "$pkgdir"/usr/lib/udev/rules.d/60-nvidia.rules
 
-    # Blacklist nouveau and nova
-    install -Dm644 /dev/stdin "${pkgdir}/usr/lib/modprobe.d/${pkgname}.conf" <<END
-blacklist nouveau
-blacklist nova_core
-blacklist nova_drm
-END
-    echo "nvidia-uvm" | install -Dm644 /dev/stdin "${pkgdir}/usr/lib/modules-load.d/${pkgname}.conf"
-
-    # Enable kernel suspend notifiers for open modules and override TemporaryFilePath
-    # from default /tmp to /var/tmp
-    install -Dm644 "${srcdir}/nvidia-sleep.conf" "${pkgdir}/usr/lib/modprobe.d/nvidia-sleep.conf"
+    install -Dm644 "${srcdir}/nvidia-utils.conf" "${pkgdir}/usr/lib/modprobe.d/nvidia-utils.conf"
 
     # Reduce idle power usage caused by CUDA contexts (NVDEC/NVENC, etc.)
     install -Dm644 "${srcdir}/50-nvidia-cuda-disable-perf-boost.conf" "${pkgdir}/usr/lib/environment.d/50-nvidia-cuda-disable-perf-boost.conf"

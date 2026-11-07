@@ -4,7 +4,7 @@
 
 pkgname=scx-scheds
 _gitname=scx
-pkgver=1.1.2
+pkgver=1.1.4
 pkgrel=1
 pkgdesc='sched_ext schedulers and tools'
 url='https://github.com/sched-ext/scx'
@@ -27,7 +27,7 @@ makedepends=(
 )
 options=(!lto)
 source=("git+https://github.com/sched-ext/scx?signed#tag=v$pkgver")
-sha256sums=('4474c253ee6440f37574cdbfa6a162cdc5d383d0768269ffe484c5c1388da167')
+sha256sums=('86b19d7667e5d8e6da6bbda6d609db0a1624fb13ad8c845e50684c7efb44f1ba')
 validpgpkeys=(
   697C63013E65270255EBC2608744DC1EB26B5A9A  # Tejun Heo <tj@kernel.org>
   F5504C7B7B8107B40EF9E97AA1148BB3207BCC33  # David Vernet <void@manifault.com>
@@ -83,7 +83,8 @@ build() {
      --exclude scx_characterize \
      --exclude xtask \
      --exclude vmlinux_docify \
-     --exclude scx_arena_selftests
+     --exclude scx_arena_selftests \
+     --exclude scx_arena_libarena_selftests
 }
 
 package() {

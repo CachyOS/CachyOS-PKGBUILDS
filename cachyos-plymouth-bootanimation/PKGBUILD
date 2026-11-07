@@ -4,14 +4,14 @@
 pkgname=cachyos-plymouth-bootanimation
 _pkgname=plymouth-theme
 pkgver=2
-pkgrel=1
+pkgrel=2
 groups=("cachyos")
 arch=("any")
 url="https://github.com/CachyOS/plymouth-theme.git#commit=29a5d7648fbe32ee4ea241919f14363be0a98903"
 license=("GPL")
 pkgdesc="CachyOS Bootanimation (new)"
 depends=("plymouth")
-makedepends=('git')
+makedepends=('git' 'plymouth')
 optdepends=("plymouth-kcm: for KDE settings integration")
 source=(git+https://github.com/CachyOS/plymouth-theme.git)
 sha256sums=('SKIP')
@@ -20,4 +20,9 @@ package() {
   install -d "$pkgdir/usr/share/plymouth/themes"
   cp -rf "${srcdir}/$_pkgname/cachyos-bootanimation" "${pkgdir}/usr/share/plymouth/themes/cachyos-bootanimation"
 #  install -Dm644 "${srcdir}/${pkgname}/LICENSE" "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE"
+
+  # keymap-render.png offsets are tied to the installed plymouth build, so take it
+  # from spinner instead of the stale copy in the git source
+  install -Dm644 /usr/share/plymouth/themes/spinner/keymap-render.png \
+    "${pkgdir}/usr/share/plymouth/themes/cachyos-bootanimation/keymap-render.png"
 }

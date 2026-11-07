@@ -1,0 +1,27 @@
+# Maintainer: Vasiliy Stelmachenok <ventureo@cachyos.org>
+# Contributor: ahzaidi <ahmedzd111@gmail.com>
+pkgname=cachyos-drm-awaiter
+pkgver=8
+pkgrel=1
+pkgdesc="Configuration for proper systemd chain-loading of DRM modules"
+arch=('any')
+license=('GPL-3.0-or-later')
+url="https://github.com/CachyOS/CachyOS-PKGBUILDS/tree/master/$pkgname"
+depends=('systemd')
+makedepends=('coreutils')
+source=(
+    drm-module-awaiter-generator
+    drm-failure-handler
+    drm-failure-handler.service
+)
+sha256sums=(
+    '983d4d4abdba60d321a5cfcd403c2712e5fef9d2ddd3263bc376140a6ecb98c8'
+    '23eddc9c8ea8c5beac9739f0dc23de1803492c3a078d224334d30e5d07c42706'
+    '90eadda6d118626caaea05f5e17a8bb7c44d846352146248fa8375806c49431b'
+)
+
+package() {
+    install -Dm755 drm-module-awaiter-generator "${pkgdir}/usr/lib/systemd/system-generators/drm-module-awaiter-generator"
+    install -Dm755 drm-failure-handler "${pkgdir}/usr/lib/systemd/scripts/drm-failure-handler"
+    install -Dm644 drm-failure-handler.service "${pkgdir}/usr/lib/systemd/system/drm-failure-handler.service"
+}
