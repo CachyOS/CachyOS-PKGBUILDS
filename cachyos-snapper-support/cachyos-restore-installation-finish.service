@@ -1,0 +1,12 @@
+[Unit]
+Description=Finish restoring the CachyOS installation snapshot
+RequiresMountsFor=/home /var/log
+Before=display-manager.service systemd-user-sessions.service
+ConditionPathExists=/var/lib/cachyos/restore-installation/state
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/bash /var/lib/cachyos/restore-installation/finish
+
+[Install]
+WantedBy=multi-user.target
