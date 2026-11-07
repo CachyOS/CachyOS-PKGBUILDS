@@ -9,14 +9,14 @@ shopt -s extglob
 
 pkgname=(python313 python313-tests)
 pkgver=3.13.15
-pkgrel=1
+pkgrel=2
 _pybasever=${pkgver%.*}
 _pymajver=${pkgver%%.*}
 pkgdesc="The Python programming language, version 3.13"
 arch=('x86_64')
 license=('PSF-2.0')
 url="https://www.python.org/"
-depends=('bzip2' 'expat' 'gdbm' 'libffi' 'libnsl' 'libxcrypt' 'openssl' 'zlib' 'tzdata' 'mpdecimal')
+depends=('bzip2' 'expat' 'gdbm' 'libffi' 'libnsl' 'libxcrypt' 'openssl-3' 'zlib' 'tzdata' 'mpdecimal')
 makedepends=('tk' 'sqlite' 'bluez-libs' 'llvm' 'gdb' 'xorg-server-xvfb' 'ttf-font')
 source=("https://www.python.org/ftp/python/${pkgver%rc*}/Python-${pkgver}.tar.xz"{,.asc}
         EXTERNALLY-MANAGED)
@@ -58,7 +58,8 @@ build() {
               --with-system-libmpdec \
               --enable-loadable-sqlite-extensions \
               --without-ensurepip \
-              --with-tzpath=/usr/share/zoneinfo
+              --with-tzpath=/usr/share/zoneinfo \
+              PKG_CONFIG_PATH=/usr/lib/openssl-3/pkgconfig
 
   # Obtain next free server number for xvfb-run; this even works in a chroot environment.
   export servernum=99
