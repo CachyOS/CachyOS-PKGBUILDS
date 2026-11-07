@@ -3,106 +3,94 @@
 
 pkgname=lz4
 epoch=1
-pkgver=1.10.0
-pkgrel=2
+pkgver=1.11.0
+pkgrel=1
 pkgdesc='Extremely fast compression algorithm'
 arch=('x86_64')
 url='https://lz4.github.io/lz4/'
 license=(GPL-2.0-or-later)
-makedepends=('git' 'meson' 'ninja' 'llvm' 'clang' 'bc')
+makedepends=('git' 'meson' 'ninja' 'llvm' 'clang')
 checkdepends=('diffutils')
 depends=('glibc')
 provides=('liblz4.so')
 source=("git+https://github.com/lz4/lz4.git#tag=v$pkgver")
-sha256sums=('487f9bc24fdaf589e2f4bb23dd98b1f21a71b643db09251145616587c9468555')
+sha256sums=('5597ab3a057acbd7850391a2baa272683c06621c4203d50c9e2b31133af1b707')
 
-# Function to generate data and compress-decompress it
-_generate_and_process_data() {
-  local _data_size=$1
-  local _compression_level=$2
-  local _filename="data_${_data_size}_${_compression_level}.bin"
+_meson_setup() {
+  meson setup --prefix=/usr --buildtype=plain \
+    -Dcontrib=true -Dexamples=true -Dprograms=true "$@" \
+    lz4/build/meson build
+}
 
-  msg2 "Generating data for ${_data_size} KB with compression level ${_compression_level}"
+# Exercise the instrumented build: frame API through the CLI (every
+# compression mode, plus legacy frames as used for initramfs) and the
+# block API through upstream's fullbench.
+_pgo_train() {
+  local _lz4="$srcdir/build/meson/programs/lz4"
+  local _tests="$srcdir/build/meson/tests"
+  local _data="$srcdir/pgo-data"
+  local _f _l
 
-  # Generate data
-  $DATASET_GENERATOR "-g$_data_size" > "$_filename"
+  mkdir "$_data"
 
-  msg2 "Compressing and decompressing data: $_filename"
+  # datagen is instrumented as well; keep its profile out of the merge
+  export LLVM_PROFILE_FILE="$srcdir/pgo-discard/%m_%p.profraw"
+  "$_tests/datagen" -g32000000      > "$_data/text"  # lorem ipsum text
+  "$_tests/datagen" -g32000000 -P20 > "$_data/low"   # poorly compressible
+  "$_tests/datagen" -g32000000 -P90 > "$_data/high"  # highly repetitive
+  head -c 32000000 /usr/lib/libLLVM.so > "$_data/bin" # real machine code
 
-  # Compress
-  local _start_time="$(date +%s.%N)"
-  LLVM_PROFILE_FILE="${PGO_PROFILE_DIR}/_%m_%p.profraw" $LZ4_BIN "-$_compression_level" "$_filename" "$_filename.lz4" > /dev/null 2>&1
-  local _end_time="$(date +%s.%N)"
-  local _compress_time="$(echo "$_end_time - $_start_time" | bc)"
+  export LLVM_PROFILE_FILE="$srcdir/pgo/%m_%p.profraw"
+  for _f in "$_data"/text "$_data"/low "$_data"/high "$_data"/bin; do
+    for _l in --fast=8 -1 -2 -3 -6 -9 -10 -12; do
+      "$_lz4" -q -f "$_l" "$_f" "$_f.lz4"
+      "$_lz4" -q -f -d "$_f.lz4" "$_f.out"
+      cmp "$_f" "$_f.out"
+    done
+    # legacy format (lz4 -l), e.g. kernel and initramfs images
+    "$_lz4" -q -f -l -9 "$_f" "$_f.lz4"
+    "$_lz4" -q -f -d "$_f.lz4" "$_f.out"
+    cmp "$_f" "$_f.out"
+  done
 
-  msg2 "Decompressing data"
-  # Decompress
-  _start_time="$(date +%s.%N)"
-  LLVM_PROFILE_FILE="${PGO_PROFILE_DIR}/_%m_%p.profraw" $LZ4_BIN -d "$_filename.lz4" "${_filename}_uncompressed" > /dev/null 2>&1
-  _end_time="$(date +%s.%N)"
-  local _decompress_time="$(echo "$_end_time - $_start_time" | bc)"
+  # block API (LZ4_compress_*, LZ4_decompress_*, HC), used by most library consumers
+  "$_tests/fullbench" --no-prompt -i1 "$_data/text" "$_data/bin" > /dev/null
+  unset LLVM_PROFILE_FILE
 
-  # Cleanup and log results
-  rm "$_filename" "$_filename.lz4" "${_filename}_uncompressed"
+  rm -rf "$_data"
 }
 
 build() {
-  export ROOT_DIR="$PWD"
-  export PGO_PROFILE_DIR="$ROOT_DIR/pgo"
-
   export CC=clang
   export CXX=clang++
 
-  mkdir -p pgo
+  rm -rf build pgo pgo-discard
+  mkdir pgo pgo-discard
 
-  # Generate PGO binary
-  export CFLAGS="$CFLAGS -fprofile-generate"
-  export CXXFLAGS="$CXXFLAGS -fprofile-generate"
+  local _cflags="$CFLAGS" _cxxflags="$CXXFLAGS" _ldflags="$LDFLAGS"
+  local _gen="-fprofile-generate -fprofile-update=atomic"
 
-  meson setup --prefix=/usr --buildtype=plain lz4/build/meson build
-  meson configure build -Dcontrib=true -Dexamples=true -Dprograms=true
-  meson compile -C build
+  # Instrumented build: only the binaries the training needs (tests are
+  # enabled for datagen and fullbench; the freestanding test can't link
+  # against the profile runtime)
+  export CFLAGS="$_cflags $_gen"
+  export CXXFLAGS="$_cxxflags $_gen"
+  export LDFLAGS="$_ldflags $_gen"
+  _meson_setup -Dtests=true
+  meson compile -C build lz4:executable datagen fullbench
 
-  cd "$pkgname/tests"
-  make datagen
-  export DATASET_GENERATOR="$PWD/datagen"
-  cd "$ROOT_DIR"
+  msg2 "Running PGO training workload"
+  _pgo_train
+  llvm-profdata merge -o pgo/merged.profdata pgo/*.profraw
 
-  export LZ4_BIN="$ROOT_DIR/build/meson/programs/lz4"
-
-  # create data for 1MB, 10MB, 50MB
-  export DATA_SIZES=(1000000 50000000)
-
-  export COMPRESSION_LEVELS=(1 3) # 1 for fastest
-
-  msg2 "PGO data generation"
-  # Generate and process data for 100 times
-  for i in {1..30}; do
-      for SIZE in "${DATA_SIZES[@]}"; do
-          for LEVEL in "${COMPRESSION_LEVELS[@]}"; do
-              _generate_and_process_data "$SIZE" "$LEVEL"
-          done
-      done
-  done
-
-  for SIZE in "${DATA_SIZES[@]}"; do
-      for LEVEL in "${COMPRESSION_LEVELS[@]}"; do
-          _generate_and_process_data "$SIZE" "$LEVEL"
-      done
-  done
-
-  export CFLAGS="${CFLAGS//-fprofile-generate/} -fprofile-use=$PGO_PROFILE_DIR/merged.profdata"
-  export CXXFLAGS="${CXXFLAGS//-fprofile-generate/} -fprofile-use=$PGO_PROFILE_DIR/merged.profdata"
-
-  llvm-profdata merge -o "$PGO_PROFILE_DIR/merged.profdata" "${PGO_PROFILE_DIR}"/*.profraw
-
-  # clean everything
+  # Optimized build
   rm -rf build
-
-  meson setup --prefix=/usr --buildtype=plain lz4/build/meson build
-  meson configure build -Dcontrib=true -Dexamples=true -Dprograms=true
+  local _use="-fprofile-use=$srcdir/pgo/merged.profdata"
+  export CFLAGS="$_cflags $_use"
+  export CXXFLAGS="$_cxxflags $_use"
+  export LDFLAGS="$_ldflags $_use"
+  _meson_setup
   meson compile -C build
-
 }
 
 check() {
