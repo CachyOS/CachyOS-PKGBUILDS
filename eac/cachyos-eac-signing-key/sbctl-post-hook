@@ -1,0 +1,30 @@
+#!/usr/bin/bash
+# Installed as /etc/initcpio/post/sbctl by cachyos-eac-signing-key, it takes the
+# place of sbctl's mkinitcpio post hook (/usr/lib/initcpio/post/sbctl).
+#
+# Easy Anti-Cheat only accepts kernels with the CachyOS signature alone. sbctl's
+# hook would add a second signature with the user's own key to the EAC kernel on
+# every initramfs rebuild, so images that are signed by the CachyOS EAC CA are
+# left alone. Everything else is handed to sbctl's hook unchanged.
+
+KERNEL_FILE="$1"
+UKI_FILE="$3"
+
+# Same image selection as sbctl's hook
+IMAGE_FILE="$KERNEL_FILE"
+if [ -n "$KERNELDESTINATION" ] && [ -f "$KERNELDESTINATION" ]; then
+    IMAGE_FILE="$KERNELDESTINATION"
+fi
+if [ -n "$UKI_FILE" ]; then
+    IMAGE_FILE="$UKI_FILE"
+fi
+
+if [ -n "$IMAGE_FILE" ] && [ -f "$IMAGE_FILE" ] &&
+    sbverify --cert /usr/share/cachyos-eac/cachyos-eac-ca.crt "$IMAGE_FILE" >/dev/null 2>&1; then
+    echo "Not signing $IMAGE_FILE, it is signed by CachyOS for Easy Anti-Cheat"
+    exit 0
+fi
+
+if [ -x /usr/lib/initcpio/post/sbctl ]; then
+    exec /usr/lib/initcpio/post/sbctl "$@"
+fi

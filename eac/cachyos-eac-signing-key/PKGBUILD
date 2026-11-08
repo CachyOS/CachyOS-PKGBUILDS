@@ -2,14 +2,16 @@
 
 pkgname=cachyos-eac-signing-key
 pkgver=1
-pkgrel=1
+pkgrel=2
 pkgdesc='CachyOS EAC CA certificate for enrollment into the Secure Boot db'
 arch=('any')
 url="https://github.com/CachyOS/linux-cachyos"
 license=('GPL-3.0-or-later')
+depends=('sbsigntools')
 makedepends=('openssl')
 optdepends=('sbctl: enroll the certificate into the Secure Boot db')
-source=("cachyos-eac-ca.crt")
+source=("cachyos-eac-ca.crt"
+        "sbctl-post-hook")
 
 _fingerprint=2decb6430e3ad1221a4e6fd32000297f13be51dc76ab76f41f26fe44c5e836ad
 
@@ -24,6 +26,11 @@ build() {
 package() {
     install -Dm644 -t "$pkgdir/usr/share/cachyos-eac" cachyos-eac-ca.crt cachyos-eac-ca.der
     install -Dm644 cachyos-eac-ca.der "$pkgdir/var/lib/sbctl/keys/custom/db/cachyos-eac-ca.der"
+
+    # Takes the place of sbctl's mkinitcpio post hook, so that sbctl doesn't add
+    # a second signature to the CachyOS-signed EAC kernel
+    install -Dm755 sbctl-post-hook "$pkgdir/etc/initcpio/post/sbctl"
 }
 
-b2sums=('af951c6c2e0857ec6b2a3f426269df21531ec8d1086b2ac8f5358a852a24f415ee3b65a91a056ecd6d0cc433fa7e21c2e4bd6e7fc44294d7d2135c4978ed39d1')
+b2sums=('af951c6c2e0857ec6b2a3f426269df21531ec8d1086b2ac8f5358a852a24f415ee3b65a91a056ecd6d0cc433fa7e21c2e4bd6e7fc44294d7d2135c4978ed39d1'
+        '5b5ea473376cf5c589273599db1fe04c8354d59ebe50f8d1591db2818bfbffcada386837c459861569d7ef1c537fea4a724d1b563b52acbfb2d1e83558b28cec')
