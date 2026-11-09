@@ -95,7 +95,7 @@ sha256sums=('c4def1816bc86f2bb981deb958a572ca63eb0ef784418f0414f1071a4efee44d'
             '2513c6d9984dd0a2058557bf00f06d8d5181734e41dcfe07be7ed86f2959622a'
             '1773f5137f08ac1f48f0f7297e324d5d868d55201c03068670ee4602babdef2f'
             '09c0fcfb370399270adb7905becc4fc395aa1d5f59c8d6169a1f021182600386'
-            'e28b77aabf5ac77dd18296af1bd4d5e9f6edb950e6cf77eea955af9446a8bf00')
+            'bbe373ed885dde53e4327b00cfe75d4c06c3940fa25dbb04049a8c490fcf36c8')
 #pkgver() {
 #  cd gcc
 #  echo "$(cat gcc/BASE-VER)+$(git describe --abbrev=12 --tags | sed 's/[^-]*-[^-]*-//;s/[^-]*-/r&/;s/-/+/g;s/_/./')"
@@ -173,7 +173,7 @@ build() {
   ../gcc/configure \
     --enable-languages=ada,c,c++,d,fortran,go,lto,m2,objc,obj-c++,rust,cobol \
     --enable-bootstrap \
-    --enable-afdo_tools \
+    --enable-afdo-tools \
     "${_confflags[@]:?_confflags unset}"
 
   # see https://bugs.archlinux.org/task/71777 for rationale re *FLAGS handling
