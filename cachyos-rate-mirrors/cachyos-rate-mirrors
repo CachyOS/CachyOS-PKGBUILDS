@@ -138,6 +138,26 @@ force_ru_mirrors() {
     done
 }
 
+# Probe a mirror and succeed only if it is reachable *and* serves data at or
+# above RATE_MIRRORS_MIN_PRIO_SPEED_KIB (KiB/s, default 512). Pinning a
+# reachable-but-slow mirror to the top is worse than trusting the ranked list,
+# because pacman always downloads from the first working server. A 1 MiB ranged
+# read is used so the measured rate is not dominated by TCP slow-start; a mirror
+# that cannot deliver it within the timeout is treated as too slow.
+mirror_is_fast_enough() {
+    local base="$1" out code speed
+    out="$(curl -s -o /dev/null -r 0-1048575 -w '%{http_code} %{speed_download}' \
+        --connect-timeout 5 --max-time 8 "${base}/core/os/x86_64/core.files" 2>/dev/null)" || return 1
+    code="${out%% *}"
+    speed="${out##* }"
+    case "$code" in
+        200 | 206) ;;
+        *) return 1 ;;
+    esac
+    awk -v s="${speed:-0}" -v m="${RATE_MIRRORS_MIN_PRIO_SPEED_KIB:-512}" \
+        'BEGIN { exit !(s / 1024 >= m) }'
+}
+
 if [ -z "$RATE_MIRRORS_ENTRY_COUNTRY" ]; then
     msg "Entry country not set, trying to detect..."
     # Prefer mirrors that are geographically close, especially in countries that
@@ -160,12 +180,23 @@ fi
 # Rate Arch Linux mirrors anyway
 rate_repository_mirrors arch "${MIRRORS_DEFAULT_DIR}/mirrorlist"
 
-# Always insert 1st prio mirrors to the start, unless RU and CN region is detected
-if [ "$country" != "RU" ] && [ "$country" != "CN" ]; then
+# Always insert 1st prio mirrors to the start, unless RU and CN region is detected.
+# Each mirror is pinned only if it passes a reachability + minimum-speed probe;
+# otherwise the freshly ranked list is used as-is. Set RATE_MIRRORS_FORCE_PRIO=0
+# in /etc/conf.d/cachyos-rate-mirrors.env to disable pinning entirely.
+if [ "${RATE_MIRRORS_FORCE_PRIO:-1}" = "1" ] && [ "$country" != "RU" ] && [ "$country" != "CN" ]; then
     # shellcheck disable=SC2016
-    sed -i \
-        -e '1iServer = https://mirror.zyner.org/archlinux/$repo/os/$arch' \
-        -e '1iServer = https://archlinux.cachyos.org/repo/$repo/os/$arch' "${MIRRORS_DEFAULT_DIR}/mirrorlist"
+    if mirror_is_fast_enough "https://archlinux.cachyos.org/repo"; then
+        sed -i '1iServer = https://archlinux.cachyos.org/repo/$repo/os/$arch' "${MIRRORS_DEFAULT_DIR}/mirrorlist"
+    else
+        info "Not pinning archlinux.cachyos.org (slow or unreachable)"
+    fi
+    # shellcheck disable=SC2016
+    if mirror_is_fast_enough "https://mirror.zyner.org/archlinux"; then
+        sed -i '1iServer = https://mirror.zyner.org/archlinux/$repo/os/$arch' "${MIRRORS_DEFAULT_DIR}/mirrorlist"
+    else
+        info "Not pinning mirror.zyner.org (slow or unreachable)"
+    fi
 fi
 
 rate_repository_mirrors cachyos "${MIRRORS_DEFAULT_DIR}/cachyos-mirrorlist"
