@@ -163,9 +163,11 @@ rate_repository_mirrors arch "${MIRRORS_DEFAULT_DIR}/mirrorlist"
 # Always insert 1st prio mirrors to the start, unless RU and CN region is detected
 if [ "$country" != "RU" ] && [ "$country" != "CN" ]; then
     # shellcheck disable=SC2016
+    # The Fastly CDN mirror is enforced as first, drop its ranked entry to avoid a duplicate
     sed -i \
-        -e '1iServer = https://mirror.zyner.org/archlinux/$repo/os/$arch' \
-        -e '1iServer = https://archlinux.cachyos.org/repo/$repo/os/$arch' "${MIRRORS_DEFAULT_DIR}/mirrorlist"
+        -e '1iServer = https://fastly.mirror.pkgbuild.com/$repo/os/$arch' \
+        -e '1iServer = https://archlinux.cachyos.org/repo/$repo/os/$arch' \
+        -e '/^Server = https:\/\/fastly\.mirror\.pkgbuild\.com\//d' "${MIRRORS_DEFAULT_DIR}/mirrorlist"
 fi
 
 rate_repository_mirrors cachyos "${MIRRORS_DEFAULT_DIR}/cachyos-mirrorlist"
