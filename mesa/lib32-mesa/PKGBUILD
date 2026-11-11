@@ -23,7 +23,7 @@ pkgname=(
   lib32-vulkan-mesa-implicit-layers
   lib32-vulkan-mesa-layers
 )
-pkgver=26.2.6
+pkgver=26.3.0
 _pkgver=${pkgver/[a-z]/-&}
 pkgrel=1
 epoch=3
@@ -111,6 +111,7 @@ declare -A _crates=(
   indexmap         2.2.6
   libc             0.2.185
   log              0.4.27
+  mach2            0.7.0
   once_cell        1.8.0
   paste            1.0.14
   pest             2.8.0
@@ -149,7 +150,7 @@ for _crate in "${!_crates[@]}"; do
   )
 done
 
-sha256sums=('b9436b3e1a8be76fbd4823dc884f90596ab7c6ac5e1867a305e66ffccfb31a92'
+sha256sums=('91d729aa68bb89e4ec857841300bbe922bcb3e52b1f97566ca83930d3b28343a'
             '9c40bf44608a52c354c13508dec435fcd4ecccc6e34eaee9dbbba2ba0ce05ffc'
             'b8aa498d22c9bbaf482329839bc5620c46be275a19a812e9a22a2b07529a642a'
             '67914ab451f3bfd2e69e5e9d2ef3858484e7074d63f204fd166ec391b54de21d'
@@ -172,6 +173,7 @@ sha256sums=('b9436b3e1a8be76fbd4823dc884f90596ab7c6ac5e1867a305e66ffccfb31a92'
             '6f109e41dd4a3c848907eb83d5a42ea98b3769495597450cf6d153507b166f0f'
             '291ec9ab5efd934aaf503a6466c5d5251535d108ee747472c3977cc5acc868ef'
             '6c20b6793b5c2fa6553b250154b78d6d0db37e72700ae35fad9387a46f487c97'
+            'b0d28e293f2b8c9d2b2d1c0193bd3c1cbdc0d2cf396888dc01162f7cf9d6c3f3'
             'de3145af08024dea9fa9914f381a17b8fc6034dfb00f3a84013f7ff43f29ed4c'
             'cea14ef9355e3beab063703aa9dab15afd25f0667c341310c1e5274bb1d0da18'
             'b6fe4565b9518b83ef4f91bb47ce29620ca828bd32cb7e408f0062e9930ba190'
@@ -181,7 +183,7 @@ sha256sums=('b9436b3e1a8be76fbd4823dc884f90596ab7c6ac5e1867a305e66ffccfb31a92'
             'db7d01726be8ab66ab32f9df467ae8b1148906685bbe75c82d1e65d7f5b3f841'
             '692fcb63b64b1758029e0a96ee63e049ce8c5948587f2f7208df04625e5f6b56'
             '25aa4ce346d03a6dcd68dd8b4010bcb74e54e62c90c573f394c46eae99aba32d')
-b2sums=('48b782cf78ab81edefd049f32074c9ccc2891402cdd0a6298037d0ee8c5f4c1e6cf9386fc196c201beea89a3c4cbfee53aa84c3bd0cc91865b6fce25494cd630'
+b2sums=('09ceeb379b7fccb2477640d5cbd508ced0ba4bae2a6f5d3319a383e9d07802ee71d51e5fc154f480979ca8b85ff52a8923293651d34ac79b94fe5794bed640d5'
         '593511ab3028bfd00d74fc622aef8dc7cc79929f16e997228f52546aa69a3e3bf346b9702b4be4e45511e2bab8589f6fcb701062c90b2f5d5e7dd4b34d43e626'
         '5fed0ea98fea7b72e9d015bddbc5337d936eb3a07f358e29421d081e76bf927bc270be5ef98e38b969b0a59a362c5b330554b446f81627821f52b2fbea0bb12c'
         '431439d31632d177aeb15f910b4f546efa76d54fc74fc8e140399dc5e54eca33fd606f11dbfb48fa83067c8474ee512e62751895d5948367b65ab08b984284e5'
@@ -204,6 +206,7 @@ b2sums=('48b782cf78ab81edefd049f32074c9ccc2891402cdd0a6298037d0ee8c5f4c1e6cf9386
         '208f858730f90834db4765c5645e9fbdfbf9a9aea939766c2ddcdea027901aca477e8274a9a91bcf7746bcd99ad9b77b96fbe94b778c91277007ec8afebdf58b'
         '81424245e1e2b94459df68bb3a9a866c6a364102b5e1d010ede9c5f8278f8406d7b651957d091c5914e936b494b0f6e9a6a1dd8b7d35cd7d7100f86dee4ec12e'
         '9605ca407af248c71e0d2bc24d213aa6ff08a14eb548b85de16de7e172a617cdf12c2e4c686f6dd1c80455448a313f6e7d760885f189ae726934efbe06fb5603'
+        '032c0291c2277b7d5af614ddebf5368fb7f892d173495245334387436773a459e4535f83d3a209aa58f1f825b55dfce43be0119dbf7fbe09f5a4a03a390fd273'
         '35e8548611c51ee75f4d04926149e5e54870d7073d9b635d550a6fa0f85891f57f326bdbcff3dd8618cf40f8e08cf903ef87d9c034d5921d8b91e1db842cdd7c'
         '1649129fb459f1b68423e1f2ddf4f2a4cfb9746796786a7ac3f10f9239aec0023604dfc48835180b554a86c533867ebf335bebd12700a4c2d6ef212738560ac6'
         'd0d710cecb9b20fa755e61a27d23b946a5b860211a9e63f34cfde2012bca2b9cc6952b546444a8a06a97ab8bb5817f87fd7fcdc7e3075640fbdb86f189f7f443'
@@ -258,7 +261,7 @@ build() {
     -D valgrind=disabled
     -D video-codecs=all
     -D vulkan-drivers=amd,intel,intel_hasvk,swrast,freedreno,panfrost,virtio,broadcom,imagination,microsoft-experimental,nouveau,asahi,gfxstream
-    -D vulkan-layers=device-select,intel-nullhw,overlay,screenshot,anti-lag,vram-report-limit
+    -D vulkan-layers=device-select,intel-nullhw,overlay,screenshot,vram-report-limit
     -D vulkan-loader-rpath=
     -D vulkan-manifest-per-architecture=false
   )
@@ -352,7 +355,6 @@ package_lib32-mesa() {
 
     _pick vkvirtio $libdir/libvulkan_virtio.so
 
-    _pick vkdevice $libdir/libVkLayer_MESA_anti_lag.so
     _pick vkdevice $libdir/libVkLayer_MESA_device_select.so
 
     _pick vklayer $libdir/libVkLayer_*.so
