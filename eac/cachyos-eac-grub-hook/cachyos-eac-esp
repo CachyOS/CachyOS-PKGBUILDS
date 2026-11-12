@@ -1,0 +1,23 @@
+#!/usr/bin/bash
+# mkinitcpio post hook: keeps the copy of the EAC kernel and its initramfs on the
+# EFI system partition (ESP) up to date.
+#
+# With GRUB, the kernels are in /boot on the root filesystem, which the
+# CachyOS-signed systemd-boot of the Easy Anti-Cheat boot entry cannot read.
+# eac-setup makes the first copy, this hook only updates an existing one.
+
+kernel=/boot/vmlinuz-linux-cachyos-eac
+initramfs=/boot/initramfs-linux-cachyos-eac.img
+
+[ "$2" = "$initramfs" ] || exit 0
+[ -f "$kernel" ] && [ -f "$initramfs" ] || exit 0
+
+esp="$(bootctl --print-esp-path 2>/dev/null)" || exit 0
+dir="$esp/$(cat /etc/machine-id)/linux-cachyos-eac"
+[ -f "$dir/vmlinuz" ] || exit 0
+
+if ! install -m644 "$kernel" "$dir/vmlinuz" || ! install -m644 "$initramfs" "$dir/initramfs"; then
+    echo "Failed to copy the EAC kernel to $dir, the Easy Anti-Cheat boot entry will not start" >&2
+    exit 1
+fi
+echo "Copied the EAC kernel and its initramfs to $dir"
