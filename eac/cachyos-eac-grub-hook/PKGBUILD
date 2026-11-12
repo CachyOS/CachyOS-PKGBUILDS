@@ -1,0 +1,17 @@
+# Maintainer: Peter Jung ptr1337 <admin@ptr1337.dev>
+
+pkgname=cachyos-eac-grub-hook
+pkgver=1
+pkgrel=1
+pkgdesc='mkinitcpio hook that keeps the copy of the EAC kernel on the EFI system partition up to date (GRUB, set up by eac-setup)'
+arch=('any')
+url="https://github.com/CachyOS/CachyOS-PKGBUILDs"
+license=('GPL-3.0-or-later')
+depends=('mkinitcpio' 'systemd')
+source=("cachyos-eac-esp")
+
+package() {
+    install -Dm755 cachyos-eac-esp "$pkgdir/usr/lib/initcpio/post/cachyos-eac-esp"
+}
+
+b2sums=('af425c499df57da98be8a209d2ed0c7b4d349cb0d463223b6b60ceee557b29547fcca1e9fd404e1657f67c15c5aff1d5c92193f3f1e6c7c0e1de8c455f7ea4f1')
