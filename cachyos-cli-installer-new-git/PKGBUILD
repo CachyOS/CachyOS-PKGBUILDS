@@ -1,6 +1,7 @@
 # Maintainer: Vladislav Nepogodin <nepogodin.vlad@gmail.com>
 
-pkgname=cachyos-cli-installer-new-git
+pkgbase=cachyos-cli-installer-new-git
+pkgname=(cachyos-cli-installer-new-git cachyos-installer-libs-git)
 _pkgname=New-Cli-Installer
 pkgver=0.11.0.r103.g32bfd03
 pkgrel=1
@@ -8,23 +9,18 @@ pkgdesc='New CLI installer for CachyOS'
 arch=('x86_64')
 license=(GPL-3.0-or-later)
 url="https://github.com/cachyos/new-cli-installer"
-depends=(
-  'fzf' 'gawk' 'chwd' 'cachyos-rate-mirrors' 'curl' 'coreutils' 'util-linux' 'gptfdisk'
-  'cryptsetup' 'qt6-imageformats' 'qt6-base' 'qt6-declarative' 'qt6-svg' 'qt6-wayland'
-)
-makedepends=('cmake' 'ninja' 'git' 'lld' 'clang' 'llvm' 'qt6-tools')
-source=("${pkgname}::git+$url.git#branch=feat/qml-gui")
+makedepends=('cmake' 'ninja' 'git' 'lld' 'clang' 'llvm' 'qt6-tools'
+             'curl' 'openssl' 'fmt' 'qt6-base' 'qt6-declarative')
+source=("${pkgbase}::git+$url.git#branch=feat/qml-gui")
 sha256sums=('SKIP')
-provides=('cachyos-cli-installer-new')
-conflicts=('cachyos-cli-installer-new')
 
 pkgver() {
-  cd "${srcdir}/${pkgname}"
+  cd "${srcdir}/${pkgbase}"
   git describe --long --tags | sed 's/^v//;s/\([^-]*-g\)/r\1/;s/-/./g'
 }
 
 build() {
-  cd "${srcdir}/${pkgname}"
+  cd "${srcdir}/${pkgbase}"
 
   CFLAGS=${CFLAGS/-Wp,-D_GLIBCXX_ASSERTIONS}
   CXXFLAGS=${CXXFLAGS/-Wp,-D_GLIBCXX_ASSERTIONS}
@@ -44,15 +40,36 @@ build() {
         -DENABLE_DEVENV=OFF \
         -DBUILD_GUI=ON \
         -DGUCC_BUILD_TOOLS=ON \
-        -DCOS_BUILD_STATIC=ON
+        -DCOS_INSTALL_DEVEL=ON
   cmake --build build
+
+  # both packages are split out of one staged install
+  rm -rf "${srcdir}/stage"
+  DESTDIR="${srcdir}/stage" cmake --install build
 }
 
-package() {
-  cd "${srcdir}/${pkgname}"
-  DESTDIR="${pkgdir}" cmake --build build --target install
+package_cachyos-installer-libs-git() {
+  pkgdesc='CachyOS installer libraries'
+  depends=('curl' 'libcurl.so' 'openssl' 'libssl.so' 'fmt' 'libfmt.so'
+           'gawk' 'chwd' 'cachyos-rate-mirrors' 'coreutils' 'util-linux' 'gptfdisk' 'cryptsetup')
+  provides=('cachyos-installer-libs' 'libgucc.so' 'libcachyos-installer-lib.so')
+  conflicts=('cachyos-installer-libs')
 
-  install -Dm644 net-profiles.toml "${pkgdir}/var/lib/cachyos-installer/net-profiles.toml"
+  install -d "${pkgdir}/usr/lib"
+  mv "${srcdir}"/stage/usr/lib/lib{gucc,cachyos-installer-lib}.so* "${pkgdir}/usr/lib/"
+  mv "${srcdir}/stage/usr/lib/cmake" "${pkgdir}/usr/lib/"
+  mv "${srcdir}/stage/usr/include" "${pkgdir}/usr/"
+}
+
+package_cachyos-cli-installer-new-git() {
+  depends=('cachyos-installer-libs-git' 'fzf'
+           'qt6-imageformats' 'qt6-base' 'qt6-declarative' 'qt6-svg' 'qt6-wayland')
+  provides=('cachyos-cli-installer-new')
+  conflicts=('cachyos-cli-installer-new')
+
+  install -d "${pkgdir}/usr"
+  mv "${srcdir}/stage/usr/bin" "${pkgdir}/usr/"
+  install -Dm644 "${srcdir}/${pkgbase}/net-profiles.toml" "${pkgdir}/var/lib/cachyos-installer/net-profiles.toml"
 }
 
 # vim:set sw=2 sts=2 et:
