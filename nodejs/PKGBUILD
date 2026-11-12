@@ -9,7 +9,7 @@
 # Contributor: TIanyi Cui <tianyicui@gmail.com>
 
 pkgname=nodejs
-pkgver=26.13.0
+pkgver=26.13.1
 pkgrel=2
 pkgdesc='Evented I/O for V8 javascript ("Current" release)'
 arch=('x86_64')
@@ -44,7 +44,7 @@ makedepends=(
 optdepends=('npm: nodejs package manager')
 source=("git+https://github.com/nodejs/node.git#tag=v$pkgver?signed")
 
-sha512sums=('f551ef6e9ab1073ff871b4e20b4316cdc3a3dff20a44fa53da0397134772a2753bf27497fc2e552499475382370f43f500d4cdc7938db0d78e1f44dd2b063db8')
+sha512sums=('97ceb89eac6ac162949ed18bc6b8c11043e3e1327695e28d541ea90978fed737c8ab4890e1bb19d1512b72f7db3a4f2a69588c63cb843d363827182899c43af5')
 validpgpkeys=(
   '8FCCA13FEF1D0C2E91008E09770F7A9A5AE15600' # Michaël Zasso (Targos) <targos@protonmail.com>
   '890C08DB8579162FEE0DF9DB8BEAB4DFCF555EF4' # RafaelGSS <rafael.nunu@hotmail.com>
@@ -91,6 +91,16 @@ _set_flags() {
 
   export CFLAGS+=" ${_common_flags[*]}"
   export CXXFLAGS+=" ${_common_flags[*]}"
+}
+
+prepare() {
+  cd node
+  # Restore child-process inheritance after process.env is reassigned.
+  # https://github.com/nodejs/node/pull/66883
+  git cherry-pick -n 5a89d815457403c0f707f87af4f9cb47507a1cc4
+
+  # Adjust test expectations for OpenSSL 4.x.
+  git cherry-pick -n c61ba86ed02dc0c80c51b9333d3fe9e3e4e2f887
 }
 
 build() {
