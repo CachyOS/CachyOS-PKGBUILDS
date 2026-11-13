@@ -2,7 +2,7 @@
 
 pkgname=scx-manager-git
 pkgver=1.15.10.r3.g126594c
-pkgrel=1
+pkgrel=2
 epoch=1
 pkgdesc="Simple GUI for managing sched-ext schedulers via scx_loader"
 arch=(aarch64 x86_64)
@@ -29,6 +29,7 @@ build() {
   export CXX=clang++
   export NM=llvm-nm
   export RANLIB=llvm-ranlib
+  export RUSTUP_TOOLCHAIN=stable
 
   export RUSTFLAGS="-Cembed-bitcode -C opt-level=3 -Ccodegen-units=1 -Clinker=clang -C link-arg=-flto -Clink-arg=-fuse-ld=/usr/bin/ld.lld"
 
@@ -49,6 +50,7 @@ package() {
   export CXX=clang++
   export NM=llvm-nm
   export RANLIB=llvm-ranlib
+  export RUSTUP_TOOLCHAIN=stable
 
   export RUSTFLAGS="-Cembed-bitcode -C opt-level=3 -Ccodegen-units=1 -Clinker=clang -C link-arg=-flto -Clink-arg=-fuse-ld=/usr/bin/ld.lld"
 
