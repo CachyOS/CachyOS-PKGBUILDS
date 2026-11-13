@@ -1,0 +1,371 @@
+#!/bin/bash
+#
+# Restore the system to the snapshot the CachyOS installer takes at the end of
+# the installation. Its snapper ID is stored in /etc/cachyos/installation-snapshot.
+#
+# The root subvolume is mounted by name (rootflags=subvol=/@), so
+# `snapper rollback`, which only changes the default subvolume, has no effect.
+# Instead a writable copy of the snapshot replaces the root subvolume:
+#
+#   @                    -> @.pre-restore-<timestamp>   (kept)
+#   copy of the snapshot -> @
+#   /.snapshots          -> moved into the new @
+#
+# /home and the other separate subvolumes are not touched.
+#
+# Supported boot setups are the ones the installer creates:
+#   Limine: /boot is the ESP and holds the kernels, so they are reinstalled
+#           from the restored system with limine-update.
+#   GRUB:   /boot is part of the root subvolume and is restored with it.
+#
+# Usage: restore-installation check|restore
+#
+# Exit codes: 0 success, 1 nothing was changed, 2 the restore failed and the
+# current system was kept, 3 the restore failed and the boot files of the
+# current system could not be repaired.
+
+set -uo pipefail
+
+readonly SNAP_ID_FILE=/etc/cachyos/installation-snapshot
+readonly LOG_FILE=/var/log/cachyos-restore-installation.log
+readonly LOCK_FILE=/run/lock/cachyos-restore-installation.lock
+readonly LIB_DIR=/usr/lib/cachyos
+readonly STATE_DIR=/var/lib/cachyos/restore-installation
+readonly FINISH_UNIT=cachyos-restore-installation-finish.service
+readonly WATCHER=limine-snapper-sync.service
+
+# Frontends show lines starting with ":: " as progress.
+progress() { echo ":: $*"; }
+error() { echo "error: $*" >&2; }
+die() {
+	error "$*"
+	exit 1
+}
+
+# Validates the system and sets SNAP_ID, SNAPSHOT, ROOT_SUBVOL, ROOT_DEV,
+# SNAPSHOTS_NESTED, BOOTLOADER and VERIFY_KERNELS. Changes nothing.
+check() {
+	((EUID == 0)) || die "This must be run as root."
+	if systemd-detect-virt --container --quiet; then
+		die "Restoring is not supported inside a container."
+	fi
+
+	[[ -r $SNAP_ID_FILE ]] ||
+		die "This system has no installation snapshot ($SNAP_ID_FILE is missing). It is created by the CachyOS installer, systems installed with an older ISO do not have one."
+	SNAP_ID=$(tr -d '[:space:]' <"$SNAP_ID_FILE")
+	[[ $SNAP_ID =~ ^[0-9]+$ ]] || die "$SNAP_ID_FILE does not contain a valid snapshot ID."
+
+	[[ $(findmnt -no FSTYPE /) == btrfs ]] || die "The root filesystem is not Btrfs."
+	ROOT_SUBVOL=$(findmnt -no FSROOT /)
+	ROOT_SUBVOL=${ROOT_SUBVOL#/}
+	[[ -n $ROOT_SUBVOL && $ROOT_SUBVOL != */* ]] ||
+		die "The system is not running from a top-level root subvolume (/$ROOT_SUBVOL). Boot the regular system instead of a snapshot."
+	ROOT_DEV=$(findmnt -nvo SOURCE /)
+
+	# Replacing the subvolume only takes effect when it is selected by name.
+	local -a cmdline
+	local opt flags=""
+	read -ra cmdline </proc/cmdline
+	for opt in "${cmdline[@]}"; do
+		[[ $opt == rootflags=* ]] && flags=${opt#rootflags=}
+	done
+	[[ ,$flags, == *,subvolid=* ]] &&
+		die "The kernel command line selects the root subvolume by ID, which is not supported."
+	[[ ,$flags, == *",subvol=$ROOT_SUBVOL,"* || ,$flags, == *",subvol=/$ROOT_SUBVOL,"* ]] ||
+		die "The kernel command line does not contain rootflags=subvol=/$ROOT_SUBVOL."
+
+	[[ -f /etc/snapper/configs/root ]] || die "The snapper configuration 'root' does not exist."
+	SNAPSHOT=/.snapshots/$SNAP_ID/snapshot
+	btrfs subvolume show "$SNAPSHOT" &>/dev/null ||
+		die "The installation snapshot #$SNAP_ID does not exist anymore."
+	compgen -G "$SNAPSHOT/usr/lib/modules/*/vmlinuz" >/dev/null ||
+		die "The installation snapshot #$SNAP_ID does not contain a kernel."
+
+	if mountpoint -q /.snapshots; then
+		SNAPSHOTS_NESTED=0
+	elif btrfs subvolume show /.snapshots &>/dev/null; then
+		SNAPSHOTS_NESTED=1
+	else
+		die "/.snapshots is not a Btrfs subvolume."
+	fi
+
+	if mountpoint -q /boot; then
+		[[ -x $SNAPSHOT/usr/bin/limine-update ]] &&
+			[[ -f /boot/limine.conf || -f /boot/limine/limine.conf || -f /boot/EFI/limine/limine.conf ]] ||
+			die "Unsupported boot setup: /boot is a separate partition, but Limine is not used."
+		BOOTLOADER=limine
+	elif [[ -f $SNAPSHOT/boot/grub/grub.cfg ]]; then
+		BOOTLOADER=grub
+	else
+		die "Unsupported boot setup: only Limine and GRUB are supported."
+	fi
+
+	# Kernels in a UKI can not be compared with the restored ones.
+	VERIFY_KERNELS=1
+	if [[ $BOOTLOADER == limine ]] &&
+		grep -qsE '^[[:space:]]*ENABLE_UKI[[:space:]]*=[[:space:]]*"?yes' \
+			"$SNAPSHOT/etc/default/limine" "$SNAPSHOT/etc/limine-entry-tool.conf"; then
+		VERIFY_KERNELS=0
+	fi
+
+	# The restored kernels would be signed with the keys of the restored system.
+	local keys
+	for keys in /var/lib/sbctl/keys /usr/share/secureboot/keys; do
+		if [[ -d $keys && ! -d $SNAPSHOT$keys ]]; then
+			die "Secure Boot was set up after the installation, the restored system would not boot."
+		fi
+	done
+
+	[[ ! -e /var/lib/pacman/db.lck ]] ||
+		die "The package manager is running. Try again after it has finished."
+	command -v arch-chroot >/dev/null || die "arch-chroot is not installed."
+
+	echo "Installation snapshot: #$SNAP_ID"
+	echo "Root subvolume: /$ROOT_SUBVOL on $ROOT_DEV"
+	echo "Bootloader: $BOOTLOADER"
+}
+
+# Runs a command in the root filesystem $1 ("/" for the running system).
+run_in() {
+	local root=$1
+	shift
+	if [[ $root == / ]]; then
+		"$@"
+	else
+		arch-chroot "$root" "$@"
+	fi
+}
+
+# Prints "<package> <modules dir>" for every kernel installed in root $1.
+list_kernels() {
+	# shellcheck disable=SC2016
+	run_in "$1" sh -c 'for f in /usr/lib/modules/*/modules.builtin; do
+		[ -e "$f" ] && printf "%s %s\n" "$(pacman -Qqo "$f")" "${f%/modules.builtin}"
+	done'
+}
+
+# Checks that limine-entry-tool copied every kernel of root $1 to the ESP.
+verify_kernels() {
+	local root=$1 pkg dir machine_id ok=1 count=0
+	((VERIFY_KERNELS)) || return 0
+	machine_id=$(<"${root%/}/etc/machine-id")
+	while read -r pkg dir; do
+		count=$((count + 1))
+		if ! cmp -s "${root%/}$dir/vmlinuz" "/boot/$machine_id/$pkg/vmlinuz"; then
+			error "The kernel $pkg was not installed to /boot."
+			ok=0
+		fi
+	done < <(list_kernels "$root")
+	((ok && count))
+}
+
+# Reinstalls the kernels on the ESP from the restored system and removes the
+# boot entries of kernels that were installed after the installation.
+install_restored_kernels() {
+	local pkg dir rc
+	local -A restored=()
+	local -a removed=()
+
+	while read -r pkg dir; do
+		restored[$pkg]=$dir
+	done < <(list_kernels "$NEW_ROOT")
+	while read -r pkg dir; do
+		[[ -v restored[$pkg] ]] || removed+=("$pkg")
+	done < <(list_kernels /)
+
+	# limine-update drops the entries of listed kernels that are not installed.
+	if ((${#removed[@]})); then
+		echo "Removing the boot entries of: ${removed[*]}"
+		mkdir -p "$NEW_ROOT/var/lib/limine"
+		printf '%s\n' "${removed[@]}" >>"$NEW_ROOT/var/lib/limine/removed_kernels.list"
+	fi
+
+	mount --bind /boot "$NEW_ROOT/boot" || return 1
+	arch-chroot "$NEW_ROOT" limine-update
+	rc=$?
+	umount "$NEW_ROOT/boot"
+	((rc == 0)) || {
+		error "limine-update failed in the restored system."
+		return 1
+	}
+	verify_kernels "$NEW_ROOT"
+}
+
+# Writes the files the restored system needs into the new root subvolume.
+prepare_new_root() {
+	# Calamares writes the ID file after taking the snapshot, so the copy lacks it.
+	mkdir -p "$NEW_ROOT${SNAP_ID_FILE%/*}" &&
+		printf '%s\n' "$SNAP_ID" >"$NEW_ROOT$SNAP_ID_FILE" || return 1
+	# Leftover of the Calamares step that took the snapshot.
+	rm -f "$NEW_ROOT/etc/calamares/scripts/btrfs-installation-snapshot"
+	rmdir "$NEW_ROOT/etc/calamares/scripts" "$NEW_ROOT/etc/calamares" 2>/dev/null
+
+	# The restored system may have an older cachyos-snapper-support without
+	# the first boot step, so it is copied instead of taken from the package.
+	install -Dm644 "$LIB_DIR/restore-installation-finish" "$NEW_ROOT$STATE_DIR/finish" &&
+		printf 'TIMESTAMP=%q\nOLD_SUBVOLUME=%q\nBACKUP_SNAPSHOT=%q\n' \
+			"$TIMESTAMP" "$OLD_SUBVOL" "$BACKUP_ID" >"$NEW_ROOT$STATE_DIR/state" &&
+		install -Dm644 "$LIB_DIR/$FINISH_UNIT" "$NEW_ROOT/etc/systemd/system/$FINISH_UNIT" &&
+		mkdir -p "$NEW_ROOT/etc/systemd/system/multi-user.target.wants" &&
+		ln -sfn "../$FINISH_UNIT" "$NEW_ROOT/etc/systemd/system/multi-user.target.wants/$FINISH_UNIT"
+}
+
+# Snapper's limine plugin syncs new snapshots in transient limine-snapper-* units.
+wait_for_snapshot_sync() {
+	local i
+	for ((i = 0; i < 240; i++)); do
+		systemctl list-units --quiet --no-legend --state=active,activating 'limine-snapper-*' |
+			grep -q . || return 0
+		sleep 0.5
+	done
+	echo "warning: limine-snapper-sync is still running, continuing anyway." >&2
+}
+
+move_subvol() {
+	mv -T --no-copy "$TOP/$1" "$TOP/$2"
+}
+
+# Returns 1 if the swap failed and was undone, 2 if it could not be undone.
+swap_subvolumes() {
+	move_subvol "$ROOT_SUBVOL" "$OLD_SUBVOL" || return 1
+	if ! move_subvol "$NEW_SUBVOL" "$ROOT_SUBVOL"; then
+		move_subvol "$OLD_SUBVOL" "$ROOT_SUBVOL" || return 2
+		return 1
+	fi
+	((SNAPSHOTS_NESTED)) || return 0
+
+	# Snapshots do not contain nested subvolumes, only an empty directory.
+	rmdir "$TOP/$ROOT_SUBVOL/.snapshots" 2>/dev/null
+	if ! move_subvol "$OLD_SUBVOL/.snapshots" "$ROOT_SUBVOL/.snapshots"; then
+		move_subvol "$ROOT_SUBVOL" "$NEW_SUBVOL" &&
+			move_subvol "$OLD_SUBVOL" "$ROOT_SUBVOL" || return 2
+		return 1
+	fi
+}
+
+umount_new_root() {
+	mountpoint -q "$NEW_ROOT/boot" && umount "$NEW_ROOT/boot"
+	mountpoint -q "$NEW_ROOT" && umount "$NEW_ROOT"
+}
+
+cleanup() {
+	umount_new_root
+	mountpoint -q "$TOP" && umount "$TOP"
+	rmdir "$NEW_ROOT" "$TOP" "$WORK_DIR" 2>/dev/null
+}
+
+# Removes everything the restore created, so the current system stays as it was.
+undo() {
+	umount_new_root
+	[[ -n $NEW_CREATED ]] && btrfs subvolume delete "$TOP/$NEW_SUBVOL" >/dev/null
+	[[ -n $BACKUP_ID ]] && snapper -c root delete "$BACKUP_ID"
+	((WATCHER_STOPPED)) && systemctl start "$WATCHER"
+}
+
+# Fails before the boot files were changed.
+abort() {
+	error "$*"
+	undo
+	exit 1
+}
+
+# Fails after the boot files were changed: reinstalls the current kernels.
+abort_and_repair() {
+	error "$*"
+	if [[ $BOOTLOADER == limine ]]; then
+		progress "Restoring the boot files of the current system"
+		umount_new_root
+		if ! limine-update || ! verify_kernels /; then
+			undo
+			error "The boot files of the current system could not be restored. Do not reboot before 'sudo limine-update' succeeded."
+			exit 3
+		fi
+	fi
+	undo
+	error "The restore failed, the current system was kept."
+	exit 2
+}
+
+restore() {
+	local lock_fd
+
+	exec {lock_fd}>"$LOCK_FILE"
+	flock -n "$lock_fd" || die "Another restore is already running."
+	exec > >(tee -a "$LOG_FILE") 2>&1
+	echo "=== $(date '+%F %T') restoring the installation snapshot ==="
+
+	check
+
+	TIMESTAMP=$(date +%Y%m%d-%H%M%S)
+	OLD_SUBVOL=$ROOT_SUBVOL.pre-restore-$TIMESTAMP
+	NEW_SUBVOL=$ROOT_SUBVOL.restore-$TIMESTAMP
+	NEW_CREATED="" BACKUP_ID="" WATCHER_STOPPED=0
+
+	WORK_DIR=$(mktemp -d /run/cachyos-restore.XXXXXX) || die "Could not create a work directory."
+	TOP=$WORK_DIR/top
+	NEW_ROOT=$WORK_DIR/new
+	mkdir "$TOP" "$NEW_ROOT"
+	trap cleanup EXIT
+
+	mount -t btrfs -o subvolid=5 "$ROOT_DEV" "$TOP" || die "Could not mount the Btrfs top level."
+	[[ -d $TOP/$ROOT_SUBVOL ]] || die "/$ROOT_SUBVOL is not a top-level subvolume."
+	[[ ! -e $TOP/$OLD_SUBVOL && ! -e $TOP/$NEW_SUBVOL ]] ||
+		die "/$OLD_SUBVOL or /$NEW_SUBVOL already exists."
+
+	# The watcher would drop all snapshot boot entries while /.snapshots is moved.
+	if systemctl -q is-active "$WATCHER"; then
+		systemctl stop "$WATCHER" && WATCHER_STOPPED=1
+	fi
+
+	progress "Creating a snapshot of the current system"
+	BACKUP_ID=$(snapper -c root create --print-number \
+		--description "Before restoring the fresh installation" \
+		--userdata "important=yes")
+	[[ $BACKUP_ID =~ ^[0-9]+$ ]] || {
+		BACKUP_ID=""
+		abort "Could not create a snapshot of the current system."
+	}
+	echo "Created snapshot #$BACKUP_ID"
+	[[ $BOOTLOADER == limine ]] && wait_for_snapshot_sync
+
+	progress "Preparing the restored system"
+	btrfs subvolume snapshot "$SNAPSHOT" "$TOP/$NEW_SUBVOL" >/dev/null ||
+		abort "Could not copy the installation snapshot #$SNAP_ID."
+	NEW_CREATED=1
+	mount -t btrfs -o "subvol=/$NEW_SUBVOL" "$ROOT_DEV" "$NEW_ROOT" ||
+		abort "Could not mount the restored system."
+	prepare_new_root || abort "Could not prepare the restored system."
+
+	if [[ $BOOTLOADER == limine ]]; then
+		progress "Installing the kernels of the restored system"
+		install_restored_kernels ||
+			abort_and_repair "Could not install the kernels of the restored system."
+	fi
+	umount_new_root
+
+	progress "Switching to the restored system"
+	swap_subvolumes
+	case $? in
+	0) ;;
+	1) abort_and_repair "Could not replace the root subvolume." ;;
+	*)
+		error "Could not replace the root subvolume and could not undo the partial change."
+		error "Check the subvolumes /$ROOT_SUBVOL, /$OLD_SUBVOL and /$NEW_SUBVOL before rebooting."
+		exit 3
+		;;
+	esac
+
+	progress "Done"
+	echo "The fresh installation starts with the next reboot. Do not install or remove packages before that."
+	echo "Snapshot #$BACKUP_ID contains the system from before the restore."
+	echo "The previous root subvolume is kept as /$OLD_SUBVOL."
+}
+
+case ${1:-} in
+check) check ;;
+restore) restore ;;
+*)
+	echo "Usage: ${0##*/} check|restore" >&2
+	exit 1
+	;;
+esac
