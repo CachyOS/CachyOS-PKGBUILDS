@@ -1,0 +1,39 @@
+# Maintainer: Peter Jung <admin@ptr1337.dev>
+# Contributor: Nico <d3sox at protonmail dot com>
+
+pkgname=cachyos-emerald-kde-theme-git
+_themeName=cachyos-emerald
+_gitname=CachyOS-Emerald-KDE
+_commit=f0fa3b9dbe5cb0e8146e395ebac8fc4c9100da39
+pkgver=r27.f0fa3b9
+pkgrel=1
+pkgdesc="CachyOS Emerald KDE Theme"
+arch=('any')
+url="https://github.com/CachyOS/CachyOS-Emerald-KDE"
+license=(GPL-3.0-or-later)
+groups=(cachyos)
+depends=(char-white)
+optdepends=('plasma-desktop: for included plasma theme')
+makedepends=('git')
+source=("${_gitname}::git+${url}.git#commit=${_commit}")
+sha256sums=('SKIP')
+
+pkgver() {
+  cd "${_gitname}"
+  printf "r%s.%s" "$(git rev-list --count HEAD)" "$(git rev-parse --short HEAD)"
+}
+
+package() {
+  cd "${_gitname}"
+
+  install -d "${pkgdir}/usr/share/color-schemes" \
+    "${pkgdir}/usr/share/plasma/desktoptheme" \
+    "${pkgdir}/usr/share/plasma/look-and-feel"
+
+  # color schemes
+  cp -r color-schemes/* "${pkgdir}/usr/share/color-schemes"
+  # desktop themes
+  cp -r plasma/desktoptheme/${_themeName}* "${pkgdir}/usr/share/plasma/desktoptheme"
+  # look and feel
+  cp -r plasma/look-and-feel/* "${pkgdir}/usr/share/plasma/look-and-feel"
+}
