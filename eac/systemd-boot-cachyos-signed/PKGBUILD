@@ -37,7 +37,9 @@ if [ -n "$_eac_sbsign_key" ] && [ -n "$_eac_sbsign_cert" ]; then
     [ -e "$_eac_sbsign_cert" ] || _die "Failed to find file ${_eac_sbsign_cert}"
     _eac_sbsign_cert="$(realpath "$_eac_sbsign_cert")"
     if [[ "$_eac_sbsign_key" = pkcs11:* ]]; then
-        _eac_sbsign_args=(--engine pkcs11)
+        # OpenSSL 4 dropped ENGINEs, use the libp11 provider. Loading a
+        # provider explicitly disables the implicit default one, so load both.
+        _eac_sbsign_args=(--provider default --provider pkcs11prov)
         makedepends+=(libp11)
     else
         [ -e "$_eac_sbsign_key" ] || _die "Failed to find file ${_eac_sbsign_key}"
