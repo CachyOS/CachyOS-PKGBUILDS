@@ -1,0 +1,166 @@
+From 96bc859e8bbd11c8baeabde2c2e8c2c56f146ec2 Mon Sep 17 00:00:00 2001
+From: LACN <1269581-lacn@users.noreply.gitlab.freedesktop.org>
+Date: Sun, 8 Nov 2026 03:40:17 -0300
+Subject: [PATCH] two-step: Don't hang when a display is removed during the end
+ animation
+
+Two-step plays its end animation on every view and counts the views on
+plugin->stop_trigger: start_end_animation() ignores one pull per view,
+and each view pulls the trigger once its end animation finishes. The
+splash only becomes idle after all of those pulls.
+
+When a display goes away while its view is still stopping the throbber
+or playing the end animation, remove_pixel_display() frees the view.
+ply_throbber_stop_now() and ply_animation_stop_now() don't pull their
+stop triggers, so the view's share is lost. The idle trigger never
+fires and "plymouth quit" hangs until systemd times it out. This
+happens when a DRM connector is reprobed at the end of boot, e.g. with
+an HDMI monitor connected on Linux 7.3.
+
+This commit keeps view->end_trigger set until the view's end animation
+finishes, by starting the animation with a per-view trigger that clears
+it and pulls the shared one. remove_pixel_display() then pulls the
+share of a view that still owes it. The pull is deferred to the event
+loop, since becoming idle may tear down the splash while the display
+is still being removed.
+
+A new two-step test removes the display right after boot progress
+reaches the end and checks that the splash still becomes idle.
+
+Closes #346
+
+Signed-off-by: Vasiliy Stelmachenok <ventureo@cachyos.org>
+---
+ src/plugins/splash/two-step/plugin.c | 59 ++++++++++++++++++++++++----
+ 1 file changed, 51 insertions(+), 8 deletions(-)
+
+diff --git a/src/plugins/splash/two-step/plugin.c b/src/plugins/splash/two-step/plugin.c
+index c810564e..443c163b 100644
+--- a/src/plugins/splash/two-step/plugin.c
++++ b/src/plugins/splash/two-step/plugin.c
+@@ -858,12 +858,24 @@ unpause_views (ply_boot_splash_plugin_t *plugin)
+ }
+ 
+ static void
+-view_start_end_animation (view_t        *view,
+-                          ply_trigger_t *trigger)
++on_view_end_animation_stopped (view_t *view)
++{
++        ply_trigger_t *end_trigger = view->end_trigger;
++
++        view->end_trigger = NULL;
++        ply_trigger_pull (end_trigger, NULL);
++}
++
++/* view->end_trigger stays set until the end animation finishes, so
++ * remove_pixel_display knows the view still owes it a pull.
++ */
++static void
++view_start_end_animation (view_t *view)
+ {
+         ply_boot_splash_plugin_t *plugin = view->plugin;
+         unsigned long screen_width, screen_height;
+         long x, y, width, height;
++        ply_trigger_t *animation_trigger;
+ 
+         ply_progress_bar_hide (view->progress_bar);
+         if (view->progress_animation != NULL)
+@@ -877,17 +889,21 @@ view_start_end_animation (view_t        *view,
+         y = plugin->animation_vertical_alignment * screen_height - height / 2.0;
+ 
+         ply_trace ("starting end sequence animation for %ldx%ld view", width, height);
++        animation_trigger = ply_trigger_new (NULL);
++        ply_trigger_add_handler (animation_trigger,
++                                 (ply_trigger_handler_t)
++                                 on_view_end_animation_stopped,
++                                 view);
+         ply_animation_start (view->end_animation,
+                              view->display,
+-                             trigger, x, y);
++                             animation_trigger, x, y);
+         view->animation_bottom = y + height;
+ }
+ 
+ static void
+ on_view_throbber_stopped (view_t *view)
+ {
+-        view_start_end_animation (view, view->end_trigger);
+-        view->end_trigger = NULL;
++        view_start_end_animation (view);
+ }
+ 
+ static void
+@@ -1510,12 +1526,11 @@ start_end_animation (ply_boot_splash_plugin_t *plugin,
+         while (node != NULL) {
+                 view = ply_list_node_get_data (node);
+ 
+-                ply_trigger_ignore_next_pull (trigger);
++                view->end_trigger = trigger;
+ 
+                 if (view->throbber != NULL) {
+                         ply_trigger_t *throbber_trigger;
+                         ply_trace ("stopping throbber");
+-                        view->end_trigger = trigger;
+                         throbber_trigger = ply_trigger_new (NULL);
+                         ply_trigger_add_handler (throbber_trigger,
+                                                  (ply_trigger_handler_t)
+@@ -1523,7 +1538,7 @@ start_end_animation (ply_boot_splash_plugin_t *plugin,
+                                                  view);
+                         ply_throbber_stop (view->throbber, throbber_trigger);
+                 } else {
+-                        view_start_end_animation (view, trigger);
++                        view_start_end_animation (view);
+                 }
+ 
+                 node = ply_list_get_next_node (plugin->views, node);
+@@ -1592,9 +1607,22 @@ stop_animation (ply_boot_splash_plugin_t *plugin)
+         }
+ }
+ 
++static void
++on_removed_view_end_animation_stopped (ply_boot_splash_plugin_t *plugin)
++{
++        /* Every view's end_trigger is plugin->stop_trigger */
++        if (plugin->stop_trigger != NULL)
++                ply_trigger_pull (plugin->stop_trigger, NULL);
++}
++
+ static void
+ detach_from_event_loop (ply_boot_splash_plugin_t *plugin)
+ {
++        if (plugin->loop != NULL) {
++                ply_event_loop_stop_watching_for_timeout (plugin->loop,
++                                                          (ply_event_loop_timeout_handler_t) on_removed_view_end_animation_stopped,
++                                                          plugin);
++        }
+         plugin->loop = NULL;
+ }
+ 
+@@ -1822,9 +1850,24 @@ remove_pixel_display (ply_boot_splash_plugin_t *plugin,
+                 next_node = ply_list_get_next_node (plugin->views, node);
+ 
+                 if (view->display == display) {
++                        bool owes_end_trigger_pull = view->end_trigger != NULL;
++
+                         ply_pixel_display_set_draw_handler (view->display, NULL, NULL);
+                         view_free (view);
+                         ply_list_remove_node (plugin->views, node);
++                        /* The view was still stopping its throbber or playing
++                         * its end animation, so its share of the stop trigger
++                         * would never get pulled and the splash would never
++                         * become idle. Pull it from the event loop, since
++                         * becoming idle may tear down the splash while the
++                         * caller is still removing the display.
++                         */
++                        if (owes_end_trigger_pull && plugin->loop != NULL) {
++                                ply_event_loop_watch_for_timeout (plugin->loop, 0.01,
++                                                                  (ply_event_loop_timeout_handler_t)
++                                                                  on_removed_view_end_animation_stopped,
++                                                                  plugin);
++                        }
+                         return;
+                 }
+ 
+-- 
+2.56.0
+
