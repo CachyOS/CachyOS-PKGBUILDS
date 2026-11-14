@@ -1,0 +1,30 @@
+diff --git a/src/fileio.c b/src/fileio.c
+index 2f72b24..5e86c58 100644
+--- a/src/fileio.c
++++ b/src/fileio.c
+@@ -115,7 +115,11 @@ EVP_PKEY *fileio_read_engine_key(const char *engine, const char *filename)
+ 
+  out_free:
+ 	ENGINE_free(e);
+-	UI_destroy_method(ui);
++	/*
++	 * Keep the UI method alive: PKCS#11 backends (libp11) cache it and use
++	 * it again at signing time to log in for keys that need
++	 * CKA_ALWAYS_AUTHENTICATE, e.g. the YubiKey PIV signature slot.
++	 */
+ 	return pkey;
+ }
+ #endif
+@@ -151,7 +155,11 @@ EVP_PKEY *fileio_read_pkey(const char *filename)
+ 	}
+ out_free:
+ 	OSSL_STORE_close(store_ctx);
+-	UI_destroy_method(ui);
++	/*
++	 * Keep the UI method alive: PKCS#11 backends (libp11) cache it and use
++	 * it again at signing time to log in for keys that need
++	 * CKA_ALWAYS_AUTHENTICATE, e.g. the YubiKey PIV signature slot.
++	 */
+ 	return key;
+ }
+ #else

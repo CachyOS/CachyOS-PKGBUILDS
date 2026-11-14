@@ -1,0 +1,74 @@
+# Maintainer: Peter Jung ptr1337 <admin@ptr1337.dev>
+# Contributor: David Runge <dvzrv@archlinux.org>
+# Contributor: Tobias Powalowski <tpowa@archlinux.org>
+# Contributor: Mico Tischler <mt-ml at gmx dot net>
+# Contributor: Keshav Amburay <(the ddoott ridikulus ddoott rat) (aatt) (gemmaeiil) (ddoott) (ccoomm)>
+
+pkgname=sbsigntools
+pkgver=0.9.5
+_commit=8445b18f64e60137408a4867fbcbb9ba112c583a  # refs/tags/v0.9.5
+pkgrel=6
+pkgdesc="Tools to add signatures to EFI binaries and Drivers"
+arch=(x86_64)
+url="https://git.kernel.org/pub/scm/linux/kernel/git/jejb/sbsigntools.git/about"
+license=(GPL-3.0-or-later)
+depends=(
+  glibc
+  openssl
+)
+makedepends=(
+  git
+  gnu-efi
+  help2man
+  util-linux
+  sed
+)
+source=(
+  git+https://git.kernel.org/pub/scm/linux/kernel/git/jejb/sbsigntools.git#tag=$_commit?signed
+  git+https://github.com/rustyrussell/ccan
+  sbsigntools-keep-ui-method.patch
+)
+sha256sums=('18d476d5497cab8f7f8acb8710481bdd3de887f6109f2deeed9e6bd2571d3f9d'
+            'SKIP'
+            '641056b149c2fdb97cd46714e93e01ae1c8de25c8938f75703441981a7eaaed6')
+validpgpkeys=('D5606E73C8B46271BEAD9ADF814AE47C214854D6') # James Bottomley <jejb@kernel.org>
+
+prepare() {
+  cd $pkgname
+  # Support OpenSSL providers and omit ENGINE calls removed in OpenSSL 4.
+  # https://git.kernel.org/pub/scm/linux/kernel/git/jejb/sbsigntools.git/commit/?id=53922bc1b084922a7434f634ca4a0715a12f65cc
+  git cherry-pick -n 53922bc1b084922a7434f634ca4a0715a12f65cc
+  # The commit above frees the UI method right after loading the key, but
+  # libp11 caches it and prompts with it again at signing time for keys with
+  # CKA_ALWAYS_AUTHENTICATE (YubiKey PIV signature slot): use-after-free.
+  git apply "$srcdir/sbsigntools-keep-ui-method.patch"
+
+  git submodule init
+  git config submodule."lib/ccan.git".url "$srcdir/ccan"
+  git -c protocol.file.allow=always submodule update
+  ./autogen.sh
+}
+
+build() {
+  local configure_options=(
+    --prefix=/usr
+    --bindir=/usr/bin
+    --sbindir=/usr/bin
+    --libexecdir=/usr/lib
+    --mandir=/usr/share/man
+    --sysconfdir=/etc
+  )
+
+  cd $pkgname
+  CFLAGS="${CFLAGS} -fshort-wchar -Wno-error" ./configure "${configure_options[@]}"
+  make
+}
+
+package() {
+  depends+=(
+    util-linux-libs libuuid.so
+  )
+
+  make DESTDIR="$pkgdir" install -C $pkgname
+  install -vDm 644 $pkgname/{AUTHORS,ChangeLog,NEWS,README} -t "$pkgdir/usr/share/doc/$pkgname/"
+}
