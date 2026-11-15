@@ -1,27 +1,45 @@
 pkgbase = cachyos-cli-installer-new
 	pkgdesc = New CLI installer for CachyOS
-	pkgver = 0.12.4
+	pkgver = 0.13.0
 	pkgrel = 1
 	url = https://github.com/cachyos/new-cli-installer
 	arch = x86_64
 	license = GPL-3.0-or-later
+	makedepends = clang
 	makedepends = cmake
-	makedepends = ninja
+	makedepends = curl
+	makedepends = fmt
 	makedepends = git
 	makedepends = lld
-	makedepends = clang
 	makedepends = llvm
+	makedepends = ninja
+	makedepends = openssl
+	source = cachyos-cli-installer-new::git+https://github.com/cachyos/new-cli-installer.git#tag=0.13.0?signed
+	validpgpkeys = B1B70BB1CD56047DEF31DE2EB62C3D10C54D5DA9
+	sha256sums = d00dd0061a951ea8e8002a651444e73afde3923133637134f255f96633e527a9
+
+pkgname = cachyos-cli-installer-new
+	depends = cachyos-installer-libs
 	depends = fzf
+	provides = cachyos-cli-installer-new
+	conflicts = cachyos-cli-installer-new
+
+pkgname = cachyos-installer-libs
+	pkgdesc = CachyOS installer libraries
+	depends = curl
+	depends = libcurl.so
+	depends = openssl
+	depends = libssl.so
+	depends = fmt
+	depends = libfmt.so
 	depends = gawk
 	depends = chwd
 	depends = cachyos-rate-mirrors
-	depends = curl
 	depends = coreutils
 	depends = util-linux
 	depends = gptfdisk
 	depends = cryptsetup
-	source = cachyos-cli-installer-new::git+https://github.com/cachyos/new-cli-installer.git#tag=0.12.4?signed
-	validpgpkeys = B1B70BB1CD56047DEF31DE2EB62C3D10C54D5DA9
-	sha256sums = 432fce52877b2d525d8c22e3966b7bc23f7791d4df3121826eba32f35edaf34f
-
-pkgname = cachyos-cli-installer-new
+	provides = cachyos-installer-libs
+	provides = libgucc.so
+	provides = libcachyos-installer-lib.so
+	conflicts = cachyos-installer-libs
