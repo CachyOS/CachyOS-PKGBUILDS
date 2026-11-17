@@ -1,0 +1,32 @@
+# Maintainer: Vasiliy Stelmachenok <ventureo@cachyos.org>
+# Maintainer: s0me1newithhand7s <hand7s@proton.me>
+pkgname=cachyos-compositor-settings
+pkgdesc='Common packages and settings for Wayland compositors provided by CachyOS'
+pkgver=1.0.0
+pkgrel=1
+arch=('any')
+url="https://github.com/CachyOS/$pkgname"
+license=(GPL-3.0-only)
+makedepends=('coreutils' 'git')
+source=("git+https://github.com/CachyOS/cachyos-compositor-settings#tag=${pkgver}?signed")
+sha256sums=('ad4ecb098e8584e2c3e72a82d33074647b7e4894db368b080be0a9faf774cd50')
+depends=(
+    adw-gtk-theme
+    bibata-cursor-theme
+    gnome-keyring
+    kanshi
+    kitty
+    noto-fonts
+    noto-fonts-emoji
+    qt6ct
+    thunar
+    uwsm
+    xdg-desktop-portal
+    xdg-desktop-portal-gtk
+    xdg-terminal-exec
+)
+
+package() {
+  install -d "${pkgdir}/etc"
+  cp -rf "${srcdir}/${pkgname}/etc" "${pkgdir}"
+}
