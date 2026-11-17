@@ -3,7 +3,7 @@
 pkgbase=cachyos-cli-installer-new
 pkgname=(cachyos-cli-installer-new cachyos-installer-libs)
 _pkgname=New-Cli-Installer
-pkgver=0.13.0
+pkgver=0.13.1
 pkgrel=1
 pkgdesc='New CLI installer for CachyOS'
 arch=(x86_64)
@@ -13,7 +13,6 @@ makedepends=(
   'clang'
   'cmake'
   'curl'
-  'fmt'
   'git'
   'lld'
   'llvm'
@@ -21,7 +20,7 @@ makedepends=(
   'openssl'
 )
 source=("$pkgbase::git+$url.git#tag=${pkgver}?signed")
-sha256sums=('d00dd0061a951ea8e8002a651444e73afde3923133637134f255f96633e527a9')
+sha256sums=('5beb53e272d25bbf8d895082e24ceccbd2f94bd360dc95f4d6a7687648092b84')
 validpgpkeys=(
   'B1B70BB1CD56047DEF31DE2EB62C3D10C54D5DA9'  # Vladislav Nepogodin <nepogodin.vlad@gmail.com>
 )
@@ -57,7 +56,7 @@ build() {
 
 package_cachyos-installer-libs() {
   pkgdesc='CachyOS installer libraries'
-  depends=('curl' 'libcurl.so' 'openssl' 'libssl.so' 'fmt' 'libfmt.so'
+  depends=('curl' 'libcurl.so' 'openssl' 'libssl.so'
            'gawk' 'chwd' 'cachyos-rate-mirrors' 'coreutils' 'util-linux' 'gptfdisk' 'cryptsetup')
   provides=('cachyos-installer-libs' 'libgucc.so' 'libcachyos-installer-lib.so')
   conflicts=('cachyos-installer-libs')
