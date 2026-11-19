@@ -1,7 +1,7 @@
 From 4555eb61e1cd4a7ea2817445efb9be16e24604d6 Mon Sep 17 00:00:00 2001
 From: Kugan Vivekanandarajah <kvivekananda@nvidia.com>
 Date: Sat, 7 Nov 2026 22:34:53 +1100
-Subject: [PATCH 01/45] Register the afdo-tools directory with the contrib
+Subject: [PATCH 01/48] Register the afdo-tools directory with the contrib
  scripts
 
 The AutoFDO host tools live in a new top-level afdo-tools directory.  Teach
@@ -56,13 +56,13 @@ index 4cc04784f99..3caba491bde 100755
              'contrib',
              'gcc',
 -- 
-2.56.0
+2.56.1
 
 
 From 646ab21c36f203e3ff0a4cdbf9c8a4e93c7cc98f Mon Sep 17 00:00:00 2001
 From: Kugan Vivekanandarajah <kvivekananda@nvidia.com>
 Date: Sat, 7 Nov 2026 22:34:54 +1100
-Subject: [PATCH 02/45] Add a ChangeLog file in the afdo-tools directory
+Subject: [PATCH 02/48] Add a ChangeLog file in the afdo-tools directory
 
 Add the ChangeLog file so that update_version_git can then fill it in.
 
@@ -87,13 +87,13 @@ index 00000000000..923c914865e
 +are permitted in any medium without royalty provided the copyright
 +notice and this notice are preserved.
 -- 
-2.56.0
+2.56.1
 
 
 From 3ea3b40ec4f10f871c3498eb4518521b4d38f893 Mon Sep 17 00:00:00 2001
 From: Kugan Vivekanandarajah <kvivekananda@nvidia.com>
 Date: Sat, 7 Nov 2026 22:34:55 +1100
-Subject: [PATCH 03/45] Add common file and profiling helpers
+Subject: [PATCH 03/48] Add common file and profiling helpers
 
 Add the common utilities used by the AutoFDO host tools: assertion handling,
 file-backed mappings and a hash-combining helper.  Keeping these facilities
@@ -416,13 +416,13 @@ index 00000000000..0f1bf1a2199
 +
 +#endif /* GCC_HASH_UTIL_H.  */
 -- 
-2.56.0
+2.56.1
 
 
 From 595c8ef46ba1b6c924420b52adbffabd8386b2c0 Mon Sep 17 00:00:00 2001
 From: Kugan Vivekanandarajah <kvivekananda@nvidia.com>
 Date: Sat, 7 Nov 2026 22:34:56 +1100
-Subject: [PATCH 04/45] Add the in-memory GCOV v3 profile model
+Subject: [PATCH 04/48] Add the in-memory GCOV v3 profile model
 
 Define the in-memory representation of a GCOV AutoFDO v3 profile, including
 functions, source positions, callsites, indirect targets, and
@@ -954,13 +954,13 @@ index f6aeff9db37..c918d6585ef 100644
  /* Structure to hold hierarchical discriminator components.  */
  struct discriminator_components
 -- 
-2.56.0
+2.56.1
 
 
 From 72f001ba9a911505ef3fd3428d30b9d0b380693c Mon Sep 17 00:00:00 2001
 From: Kugan Vivekanandarajah <kvivekananda@nvidia.com>
 Date: Sat, 7 Nov 2026 22:34:57 +1100
-Subject: [PATCH 05/45] Add GCOV v3 byte I/O and profile summaries
+Subject: [PATCH 05/48] Add GCOV v3 byte I/O and profile summaries
 
 Add the low-level GCOV v3 byte I/O helpers and working-set summary
 calculation.  These routines provide the checked encoding primitives shared
@@ -1390,13 +1390,13 @@ index 00000000000..b2627a43c7f
 +
 +#endif /* GCC_GCOV_SUMMARY_H.  */
 -- 
-2.56.0
+2.56.1
 
 
 From 6354851ed2c568a02116a1b24745d92000d676f6 Mon Sep 17 00:00:00 2001
 From: Kugan Vivekanandarajah <kvivekananda@nvidia.com>
 Date: Sat, 7 Nov 2026 22:34:58 +1100
-Subject: [PATCH 06/45] Add the GCOV v3 profile reader and writer
+Subject: [PATCH 06/48] Add the GCOV v3 profile reader and writer
 
 Implement parsing of GCOV AutoFDO v3 profiles into the shared profile
 model, and deterministic serialization back out of it.  The reader
@@ -2618,13 +2618,13 @@ index 00000000000..42f1f951e04
 +
 +} /* namespace gcov.  */
 -- 
-2.56.0
+2.56.1
 
 
 From 7324223bcc21c87a05c8549803e11324340a400b Mon Sep 17 00:00:00 2001
 From: Kugan Vivekanandarajah <kvivekananda@nvidia.com>
 Date: Sat, 7 Nov 2026 22:34:59 +1100
-Subject: [PATCH 07/45] Add the afdo_dump command
+Subject: [PATCH 07/48] Add the afdo_dump command
 
 Add the afdo_dump command-line frontend for inspecting AutoFDO profiles in a
 stable textual form.  The patch is intentionally limited to a consumer of
@@ -2943,13 +2943,13 @@ index 00000000000..7e83aa9f3d4
 +  return 0;
 +}
 -- 
-2.56.0
+2.56.1
 
 
 From b4ab2c4656e499c0c39001a81b3d3fdef82512b6 Mon Sep 17 00:00:00 2001
 From: Kugan Vivekanandarajah <kvivekananda@nvidia.com>
 Date: Sat, 7 Nov 2026 22:35:00 +1100
-Subject: [PATCH 08/45] Add GCOV profile merge support
+Subject: [PATCH 08/48] Add GCOV profile merge support
 
 Add the library that combines multiple AutoFDO profiles, and the
 afdo_merge command that drives it.  The library remaps names and function
@@ -3617,13 +3617,13 @@ index 00000000000..324af97da1d
 +
 +#endif /* GCC_GCOV_MERGE_H.  */
 -- 
-2.56.0
+2.56.1
 
 
 From eeac497175bdbd17d90275a83ec41a6d47e16cdc Mon Sep 17 00:00:00 2001
 From: Kugan Vivekanandarajah <kvivekananda@nvidia.com>
 Date: Sat, 7 Nov 2026 22:35:01 +1100
-Subject: [PATCH 09/45] Define the sample-scoped DWARF reader API
+Subject: [PATCH 09/48] Define the sample-scoped DWARF reader API
 
 Define the DWARF types, correlation session, and public reader
 interface.  The API documents the split between ELF symbol ownership and
@@ -4092,13 +4092,13 @@ index 00000000000..b9a6d5c3a2a
 +
 +#endif /* GCC_DWARF_TYPES_H.  */
 -- 
-2.56.0
+2.56.1
 
 
 From f618669b521a105218fd5684b405e738372c170e Mon Sep 17 00:00:00 2001
 From: Kugan Vivekanandarajah <kvivekananda@nvidia.com>
 Date: Sat, 7 Nov 2026 22:35:02 +1100
-Subject: [PATCH 10/45] Add symbol, source-path and function lookup helpers
+Subject: [PATCH 10/48] Add symbol, source-path and function lookup helpers
 
 Add helpers for matching GCC symbol names and source paths, looking up
 functions by address, and finding overlapping DWARF ranges.  Keep
@@ -4671,13 +4671,13 @@ index 00000000000..8d89f416bfa
 +
 +#endif /* GCC_SYMBOL_UTIL_H.  */
 -- 
-2.56.0
+2.56.1
 
 
 From bbfb0a5ecd3711994966d983029910eb64ced479 Mon Sep 17 00:00:00 2001
 From: Kugan Vivekanandarajah <kvivekananda@nvidia.com>
 Date: Sat, 7 Nov 2026 22:35:03 +1100
-Subject: [PATCH 11/45] Implement sample-scoped DWARF indexing
+Subject: [PATCH 11/48] Implement sample-scoped DWARF indexing
 
 Implement sample-scoped ELF and DWARF loading, line and inline indexes,
 symbol identity lookup, and address symbolization.  Only compilation units
@@ -7636,13 +7636,13 @@ index 00000000000..71fb1ff9b92
 +
 +#endif /* GCC_DWARF_READER_IMPL_H.  */
 -- 
-2.56.0
+2.56.1
 
 
 From ed5fcc203a343091039dc8fc2b6849255a54dedc Mon Sep 17 00:00:00 2001
 From: Kugan Vivekanandarajah <kvivekananda@nvidia.com>
 Date: Sat, 7 Nov 2026 22:35:04 +1100
-Subject: [PATCH 12/45] Describe the Linux perf data ABI
+Subject: [PATCH 12/48] Describe the Linux perf data ABI
 
 Define the Linux perf.data records, attributes, sample fields, and feature
 structures and helpers consumed by afdo_create.  Parsing is introduced
@@ -8091,13 +8091,13 @@ index 00000000000..1a02cf6d7c6
 +
 +#endif /* GCC_PERF_H.  */
 -- 
-2.56.0
+2.56.1
 
 
 From 7fd310a9dfdde64b225a6e45502504c19449807b Mon Sep 17 00:00:00 2001
 From: Kugan Vivekanandarajah <kvivekananda@nvidia.com>
 Date: Sat, 7 Nov 2026 22:35:05 +1100
-Subject: [PATCH 13/45] Define the profile reader interface
+Subject: [PATCH 13/48] Define the profile reader interface
 
 Add the abstract profile_reader interface that the perf, branch-stack
 and SPE readers derive from.  It precedes them because a base class
@@ -8264,13 +8264,13 @@ index 00000000000..e62bcaeea40
 +
 +#endif /* GCC_PROFILE_READER_H.  */
 -- 
-2.56.0
+2.56.1
 
 
 From bb85db7e985aa2a6176045937704ecd241bce452 Mon Sep 17 00:00:00 2001
 From: Kugan Vivekanandarajah <kvivekananda@nvidia.com>
 Date: Sat, 7 Nov 2026 22:35:06 +1100
-Subject: [PATCH 14/45] Add offline perf.data parsing
+Subject: [PATCH 14/48] Add offline perf.data parsing
 
 Add mmap-backed parsing of perf.data headers, event records, attributes, and
 address mappings.  The parser exposes normalized event streams while keeping
@@ -10139,13 +10139,13 @@ index 00000000000..57788d2cfd3
 +
 +#endif /* GCC_PERF_FILE_READER_H.  */
 -- 
-2.56.0
+2.56.1
 
 
 From 116d6ec8ece3460f55c396ca71a439ff0b0a1533 Mon Sep 17 00:00:00 2001
 From: Kugan Vivekanandarajah <kvivekananda@nvidia.com>
 Date: Sat, 7 Nov 2026 22:35:07 +1100
-Subject: [PATCH 15/45] Decode perf event samples
+Subject: [PATCH 15/48] Decode perf event samples
 
 Add checked decoding for variable-layout PERF_RECORD_SAMPLE payloads.  The
 helpers centralize sample_type handling so BRBE, LBR, and SPE readers share
@@ -10697,13 +10697,13 @@ index 00000000000..2563f9b2e32
 +
 +#endif /* GCC_PERF_EVENT_SAMPLE_UTIL_H */
 -- 
-2.56.0
+2.56.1
 
 
 From 2b9a06b4da804ef7dddca8778dd02731a79778a7 Mon Sep 17 00:00:00 2001
 From: Kugan Vivekanandarajah <kvivekananda@nvidia.com>
 Date: Sat, 7 Nov 2026 22:35:08 +1100
-Subject: [PATCH 16/45] Add common branch-stack ingestion
+Subject: [PATCH 16/48] Add common branch-stack ingestion
 
 Add the common machinery for translating branch-stack samples and runtime
 mappings into file-relative ranges and edges.  Backend-specific readers
@@ -11092,13 +11092,13 @@ index 00000000000..ad951f0b8c6
 +
 +#endif /* GCC_BRANCH_STACK_READER_BASE_H.  */
 -- 
-2.56.0
+2.56.1
 
 
 From b38a7b4ff13c32443df2658e51582309ee78e4a1 Mon Sep 17 00:00:00 2001
 From: Kugan Vivekanandarajah <kvivekananda@nvidia.com>
 Date: Sat, 7 Nov 2026 22:35:09 +1100
-Subject: [PATCH 17/45] Read BRBE and LBR branch stacks
+Subject: [PATCH 17/48] Read BRBE and LBR branch stacks
 
 Implement offline BRBE and LBR ingestion from perf.data.  The reader
 converts sampled branch stacks into range, branch, address-frequency, and
@@ -11523,13 +11523,13 @@ index 00000000000..56441d74491
 +
 +#endif /* GCC_PERF_BRANCH_STACK_READER_H.  */
 -- 
-2.56.0
+2.56.1
 
 
 From d11be5eee9a6a8697a4dcaf10766198fb5c74a62 Mon Sep 17 00:00:00 2001
 From: Kugan Vivekanandarajah <kvivekananda@nvidia.com>
 Date: Sat, 7 Nov 2026 22:35:10 +1100
-Subject: [PATCH 18/45] Add live LBR profile capture
+Subject: [PATCH 18/48] Add live LBR profile capture
 
 Add perf_event_open-based live LBR capture.  The backend manages per-CPU
 ring buffers and feeds captured branch stacks through the same normalization
@@ -12588,13 +12588,13 @@ index 00000000000..396a9875722
 +
 +#endif /* GCC_LIVE_BRANCH_STACK_READER_H.  */
 -- 
-2.56.0
+2.56.1
 
 
 From 821682c04430119d032145f915b1a4d2bbd98cf4 Mon Sep 17 00:00:00 2001
 From: Kugan Vivekanandarajah <kvivekananda@nvidia.com>
 Date: Sat, 7 Nov 2026 22:35:11 +1100
-Subject: [PATCH 19/45] Decode ARM SPE auxiliary packets
+Subject: [PATCH 19/48] Decode ARM SPE auxiliary packets
 
 Add a self-contained decoder for ARM Statistical Profiling Extension
 auxiliary packets.  It reconstructs packet state and reports sampled
@@ -13318,13 +13318,13 @@ index 00000000000..df5ea9ad90d
 +
 +#endif /* GCC_ARM_SPE_AUX_DECODE_H.  */
 -- 
-2.56.0
+2.56.1
 
 
 From 298eb4cff225e58794a7243478f0b20f0b3cac16 Mon Sep 17 00:00:00 2001
 From: Kugan Vivekanandarajah <kvivekananda@nvidia.com>
 Date: Sat, 7 Nov 2026 22:35:12 +1100
-Subject: [PATCH 20/45] Read ARM SPE profiles
+Subject: [PATCH 20/48] Read ARM SPE profiles
 
 Add perf.data ARM SPE ingestion on top of the auxiliary packet decoder.
 SPE records are translated into normalized address and branch information
@@ -14011,13 +14011,13 @@ index 00000000000..e3df273477d
 +
 +#endif /* GCC_PERF_SPE_READER_H.  */
 -- 
-2.56.0
+2.56.1
 
 
 From 8006571288a37636bd1e8fcdaa729b0f89ce2a07 Mon Sep 17 00:00:00 2001
 From: Kugan Vivekanandarajah <kvivekananda@nvidia.com>
 Date: Sat, 7 Nov 2026 22:35:13 +1100
-Subject: [PATCH 21/45] Add the offline profile reader
+Subject: [PATCH 21/48] Add the offline profile reader
 
 Implement the facade that selects an offline perf reader and exposes
 normalized sample mass to the profiler, separating input selection
@@ -14286,13 +14286,13 @@ index 00000000000..919928afb7f
 +
 +} /* namespace perf_data.  */
 -- 
-2.56.0
+2.56.1
 
 
 From 7d59a350bb807ed6fc898999d13eb0c48acc3bcb Mon Sep 17 00:00:00 2001
 From: Kugan Vivekanandarajah <kvivekananda@nvidia.com>
 Date: Sat, 7 Nov 2026 22:35:14 +1100
-Subject: [PATCH 22/45] Add the AutoFDO profile model
+Subject: [PATCH 22/48] Add the AutoFDO profile model
 
 Add the correlation-side profile builders used to accumulate function,
 source-position, callsite, and indirect-call counts.  This model is
@@ -14872,13 +14872,13 @@ index 00000000000..accd6e36942
 +
 +#endif /* GCC_AUTOFDO_MODEL_H.  */
 -- 
-2.56.0
+2.56.1
 
 
 From eaa62cf42ee88e440ae0499c3d304374a7282a66 Mon Sep 17 00:00:00 2001
 From: Kugan Vivekanandarajah <kvivekananda@nvidia.com>
 Date: Sat, 7 Nov 2026 22:35:15 +1100
-Subject: [PATCH 23/45] Define the AutoFDO run options
+Subject: [PATCH 23/48] Define the AutoFDO run options
 
 Define the run options shared by bucketing, correlation and the profiler
 pipeline: thread count, sample threshold, minimum function samples, live
@@ -14956,13 +14956,13 @@ index 00000000000..4738ca8d1db
 +
 +#endif /* GCC_AUTOFDO_OPTIONS_H.  */
 -- 
-2.56.0
+2.56.1
 
 
 From a2b1e215056f8e583c0d9894ed6f0afe68512efd Mon Sep 17 00:00:00 2001
 From: Kugan Vivekanandarajah <kvivekananda@nvidia.com>
 Date: Sat, 7 Nov 2026 22:35:16 +1100
-Subject: [PATCH 24/45] Bucket branch mass onto ELF functions
+Subject: [PATCH 24/48] Bucket branch mass onto ELF functions
 
 Bucket normalized perf ranges, branches, and address counts onto containing
 ELF functions.  Functions are selected using grouped profile mass before
@@ -15555,13 +15555,13 @@ index 00000000000..94d311715ce
 +
 +#endif /* GCC_AUTOFDO_CORRELATE_DETAIL_H.  */
 -- 
-2.56.0
+2.56.1
 
 
 From 15f7f8dd98046d64d57b8ad7f58f2d1fcd142190 Mon Sep 17 00:00:00 2001
 From: Kugan Vivekanandarajah <kvivekananda@nvidia.com>
 Date: Sat, 7 Nov 2026 22:35:17 +1100
-Subject: [PATCH 25/45] Deposit source and call-edge profile mass
+Subject: [PATCH 25/48] Deposit source and call-edge profile mass
 
 Deposit selected function mass onto source locations and inline callsite
 trees.  The implementation coalesces equivalent ranges and records direct
@@ -16407,13 +16407,13 @@ index 00000000000..c52cda08367
 +} /* namespace correlate_detail.  */
 +} /* namespace autofdo.  */
 -- 
-2.56.0
+2.56.1
 
 
 From 60f914cedc21d1ee2dccfe21a599f319ce9c5f66 Mon Sep 17 00:00:00 2001
 From: Kugan Vivekanandarajah <kvivekananda@nvidia.com>
 Date: Sat, 7 Nov 2026 22:35:18 +1100
-Subject: [PATCH 26/45] Add correlation debug dumps
+Subject: [PATCH 26/48] Add correlation debug dumps
 
 Add optional dumps of ingested perf maps and resolved address-to-source
 mappings.  These diagnostics are isolated from the correlation algorithm so
@@ -16744,13 +16744,13 @@ index 00000000000..3571543887d
 +
 +#endif /* GCC_AUTOFDO_DEBUG_DUMP_H.  */
 -- 
-2.56.0
+2.56.1
 
 
 From 252933680d3c396880fc7a9ae7b3d1917ade08fb Mon Sep 17 00:00:00 2001
 From: Kugan Vivekanandarajah <kvivekananda@nvidia.com>
 Date: Sat, 7 Nov 2026 22:35:19 +1100
-Subject: [PATCH 27/45] Add the profile correlation driver
+Subject: [PATCH 27/48] Add the profile correlation driver
 
 Add the public driver that sequences bucketing, target materialization, work
 estimation, and parallel source correlation.  This provides one
@@ -16935,13 +16935,13 @@ index 00000000000..cbb98695772
 +
 +#endif /* GCC_AUTOFDO_CORRELATOR_H.  */
 -- 
-2.56.0
+2.56.1
 
 
 From 1ec4b8938a95eba7a4e4c7d9f0ebc271d65a424d Mon Sep 17 00:00:00 2001
 From: Kugan Vivekanandarajah <kvivekananda@nvidia.com>
 Date: Sat, 7 Nov 2026 22:35:20 +1100
-Subject: [PATCH 28/45] Export correlated profiles as GCOV
+Subject: [PATCH 28/48] Export correlated profiles as GCOV
 
 Translate correlation builders into the shared GCOV profile model.  The
 exporter assigns stable names and identifiers, emits inline trees and
@@ -17512,13 +17512,13 @@ index accd6e36942..8072c80e23e 100644
    void finalize_after_correlate (const perf_data::profile_reader &perf);
    void materialize_alias_profiles
 -- 
-2.56.0
+2.56.1
 
 
 From aad64cb1ba7240686aae54791c78d02cece3e616 Mon Sep 17 00:00:00 2001
 From: Kugan Vivekanandarajah <kvivekananda@nvidia.com>
 Date: Sat, 7 Nov 2026 22:35:21 +1100
-Subject: [PATCH 29/45] Add AutoFDO profiler orchestration
+Subject: [PATCH 29/48] Add AutoFDO profiler orchestration
 
 Add profiler orchestration that loads samples, initializes DWARF,
 correlates source data, and exports a profile.  The command-line frontend
@@ -17788,13 +17788,13 @@ index 00000000000..e326fbc4aa1
 +
 +#endif /* GCC_AUTOFDO_PROFILER_H.  */
 -- 
-2.56.0
+2.56.1
 
 
 From da7d2582c5023c9442c9b62c673328ecfe26fe36 Mon Sep 17 00:00:00 2001
 From: Kugan Vivekanandarajah <kvivekananda@nvidia.com>
 Date: Sat, 7 Nov 2026 22:35:22 +1100
-Subject: [PATCH 30/45] Add the afdo_create command
+Subject: [PATCH 30/48] Add the afdo_create command
 
 Add the afdo_create command-line frontend for producing GCOV AutoFDO
 profiles from an executable and its samples.  It validates options, selects
@@ -18338,13 +18338,13 @@ index 00000000000..2e2507bb50a
 +  return 0;
 +}
 -- 
-2.56.0
+2.56.1
 
 
 From fd3eb3a32d9bfe4a922fe8840708c38d7e9d6900 Mon Sep 17 00:00:00 2001
 From: Kugan Vivekanandarajah <kvivekananda@nvidia.com>
 Date: Sat, 7 Nov 2026 22:35:23 +1100
-Subject: [PATCH 31/45] Configure and build the afdo-tools module
+Subject: [PATCH 31/48] Configure and build the afdo-tools module
 
 Add the afdo-tools configure script and module Makefile now that all
 source backends are present.  This is the first patch that compiles and
@@ -26988,13 +26988,13 @@ index 00000000000..086ccc14eee
 +
 +#endif /* AFDO_TOOLS_VERSION_H */
 -- 
-2.56.0
+2.56.1
 
 
 From 6ff2f24a5702b6fc28120f6aef27e1030f2aedf2 Mon Sep 17 00:00:00 2001
 From: Kugan Vivekanandarajah <kvivekananda@nvidia.com>
 Date: Sat, 7 Nov 2026 22:35:24 +1100
-Subject: [PATCH 32/45] Wire afdo-tools into the GCC build
+Subject: [PATCH 32/48] Wire afdo-tools into the GCC build
 
 Register afdo-tools as an optional bootstrapped GCC host module and
 regenerate the top-level build files.  The module is configured on
@@ -28808,13 +28808,13 @@ index c5f71b4fe50..832ef09e5de 100644
        `find $lang_subdirs -type d -print | sort | sed -e 's|$|/|'`
      do  for glob in '*.c' '*.cc' '*.h' '*.def'
 -- 
-2.56.0
+2.56.1
 
 
 From cb24a4161a0c883757060f8bbc3013c6b0a95f1f Mon Sep 17 00:00:00 2001
 From: Kugan Vivekanandarajah <kvivekananda@nvidia.com>
 Date: Sat, 7 Nov 2026 22:35:25 +1100
-Subject: [PATCH 33/45] Add afdo-tools test support and tests
+Subject: [PATCH 33/48] Add afdo-tools test support and tests
 
 Add the directive-driven DejaGnu harness and the complete afdo-tools
 regression suite in one patch.  Coverage includes profile I/O and merge,
@@ -33652,13 +33652,13 @@ index 00000000000..68b5605cff1
 +  return 0;
 +}
 -- 
-2.56.0
+2.56.1
 
 
 From 5c1384a623fdc77c1a621ff00bdf9595114b7850 Mon Sep 17 00:00:00 2001
 From: Dhruv Chawla <dhruvc@nvidia.com>
 Date: Sat, 7 Nov 2026 22:35:26 +1100
-Subject: [PATCH 34/45] Use in-tree tools for profile bootstrap
+Subject: [PATCH 34/48] Use in-tree tools for profile bootstrap
 
 Switch autoprofiledbootstrap and DejaGnu AutoFDO profile generation from
 the external create_gcov/profile_merger tools to in-tree afdo_create and
@@ -34013,13 +34013,13 @@ index 370b45436fb..10edb05d981 100644
  	    }
  
 -- 
-2.56.0
+2.56.1
 
 
 From 101ab13cc2111d30508e9788cfdcde16db28fc0f Mon Sep 17 00:00:00 2001
 From: Dhruv Chawla <dhruvc@nvidia.com>
 Date: Sat, 7 Nov 2026 22:35:27 +1100
-Subject: [PATCH 35/45] Add GCOV v4 read/write machinery
+Subject: [PATCH 35/48] Add GCOV v4 read/write machinery
 
 Add section-based GCOV AutoFDO v4 profile I/O to afdo_tools:
 
@@ -38543,13 +38543,13 @@ index 00000000000..bdf48cf8921
 +  return 0;
 +}
 -- 
-2.56.0
+2.56.1
 
 
 From 9ac5d7aa552d5c578951095e5c7399d903223216 Mon Sep 17 00:00:00 2001
 From: Dhruv Chawla <dhruvc@nvidia.com>
 Date: Sat, 7 Nov 2026 22:35:28 +1100
-Subject: [PATCH 36/45] Teach cc1 to read GCOV AutoFDO profiles
+Subject: [PATCH 36/48] Teach cc1 to read GCOV AutoFDO profiles
 
 Build libgcovreader.a from the afdo-tools GCOV reader sources and link it
 into the GCC backend so auto-profile can consume GCOV v3 and v4 profiles
@@ -40222,13 +40222,13 @@ index 00000000000..c30e66c39f2
 +  return x + 1;
 +}
 -- 
-2.56.0
+2.56.1
 
 
 From fef6f694603b2ac6cc8f320ab0ee2bcbe4bbc7e9 Mon Sep 17 00:00:00 2001
 From: Kugan Vivekanandarajah <kvivekananda@nvidia.com>
 Date: Sat, 7 Nov 2026 22:35:29 +1100
-Subject: [PATCH 37/45] Document afdo-tools in install.texi
+Subject: [PATCH 37/48] Document afdo-tools in install.texi
 
 Document --enable-afdo-tools, the host and library requirements, and the
 use of the in-tree tools by autoprofiledbootstrap.
@@ -40284,13 +40284,13 @@ index 001d16fe67a..94cf91836c2 100644
  Only the profile from the current build is used, so when an error
  occurs it is recommended to clean before restarting. Otherwise
 -- 
-2.56.0
+2.56.1
 
 
 From db0640cca28f47e1ca27c383304ecb5297b87e32 Mon Sep 17 00:00:00 2001
 From: Kugan Vivekanandarajah <kvivekananda@nvidia.com>
 Date: Wed, 19 Aug 2026 08:30:08 +1000
-Subject: [PATCH 38/45] [AutoFDO] Walk predecessor edges for PHI arguments in
+Subject: [PATCH 38/48] [AutoFDO] Walk predecessor edges for PHI arguments in
  match
 
 PHI arguments are indexed by incoming edges.  function_instance::match
@@ -40327,13 +40327,13 @@ index f97db7d6ec6..074d32a4e34 100644
  	      location_t phi_loc
  		= gimple_phi_arg_location_from_edge (phi, e);
 -- 
-2.56.0
+2.56.1
 
 
 From 659bb24710e51769b8026cc1f27e69128359a157 Mon Sep 17 00:00:00 2001
 From: Kugan Vivekanandarajah <kvivekananda@nvidia.com>
 Date: Fri, 21 Aug 2026 10:57:09 +1000
-Subject: [PATCH 39/45] [AutoFDO] Do not leave entry block at zero after
+Subject: [PATCH 39/48] [AutoFDO] Do not leave entry block at zero after
  guessed-profile adjust
 
 When afdo_adjust_guessed_profile runs scale_bbs, the entry block can be
@@ -40382,13 +40382,13 @@ index 074d32a4e34..bc13835bd1a 100644
      {
        bb->aux = NULL;
 -- 
-2.56.0
+2.56.1
 
 
 From c904d737d0c7736bde0acbd0ab04d738618150d2 Mon Sep 17 00:00:00 2001
 From: Kugan Vivekanandarajah <kvivekananda@nvidia.com>
 Date: Mon, 24 Aug 2026 17:37:03 +1000
-Subject: [PATCH 40/45] [IPA-CP] only tweak clone incoming edge counts when
+Subject: [PATCH 40/48] [IPA-CP] only tweak clone incoming edge counts when
  ipa_p ()
 
 Fixes ICE in include/c++/16.0.1/bits/stl_tree.h:2801:5 during IPA inline:
@@ -40497,13 +40497,13 @@ index 7a50a7ee811..e746ff0ede3 100644
  }
  
 -- 
-2.56.0
+2.56.1
 
 
 From 5348325bd4a449e129f4aa653e6fc857d7cbadae Mon Sep 17 00:00:00 2001
 From: Kugan Vivekanandarajah <kvivekananda@nvidia.com>
 Date: Tue, 1 Sep 2026 19:52:09 +1000
-Subject: [PATCH 41/45] [AutoFDO] Avoid inserting null PHI profile matches
+Subject: [PATCH 41/48] [AutoFDO] Avoid inserting null PHI profile matches
 
 Compiling SPEC CPU 2026 710.omnetpp_r with an AutoFDO profile failed with:
 
@@ -40537,13 +40537,13 @@ index bc13835bd1a..fc7305fd1f0 100644
  	  for (edge e : bb->preds)
  	    {
 -- 
-2.56.0
+2.56.1
 
 
 From 368563b2cff748e580a5429a3b85320f4d2d758c Mon Sep 17 00:00:00 2001
 From: Kugan Vivekanandarajah <kvivekananda@nvidia.com>
 Date: Fri, 9 Oct 2026 11:02:22 +1100
-Subject: [PATCH 42/45] [AutoFDO] Keep a local IPA-CP profile under
+Subject: [PATCH 42/48] [AutoFDO] Keep a local IPA-CP profile under
  -fprofile-partial-training
 
 When the callers of a new clone already claim more count than the original
@@ -40577,13 +40577,13 @@ index e746ff0ede3..6b4a3713ffe 100644
        else
  	orig_node->make_profile_global0 (GUESSED_GLOBAL0_ADJUSTED);
 -- 
-2.56.0
+2.56.1
 
 
 From 7152b09b5c62adaad4aed3f67dcf20d9c4b9720d Mon Sep 17 00:00:00 2001
 From: Hugo Sales <hugo@hsal.es>
 Date: Fri, 16 Oct 2026 11:50:48 +0100
-Subject: [PATCH 43/45] ipa-cp: Check polymorphic contexts before redirecting
+Subject: [PATCH 43/48] ipa-cp: Check polymorphic contexts before redirecting
  to a clone [PR127917]
 
 perhaps_add_new_callers redirects a call to an existing specialized
@@ -40742,13 +40742,13 @@ index 00000000000..dfa1517f5e9
 +  perform (t);
 +}
 -- 
-2.56.0
+2.56.1
 
 
 From ca966a723330734b8214d7ef81cf67acc9e3bc84 Mon Sep 17 00:00:00 2001
 From: Artemiy Volkov <artemiy.volkov@arm.com>
 Date: Thu, 5 Nov 2026 14:05:11 +0000
-Subject: [PATCH 44/45] profile_probability: two fixes for ->sqrt ()
+Subject: [PATCH 44/48] profile_probability: two fixes for ->sqrt ()
 
 Firstly, so far, we've always been returning 'm_val' from this method (which is
 the input value of the algorithm) rather than 'val' (which is the value of the
@@ -40791,13 +40791,13 @@ index 2cce9caa772..ee20aa18289 100644
  	max_range = val - 1;
        else if (val2 < m_val)
 -- 
-2.56.0
+2.56.1
 
 
 From c841f1912c445e24b8106db32cfda1a171df9f1f Mon Sep 17 00:00:00 2001
 From: Peter Jung <admin@ptr1337.dev>
 Date: Mon, 9 Nov 2026 11:21:12 +0100
-Subject: [PATCH 45/45] [AutoFDO] Do not read a renamed callsite after erasing
+Subject: [PATCH 45/48] [AutoFDO] Do not read a renamed callsite after erasing
  it
 
 function_instance::remove_external_functions renames callsites by
@@ -40841,5 +40841,176 @@ index fc7305fd1f0..c238dc71cd4 100644
    auto_vec <int, 20> target_to_rename;
    for (auto &iter : pos_counts)
 -- 
-2.56.0
+2.56.1
+
+
+From e90b7bbe8d60874c89e0dc5fc8554826d8853218 Mon Sep 17 00:00:00 2001
+From: Kugan Vivekanandarajah <kvivekananda@nvidia.com>
+Date: Mon, 16 Nov 2026 21:17:28 +1100
+Subject: [PATCH 46/48] [AutoFDO] Scale early indirect call counts consistently
+
+The early inliner compares a raw call-site count with scaled target counts.
+This can reject a hot target when the AutoFDO scale is large.  Scale the
+call-site estimate and existing target counts before combining them with
+recovered inlined-target counts.  Calculate the target total only when
+building a histogram.
+
+For example, with a scale of 100, a call count of 10 and a target count
+of 8 were compared as 10 and 800.  Scale both to compare 1000 and 800.
+
+Regression tested on aarch64-linux-gnu with no new regressions.
+
+gcc/ChangeLog:
+
+	* auto-profile.cc (afdo_indirect_call): Calculate the total when building
+	the histogram.
+	(afdo_vpt_for_early_inline): Scale the call and target counts.
+
+Signed-off-by: Kugan Vivekanandarajah <kvivekananda@nvidia.com>
+---
+ gcc/auto-profile.cc | 18 ++++++++++--------
+ 1 file changed, 10 insertions(+), 8 deletions(-)
+
+diff --git a/gcc/auto-profile.cc b/gcc/auto-profile.cc
+index c238dc71cd4..493da4b696e 100644
+--- a/gcc/auto-profile.cc
++++ b/gcc/auto-profile.cc
+@@ -3398,17 +3398,12 @@ afdo_indirect_call (gcall *stmt, const icall_target_map &map,
+       return false;
+     }
+ 
+-  gcov_type total = 0;
+   icall_target_map::const_iterator max_iter = map.end ();
+ 
+   for (icall_target_map::const_iterator iter = map.begin ();
+        iter != map.end (); ++iter)
+-    {
+-      total += iter->second;
+-      if (max_iter == map.end () || max_iter->second < iter->second)
+-        max_iter = iter;
+-    }
+-  total *= afdo_count_scale;
++    if (max_iter == map.end () || max_iter->second < iter->second)
++      max_iter = iter;
+   struct cgraph_node *direct_call = cgraph_node::get_for_asmname (
+     get_identifier (afdo_string_table->get_symbol_name (max_iter->first)));
+   if (direct_call == NULL)
+@@ -3423,6 +3418,11 @@ afdo_indirect_call (gcall *stmt, const icall_target_map &map,
+ 
+   if (!transform)
+     {
++      gcov_type total = 0;
++      for (const auto &target : map)
++	total += target.second;
++      total *= afdo_count_scale;
++
+       if (!direct_call->profile_id)
+ 	{
+ 	  if (dump_file)
+@@ -4895,7 +4895,9 @@ afdo_vpt_for_early_inline (cgraph_node *node)
+ 	    bb_count = MAX (bb_count, info.count);
+ 	}
+       autofdo::afdo_source_profile->get_count_info (e->call_stmt, &info, node);
+-      info.count = bb_count;
++      info.count = bb_count * autofdo::afdo_count_scale;
++      for (auto &target : info.targets)
++	target.second *= autofdo::afdo_count_scale;
+       if (!autofdo::afdo_source_profile->update_inlined_ind_target
+ 		      (e->call_stmt, &info, node))
+ 	continue;
+-- 
+2.56.1
+
+
+From b6aab4b13b5713d5d5bffa2d599703134817b883 Mon Sep 17 00:00:00 2001
+From: Kugan Vivekanandarajah <kvivekananda@nvidia.com>
+Date: Mon, 16 Nov 2026 21:17:29 +1100
+Subject: [PATCH 47/48] [AutoFDO] Keep the full width of the profile cutoff
+
+A scaled cutoff can exceed the width of gcov_unsigned_t.  Truncating it
+makes a forced nonzero count too small.  Keep the full cutoff and cap the
+result at the largest representable profile count.
+
+Regression tested on aarch64-linux-gnu with no new regressions.
+
+gcc/ChangeLog:
+
+	* profile-count.cc (profile_count::force_nonzero): Use a full width
+	integer for the cutoff and cap the result.
+
+Signed-off-by: Kugan Vivekanandarajah <kvivekananda@nvidia.com>
+---
+ gcc/profile-count.cc | 4 +++-
+ 1 file changed, 3 insertions(+), 1 deletion(-)
+
+diff --git a/gcc/profile-count.cc b/gcc/profile-count.cc
+index ee20aa18289..c35bcc866ea 100644
+--- a/gcc/profile-count.cc
++++ b/gcc/profile-count.cc
+@@ -586,8 +586,10 @@ profile_count::force_nonzero () const
+      cutoff and we perform count = count * num / den where num is non-zero
+      and den is 0.   If profile was scaled by large factor, forcing value
+      to 1 would lead to large scale factor.  */
+-  gcov_unsigned_t small = profile_info ? profile_info->cutoff / 2 + 1
++  /* The scaled cutoff can exceed the range of gcov_unsigned_t.  */
++  gcov_type_unsigned small = profile_info ? profile_info->cutoff / 2 + 1
+ 			  : 1;
++  small = MIN (small, max_count);
+   if (ret.m_val < small)
+     {
+       ret.m_val = small;
+-- 
+2.56.1
+
+
+From 7b7f10a467352d67f7ab245b9a3f60c9fd3233f3 Mon Sep 17 00:00:00 2001
+From: Kugan Vivekanandarajah <kvivekananda@nvidia.com>
+Date: Mon, 16 Nov 2026 21:17:30 +1100
+Subject: [PATCH 48/48] [AutoFDO] Restore merged profile summary fields in
+ LTRANS
+
+LTRANS clears the profile summary after reading it and used to leave its
+cutoff and maximum count at zero.  Restore the merged fields so profile
+adjustment uses the same summary as WPA.
+
+Regression tested on aarch64-linux-gnu with no new regressions.
+
+gcc/ChangeLog:
+
+	* lto-cgraph.cc (merge_profile_summaries): Restore the merged cutoff
+	and maximum count in LTRANS.
+
+Signed-off-by: Kugan Vivekanandarajah <kvivekananda@nvidia.com>
+---
+ gcc/lto-cgraph.cc | 15 ++++++++++++++-
+ 1 file changed, 14 insertions(+), 1 deletion(-)
+
+diff --git a/gcc/lto-cgraph.cc b/gcc/lto-cgraph.cc
+index 635ed1af76b..f33a34170af 100644
+--- a/gcc/lto-cgraph.cc
++++ b/gcc/lto-cgraph.cc
+@@ -1787,7 +1787,20 @@ merge_profile_summaries (struct lto_file_decl_data **file_data_vec)
+ 
+   /* If merging already happent at WPA time, we are done.  */
+   if (flag_ltrans)
+-    return;
++    {
++      /* The streamed LTRANS summaries were already merged at WPA.  */
++      for (j = 0; (file_data = file_data_vec[j]) != NULL; j++)
++	if (file_data->profile_info.runs)
++	  {
++	    profile_info->sum_max
++	      = MAX (profile_info->sum_max,
++		     file_data->profile_info.sum_max);
++	    profile_info->cutoff
++	      = MAX (profile_info->cutoff,
++		     file_data->profile_info.cutoff);
++	  }
++      return;
++    }
+ 
+   /* Now compute count_materialization_scale of each node.
+      During LTRANS we already have values of count_materialization_scale
+-- 
+2.56.1
 
