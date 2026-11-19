@@ -5,6 +5,6 @@
 	sharedscripts
 	compress
 	postrotate
-		test ! -r /run/nginx.pid || kill -USR1 `cat /run/nginx.pid`
+		if systemctl -q is-active nginx; then systemctl -q kill --signal=USR1 --kill-whom=main nginx; fi
 	endscript
 }

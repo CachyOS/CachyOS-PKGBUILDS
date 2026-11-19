@@ -18,9 +18,9 @@ pkgname=(
   nginx-src
 )
 # IMPORTANT: When bumping $pkgver, remember to rebuild NGINX modules nginx-mod-*.
-pkgver=1.30.6
+pkgver=1.30.7
 pkgrel=1
-_tests_commit=4d1de3f357afeb91865d024b27516d6b67aad86e
+_tests_commit=cf2b5bf5f98f578a0a3da13c8c507c996f5f74fe
 arch=(x86_64)
 pkgdesc='Lightweight HTTP server and IMAP/POP3 proxy server'
 url='https://nginx.org'
@@ -70,8 +70,8 @@ validpgpkeys=(
   'D6786CE303D9A9022998DC6CC8464D549AF75C0A'  # Sergey Kandaurov <s.kandaurov@f5.com>
   '13C82A63B603576156E30A4EA0EA981B66B0D967'  # Konstantin Pavlov <thresh@nginx.com>
 )
-sha512sums=('cd3c52ceb8f62bda3f9fb88d33f24e162069ddd6ec9a7ea05c78a2579c60405350c8d5b0a2b7a2d745a588257f4953feb9d9c2c61ab5fc074a661f06ed5c30c1'
-            '827180c353d2765557c9cd85f205d4e79b4a43dc01b150abc32e93b37ff27ac718d339825096396250c4a9b83899f06de39e9622dae10c54b9bd9748112a3016'
+sha512sums=('00a9a4574eb9e633424ab9bfb0df4847880c917ced8e1bb9dc5339a0b836318cbe4de9b44c662c4d1a2a752eb59ff941be00c6771c8ee7efadf68866dae9ef21'
+            'b9fe7db2f4145673bb6148e0d6c902358ecd4b0e6d66c64ffecf18bb67d5dfb693f42a79d82458e200845edda2bd811ef245d832c6a830c3fd5c55ca9a677f14'
             'f469b3b14def666e955abf6f2d3c68a47631cad7bee90c92039ffe5bf629aa7e32bb4250844d52c0f963740fb07bf7fea5f8887cc1d5199403f07be6214fcb8d'
             'f707961d716392a0cc5345aa79e0cb1b44d2f1233b26cb77724a2716f1552a766d8aeb5347e20cba801a271e785c9ba1f35ac8e155fbadadd0c145ec222e8e0b')
 
@@ -79,6 +79,21 @@ prepare() {
   cp -r $pkgbase{,-src}
   # Fix ssl_certificate_compression test: loop only checked first algorithm
   sed '/\$has_zlib = 1 if \$algo == 1;/{n;/^\t\t\t\tlast;/d}' -i nginx-tests/ssl_certificate_compression.t
+
+  # OpenSSL 4.1 no longer falls back to the subject CN for hostname checks; give the CN-only test
+  # certificates a matching DNS SAN.
+  cd nginx-tests
+  sed -i '/openssl\.2\.example\.com\.conf/,/^EOF/{
+    s/^encrypt_key = no$/&\nx509_extensions = v3_req/
+    s/^commonName=2\.example\.com$/&\n\n[ v3_req ]\nsubjectAltName = DNS:2.example.com/
+  }' proxy_ssl_verify.t stream_proxy_ssl_verify.t
+  grep -q 'subjectAltName = DNS:2.example.com' proxy_ssl_verify.t stream_proxy_ssl_verify.t
+  sed -i 's/^default_days = 1$/&\ncopy_extensions = copy/' \
+    proxy_ssl_crl.t ssl_cache.t
+  grep -q 'copy_extensions = copy' proxy_ssl_crl.t ssl_cache.t
+  sed -i 's|-config \$d/openssl\.conf -subj /CN=\$name/ "|-config $d/openssl.conf -subj /CN=$name/ -addext subjectAltName=DNS:$name "|' \
+    grpc_ssl.t proxy_ssl_crl.t ssl_cache.t
+  grep -q 'addext subjectAltName' grpc_ssl.t proxy_ssl_crl.t ssl_cache.t
 }
 
 _configure_nginx() {
