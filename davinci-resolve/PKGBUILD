@@ -113,7 +113,11 @@ prepare() {
   done
   while IFS= read -r -d '' _file; do
     [[ -f "${_file}" && $(od -t x1 -N 4 "${_file}") == *"7f 45 4c 46"* ]] || continue
-    patchelf --set-rpath "$(IFS=":"; echo "${_patchelf_paths[*]}:\$ORIGIN")" "${_file}"
+    # Some upstream binaries (e.g. CEF's chrome-sandbox) were already
+    # patchelf'd with non-contiguous SHT_NOTE sections, so growing their
+    # rpath fails. They only need glibc, so leave them untouched.
+    patchelf --set-rpath "$(IFS=":"; echo "${_patchelf_paths[*]}:\$ORIGIN")" "${_file}" \
+      || warning "patchelf: leaving rpath of ${_file#"${srcdir}/"} untouched"
   done < <(find "squashfs-root" -type f -size -32M -print0)
 
   while IFS= read -r -d '' _file; do
