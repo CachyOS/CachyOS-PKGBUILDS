@@ -4,7 +4,7 @@
 
 pkgname=cachyos-calamares
 pkgver=3.4.2
-pkgrel=7
+pkgrel=8
 pkgdesc='Distribution-independent installer framework'
 arch=('x86_64')
 license=(GPL-3.0-or-later)
@@ -13,6 +13,8 @@ conflicts=('calamares')
 provides=('calamares')
 depends=(
   boost-libs
+  # should rebuild together with specific versio. e.g. to keep releases working having -next and w/o
+  cachyos-installer-libs
   ckbcomp
   cryptsetup
   dmidecode
@@ -81,6 +83,7 @@ build() {
         -DWITH_APPSTREAM=OFF \
         -DWITH_PYBIND11=OFF \
         -DWITH_QT6=ON \
+        -DWITH_CACHYOS_INSTALLER=ON \
         -DSKIP_MODULES="dracut dracutlukscfg \
         dummycpp dummyprocess dummypython dummypythonqt \
         finishedq keyboardq license localeq notesqml oemid \
