@@ -1,0 +1,187 @@
+#!/bin/bash
+#
+# Frontend for /usr/lib/cachyos/restore-installation: asks for confirmation,
+# runs the restore through pkexec and reports the result.
+# Uses kdialog or zenity, and a terminal when neither is installed.
+#
+# Usage: cachyos-restore-installation [--cli]
+
+readonly HELPER=/usr/lib/cachyos/restore-installation
+readonly SNAP_ID_FILE=/etc/cachyos/installation-snapshot
+readonly LOG_FILE=/var/log/cachyos-restore-installation.log
+readonly TITLE="Restore Fresh Installation"
+
+# ANSI-C quoting so real newlines reach the dialogs.
+readonly CONFIRM_MSG=$'This resets the system to the state right after the CachyOS installation.\n\nReverted:\n • installed applications, updates and drivers\n • system settings, including users and passwords\n • desktop and application settings: ~/.config, ~/.cache and ~/.local/state are moved to a ~/.cachyos-restore-backup-* folder\n\nKept:\n • your files in /home (Documents, Downloads, Pictures, …)\n\nA snapshot of the current system is taken first, so the restore can be undone with Btrfs Assistant or from the boot menu.\n\nThe fresh installation starts with the next reboot. Continue?'
+readonly NO_SNAPSHOT_MSG=$'This system has no fresh installation snapshot.\n\nIt is created by the CachyOS installer on Btrfs installations with Limine or GRUB. Systems installed with an older ISO do not have one.'
+readonly SUCCESS_MSG=$'The restore is complete.\n\nThe fresh installation starts with the next reboot. Do not install or remove packages before that.\n\nReboot now?'
+
+# Pass-through to the helper. The output is also written to $OUTPUT.
+run_helper() {
+	pkexec "$HELPER" restore 2>&1 | tee "$OUTPUT"
+	return "${PIPESTATUS[0]}"
+}
+
+# Explains a failed run, empty when the user cancelled the authentication.
+failure_message() {
+	local reasons
+	reasons=$(sed -n 's/^error: //p' "$OUTPUT")
+	case $1 in
+	126 | 127) return ;;
+	1) printf 'The restore was not started, nothing was changed.\n\n%s' "$reasons" ;;
+	2) printf 'The restore failed, the current system was kept.\n\n%s\n\nDetails are in %s.' "$reasons" "$LOG_FILE" ;;
+	*) printf 'The restore failed and the system may not boot correctly.\n\n%s\n\nDetails are in %s.' "$reasons" "$LOG_FILE" ;;
+	esac
+}
+
+has_snapshot() {
+	[[ -r $SNAP_ID_FILE && $(findmnt -no FSTYPE /) == btrfs ]]
+}
+
+ask() {
+	case $GUI in
+	kdialog) kdialog --title "$TITLE" --warningcontinuecancel "$1" ;;
+	zenity) zenity --question --title="$TITLE" --text="$1" --no-markup --default-cancel --width=500 ;;
+	esac
+}
+
+error() {
+	case $GUI in
+	kdialog) kdialog --title "$TITLE" --error "$1" ;;
+	zenity) zenity --error --title="$TITLE" --text="$1" --no-markup --width=500 ;;
+	esac
+}
+
+ask_reboot() {
+	case $GUI in
+	kdialog) kdialog --title "$TITLE" --yesno "$SUCCESS_MSG" ;;
+	zenity) zenity --question --title="$TITLE" --text="$SUCCESS_MSG" --no-markup --width=500 ;;
+	esac
+}
+
+# Runs the helper behind a busy indicator that shows its progress lines.
+run_with_progress() {
+	local rc
+	case $GUI in
+	kdialog)
+		local ref service line
+		ref=$(kdialog --title "$TITLE" --progressbar "Restoring the fresh installation…" 0)
+		service=${ref%% *}
+		run_helper | while IFS= read -r line; do
+			[[ $line == ':: '* ]] || continue
+			busctl --user call "$service" /ProgressDialog org.kde.kdialog.ProgressDialog \
+				setLabelText s "${line#:: }…" &>/dev/null
+		done
+		rc=${PIPESTATUS[0]}
+		busctl --user call "$service" /ProgressDialog org.kde.kdialog.ProgressDialog close &>/dev/null ||
+			kill "${service##*-}" 2>/dev/null
+		;;
+	zenity)
+		local rc_file
+		rc_file=$(mktemp)
+		{
+			run_helper | sed -un 's/^:: \(.*\)$/# \1…/p'
+			echo "${PIPESTATUS[0]}" >"$rc_file"
+			echo 100
+		} | zenity --progress --title="$TITLE" --text="Restoring the fresh installation…" \
+			--pulsate --auto-close --no-cancel --width=500
+		rc=$(<"$rc_file")
+		rm -f "$rc_file"
+		;;
+	esac
+	return "${rc:-1}"
+}
+
+gui_main() {
+	local rc msg
+	if ! has_snapshot; then
+		error "$NO_SNAPSHOT_MSG"
+		exit 1
+	fi
+	ask "$CONFIRM_MSG" || exit 0
+
+	run_with_progress
+	rc=$?
+	if ((rc == 0)); then
+		ask_reboot && systemctl reboot
+		exit 0
+	fi
+	msg=$(failure_message "$rc")
+	[[ -n $msg ]] && error "$msg"
+	exit "$rc"
+}
+
+cli_main() {
+	local rc answer msg
+	if ! has_snapshot; then
+		echo "$NO_SNAPSHOT_MSG" >&2
+		exit 1
+	fi
+	printf '%s\n\n' "${CONFIRM_MSG% Continue?}"
+	read -rp "Type 'yes' to restore the fresh installation: " answer
+	[[ $answer == yes ]] || exit 0
+
+	run_helper
+	rc=$?
+	if ((rc == 0)); then
+		read -rp "Reboot now? [y/N] " answer
+		[[ $answer == [yY]* ]] && systemctl reboot
+		exit 0
+	fi
+	msg=$(failure_message "$rc")
+	[[ -n $msg ]] && printf '\n%s\n' "$msg" >&2
+	exit "$rc"
+}
+
+# Prefers kdialog on KDE and zenity everywhere else.
+pick_gui() {
+	if [[ ${XDG_CURRENT_DESKTOP:-} == *KDE* ]] && command -v kdialog >/dev/null; then
+		GUI=kdialog
+	elif command -v zenity >/dev/null; then
+		GUI=zenity
+	elif command -v kdialog >/dev/null; then
+		GUI=kdialog
+	else
+		return 1
+	fi
+}
+
+# Without a dialog tool, rerun this script in --cli mode in a terminal.
+open_terminal() {
+	local self term
+	self=$(realpath "$0")
+	if command -v xdg-terminal-exec >/dev/null; then
+		exec xdg-terminal-exec "$self" --cli --wait
+	fi
+	for term in konsole gnome-terminal kgx cosmic-term ghostty kitty alacritty foot wezterm xfce4-terminal qterminal xterm; do
+		command -v "$term" >/dev/null || continue
+		case $term in
+		gnome-terminal) exec "$term" -- "$self" --cli --wait ;;
+		kitty | foot) exec "$term" "$self" --cli --wait ;;
+		wezterm) exec "$term" start -- "$self" --cli --wait ;;
+		xfce4-terminal) exec "$term" -x "$self" --cli --wait ;;
+		*) exec "$term" -e "$self" --cli --wait ;;
+		esac
+	done
+	notify-send -a "$TITLE" "$TITLE" "Install kdialog, zenity or a terminal to use this." 2>/dev/null
+	exit 1
+}
+
+OUTPUT=$(mktemp)
+trap 'rm -f "$OUTPUT"' EXIT
+
+if [[ ${1:-} == --cli ]]; then
+	# --wait keeps a terminal opened by open_terminal until the result was read.
+	if [[ ${2:-} == --wait ]]; then
+		(cli_main)
+		read -rp $'\nPress Enter to close.'
+		exit
+	fi
+	cli_main
+elif { [[ -n ${WAYLAND_DISPLAY:-}${DISPLAY:-} ]] || [[ ! -t 0 ]]; } && pick_gui; then
+	gui_main
+elif [[ -t 0 ]]; then
+	cli_main
+else
+	open_terminal
+fi
