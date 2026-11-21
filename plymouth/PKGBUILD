@@ -7,7 +7,7 @@
 
 pkgname=plymouth
 pkgver=26.134.222
-pkgrel=4
+pkgrel=5
 pkgdesc='Graphical boot splash screen'
 arch=(x86_64)
 url='https://www.freedesktop.org/wiki/Software/Plymouth/'
@@ -50,7 +50,7 @@ source=(
   plymouth-shutdown.initcpio_install
   50-plymouth.conf
   386.patch
-  Stop-waiting-for-new-device-on-plymouth-quit.patch
+  524.patch
 )
 b2sums=(
     '5130dbb16d4634915b7f68542b6c29d664bd8c26f4508adf536833e93f2c78aee287208e88dc3bcf8298979c6f9811657ab5a30c1563b1e5307b7e886b6bffa2'
@@ -60,7 +60,7 @@ b2sums=(
     '15b3dd628ac05659f0ea7128b873a00263aa45ef8964a2bd985c3c9bcd8df86dfcd204fd572a68cfae0d2087b4ae46224a2799e23dee1cb25fc59dbebfae22ee'
     '5ab47942d222c311b495d056f24bdd9d08438162fef1ca6e51982fc00018acbf0c31e4c61164b40950fe2511e17ba2a4635894d145d83a9b349e5a8a83f8c026'
     '340a728dd8576eac152d9a692492506444c0386fdb8c6964b286e81ff2c1fbdd79048e309da14e08188124ea927e5f6771b846d9adf9df9fa9c6cab832db94af'
-    '57cfd3d79ddc44bce75099edc6f0972460c45f699a6b5229d35c9e871fadc325ccba354814a437b80e11cac0a06be979920685a3e8f7c28832bb58f05150834b'
+    'a435e6ea4845fef1ae436fcba0ec81cc376d37e0b1c1daf778e37185da0219ed6660e228451c554823502fee8c9d95c55763c1555661b40b6493fb7616bbf868'
 )
 
 prepare() {
@@ -86,7 +86,7 @@ prepare() {
 
   # Fixes: plymouthd does not quit when new DRM devices are probed during end animation
   # https://gitlab.freedesktop.org/plymouth/plymouth/-/work_items/349
-  patch -Np1 -i "${srcdir}/Stop-waiting-for-new-device-on-plymouth-quit.patch"
+  patch -Np1 -i "${srcdir}/524.patch"
 }
 
 build() {
