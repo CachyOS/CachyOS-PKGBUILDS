@@ -1,4 +1,4 @@
-SERVICES=("bluetooth" "scx_loader")
+SERVICES=("bluetooth")
 
 update_user() {
   # Get user name and update it in config files.
@@ -20,20 +20,10 @@ update_user() {
   cp /etc/skel/Desktop/steamos-gamemode.desktop /home/${usr}/Desktop/steamos-gamemode.desktop
 }
 
-scx_lavd_default() {
-  # migrate all users to scx_loader
-  local config_path="/etc/scx_loader.toml"
-  if [[ ! -f "$config_path" ]]; then
-     cat <<'EOF' > "$config_path"
-default_sched = "scx_lavd"
-EOF
-  fi
-}
-
 post_install() {
-  # Use scx_lavd as default scheduler
-  scx_lavd_default
-
+  # scx_lavd is opt-in: scx_loader is neither enabled nor given a default
+  # scheduler here. It is started on demand over D-Bus and would start
+  # whatever default_sched names, so /etc/scx_loader.toml is left alone.
   echo "Enabling services..."
   for service in "${SERVICES[@]}"; do
     systemctl enable "$service" --now
@@ -56,8 +46,8 @@ pre_upgrade() {
 }
 
 post_upgrade() {
-  # Use scx_lavd as default scheduler
-  scx_lavd_default
+  # Existing installations keep their scheduler setup: nothing here touches
+  # scx_loader.service or /etc/scx_loader.toml.
 
   # Enable Plasma Login Manager
   ln -sf /usr/lib/systemd/system/plasmalogin.service /etc/systemd/system/display-manager.service
