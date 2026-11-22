@@ -1,0 +1,153 @@
+From 32d2aef3ae9ff74fc9ffef1cb65daf2e0e876860 Mon Sep 17 00:00:00 2001
+From: Kyrylo Tkachov <ktkachov@nvidia.com>
+Date: Fri, 20 Nov 2026 12:33:00 +0100
+Subject: [PATCH] profile: recover the counts of computed goto edges
+
+This is an alternative to
+https://gcc.gnu.org/pipermail/gcc-patches/2026-August/728947.html, which
+answered Honza's comments at
+https://gcc.gnu.org/pipermail/gcc-patches/2026-August/728898.html, respun to
+address the Sashiko review on the previous version.  That
+patch gives each target of a computed goto an even, guessed share of the
+remaining probability.  This patch recovers the measured count of each
+target instead.  This is better: the targets keep their measured
+distribution, so bb-reorder knows the likely target, which was a point of
+the review.  The entry count and the consistency of the profile also
+become correct, and 728947 does not fix these.  Ignored edges that are
+not computed goto edges, for example those of setjmp receivers, keep
+their current probabilities.
+
+branch_prob cannot instrument abnormal edges.  It replaces each of them by
+two fake edges, from the entry block to the destination and from the
+source to the exit block.  It ignores the abnormal edge.  The ignored edge
+keeps a zero count.  So compute_branch_probabilities gives every edge of a
+factored computed goto a precise never probability, although the blocks
+it reaches have measured counts.
+
+Since r16-4164, rebuild_frequencies calls determine_unlikely_bbs for
+read profiles.  Its forward propagation cannot pass the dispatch, so it
+sets the count of the whole dispatch loop to zero.  When ceval.c of
+CPython 3.14.5 is compiled with its training profile, 2851 of the 2899
+blocks of _PyEval_EvalFrameDefault end up as never executed.  The fake
+flow also inflates the entry count, so the node count of that function
+counts its dispatches as calls.
+
+When the only abnormal edge into a block comes from a computed goto, the
+fake edge from the entry block carries exactly its flow.  Move the flow
+back to the abnormal edge.  Remove it from the fake edge of the computed
+goto and from the entry and exit counts.  The profile stays
+flow-consistent, the dispatch keeps its measured targets and the entry
+count becomes the number of calls again.  In the same compilation, 645
+of the 2908 blocks of _PyEval_EvalFrameDefault keep a zero count, the
+code that the training run did not execute.
+
+In gcc.dg/tree-prof/comp-goto-2.c, run is called 10 times and dispatches
+20020 times.  The edges from its dispatch change as follows, and the node
+count of run changes from 20030 to 10:
+
+  target    before              after
+  op_inc    [never] count:0     [0.0%] count:10
+  op_dec    [never] count:0     [50.0%] count:10000
+  op_jnz    [never] count:0     [50.0%] count:10000
+  op_halt   [never] count:0     [0.0%] count:10
+
+On CPython 3.14.5 built with PGO and LTO on aarch64 (Neoverse V2), this
+patch reduces the geometric mean run time of 17 pyperformance benchmarks
+by 8.9% compared to trunk.  In the python binary,
+_PyEval_EvalFrameDefault has 80% fewer stack accesses and 10% fewer
+instructions.
+
+Bootstrapped and regression tested on aarch64-unknown-linux-gnu and
+x86_64-pc-linux-gnu.
+
+Ok for trunk?
+Thanks,
+Kyrill
+
+Cc: Jan Hubicka <hubicka@ucw.cz>
+
+gcc/ChangeLog:
+
+	* profile.cc (compute_branch_probabilities): Move the flow of the
+	fake edges of a computed goto back to its abnormal edges.
+
+gcc/testsuite/ChangeLog:
+
+	* gcc.dg/tree-prof/comp-goto-2.c: New test.
+	* gcc.dg/tree-prof/comp-goto-3.c: New test.
+
+Signed-off-by: Kyrylo Tkachov <ktkachov@nvidia.com>
+---
+ gcc/profile.cc | 56 ++++++++++++++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 56 insertions(+)
+
+diff --git a/gcc/profile.cc b/gcc/profile.cc
+index 17841fc723a..933c5458cca 100644
+--- a/gcc/profile.cc
++++ b/gcc/profile.cc
+@@ -666,6 +666,62 @@ compute_branch_probabilities (unsigned cfg_checksum, unsigned lineno_checksum)
+        error ("corrupted profile info: profile data is not flow-consistent");
+    }
+ 
++  /* branch_prob replaced each abnormal edge by fake edges from the entry
++     block to its destination and from its source to the exit block.  When
++     the only abnormal predecessor of a block is a computed goto, the fake
++     edge from the entry block carries exactly the flow of that edge.  Move
++     it back to the edge so that the dispatch keeps its measured targets.  */
++  if (!inconsistent || flag_profile_correction)
++    {
++      for (edge fake : ENTRY_BLOCK_PTR_FOR_FN (cfun)->succs)
++	{
++	  if (!(fake->flags & EDGE_FAKE) || EDGE_INFO (fake)->ignore)
++	    continue;
++
++	  edge abnormal = NULL;
++	  unsigned num_ignored = 0;
++	  for (edge e : fake->dest->preds)
++	    if (EDGE_INFO (e)->ignore)
++	      {
++		abnormal = e;
++		num_ignored++;
++	      }
++	  if (num_ignored != 1)
++	    continue;
++	  gimple *last = last_nondebug_stmt (abnormal->src);
++	  if (!last || !computed_goto_p (last))
++	    continue;
++
++	  /* The fake edge from the computed goto to the exit block carries the
++	     flow, unless the block also has a fake edge from the entry block
++	     and that one took the place of it on the spanning tree.  */
++	  edge out = find_edge (abnormal->src, EXIT_BLOCK_PTR_FOR_FN (cfun));
++	  if (!out || EDGE_INFO (out)->ignore)
++	    continue;
++	  /* Counters of a program with threads need not be consistent, so do
++	     not move more than the computed goto has left.  */
++	  gcov_type flow = MIN (edge_gcov_count (fake), edge_gcov_count (out));
++	  if (flow <= 0)
++	    continue;
++
++	  edge_gcov_count (abnormal) = flow;
++	  edge_gcov_count (fake) -= flow;
++	  edge_gcov_count (out) -= flow;
++	  bb_gcov_count (ENTRY_BLOCK_PTR_FOR_FN (cfun)) -= flow;
++	  bb_gcov_count (EXIT_BLOCK_PTR_FOR_FN (cfun)) -= flow;
++	  /* An emptied fake edge was not measured to be dead, so keep it from
++	     turning a partial profile into a guess below.  */
++	  if (!edge_gcov_count (fake))
++	    fake->probability = profile_probability::never ();
++	  if (!edge_gcov_count (out))
++	    out->probability = profile_probability::never ();
++	  if (dump_file)
++	    fprintf (dump_file, "Computed goto edge from %i to %i, count: %"
++		     PRId64 "\n", abnormal->src->index, abnormal->dest->index,
++		     (int64_t) flow);
++	}
++    }
++
+   /* For every edge, calculate its branch probability and add a reg_note
+      to the branch insn to indicate this.  */
+ 
+-- 
+2.56.1
+
