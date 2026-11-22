@@ -7,12 +7,6 @@
 # toolchain build order: linux-api-headers->glibc->binutils->gcc->glibc->binutils->gcc
 # NOTE: libtool requires rebuilt with each new gcc version
 
-# ENABLE x86-64-v3 optimization
-_optimize_v3=${_optimize_v3-}
-
-# ENABLE x86-64-v4 optimization
-_optimize_v4=${_optimize_v4-}
-
 pkgname=(
   gcc
   gcc-ada
@@ -159,16 +153,6 @@ build() {
   # TODO: properly deal with the build issues resulting from this
   CFLAGS=${CFLAGS/-Werror=format-security/}
   CXXFLAGS=${CXXFLAGS/-Werror=format-security/}
-
-  if [ -n "$_optimize_v3" ]; then
-    export ASFLAGS+=" -D__AVX__=1 -D__AVX2__=1 -msse2avx -D__FMA__=1 "
-    export LDFLAGS+=" -Wl,-z,max-page-size=0x1000"
-  elif [ -n "$_optimize_v4" ]; then
-    export ASFLAGS+=" -D__AVX__=1 -D__AVX2__=1 -D__AVX512__=1 -msse2avx -D__FMA__=1 "
-    export LDFLAGS+=" -Wl,-z,max-page-size=0x1000"
-  else
-    echo "Do not set any custom Asembler Flags"
-  fi
 
   ../gcc/configure \
     --enable-languages=ada,c,c++,d,fortran,go,lto,m2,objc,obj-c++,rust,cobol \
