@@ -65,7 +65,7 @@ function archiso_nvidia_module() {
     mkdir -p /run/modprobe.d
     if (chwd --check "nouveau" \
         || chwd --check "nvidia-dkms-470xx" \
-        || check --check "nvidia-dkms-580xx") &>/dev/null
+        || chwd --check "nvidia-dkms-580xx") &>/dev/null
     then
         cat <<'EOF' >"/run/modprobe.d/archiso.conf"
 install nvidia modprobe nouveau
