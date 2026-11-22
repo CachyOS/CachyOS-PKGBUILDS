@@ -1,12 +1,11 @@
 # Maintainer: Morgan <morganamilo@archlinux.org>
 pkgname=paru
 pkgver=2.2.0
-pkgrel=2
+pkgrel=3
 pkgdesc='Feature packed AUR helper'
 url='https://github.com/morganamilo/paru'
 source=("$pkgname-$pkgver.tar.gz::https://github.com/Morganamilo/paru/archive/v$pkgver.tar.gz"
-        0001-deps-use-latest-alpm-crate-commit.patch
-        0002-fix-aur-package-list-gz-decode.patch)
+        0003-fix-search-aur-url-split-packages.patch)
 backup=("etc/paru.conf")
 arch=('i686' 'pentium4' 'x86_64' 'arm' 'armv7h' 'armv6h' 'aarch64')
 license=('GPL-3.0-or-later')
@@ -14,11 +13,13 @@ makedepends=('cargo')
 depends=('git' 'openssl' 'pacman' 'libalpm.so>=14')
 optdepends=('bat: colored pkgbuild printing' 'devtools: build in chroot and downloading pkgbuilds')
 sha256sums=('213d55a67605ff69faefa523917fee7168ea5bf143be8cef800fb48c9759f348'
-            'c35eb11f6b98dd87d836deb3d54759f3beb14b97587f5e0a71c3cc51c9500f4b'
-            '8b2f7680dfeaa563920837ca96123c3780bffd4386a105b496f90da85b46be8d')
+            '8ca5151a1044ec73e4f7fa6c8fcc84d9f33382a3f07973f72b19946538060f59')
 
 prepare() {
   cd "$pkgname-$pkgver"
+
+  # fix -Sss printing a dead AUR URL for split packages (7a8a0b9)
+  patch -Np1 -i ../0003-fix-search-aur-url-split-packages.patch
 
   # Locked openssl-sys has the wrong SSL_OP_ALL value on OpenSSL 4.1
   cargo update -p openssl-sys --precise 0.9.118
