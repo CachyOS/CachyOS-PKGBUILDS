@@ -196,6 +196,16 @@ EOF
     ln -s ../drm-module-load.target "$generator_dir"/getty@tty1.service.wants/drm-module-load.target
     ln -s ../drm-module-load.target "$generator_dir"/display-manager.service.wants/drm-module-load.target
 
+    # ly@.service has no display-manager.service alias
+    local unit
+    for unit in ly@.service ly-kmsconvt@.service; do
+        mkdir -p "$generator_dir/$unit.d"
+        cat <<'EOF' >"$generator_dir/$unit.d/50-drm-awaiter.conf"
+[Unit]
+Wants=drm-module-load.target
+After=drm-module-load.target
+EOF
+    done
 }
 
 # most DRM drivers do not load with nomodeset, so do not wait for any
