@@ -73,7 +73,7 @@ function is_module_loadable() {
     local module="$1"
     is_module_blocked "$module" && return 1
     modprobe --showconfig | grep -q "^blacklist $1\$" && return 1
-    modprobe --showconfig | grep -q "^options $1 modeset=0\$" && return 1
+    modprobe --showconfig | grep -Eq "^options $1 (.* )?modeset=0( |\$)" && return 1
     [[ "${modaliases[*]}" =~ $module ]] && return 0
     return 1
 }
