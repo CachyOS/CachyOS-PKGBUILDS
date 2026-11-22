@@ -54,9 +54,26 @@ function is_module_forced() {
     return 1
 }
 
+# modules in module_blacklist= never load, so do not wait for them
+function is_module_blocked() {
+    local module="$1" param blacklist=""
+    local -a params
+
+    read -ra params </proc/cmdline
+    for param in "${params[@]}"; do
+        param="${param//\"/}"
+        # the kernel only applies the last module_blacklist=
+        [[ "$param" == module_blacklist=* ]] && blacklist="${param#*=}"
+    done
+
+    [[ ",$blacklist," == *",$module,"* ]]
+}
+
 function is_module_loadable() {
     local module="$1"
+    is_module_blocked "$module" && return 1
     modprobe --showconfig | grep -q "^blacklist $1\$" && return 1
+    modprobe --showconfig | grep -q "^options $1 modeset=0\$" && return 1
     [[ "${modaliases[*]}" =~ $module ]] && return 0
     return 1
 }
@@ -65,7 +82,7 @@ function archiso_nvidia_module() {
     mkdir -p /run/modprobe.d
     if (chwd --check "nouveau" \
         || chwd --check "nvidia-dkms-470xx" \
-        || check --check "nvidia-dkms-580xx") &>/dev/null
+        || chwd --check "nvidia-dkms-580xx") &>/dev/null
     then
         cat <<'EOF' >"/run/modprobe.d/archiso.conf"
 install nvidia modprobe nouveau
@@ -134,6 +151,10 @@ function generate_load_target() {
         nvidia_module="$(archiso_nvidia_module)"
     fi
 
+    if [ -n "$nvidia_module" ] && is_module_blocked "$nvidia_module"; then
+        nvidia_module=""
+    fi
+
     if [ -n "$nvidia_module" ]; then
         for module in "${modules[@]}"; do
             postpone_nvidia_module "$module" "$nvidia_module"
@@ -174,9 +195,21 @@ EOF
     ln -s ../drm-module-load.target "$generator_dir"/kmsconvt@tty1.service.wants/drm-module-load.target
     ln -s ../drm-module-load.target "$generator_dir"/getty@tty1.service.wants/drm-module-load.target
     ln -s ../drm-module-load.target "$generator_dir"/display-manager.service.wants/drm-module-load.target
+
+    # ly@.service has no display-manager.service alias
+    local unit
+    for unit in ly@.service ly-kmsconvt@.service; do
+        mkdir -p "$generator_dir/$unit.d"
+        cat <<'EOF' >"$generator_dir/$unit.d/50-drm-awaiter.conf"
+[Unit]
+Wants=drm-module-load.target
+After=drm-module-load.target
+EOF
+    done
 }
 
-if ! cat /proc/cmdline | tr ' ' '\n' | grep -qx "cachyos-drm-awaiter.disable"; then
+# most DRM drivers do not load with nomodeset, so do not wait for any
+if ! cat /proc/cmdline | tr ' ' '\n' | grep -qxE "cachyos-drm-awaiter.disable|nomodeset"; then
     generate_load_target
 fi
 exit 0
