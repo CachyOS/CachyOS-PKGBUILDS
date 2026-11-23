@@ -145,7 +145,7 @@ function generate_load_target() {
                 fi
                 ;;
         esac
-    done < <(grep -l "0x030[0-9]00" /sys/bus/pci/devices/*/class)
+    done < <(grep -l "^0x03" /sys/bus/pci/devices/*/class)
 
     if [[ -d /run/archiso ]]; then
         nvidia_module="$(archiso_nvidia_module)"
