@@ -98,15 +98,30 @@ EOF
     fi
 }
 
+function is_passthrough_device() {
+    local sysfs="$1" driver
+
+    # The override can reserve the device before the passthrough driver binds.
+    for driver in "$(readlink "$sysfs/driver")" "$(<"$sysfs/driver_override")"; do
+        case "${driver##*/}" in
+            vfio-pci|*-vfio-pci*|pci-stub) return 0 ;;
+        esac
+    done
+    return 1
+}
+
 function generate_load_target() {
     local device class vendor sysfs modalias nvidia_module kernel modprobe
+    local has_host_nvidia=false
     local -a modules=()
     local -a modaliases=()
 
     while read -r class; do
         sysfs="${class%%/class}"
+        is_passthrough_device "$sysfs" && continue
         device="$(cat "${sysfs}/device" | sed 's/0x//')"
         vendor="$(cat "${sysfs}/vendor")"
+        [[ "$vendor" == 0x10de ]] && has_host_nvidia=true
         modalias="$(cat "${sysfs}/modalias")"
         modprobe="$(modprobe -R "$modalias")"
 
@@ -147,7 +162,7 @@ function generate_load_target() {
         esac
     done < <(grep -l "^0x03" /sys/bus/pci/devices/*/class)
 
-    if [[ -d /run/archiso ]]; then
+    if [[ -d /run/archiso && "$has_host_nvidia" == true ]]; then
         nvidia_module="$(archiso_nvidia_module)"
     fi
 
