@@ -85,10 +85,16 @@ function archiso_nvidia_module() {
         || chwd --check "nvidia-dkms-580xx") &>/dev/null
     then
         cat <<'EOF' >"/run/modprobe.d/archiso.conf"
-install nvidia modprobe nouveau
-install nvidia_drm modprobe nouveau
-install nvidia_modeset modprobe nouveau
-install nvidia_uvm modprobe nouveau
+alias nvidia nouveau
+alias nvidia_drm nouveau
+alias nvidia_modeset nouveau
+alias nvidia_uvm nouveau
+EOF
+        cat <<'EOF' >"/run/modprobe.d/nvidia-utils.conf"
+blacklist nvidia
+blacklist nvidia_drm
+blacklist nvidia_uvm
+blacklist nvidia_modeset
 EOF
         echo "nouveau"
     elif (chwd --check "nvidia-open-dkms" \
