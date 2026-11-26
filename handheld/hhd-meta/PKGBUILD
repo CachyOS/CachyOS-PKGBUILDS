@@ -1,0 +1,25 @@
+# Author : Manuel A. Fernandez Montecelo <mafm@igalia.com>
+# Maintainer: Eric Naim <dnaim@cachyos.org>
+
+pkgname='hhd-meta'
+pkgver=1.0.0
+pkgrel=1
+pkgdesc='Meta package for Handheld Daemon'
+arch=('any')
+depends=(
+  'cachyos-hooks'
+  'cachyos-settings'
+  'hhd'
+  'hhd-ui'
+)
+conflicts=('inputplumber' 'steamos-manager')
+install=hhd-meta.install
+source=('hhd-blacklist.conf'
+        'hhd-exports.sh')
+b2sums=('0042b4398212ee1360642fa898581d5cd54b87f964cda8dabaf311500353437fddb74d5240c44d556ab4d296cbcc9917bc6d8c0b7f301716b32eb1ca3a21b6b5'
+        '7727df8e5084c19a4eb9411bddef4a3318b29009592f02a2db7fbb610d3d04517d4e223e131cffa552eb17c7ce5c4a53b871b7b431ab96e0cfce9dca30720d66')
+
+package() {
+  install -Dm0644 hhd-blacklist.conf -t "${pkgdir}/usr/lib/modprobe.d"
+  install -Dm0755 hhd-exports.sh -t "${pkgdir}/etc/profile.d"
+}
