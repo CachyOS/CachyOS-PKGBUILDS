@@ -1,0 +1,86 @@
+From 0c57beca33efaaa7a3152b078350f03ff6962e41 Mon Sep 17 00:00:00 2001
+From: Jacob Lasky <jacob.s.lasky@gmail.com>
+Date: Mon, 19 Oct 2026 09:55:41 -0400
+Subject: [PATCH] updatedb: Compare mount roots by path component in bind mount
+ detection.
+
+rebuild_bind_mount_paths() treats a mount as a bind mount if its root
+(field 4 of /proc/self/mountinfo) lies below the root of another mount
+of the same device. The test was a plain string prefix match, so a root
+of /@home was considered to lie below /@. That is a common Btrfs
+layout (/ on /@, /home on /@home; archinstall and the CachyOS
+installer use it by default), so with PRUNE_BIND_MOUNTS enabled,
+updatedb skipped /home, /var/log and every other sibling subvolume,
+even though updatedb.conf(5) says that making the root directory a
+subvolume avoids this.
+
+Require the match to end at a path component boundary. Mounts whose
+root really is inside another mount's root (classic bind mounts, nested
+subvolumes, or the top-level subvolume mounted somewhere) are detected
+as before. Also make the Btrfs note in updatedb.conf(5) say which
+subvolume mounts are skipped.
+---
+ bind-mount.cpp     | 16 ++++++++++++++--
+ updatedb.conf.5.in | 11 ++++++++---
+ 2 files changed, 22 insertions(+), 5 deletions(-)
+
+diff --git a/bind-mount.cpp b/bind-mount.cpp
+index 5b4bb86..840f71b 100644
+--- a/bind-mount.cpp
++++ b/bind-mount.cpp
+@@ -265,6 +265,18 @@ static optional<MountEntries> read_mount_entries(void)
+ 	return mount_entries;
+ }
+ 
++/* Return true if CHILD is a path strictly below PARENT, comparing whole
++   path components. A plain string prefix test is not enough: Btrfs
++   subvolumes such as /@home and /@ (as used by many installers for
++   /home and /) share a string prefix, but neither is below the other. */
++static bool is_path_below(const string &child, const string &parent)
++{
++	if (child.size() <= parent.size() || child.compare(0, parent.size(), parent) != 0) {
++		return false;
++	}
++	return parent.empty() || parent.back() == '/' || child[parent.size()] == '/';
++}
++
+ /* Bind mount path list maintenace and top-level interface. */
+ 
+ /* mountinfo_path file descriptor, or -1 */
+@@ -300,9 +312,9 @@ static void rebuild_bind_mount_paths(void)
+ 				// Don't compare an element to itself.
+ 				continue;
+ 			}
+-			// We have two mounts from the same device. Is one a prefix of the other?
++			// We have two mounts from the same device. Is one below the other?
+ 			// If there are two that are equal, prefer the one with lowest ID.
+-			if (me.root.size() > other.root.size() && me.root.find(other.root) == 0) {
++			if (is_path_below(me.root, other.root)) {
+ 				if (conf_debug_pruning) {
+ 					fprintf(stderr, " => adding `%s' (root `%s' is a child of `%s', mounted on `%s')\n",
+ 					        me.mount_point.c_str(), me.root.c_str(), other.root.c_str(), other.mount_point.c_str());
+diff --git a/updatedb.conf.5.in b/updatedb.conf.5.in
+index 73e090d..2a2cd22 100644
+--- a/updatedb.conf.5.in
++++ b/updatedb.conf.5.in
+@@ -99,9 +99,14 @@ even if they are not bind mounts.
+ As an exception, bind mounts of a directory on itself are not skipped.
+ Note that Btrfs subvolume mounts are handled internally in the kernel
+ as bind mounts (see
+-.BR btrfs-subvolume (8)),
+-and thus, may get skipped if you have also mounted the filesystem root itself.
+-To counteract this, make your root directory a Btrfs subvolume, too.
++.BR btrfs-subvolume (8)).
++A subvolume mount may be skipped when its root lies below the root
++of another mount of the same file system.
++Mounts already excluded by \fBPRUNEFS\fR or \fBPRUNEPATHS\fR
++are not used in this detection.
++To counteract this, make your root directory a Btrfs subvolume, too,
++and keep the other subvolumes outside it; for instance, /@ mounted on /
++and /@home mounted on /home are not skipped, but /@/home would be.
+ 
+ By default, bind mounts are not skipped.
+ 
+-- 
+2.56.0
+
