@@ -5,11 +5,11 @@
 pkgname=cachyos-niri-settings
 pkgdesc='CachyOS Niri settings'
 pkgver=1.0.0
-pkgrel=3
+pkgrel=4
 arch=('any')
 url="https://github.com/cachyos/$pkgname"
 license=(GPL-3.0-only)
-makedepends=('coreutils')
+makedepends=('coreutils' 'git')
 source=(git+$url#commit=984eaae9444d84254160b8fb0893407b5c8e5e6f)
 sha512sums=('186e2f786716405d27da76c8b1ecb748c2f483add62f6c0cf662221874995c36669172884873b373b32fdf62d02487ceff98d7e33d34805f242ee34ac7b13d83')
 depends=(
@@ -43,13 +43,17 @@ depends=(
   xorg-xwayland
   capitaine-cursors
   cachyos-wallpapers
-  kvantum-theme-nordic-git
   brightnessctl
   cachyos-nord-gtk-theme-git
   swww
 )
 provides=('cachyos-desktop-settings')
 conflicts=('cachyos-desktop-settings')
+
+prepare() {
+  cd "$srcdir/$pkgname"
+  sed -i '/^theme=Nordic-Darker-Solid$/d' etc/skel/.config/Kvantum/kvantum.kvconfig
+}
 
 package() {
   install -d $pkgdir/etc
