@@ -1,0 +1,54 @@
+#!/bin/bash
+#
+# Runs once on the first boot after restore-installation switched to the
+# installation snapshot, before anyone can log in. The restore copies this
+# file into the restored system, because its cachyos-snapper-support may be
+# too old to have it. It removes itself when done.
+#
+# Settings written by newer software can break the older restored versions,
+# so the per-user settings are moved into a backup folder in each home.
+
+set -u
+
+readonly STATE_DIR=/var/lib/cachyos/restore-installation
+readonly UNIT=cachyos-restore-installation-finish.service
+readonly LOG_FILE=/var/log/cachyos-restore-installation.log
+readonly RESET_PATHS=(.config .cache .local/state)
+
+exec > >(tee -a "$LOG_FILE") 2>&1
+echo "=== $(date '+%F %T') first boot of the restored installation ==="
+
+# shellcheck source=/dev/null
+. "$STATE_DIR/state"
+
+# Runs as the owner of the home directory, so symlinks in it can not be used
+# to move files the user has no access to.
+reset_user_settings() {
+	local home=$1 backup=$2 path
+	shift 2
+	mkdir -m 700 "$backup" || return 1
+	for path in "$@"; do
+		[[ -e $home/$path || -L $home/$path ]] || continue
+		[[ $path == */* ]] && mkdir -p "$backup/${path%/*}"
+		mv -T --no-copy "$home/$path" "$backup/$path" && echo "  moved ~/$path"
+	done
+}
+
+while IFS=: read -r name _ uid gid _ home _; do
+	((uid >= 1000 && uid < 60000)) || continue
+	[[ -d $home && $(stat -c %u "$home") == "$uid" ]] || continue
+	backup=$home/.cachyos-restore-backup-$TIMESTAMP
+	echo "Resetting the settings of $name, the old ones are in $backup"
+	setpriv --reuid="$uid" --regid="$gid" --clear-groups \
+		bash -c "$(declare -f reset_user_settings); reset_user_settings \"\$@\"" \
+		_ "$home" "$backup" "${RESET_PATHS[@]}"
+done </etc/passwd
+
+rm -f "/etc/systemd/system/multi-user.target.wants/$UNIT" "/etc/systemd/system/$UNIT"
+rm -rf "$STATE_DIR"
+rmdir --ignore-fail-on-non-empty "${STATE_DIR%/*}"
+
+echo "Snapshot #$BACKUP_SNAPSHOT contains the system from before the restore."
+echo "The previous root subvolume is kept as /$OLD_SUBVOLUME. To free its space:"
+echo "  sudo mount -o subvolid=5 \"\$(findmnt -nvo SOURCE /)\" /mnt"
+echo "  sudo btrfs subvolume delete -R /mnt/$OLD_SUBVOLUME && sudo umount /mnt"
