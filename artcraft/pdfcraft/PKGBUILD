@@ -1,0 +1,410 @@
+# Maintainer: <your name> <your email>
+
+# =================================================================================================
+# PKGBUILD di PdfCraft per CachyOS
+#
+# Varianti x86-64 / v3 / v4 / znver:
+#   NON si gestiscono qui. Il PKGBUILD è unico; i builder di CachyOS lo ricompilano con un
+#   makepkg.conf diverso per ogni repo, che imposta RUSTFLAGS="... -C target-cpu=x86-64-v3" (ecc.).
+#   In locale vale /etc/makepkg.conf.d/rust.conf (sul mio PC: -C opt-level=3 -C target-cpu=native).
+#   Per questo in build() i RUSTFLAGS vanno solo AGGIUNTI (+=), mai sovrascritti (=).
+#
+# CHECKLIST QUANDO ESCE UNA NUOVA VERSIONE (es. 0.23.0):
+#   1. pkgver=0.23.0, pkgrel=1
+#   2. _i18n_commit  -> contenuto del file `craft-i18n.rev` nella root del repo, al nuovo tag
+#   3. _fonts_commit -> valore `craft-fonts-ref:` in `.github/workflows/release.yml`, al nuovo tag
+#   4. modelli OCR   -> in `ATTRIBUTION.toml` cercare le voci [[fetched]] con kind = "model":
+#                       usare i loro `url` e `sha256` (e `licence_url` / `licence_sha256`)
+#   5. sha256 del tarball -> `updpkgsums` (pacman-contrib) oppure
+#                            `curl -fsSL <url-tarball> | sha256sum`
+#   6. requisito Rust -> `rust-version` in Cargo.toml (0.22.0: 1.95; Arch extra ha 1.100)
+#   Comandi utili (dal repo upstream clonato, es. ../../pdfcraft):
+#     git show v0.23.0:craft-i18n.rev
+#     git show v0.23.0:.github/workflows/release.yml | grep craft-fonts-ref
+#     git show v0.23.0:ATTRIBUTION.toml | grep -B12 'kind = "model"'
+# =================================================================================================
+
+pkgname=pdfcraft
+pkgver=0.22.0
+pkgrel=1
+pkgdesc="Fast, native PDF editor and toolkit (GUI + CLI) written in Rust"
+arch=('x86_64')
+url="https://github.com/storytold/pdfcraft"
+# Licenze: codice MIT/Apache (LICENSE-MIT, LICENSE-APACHE nel repo), font craft-fonts OFL-1.1,
+# modelli OCR CC-BY-SA-4.0 (vedi ATTRIBUTION.toml).
+license=('MIT OR Apache-2.0' 'OFL-1.1' 'CC-BY-SA-4.0')
+
+# -------------------------------------------------------------------------------------------------
+# DIPENDENZE
+# Fonte: packaging/linux/nfpm.yaml (il file con cui upstream genera .deb/.rpm), sezioni
+# `depends` e `recommends`, tradotte dai nomi Debian/Fedora ai nomi Arch.
+# Verificate con build reale (docker cachyos-v3) + namcap su 0.22.0-1:
+#  - namcap segnalava 'gcc-libs' non necessaria e 'libgcc' implicita: su Arch gcc-libs è stato
+#    diviso e libgcc_s.so.1 ora sta nel pacchetto libgcc -> sostituito.
+#  - namcap segnala anche libxkbcommon e vulkan-icd-loader come "may not be needed": FALSO
+#    POSITIVO, winit/wgpu le caricano a runtime con dlopen e namcap non lo vede. NON toglierle.
+#
+# depends = obbligatorie: pacman le installa sempre e non si possono rimuovere finché
+# pdfcraft è installato.
+# -------------------------------------------------------------------------------------------------
+depends=(
+  'glibc'              # Debian: libc6 (>= 2.35)
+  'libgcc'             # Debian: libgcc-s1 (libgcc_s.so.1; prima era in gcc-libs)
+  'libxkbcommon'       # Debian: libxkbcommon0 - gestione tastiera, senza la finestra non va
+                       # (caricata con dlopen: namcap la dà per non necessaria, è falso)
+  # Debian: "libvulkan1 | libegl1" = Vulkan OPPURE OpenGL/EGL. pacman non ha la sintassi
+  # "A oppure B", quindi ho scelto Vulkan (percorso preferito da wgpu). SCELTA MIA, arbitraria.
+  # Non dà errori su sistemi solo-OpenGL: wgpu carica Vulkan con dlopen e, se non trova un
+  # driver Vulkan, ripiega da solo su OpenGL/EGL. Alternativa valutata: mettere anche
+  # 'libglvnd' qui. Per ora lasciato così.
+  'vulkan-icd-loader'
+  'hicolor-icon-theme' # convenzione Arch per chi installa icone in /usr/share/icons/hicolor
+)
+
+# optdepends = facoltative: pacman NON le installa, le mostra solo come suggerimento.
+# Se mancano si perde solo la funzione indicata. Fonte: `recommends` di nfpm.yaml.
+optdepends=(
+  # Finestre: Wayland e X11 sono i protocolli con cui l'app apre la finestra e riceve
+  # tastiera/mouse. Ne basta uno (quello della propria sessione).
+  'wayland: Wayland session support'      # Debian: libwayland-client0
+  'libx11: X11 session support'           # Debian: libx11-6, libx11-xcb1
+  'libxcursor: X11 cursors'               # Debian: libxcursor1
+  'libxi: X11 input'                      # Debian: libxi6
+  'libxrandr: X11 multi-monitor'          # Debian: libxrandr2
+  # Disegno: OpenGL via EGL è il ripiego di wgpu quando Vulkan non è disponibile.
+  'libglvnd: OpenGL/EGL fallback when Vulkan is unavailable'  # Debian: libegl1 (scelta mia)
+  'vulkan-driver: GPU rendering'          # Debian: mesa-vulkan-drivers
+  'cups: printing'                        # Debian: cups-client
+  'xdg-desktop-portal: native file dialogs'
+)
+
+# makedepends = servono solo per compilare, non vengono richieste per usare il programma.
+makedepends=(
+  'cargo'   # compilazione Rust
+  'git'     # sorgenti git+ (craft-i18n, craft-fonts) e crate patchati da git in Cargo.toml
+  # clang + lld: servono SOLO per i flag -Clinker=clang -fuse-ld=lld scelti in build()
+  # (stessa combinazione dei PKGBUILD CachyOS chwd, cachyos-hello, cachy-chroot).
+  # lld = linker di LLVM, molto più veloce di ld (GNU). clang fa da "driver" del linker
+  # (rustc chiama il linker tramite un compilatore C). Se si tolgono i flag, non servono più.
+  'clang'
+  'lld'
+  # llvm: fornisce llvm-profdata, che unisce i dati raccolti dalla PGO (vedi build()).
+  # Deve avere la stessa versione LLVM di rustc (verificato su 0.22.0: entrambi LLVM 23.1.5,
+  # controllare con `rustc -vV | grep LLVM` e `llvm-profdata --version`). Come ripgrep/PKGBUILD.
+  'llvm'
+)
+
+# -------------------------------------------------------------------------------------------------
+# PGO (Profile-Guided Optimization) - modello: ripgrep/PKGBUILD in questo repo (unico esempio
+# Rust con PGO tra i PKGBUILD CachyOS; gli altri - zstd, sqlite, python, nodejs... - sono C/C++).
+#   1. build "strumentata" (-Cprofile-generate): il binario registra quali parti di codice usa
+#   2. training: pdfcraft-cli lavora sul corpus di PDF di pdf.js (vedi SORGENTI, punto 7)
+#   3. llvm-profdata unisce i dati raccolti in un unico file .profdata
+#   4. build finale (-Cprofile-use): il compilatore ottimizza sapendo cosa è "caldo"
+# Costo: circa il doppio del tempo di build (due compilazioni complete + training).
+# La GUI non viene allenata direttamente, ma usa gli stessi crate della CLI (render, text, OCR...).
+# _use_pgo=n -> build normale senza PGO (utile per prove veloci):  _use_pgo=n makepkg ...
+# -------------------------------------------------------------------------------------------------
+: "${_use_pgo:=y}"
+
+# options = attiva/disattiva comportamenti di makepkg solo per questo pacchetto (sovrascrive
+# OPTIONS=(...) di /etc/makepkg.conf, che di default ha `lto` attivo).
+# !lto: l'LTO di makepkg aggiunge -flto alle CFLAGS per il codice C (alcuni crate Rust compilano
+# piccole parti in C con gcc). Quegli oggetti contengono bytecode LTO di GCC che clang/lld non
+# sanno leggere -> il link potrebbe fallire. L'LTO del codice Rust si fa comunque, via cargo
+# (CARGO_PROFILE_RELEASE_LTO in build()). Pratica comune nei PKGBUILD Rust di Arch/CachyOS.
+options=('!lto')
+
+# -------------------------------------------------------------------------------------------------
+# COMMIT FISSATI degli input esterni (devono corrispondere a quelli usati dalla release upstream)
+#
+# _i18n_commit: file `craft-i18n.rev` nella root del sorgente pdfcraft (al tag v$pkgver).
+#   Lo usano anche i manifest flatpak (packaging/linux/flatpak/*.yml). prepare() controlla che
+#   coincida con quello nel tarball e blocca la build se no.
+#
+# _fonts_commit: `craft-fonts-ref:` in `.github/workflows/release.yml` (al tag v$pkgver).
+#   Lo stesso valore è in ci.yml, freebsd.yml, nightly-macos.yml. Non esiste un file .rev
+#   dedicato come per i18n, quindi NON viene controllato automaticamente: verificarlo a mano.
+# -------------------------------------------------------------------------------------------------
+_i18n_commit=866aff71dd63d8369eb100b9c432b5af1400c22a
+_fonts_commit=b076417b5880bd4154bd22f00695b1d28c6bea83
+
+# -------------------------------------------------------------------------------------------------
+# SORGENTI (sintassi "nome::url" = salva il download con quel nome)
+#
+# 1. Tarball del tag GitHub: il codice di PdfCraft. -> compilato nel binario.
+#
+# 2. craft-i18n (repo separato): traduzioni dell'interfaccia in 34 lingue (italiano compreso),
+#    file .tsv in locales/<codice>/. -> INCORPORATE NEL BINARIO dal build.rs tramite
+#    CRAFT_I18N_DIR. Senza: PdfCraft funziona ma solo in inglese.
+#    Fonte: ATTRIBUTION.toml, voce [[build_input]] name = "craft-i18n".
+#
+# 3. craft-fonts (repo separato): font aggiuntivi. -> INCORPORATI NEL BINARIO da
+#    crates/fonts/build.rs tramite CRAFT_FONTS_DIR. Servono per l'interfaccia (es. menu in
+#    giapponese) e per scrivere/modificare testo nei PDF in quei sistemi di scrittura.
+#    ATTENZIONE: non solo giapponese. Il build script incorpora TUTTO ciò che trova.
+#    Contenuto di fonts/ al commit fissato (verificato con `git ls-tree -r <commit> fonts/`):
+#      giapponese : biz-ud-pgothic, biz-ud-mincho, shippori-mincho
+#      cinese     : noto-sans-cjk-sc, lxgw-wenkai-lite (+ simplified-chinese-manifest.txt)
+#      coreano    : nanum-gothic
+#      altri      : noto-sans-arabic, -hebrew, -thai, -devanagari, -georgian, -symbols, -symbols-2
+#    più fonts/manifest.txt. Tutti con OFL.txt. Il main di craft-fonts ha più font (latini,
+#    indiani, ecc.) ma la release 0.22.0 usa questo commit, non il main.
+#    Non si può prendere solo il giapponese senza modificare il codice.
+#    Stessa configurazione delle release ufficiali. Licenza OFL -> testi copiati in package().
+#    Fonte: README.md (sezione build, CRAFT_FONTS_DIR) e intestazione di crates/fonts/build.rs.
+#
+# 4-5. Modelli OCR del progetto "ocrs" (funzione Scan & OCR):
+#    - text-detection.onnx   : trova DOVE sono le parole nell'immagine della pagina
+#    - text-recognition.onnx : legge COSA c'è scritto
+#    -> NON incorporati: file installati in /usr/share/pdfcraft/models/, l'app li cerca lì
+#       a runtime (<bin>/../share/pdfcraft/models, vedi packaging/linux/package.sh).
+#    Fonte url + sha256: ATTRIBUTION.toml, voci [[fetched]] con kind = "model".
+#
+# 6. Testo della licenza CC-BY-SA-4.0 dei modelli (obbligatorio distribuirlo con i modelli).
+#    Fonte url + sha256: campi licence_url / licence_sha256 delle stesse voci di ATTRIBUTION.toml.
+#
+# 7. Corpus di test di pdf.js (Mozilla): ~989 PDF di ogni tipo (font, immagini, moduli, file
+#    danneggiati, CJK...) in test/pdfs/. Usato SOLO per il training della PGO, non finisce nel
+#    pacchetto. Il commit è quello che upstream usa per i suoi test di robustezza:
+#    costante PDFJS_COMMIT in xtask/src/corpus.rs (al tag v$pkgver).
+#    Scaricato come tarball (~101 MB) invece che git: molto più leggero del repo completo.
+#    sha256 calcolato con `curl -fsSL <url> | sha256sum`.
+# -------------------------------------------------------------------------------------------------
+_pdfjs_commit=5d923c9600b1da6772cca2e167356b13b8a9aa9e
+source=(
+  "$pkgname-$pkgver.tar.gz::$url/archive/v$pkgver.tar.gz"
+  "craft-i18n::git+https://github.com/storytold/craft-i18n.git#commit=$_i18n_commit"
+  "craft-fonts::git+https://github.com/storytold/craft-fonts.git#commit=$_fonts_commit"
+  "text-detection.onnx::https://ocrs-models.s3-accelerate.amazonaws.com/text-detection.onnx"
+  "text-recognition.onnx::https://ocrs-models.s3-accelerate.amazonaws.com/text-recognition.onnx"
+  "CC-BY-SA-4.0.txt::https://creativecommons.org/licenses/by-sa/4.0/legalcode.txt"
+  "pdfjs-$_pdfjs_commit.tar.gz::https://github.com/mozilla/pdf.js/archive/$_pdfjs_commit.tar.gz"
+)
+# Checksum, nello stesso ordine di source=():
+#  1. tarball: calcolato con `curl -fsSL <url> | sha256sum` (o `updpkgsums`)
+#  2-3. git: SKIP è la convenzione Arch. L'integrità la garantisce già l'hash del commit
+#       (#commit=...): un contenuto diverso avrebbe un hash diverso.
+#  4-5. modelli: campo `sha256` in ATTRIBUTION.toml
+#  6. licenza: campo `licence_sha256` in ATTRIBUTION.toml
+#  7. corpus pdf.js: calcolato con `curl -fsSL <url> | sha256sum`
+sha256sums=('e9165e846d61fdd2fcc5f53c587178750b791f4b0fa6d57212b7e0adab20be7f'
+            'SKIP'
+            'SKIP'
+            'a917b23dbd9524b465df7e922641b3ff2981623df4ded5a0234004ef2fee7cfe'
+            '86c145c2edb96c8caed5b1ebb8f44d706408922211451c309c625157dd6061c5'
+            '28a9529c7d0bb4dc51f4bf5c116a3d16ef247a052f7591466768ddf563fd1cf5'
+            'df60f9633d32445c3c1ad560622397d707ec3e3b5136a515a355c15ae5840e13')
+# I .onnx non sono archivi: makepkg non deve provare a estrarli.
+# Il corpus pdf.js lo estrae prepare(), solo i PDF (l'intero repo pdf.js non serve).
+noextract=('text-detection.onnx' 'text-recognition.onnx' "pdfjs-$_pdfjs_commit.tar.gz")
+
+prepare() {
+  cd "$pkgname-$pkgver"
+
+  # Controllo di coerenza: il commit delle traduzioni fissato qui deve essere quello che
+  # questa versione di PdfCraft si aspetta (file craft-i18n.rev nel sorgente).
+  if [[ "$(<craft-i18n.rev)" != "$_i18n_commit" ]]; then
+    echo "craft-i18n.rev ($(<craft-i18n.rev)) != _i18n_commit ($_i18n_commit)" >&2
+    return 1
+  fi
+
+  # Scarica ADESSO tutte le dipendenze Rust (crates.io + git da [patch] in Cargo.toml), così
+  # build() può girare offline con --frozen. --locked = rispetta esattamente Cargo.lock.
+  export RUSTUP_TOOLCHAIN=stable
+  cargo fetch --locked --target "$(rustc --print host-tuple)"
+
+  # Prepara la cartella dei modelli OCR nel formato che upstream si aspetta:
+  #   <modello>.onnx + <modello>.onnx.LICENCE.txt (vedi stage_models in packaging/env.sh)
+  # `cargo xtask models` (in build()) salta i file già presenti con lo SHA-256 giusto
+  # (fetch_verified in xtask/src/assets.rs), quindi non scaricherà nulla: genererà solo
+  # ATTRIBUTION.txt. Così tutta la build resta offline.
+  # cp -L: makepkg mette in $srcdir dei symlink ai file scaricati; copiamo il contenuto vero.
+  mkdir -p "$srcdir/models"
+  for _m in text-detection.onnx text-recognition.onnx; do
+    cp -L "$srcdir/$_m" "$srcdir/models/$_m"
+    cp -L "$srcdir/CC-BY-SA-4.0.txt" "$srcdir/models/$_m.LICENCE.txt"
+  done
+
+  # Corpus per la PGO: estrae SOLO test/pdfs/*.pdf dal tarball di pdf.js, in $srcdir/pdfjs-corpus
+  if [[ "$_use_pgo" == y ]]; then
+    rm -rf "$srcdir/pdfjs-corpus"
+    mkdir -p "$srcdir/pdfjs-corpus"
+    tar -xzf "$srcdir/pdfjs-$_pdfjs_commit.tar.gz" -C "$srcdir/pdfjs-corpus" \
+      --strip-components=3 --wildcards "*/test/pdfs/*.pdf"
+  fi
+}
+
+# Training PGO: fa lavorare pdfcraft-cli (build strumentata) sul corpus pdf.js.
+# Comandi provati a mano sul binario normale: tempi su 20 core ~1 min totale (la build
+# strumentata è più lenta, qualche minuto). Gli errori sono IGNORATI (|| true): il corpus
+# contiene apposta file danneggiati, e anche i percorsi di errore/riparazione vanno allenati.
+# timeout: un file patologico non può bloccare la build.
+_pgo_train() {
+  local _bin="$1" _corpus="$srcdir/pdfjs-corpus" _tmp="$srcdir/pgo-tmp" _jobs
+  _jobs="$(nproc)"
+  rm -rf "$_tmp"
+  mkdir -p "$_tmp/render" "$_tmp/ocr" "$_tmp/edit"
+
+  # 1. info: parsing del documento, metadati, moduli, standard dichiarati
+  find "$_corpus" -name '*.pdf' -print0 |
+    xargs -0 -P "$_jobs" -I{} timeout 60 "$_bin" info {} >/dev/null 2>&1 || true
+
+  # 2. text: estrazione del testo (font, encoding, CJK)
+  find "$_corpus" -name '*.pdf' -print0 |
+    xargs -0 -P "$_jobs" -I{} timeout 60 "$_bin" text {} >/dev/null 2>&1 || true
+
+  # 3. render: prima pagina a 150 dpi -> PNG (il motore di rendering, la parte più pesante)
+  find "$_corpus" -name '*.pdf' -print0 |
+    xargs -0 -P "$_jobs" -I{} sh -c 'timeout 60 "$1" render "$2" --page 1 --dpi 150 \
+      --out "$3/$(basename "$2").png" >/dev/null 2>&1' _ "$_bin" {} "$_tmp/render" || true
+
+  # 4. check: apre e renderizza TUTTE le pagine di ogni file (a bassa risoluzione)
+  timeout 1800 "$_bin" check "$_corpus" --timeout 20 --dpi 36 --json "$_tmp/check.json" \
+    >/dev/null 2>&1 || true
+
+  # 5. OCR + ottimizzazione: immagini (le pagine renderizzate al punto 3) -> PDF -> OCR -> optimize.
+  #    PDFCRAFT_MODELS: i modelli non sono ancora installati accanto al binario, li indichiamo.
+  #    20 immagini bastano: l'OCR è lento e il codice eseguito è sempre lo stesso.
+  local _imgs=()
+  mapfile -t _imgs < <(find "$_tmp/render" -name '*.png' | sort | head -20)
+  PDFCRAFT_MODELS="$srcdir/models" timeout 1800 "$_bin" batch "${_imgs[@]}" \
+    --steps convert,ocr,optimize --out-dir "$_tmp/ocr" >/dev/null 2>&1 || true
+
+  # 6. operazioni di modifica: combine, extract, split, edit (scrittura di PDF)
+  local _few=()
+  mapfile -t _few < <(find "$_corpus" -name '*.pdf' | sort | head -30)
+  timeout 600 "$_bin" combine "${_few[@]}" --out "$_tmp/edit/combined.pdf" >/dev/null 2>&1 || true
+  timeout 600 "$_bin" extract "$_tmp/edit/combined.pdf" --pages 1-10 \
+    --out "$_tmp/edit/extract.pdf" >/dev/null 2>&1 || true
+  timeout 600 "$_bin" split "$_tmp/edit/combined.pdf" --every 5 \
+    --out-dir "$_tmp/edit/split" >/dev/null 2>&1 || true
+  timeout 600 "$_bin" edit "$_tmp/edit/combined.pdf" --out "$_tmp/edit/edited.pdf" \
+    --rotate 1:90 --delete 2 --title PGO --full >/dev/null 2>&1 || true
+
+  rm -rf "$_tmp"
+}
+
+build() {
+  cd "$pkgname-$pkgver"
+
+  export RUSTUP_TOOLCHAIN=stable
+  export CARGO_TARGET_DIR=target
+
+  # Input esterni incorporati nel binario (vedi SORGENTI sopra).
+  # *_REQUIRED=1: se mancano o non sono validi la build FALLISCE invece di produrre in silenzio
+  # un pacchetto senza traduzioni/font (fonte: crates/fonts/build.rs e Cargo.toml,
+  # [workspace.metadata.cl] unset_env).
+  export CRAFT_I18N_DIR="$srcdir/craft-i18n"
+  export CRAFT_I18N_REQUIRED=1
+  export CRAFT_FONTS_DIR="$srcdir/craft-fonts"
+  export CRAFT_FONTS_REQUIRED=1
+
+  # Data di build mostrata dall'app (vedi packaging/env.sh). Usa SOURCE_DATE_EPOCH (fornito da
+  # makepkg) per build riproducibili.
+  export PDFCRAFT_BUILD_DATE="$(date -u -d "@${SOURCE_DATE_EPOCH:-$(date +%s)}" +%Y-%m-%d)"
+
+  # Ottimizzazioni aggiuntive, AGGIUNTE (+=) ai RUSTFLAGS di makepkg.conf (che portano
+  # target-cpu: x86-64-v3/v4/znver4 sui builder CachyOS, native in locale).
+  #  -Cembed-bitcode               : necessario perché l'LTO funzioni
+  #  -Clinker=clang -fuse-ld=lld   : link più veloce con lld (vedi makedepends)
+  # Stessa linea dei PKGBUILD CachyOS (es. chwd/PKGBUILD).
+  export RUSTFLAGS+=" -Cembed-bitcode -Clinker=clang -Clink-arg=-fuse-ld=lld"
+
+  # LTO (Link-Time Optimization): ottimizza l'INTERO programma alla fine, non crate per crate
+  # -> inlining tra crate diversi, rimozione codice morto, binario più piccolo/veloce.
+  # Upstream (Cargo.toml, [profile.release]) usa già lto="thin" e codegen-units=1.
+  # Qui forzo "fat": un filo più ottimizzato ma richiede MOLTA più RAM e tempo.
+  # Se la build va in crisi di RAM: togliere la riga sotto (si torna a thin di upstream).
+  export CARGO_PROFILE_RELEASE_LTO=fat
+  export CARGO_PROFILE_RELEASE_CODEGEN_UNITS=1
+
+  if [[ "$_use_pgo" == y ]]; then
+    # Dati PGO in $srcdir (non in /tmp come ripgrep: resta dentro la build e si pulisce con essa)
+    local _pgo="$srcdir/pgo-data"
+    rm -rf "$_pgo"
+    mkdir -p "$_pgo"
+    local _rustflags_base="$RUSTFLAGS"
+
+    # PGO 1/4: build strumentata (solo la CLI: è lei che esegue il training)
+    export RUSTFLAGS="$_rustflags_base -Cprofile-generate=$_pgo"
+    cargo build --release --frozen -p pdfcraft-cli
+
+    # PGO 2/4: training sul corpus pdf.js (vedi _pgo_train sopra)
+    _pgo_train "$PWD/target/release/pdfcraft-cli"
+
+    # PGO 3/4: unisce i file .profraw (uno per processo) in un unico profilo
+    llvm-profdata merge -o "$_pgo/merged.profdata" "$_pgo"
+
+    # PGO 4/4: la build finale sotto usa il profilo.
+    # -pgo-warn-missing-function=false: silenzia i warning per funzioni senza dati di profilo
+    # (es. quelle usate solo dalla GUI, che il training non esegue): sono normali, non errori.
+    export RUSTFLAGS="$_rustflags_base -Cprofile-use=$_pgo/merged.profdata"
+    export RUSTFLAGS+=" -Cllvm-args=-pgo-warn-missing-function=false"
+  fi
+
+  # Compila l'app desktop (pdfcraft) e la CLI (pdfcraft-cli), come fa
+  # packaging/linux/package.sh. --frozen = niente rete, Cargo.lock esatto.
+  # Con PGO attiva, RUSTFLAGS contiene -Cprofile-use: build ottimizzata con il profilo.
+  # Il cambio di RUSTFLAGS forza cargo a ricompilare tutto (niente riuso della build strumentata).
+  cargo build --release --frozen -p pdfcraft -p pdfcraft-cli
+
+  # Genera models/ATTRIBUTION.txt (i modelli sono già presenti e verificati -> offline).
+  # xtask è uno strumento di build, non va nel pacchetto: lo si compila senza il profilo PGO.
+  [[ "$_use_pgo" == y ]] && export RUSTFLAGS="$_rustflags_base"
+  cargo xtask models "$srcdir/models"
+}
+
+check() {
+  cd "$pkgname-$pkgver"
+  export RUSTUP_TOOLCHAIN=stable
+  # Test minimo: il binario parte. La suite completa (cargo test --frozen) è molto pesante;
+  # da valutare se aggiungerla.
+  target/release/pdfcraft-cli --version
+}
+
+package() {
+  cd "$pkgname-$pkgver"
+  # ID applicazione usato nei nomi dei file desktop/mime/metainfo (vedi packaging/linux/).
+  local _id=ai.storyteller.pdfcraft
+
+  # La struttura dei file ricalca la sezione "stage an FHS tree" di packaging/linux/package.sh.
+
+  # Binari
+  install -Dm755 target/release/pdfcraft     "$pkgdir/usr/bin/pdfcraft"
+  install -Dm755 target/release/pdfcraft-cli "$pkgdir/usr/bin/pdfcraft-cli"
+
+  # Integrazione desktop: voce nel menu, associazione ai file PDF, metadati per gli app store
+  # (GNOME Software / Discover). Il metainfo è un template: si sostituiscono versione e data.
+  install -Dm644 "packaging/linux/$_id.desktop"  "$pkgdir/usr/share/applications/$_id.desktop"
+  install -Dm644 "packaging/linux/$_id.mime.xml" "$pkgdir/usr/share/mime/packages/$_id.xml"
+  install -dm755 "$pkgdir/usr/share/metainfo"
+  sed -e "s/@VERSION@/$pkgver/g" -e "s/@DATE@/$(date -u -d "@${SOURCE_DATE_EPOCH:-$(date +%s)}" +%Y-%m-%d)/g" \
+    "packaging/linux/$_id.metainfo.xml.in" > "$pkgdir/usr/share/metainfo/$_id.metainfo.xml"
+
+  # Icone in tutte le dimensioni
+  install -dm755 "$pkgdir/usr/share/icons"
+  cp -r assets/app-icon/hicolor "$pkgdir/usr/share/icons/"
+
+  # Modelli OCR (+ licenze + ATTRIBUTION.txt): l'app li cerca in <bin>/../share/pdfcraft/models
+  install -dm755 "$pkgdir/usr/share/pdfcraft/models"
+  install -m644 "$srcdir"/models/* "$pkgdir/usr/share/pdfcraft/models/"
+
+  # Documentazione e licenze (lista file presa da copy_docs in packaging/env.sh)
+  install -Dm644 -t "$pkgdir/usr/share/doc/$pkgname" README.md NOTICE ATTRIBUTION.md
+  install -Dm644 -t "$pkgdir/usr/share/licenses/$pkgname" LICENSE-MIT LICENSE-APACHE
+  cp -r licenses "$pkgdir/usr/share/licenses/$pkgname/"
+
+  # I font craft-fonts sono incorporati nel binario: la licenza OFL richiede di distribuirne
+  # il testo. fonts/<famiglia>/OFL.txt -> OFL-<famiglia>.txt
+  # (stessa logica di copy_font_licences in packaging/env.sh).
+  local _f _family
+  for _f in "$srcdir"/craft-fonts/fonts/*/OFL.txt; do
+    _family="$(basename "$(dirname "$_f")")"
+    install -Dm644 "$_f" "$pkgdir/usr/share/licenses/$pkgname/OFL-$_family.txt"
+  done
+}
+
+# Disinstallazione: `pacman -R pdfcraft` rimuove TUTTO quanto sopra (binari con font e traduzioni
+# incorporati, modelli, icone, licenze). Restano solo i dati creati dall'app nella home
+# dell'utente (~/.config, ~/.local/share), che pacman non tocca.
