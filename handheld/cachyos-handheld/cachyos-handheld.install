@@ -14,10 +14,15 @@ update_user() {
   sed -ri "s|^(User=).*|User=${usr}|" /etc/plasmalogin.conf.d/steam-deckify.conf
   # Decky loader
   sed -ri "s|^(DECKY_USER=).*|DECKY_USER=${usr}|" /etc/environment.d/handheld.conf
-  sed -ri "s|^(DECKY_USER_HOME=).*|DECK_USER_HOME=/home/${usr}|" /etc/environment.d/handheld.conf
+  sed -ri "s|^(DECKY_USER_HOME=).*|\1/home/${usr}|" /etc/environment.d/handheld.conf
 
-  # Return to Gaming Mode file
-  cp /etc/skel/Desktop/steamos-gamemode.desktop /home/${usr}/Desktop/steamos-gamemode.desktop
+  # Return to Gaming Mode shortcut, a link like the one in /etc/skel. Copying
+  # fails once the user already has that link ("are the same file").
+  local desktop="/home/${usr}/Desktop"
+  if [[ -n ${usr} && -d ${desktop} ]]; then
+    ln -sfn /usr/share/applications/steamos-gamemode.desktop "${desktop}/steamos-gamemode.desktop"
+    chown -h "${usr}:" "${desktop}/steamos-gamemode.desktop" || true
+  fi
 }
 
 scx_lavd_default() {
