@@ -1,0 +1,46 @@
+# Maintainer: Daniel Betz <dnlbtz@gmail.com>
+#
+# davidjo's CS8409 driver with resume after hibernation, the headset mic on
+# the MacBookPro14,3, and a DKMS build that needs no network: the kernel files
+# it compiles against come vendored per kernel point release
+# (packaging/dkms/kernel/<x.y.z>).
+
+pkgname=snd-hda-macbookpro-resume-dkms
+_commit=e35f73e
+pkgver=r97.ge35f73e
+pkgrel=1
+pkgdesc='Kernel driver for sound on MacBook Pros with the Cirrus CS8409, with resume after hibernation and the headset mic (DKMS)'
+arch=('any')
+url='https://github.com/dnlbtz/snd_hda_macbookpro'
+license=('GPL-2.0-only')
+depends=('bash' 'dkms' 'patch')
+makedepends=('git')
+provides=('snd-hda-macbookpro-dkms-git')
+conflicts=('snd-hda-macbookpro-dkms-git')
+source=("snd_hda_macbookpro::git+$url.git#commit=$_commit")
+sha256sums=('SKIP')
+
+check() {
+  # every kept set of kernel files dkmsPrepare can pick must be complete
+  cd snd_hda_macbookpro
+  for s in packaging/dkms/kernel/*/; do
+    for f in codecs/cirrus/cs8409.c codecs/cirrus/cs8409.h codecs/cirrus/cs8409-tables.c codecs/generic.h \
+             codecs/side-codecs/hda_component.h common/hda_auto_parser.h common/hda_jack.h common/hda_local.h; do
+      [ -f "$s/sound/hda/$f" ] || { echo "missing $s/sound/hda/$f"; return 1; }
+    done
+    [ -f "$s/include/sound/hda_codec.h" ] || { echo "missing $s/include/sound/hda_codec.h"; return 1; }
+  done
+}
+
+package() {
+  cd snd_hda_macbookpro
+  # DKMS name and version as in the Ubuntu package: snd_hda_macbookpro/0.1+<pkgver>
+  local ver=0.1+$pkgver
+  local dest=$pkgdir/usr/src/snd_hda_macbookpro-$ver
+  install -Dm644 -t "$dest" Makefile patch_cs8409.c.diff patch_cs8409.h.diff LICENSE
+  sed "s/^PACKAGE_VERSION=.*/PACKAGE_VERSION=\"$ver\"/" dkms.conf | install -Dm644 /dev/stdin "$dest/dkms.conf"
+  install -Dm755 -t "$dest/packaging/dkms" packaging/dkms/dkmsPrepare
+  install -Dm644 -t "$dest/makefiles" makefiles/*
+  install -Dm644 -t "$dest/patch_cirrus" patch_cirrus/*.h
+  find packaging/dkms/kernel -type f -exec install -Dm644 {} "$dest/{}" \;
+}
