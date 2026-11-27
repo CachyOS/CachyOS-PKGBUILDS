@@ -1,0 +1,45 @@
+# Maintainer: Daniel Betz <dnlbtz@gmail.com>
+
+pkgname=mbp143-audio
+pkgver=1.0.1
+pkgrel=1
+pkgdesc='Audio DSP for the 15" MacBook Pro of 2017 (MacBookPro14,3): speaker and microphone graphs for PipeWire, with LV2 plugins'
+arch=('x86_64')
+url='https://github.com/dnlbtz/mbp143-audio'
+license=('MIT')
+# pipewire-audio carries the LV2 filter-graph plugin. The kernel driver is
+# optional so that one installed without a package does not block this one.
+depends=('glibc' 'libgcc' 'pipewire' 'pipewire-audio' 'wireplumber')
+optdepends=('snd-hda-macbookpro-resume-dkms: the kernel driver for the sound card, with resume after hibernation and the headset mic')
+makedepends=('cargo')
+install=mbp143-audio.install
+options=('!debug')
+source=("$pkgname-$pkgver.tar.gz::$url/archive/refs/tags/v$pkgver.tar.gz")
+sha256sums=('df48cdb3c5799d078b9c48a2e27db7b40586b5502fdceb396aac7c54a1180a4b')
+
+prepare() {
+  cd "$pkgname-$pkgver"
+  export RUSTUP_TOOLCHAIN=stable
+  cargo fetch --locked --target "$(rustc -vV | sed -n 's/host: //p')"
+}
+
+# makepkg's RUSTFLAGS (CachyOS: -C target-cpu=native) do not move the blocks'
+# results: Rust fuses no a*b+c on its own.
+build() {
+  cd "$pkgname-$pkgver"
+  export RUSTUP_TOOLCHAIN=stable
+  make CARGOFLAGS=--frozen
+}
+
+check() {
+  cd "$pkgname-$pkgver"
+  export RUSTUP_TOOLCHAIN=stable
+  make check CARGOFLAGS=--frozen
+}
+
+package() {
+  cd "$pkgname-$pkgver"
+  export RUSTUP_TOOLCHAIN=stable
+  make install PREFIX=/usr DESTDIR="$pkgdir" CARGOFLAGS=--frozen
+  install -Dm644 LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+}
