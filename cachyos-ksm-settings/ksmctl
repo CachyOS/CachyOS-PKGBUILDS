@@ -15,6 +15,7 @@
 # with this program; if not, write to the Free Software Foundation, Inc.,
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 file_path="/sys/kernel/mm/ksm/run"
+merge_across_nodes_path="/sys/kernel/mm/ksm/merge_across_nodes"
 
 die() {
     echo "$@" >&2
@@ -86,6 +87,17 @@ if ((new_state == 0)); then
     echo "0" > "$file_path"
 elif ((new_state == 1)); then
     echo "Enabling Kernel Samepage Merging..."
+
+    # Merge pages only within the same NUMA node. The tunable does not
+    # exist on kernels built without CONFIG_NUMA and can only be changed
+    # while KSM has no merged pages.
+    if [ -e "$merge_across_nodes_path" ] &&
+       [ "$(cat "$merge_across_nodes_path")" != "0" ]; then
+        if ! echo "0" 2>/dev/null > "$merge_across_nodes_path"; then
+            echo "Warning: failed to set merge_across_nodes to 0. Run '$0 --disable' to unmerge pages first." >&2
+        fi
+    fi
+
     echo "1" > "$file_path"
 else
     echo "Disabling Kernel Samepage Merging..."
