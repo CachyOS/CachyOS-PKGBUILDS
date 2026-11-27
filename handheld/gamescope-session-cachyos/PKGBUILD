@@ -2,7 +2,7 @@
 
 pkgname=gamescope-session-cachyos
 pkgver=1.1.6
-pkgrel=2
+pkgrel=3
 pkgdesc="Steam Big Picture session based on gamescope from SteamOS"
 arch=('any')
 url="https://github.com/CachyOS/gamescope-session"
@@ -32,6 +32,8 @@ sha256sums=('6ade88ca4c6e66713010ccfcbc57be82037721f2ac13486b20a14f67267a7da1')
 prepare() {
     cd "${pkgname}"
     git cherry-pick -n aea6a6cced80
+    # steam-short-session-tracker: Don't reset Steam on session switches
+    git cherry-pick -n ef4a5b2c1c4b
 }
 
 package() {
