@@ -1,25 +1,17 @@
-From e44f57acf67ea2dfc28193ea7859706c39f11c69 Mon Sep 17 00:00:00 2001
-From: Nekoh <francisd246@hotmail.com>
-Date: Wed, 5 Jun 2024 01:14:54 -0400
-Subject: [PATCH] Only automount sdcards and external usb devices
-
----
- usr/lib/udev/rules.d/99-holo-automount.rules | 4 ++++
- 1 file changed, 4 insertions(+)
-
-diff --git a/usr/lib/udev/rules.d/99-holo-automount.rules b/usr/lib/udev/rules.d/99-steamos-automount.rules
-index 49a5968..39cf0a3 100644
+diff --git a/usr/lib/udev/rules.d/99-holo-automount.rules b/usr/lib/udev/rules.d/99-holo-automount.rules
+index 817c4d3..2e9ab3c 100644
 --- a/usr/lib/udev/rules.d/99-holo-automount.rules
 +++ b/usr/lib/udev/rules.d/99-holo-automount.rules
 @@ -1,7 +1,11 @@
  # Originally from https://serverfault.com/a/767079
- # Run a mount script through systemd on any mmcblk* and sd* activity
+ # Run a mount script through systemd on any block device activity
  
-+#If device is not sda or sdcard, ignore.
- KERNEL!="mmcblk*|sd*",          GOTO="holo_automount_end"
-+#If sda device is not usb, ignore.
+-KERNEL!="mmcblk*|sd*|nvme*|vd*", GOTO="holo_automount_end"
++# Only automount SD cards and USB drives. The OS partition check below and in
++# block-device-event.sh relies on SteamOS partition names and partsets, which
++# CachyOS installs do not have, so internal NVMe and SATA drives must be skipped.
++KERNEL!="mmcblk*|sd*", GOTO="holo_automount_end"
 +KERNEL=="sd*", ENV{ID_BUS}!="usb", GOTO="holo_automount_end"
-+#Do not automount crypto, raid or other special devices
  ENV{ID_FS_USAGE}!="filesystem", GOTO="holo_automount_end"
  
- # The service expects to be asynchronous and shouldn't block udev rules
+ # Skip partitions with labels used for the OS

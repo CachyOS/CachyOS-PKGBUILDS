@@ -1,0 +1,25 @@
+diff --git a/usr/lib/hwsupport/format-device.sh b/usr/lib/hwsupport/format-device.sh
+index 9298c91..acb9f48 100755
+--- a/usr/lib/hwsupport/format-device.sh
++++ b/usr/lib/hwsupport/format-device.sh
+@@ -43,16 +43,17 @@ fi
+ 
+ EXTENDED_OPTIONS="$EXTENDED_OPTIONS,root_owner=$OWNER"
+ 
+-# We support SD/MMC, NVMe, VirtIO-blk and USB mass-storage devices
++# We only support SD/MMC and USB mass-storage devices. The system partition
++# check below relies on SteamOS partsets, which CachyOS installs do not have.
+ case "$STORAGE_DEVICE" in
+     "")
+         echo "Usage: $(basename $0) [--version] [--force] [--skip-validation] [--full] [--quick] [--owner <uid>:<gid>] [--label <label>] --device <device>"
+         exit 19 #ENODEV
+         ;;
+-    /dev/mmcblk[0-9] | /dev/nvme[0-9]n[0-9])
++    /dev/mmcblk[0-9])
+         STORAGE_PARTITION="${STORAGE_DEVICE}p1"
+         ;;
+-    /dev/sd[a-z] | /dev/vd[a-z])
++    /dev/sd[a-z])
+         STORAGE_PARTITION="${STORAGE_DEVICE}1"
+         ;;
+     *)
