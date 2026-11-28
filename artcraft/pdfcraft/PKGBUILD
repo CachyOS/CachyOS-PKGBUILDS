@@ -1,0 +1,242 @@
+# Maintainer: <Davide Caruso> <davidencho@davdev.simplelogin.com>
+
+# Updating to a new release (vX.Y.Z), all values are read from the upstream tag:
+#   _i18n_commit   craft-i18n.rev
+#   _fonts_commit  craft-fonts-ref in .github/workflows/release.yml
+#   _pdfjs_commit  PDFJS_COMMIT in xtask/src/corpus.rs
+#   OCR models     [[fetched]] entries with kind = "model" in ATTRIBUTION.toml (url, sha256)
+# then run updpkgsums and regenerate .SRCINFO.
+
+pkgname=pdfcraft
+pkgver=0.22.0
+pkgrel=1
+pkgdesc="Fast, native PDF editor and toolkit (GUI + CLI) written in Rust"
+arch=('x86_64')
+url="https://github.com/storytold/pdfcraft"
+# Code MIT/Apache, embedded craft-fonts OFL, OCR models CC-BY-SA (see ATTRIBUTION.toml)
+license=('MIT OR Apache-2.0' 'OFL-1.1' 'CC-BY-SA-4.0')
+# Based on upstream packaging/linux/nfpm.yaml.
+# namcap reports libxkbcommon and vulkan-icd-loader as not needed: false positive, they are
+# dlopen'ed at runtime by winit/wgpu. Without a Vulkan driver wgpu falls back to OpenGL/EGL.
+depends=(
+  'glibc'
+  'libgcc'
+  'libxkbcommon'
+  'vulkan-icd-loader'
+  'hicolor-icon-theme'
+)
+optdepends=(
+  'wayland: Wayland session support'
+  'libx11: X11 session support'
+  'libxcursor: X11 cursors'
+  'libxi: X11 input'
+  'libxrandr: X11 multi-monitor'
+  'libglvnd: OpenGL/EGL fallback when Vulkan is unavailable'
+  'vulkan-driver: GPU rendering'
+  'cups: printing'
+  'xdg-desktop-portal: native file dialogs'
+)
+# llvm provides llvm-profdata for PGO; it must match rustc's LLVM version
+makedepends=(
+  'cargo'
+  'git'
+  'clang'
+  'lld'
+  'llvm'
+)
+
+# Build with PGO (same approach as ripgrep): an instrumented pdfcraft-cli is trained on the
+# pdf.js test corpus, then the final build uses the merged profile. Roughly doubles build time.
+# The GUI shares the trained crates (render, text, OCR...).
+# Set _use_pgo=n for a plain build.
+: "${_use_pgo:=y}"
+
+# makepkg's GCC-style LTO objects can't be linked by clang/lld; Rust LTO is set in build()
+options=('!lto')
+
+# Pinned build inputs, matching the upstream release
+_i18n_commit=866aff71dd63d8369eb100b9c432b5af1400c22a
+_fonts_commit=b076417b5880bd4154bd22f00695b1d28c6bea83
+_pdfjs_commit=5d923c9600b1da6772cca2e167356b13b8a9aa9e
+# - craft-i18n: UI translations, embedded at build time (CRAFT_I18N_DIR)
+# - craft-fonts: extra fonts (CJK, Arabic, Hebrew, Thai...), embedded at build time
+#   (CRAFT_FONTS_DIR)
+# - *.onnx: OCR models, installed to /usr/share/pdfcraft/models
+# - pdf.js corpus: PGO training only, not shipped
+source=(
+  "$pkgname-$pkgver.tar.gz::$url/archive/v$pkgver.tar.gz"
+  "craft-i18n::git+https://github.com/storytold/craft-i18n.git#commit=$_i18n_commit"
+  "craft-fonts::git+https://github.com/storytold/craft-fonts.git#commit=$_fonts_commit"
+  "text-detection.onnx::https://ocrs-models.s3-accelerate.amazonaws.com/text-detection.onnx"
+  "text-recognition.onnx::https://ocrs-models.s3-accelerate.amazonaws.com/text-recognition.onnx"
+  "CC-BY-SA-4.0.txt::https://creativecommons.org/licenses/by-sa/4.0/legalcode.txt"
+  "pdfjs-$_pdfjs_commit.tar.gz::https://github.com/mozilla/pdf.js/archive/$_pdfjs_commit.tar.gz"
+)
+sha256sums=('e9165e846d61fdd2fcc5f53c587178750b791f4b0fa6d57212b7e0adab20be7f'
+            'SKIP'
+            'SKIP'
+            'a917b23dbd9524b465df7e922641b3ff2981623df4ded5a0234004ef2fee7cfe'
+            '86c145c2edb96c8caed5b1ebb8f44d706408922211451c309c625157dd6061c5'
+            '28a9529c7d0bb4dc51f4bf5c116a3d16ef247a052f7591466768ddf563fd1cf5'
+            'df60f9633d32445c3c1ad560622397d707ec3e3b5136a515a355c15ae5840e13')
+noextract=('text-detection.onnx' 'text-recognition.onnx' "pdfjs-$_pdfjs_commit.tar.gz")
+
+prepare() {
+  cd "$pkgname-$pkgver"
+
+  # The pinned translations must be the ones this release expects
+  if [[ "$(<craft-i18n.rev)" != "$_i18n_commit" ]]; then
+    echo "craft-i18n.rev ($(<craft-i18n.rev)) != _i18n_commit ($_i18n_commit)" >&2
+    return 1
+  fi
+
+  export RUSTUP_TOOLCHAIN=stable
+  cargo fetch --locked --target "$(rustc --print host-tuple)"
+
+  # Pre-seed the models in the layout upstream expects (<model> + <model>.LICENCE.txt), so
+  # `cargo xtask models` in build() finds them verified and stays offline
+  mkdir -p "$srcdir/models"
+  for _m in text-detection.onnx text-recognition.onnx; do
+    cp -L "$srcdir/$_m" "$srcdir/models/$_m"
+    cp -L "$srcdir/CC-BY-SA-4.0.txt" "$srcdir/models/$_m.LICENCE.txt"
+  done
+
+  # PGO corpus: only test/pdfs/*.pdf from the pdf.js tarball
+  if [[ "$_use_pgo" == y ]]; then
+    rm -rf "$srcdir/pdfjs-corpus"
+    mkdir -p "$srcdir/pdfjs-corpus"
+    tar -xzf "$srcdir/pdfjs-$_pdfjs_commit.tar.gz" -C "$srcdir/pdfjs-corpus" \
+      --strip-components=3 --wildcards "*/test/pdfs/*.pdf"
+  fi
+}
+
+# PGO training workload. Failures are ignored on purpose: the corpus contains broken files, and
+# the error/repair paths are worth profiling too. timeout keeps a pathological file from hanging.
+_pgo_train() {
+  local _bin="$1" _corpus="$srcdir/pdfjs-corpus" _tmp="$srcdir/pgo-tmp" _jobs
+  _jobs="$(nproc)"
+  rm -rf "$_tmp"
+  mkdir -p "$_tmp/render" "$_tmp/ocr" "$_tmp/edit"
+
+  # Parsing and metadata
+  find "$_corpus" -name '*.pdf' -print0 |
+    xargs -0 -P "$_jobs" -I{} timeout 60 "$_bin" info {} >/dev/null 2>&1 || true
+
+  # Text extraction
+  find "$_corpus" -name '*.pdf' -print0 |
+    xargs -0 -P "$_jobs" -I{} timeout 60 "$_bin" text {} >/dev/null 2>&1 || true
+
+  # Rendering (first page)
+  find "$_corpus" -name '*.pdf' -print0 |
+    xargs -0 -P "$_jobs" -I{} sh -c 'timeout 60 "$1" render "$2" --page 1 --dpi 150 \
+      --out "$3/$(basename "$2").png" >/dev/null 2>&1' _ "$_bin" {} "$_tmp/render" || true
+
+  # Open and render every page
+  timeout 1800 "$_bin" check "$_corpus" --timeout 20 --dpi 36 --json "$_tmp/check.json" \
+    >/dev/null 2>&1 || true
+
+  # Image to PDF, OCR and optimize, on some of the rendered pages
+  local _imgs=()
+  mapfile -t _imgs < <(find "$_tmp/render" -name '*.png' | sort | head -20)
+  PDFCRAFT_MODELS="$srcdir/models" timeout 1800 "$_bin" batch "${_imgs[@]}" \
+    --steps convert,ocr,optimize --out-dir "$_tmp/ocr" >/dev/null 2>&1 || true
+
+  # Writing PDFs
+  local _few=()
+  mapfile -t _few < <(find "$_corpus" -name '*.pdf' | sort | head -30)
+  timeout 600 "$_bin" combine "${_few[@]}" --out "$_tmp/edit/combined.pdf" >/dev/null 2>&1 || true
+  timeout 600 "$_bin" extract "$_tmp/edit/combined.pdf" --pages 1-10 \
+    --out "$_tmp/edit/extract.pdf" >/dev/null 2>&1 || true
+  timeout 600 "$_bin" split "$_tmp/edit/combined.pdf" --every 5 \
+    --out-dir "$_tmp/edit/split" >/dev/null 2>&1 || true
+  timeout 600 "$_bin" edit "$_tmp/edit/combined.pdf" --out "$_tmp/edit/edited.pdf" \
+    --rotate 1:90 --delete 2 --title PGO --full >/dev/null 2>&1 || true
+
+  rm -rf "$_tmp"
+}
+
+build() {
+  cd "$pkgname-$pkgver"
+
+  export RUSTUP_TOOLCHAIN=stable
+  export CARGO_TARGET_DIR=target
+
+  # Embedded inputs; *_REQUIRED makes the build fail instead of silently dropping them
+  export CRAFT_I18N_DIR="$srcdir/craft-i18n"
+  export CRAFT_I18N_REQUIRED=1
+  export CRAFT_FONTS_DIR="$srcdir/craft-fonts"
+  export CRAFT_FONTS_REQUIRED=1
+
+  export PDFCRAFT_BUILD_DATE="$(date -u -d "@${SOURCE_DATE_EPOCH:-$(date +%s)}" +%Y-%m-%d)"
+
+  # Appended to makepkg's RUSTFLAGS, which carry target-cpu
+  export RUSTFLAGS+=" -Cembed-bitcode -Clinker=clang -Clink-arg=-fuse-ld=lld"
+
+  # Upstream release profile uses thin LTO
+  export CARGO_PROFILE_RELEASE_LTO=fat
+  export CARGO_PROFILE_RELEASE_CODEGEN_UNITS=1
+
+  if [[ "$_use_pgo" == y ]]; then
+    local _pgo="$srcdir/pgo-data"
+    rm -rf "$_pgo"
+    mkdir -p "$_pgo"
+    local _rustflags_base="$RUSTFLAGS"
+
+    # Instrumented CLI build
+    export RUSTFLAGS="$_rustflags_base -Cprofile-generate=$_pgo"
+    cargo build --release --frozen -p pdfcraft-cli
+
+    _pgo_train "$PWD/target/release/pdfcraft-cli"
+
+    llvm-profdata merge -o "$_pgo/merged.profdata" "$_pgo"
+
+    # GUI-only functions have no profile data: silence those warnings
+    export RUSTFLAGS="$_rustflags_base -Cprofile-use=$_pgo/merged.profdata"
+    export RUSTFLAGS+=" -Cllvm-args=-pgo-warn-missing-function=false"
+  fi
+
+  cargo build --release --frozen -p pdfcraft -p pdfcraft-cli
+
+  # Writes models/ATTRIBUTION.txt (offline). xtask is a build tool: built without the profile.
+  [[ "$_use_pgo" == y ]] && export RUSTFLAGS="$_rustflags_base"
+  cargo xtask models "$srcdir/models"
+}
+
+check() {
+  cd "$pkgname-$pkgver"
+  export RUSTUP_TOOLCHAIN=stable
+  target/release/pdfcraft-cli --version
+}
+
+package() {
+  cd "$pkgname-$pkgver"
+  local _id=ai.storyteller.pdfcraft
+
+  # Layout follows upstream packaging/linux/package.sh
+  install -Dm755 target/release/pdfcraft     "$pkgdir/usr/bin/pdfcraft"
+  install -Dm755 target/release/pdfcraft-cli "$pkgdir/usr/bin/pdfcraft-cli"
+
+  install -Dm644 "packaging/linux/$_id.desktop"  "$pkgdir/usr/share/applications/$_id.desktop"
+  install -Dm644 "packaging/linux/$_id.mime.xml" "$pkgdir/usr/share/mime/packages/$_id.xml"
+  install -dm755 "$pkgdir/usr/share/metainfo"
+  sed -e "s/@VERSION@/$pkgver/g" -e "s/@DATE@/$(date -u -d "@${SOURCE_DATE_EPOCH:-$(date +%s)}" +%Y-%m-%d)/g" \
+    "packaging/linux/$_id.metainfo.xml.in" > "$pkgdir/usr/share/metainfo/$_id.metainfo.xml"
+
+  install -dm755 "$pkgdir/usr/share/icons"
+  cp -r assets/app-icon/hicolor "$pkgdir/usr/share/icons/"
+
+  # The app looks for the models in <bin>/../share/pdfcraft/models
+  install -dm755 "$pkgdir/usr/share/pdfcraft/models"
+  install -m644 "$srcdir"/models/* "$pkgdir/usr/share/pdfcraft/models/"
+
+  install -Dm644 -t "$pkgdir/usr/share/doc/$pkgname" README.md NOTICE ATTRIBUTION.md
+  install -Dm644 -t "$pkgdir/usr/share/licenses/$pkgname" LICENSE-MIT LICENSE-APACHE
+  cp -r licenses "$pkgdir/usr/share/licenses/$pkgname/"
+
+  # The fonts are embedded in the binaries, so ship their OFL texts
+  local _f _family
+  for _f in "$srcdir"/craft-fonts/fonts/*/OFL.txt; do
+    _family="$(basename "$(dirname "$_f")")"
+    install -Dm644 "$_f" "$pkgdir/usr/share/licenses/$pkgname/OFL-$_family.txt"
+  done
+}
