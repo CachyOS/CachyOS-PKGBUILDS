@@ -10,7 +10,7 @@ _monover=11.3.0
 _xaliaver=0.5.0
 _zludaver=v7-preview.15
 _zludasha=86ec0a9
-pkgrel=1
+pkgrel=2
 epoch=1
 
 source=(
@@ -329,6 +329,8 @@ package() {
     local _compatdir="${pkgdir}/usr/share/steam/compatibilitytools.d"
     mkdir -p "${_compatdir}/${pkgname}"
     rsync --delete -arx dist/* "${_compatdir}/${pkgname}"
+    # xalia files end up world-writable
+    chmod -R go-w "${_compatdir}/${pkgname}/files/share/xalia"
 
     mkdir -p "${pkgdir}/usr/share/licenses/${pkgname}"
     mv "${_compatdir}/${pkgname}"/{PATENTS.AV1,LICENSE{,.OFL}} \
